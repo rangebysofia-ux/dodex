@@ -29,7 +29,7 @@ Granskningen visar mjuka avvikelser under "Att notera". Lyft dem som frågor, in
 
 ## Möjliga tillägg
 
-Om användaren vill skärpa hållbarheten kan dessa läggas till som mjuka mål i build_schedule.py:
+Om användaren vill skärpa hållbarheten kan dessa läggas till som mjuka mål i schemamotor/build.py:
 - högst ett visst antal kvällar i följd
 - minst en längre ledighet (tre dagar) per fyra veckor
 - jämn fördelning av helgkvällar

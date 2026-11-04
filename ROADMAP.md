@@ -4,7 +4,7 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 
 ## Fas 1 – Stabil kärna
 
-- [ ] **1. Gör motorn till ett Python-paket.** Flytta `motor/` till paketet `schemamotor` med moduler i stället för `sys.path`-tricket. Behåll kommandona som `python -m schemamotor.build …`.
+- [x] **1. Gör motorn till ett Python-paket.** Flytta `motor/` till paketet `schemamotor` med moduler i stället för `sys.path`-tricket. Behåll kommandona som `python -m schemamotor.build …`.
   *Klart när:* alla tester passerar och kommandona i README fungerar med de nya namnen. `validate` importerar fortfarande ingenting från `build`.
 - [ ] **2. Datamodell med validering.** Beskriv indata och schema med Pydantic enligt `docs/indata-schema.md`. Felaktig indata ger begripliga felmeddelanden på svenska.
   *Klart när:* ett test visar tre typiska fel (okänd dag, saknad grad, periodlängd som inte ger heltal) med tydliga meddelanden.

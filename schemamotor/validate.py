@@ -2,12 +2,12 @@
 """Fristående kontroll av ett färdigt schema mot avtal, lag, lokala regler och principer.
 
 Användning:
-    python validate_schedule.py indata.json schema.json [--json]
+    python -m schemamotor.validate indata.json schema.json [--json]
 
-Skriptet delar ingen kod med build_schedule.py. Det läser ett schema – oavsett varifrån
+Skriptet delar ingen kod med schemamotor.build. Det läser ett schema – oavsett varifrån
 det kommer – och kontrollerar varje regel exakt på tidslinjen, inklusive dygnsvila räknad
 från dygnsbrytet och veckovila räknad från veckobrytet. Schemaformatet beskrivs i
-references/indata-schema.md.
+docs/indata-schema.md.
 
 Exitkod: 0 = inga brott mot hårda regler, 1 = minst ett brott, 2 = fel i indata.
 """

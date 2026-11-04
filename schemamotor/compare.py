@@ -2,7 +2,7 @@
 """Jämför scenarier: samma verksamhet med olika ändringar, lösta och granskade var för sig.
 
 Användning:
-    python compare_scenarios.py scenarier.json [--json] [--spara-scheman katalog]
+    python -m schemamotor.compare scenarier.json [--json] [--spara-scheman katalog]
 
 Scenariofilen:
 {
@@ -27,9 +27,8 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_schedule import IndataFel, forbered, los  # noqa: E402
-import validate_schedule  # noqa: E402
+from schemamotor import validate
+from schemamotor.build import IndataFel, forbered, los
 
 KOLUMNER = [
     ("status", "Status"), ("vakanta_pass", "Vakanta pass"), ("vakanta_tidpunkter", "Vakanta tidpunkter"),
@@ -78,7 +77,7 @@ def kor(indata, tid_s):
         return rad, res
     rad.update({k: res["kpi"].get(k) for k in ("vakanta_pass", "vakanta_tidpunkter", "blocklangd",
                                                "passlangd", "rattvisa", "onskemal")})
-    granskning = validate_schedule.kontrollera(indata, res)
+    granskning = validate.kontrollera(indata, res)
     rad["hardregelbrott"] = len(granskning["brott"])
     return rad, res
 

@@ -2,7 +2,7 @@
 """Förklara varför ett schema inte går att lägga.
 
 Användning:
-    python explain_infeasibility.py indata.json [--tid 30] [--json]
+    python -m schemamotor.explain indata.json [--tid 30] [--json]
 
 Steg:
 1. Aritmetiska förkontroller per person (antal pass, arbetstid och passfönster).
@@ -16,11 +16,9 @@ Exitkod: 0 = förklaring hittad eller reglerna är förenliga, 1 = kunde inte av
 """
 import argparse
 import json
-import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_schedule import DAGNAMN, IndataFel, bygg_modell, cp_model, forbered, monsterproblem  # noqa: E402
+from schemamotor.build import DAGNAMN, IndataFel, bygg_modell, cp_model, forbered, monsterproblem
 
 BESKRIVNING = {
     "DYGNSVILA": ("avtal", "dygnsvila {v} timmar mellan pass"),
@@ -115,7 +113,7 @@ def forklara(prob, tid_s=30):
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         res["slutsats"] = ("De hårda reglerna om vila, block, helger, antal pass och krav är förenliga."
                            + (" Konflikten ligger i arbetstiden – se förkontrollerna." if res["forkontroller"]
-                              else " Gick genereringen inte att lösa, pröva build_schedule.py med längre --tid."))
+                              else " Gick genereringen inte att lösa, pröva schemamotor.build med längre --tid."))
         return res, 0
     if status != cp_model.INFEASIBLE:
         res["slutsats"] = "Kunde inte avgöras inom tidsgränsen. Pröva --tid med fler sekunder."

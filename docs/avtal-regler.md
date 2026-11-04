@@ -27,7 +27,7 @@ Följden av rastregeln är att pass med 5:00–5:30 på plats inte kan förekomm
 
 ## Hur skripten hanterar reglerna
 
-| Regel | build_schedule.py | validate_schedule.py |
+| Regel | schemamotor/build.py | schemamotor/validate.py |
 |---|---|---|
 | Dygnsvila | Minst 11 h mellan två pass | Exakt: 11 h sammanhängande i varje period från dygnsbrytet, plus 11 h mellan pass |
 | Veckovila | Tillräckligt villkor per kalendervecka: två lediga dagar i följd, eller en ledig dag med tillräckligt tidigt slut före och sen start efter | Exakt: längsta lediga tid i varje sjudagarsperiod från veckobrytet |

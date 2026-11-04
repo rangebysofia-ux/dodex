@@ -4,10 +4,10 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 
 ## Systemets delar
 
-- `motor/build_schedule.py` – lägger schemat med OR-Tools CP-SAT i två faser (mönster, sedan passlängder) och lexikografisk optimering.
-- `motor/validate_schedule.py` – fristående granskning av ett färdigt schema. **Får aldrig importera något från build_schedule.py.** Den ska kunna fånga fel i motorn.
-- `motor/explain_infeasibility.py` – hittar en minimal uppsättning regler som krockar.
-- `motor/compare_scenarios.py` – kör och jämför scenarier.
+- `schemamotor/build.py` – lägger schemat med OR-Tools CP-SAT i två faser (mönster, sedan passlängder) och lexikografisk optimering.
+- `schemamotor/validate.py` – fristående granskning av ett färdigt schema. **Får aldrig importera något från build.py.** Ett test kontrollerar det. Den ska kunna fånga fel i motorn.
+- `schemamotor/explain.py` – hittar en minimal uppsättning regler som krockar.
+- `schemamotor/compare.py` – kör och jämför scenarier.
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.
 - `tests/fall/` – testfall med fältet `forvantat`. `tests/test_motor.py` kör dem.
 

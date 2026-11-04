@@ -62,7 +62,7 @@
 
 **forvantat** och **beskrivning** – används bara i testfallen.
 
-## Utdata från build_schedule.py
+## Utdata från schemamotor/build.py
 
 ```json
 {
@@ -81,4 +81,4 @@
 
 ## Schema från andra system
 
-validate_schedule.py läser samma `schema`-format, antingen hela utdatafilen eller en fil med bara `{"schema": {...}}`. Ett schema från ett annat system kan granskas genom att räkna om det till detta format. `dygnsdel` behövs för fönsterkontrollen och för behovet; `rast` för rastkontrollen.
+schemamotor/validate.py läser samma `schema`-format, antingen hela utdatafilen eller en fil med bara `{"schema": {...}}`. Ett schema från ett annat system kan granskas genom att räkna om det till detta format. `dygnsdel` behövs för fönsterkontrollen och för behovet; `rast` för rastkontrollen.

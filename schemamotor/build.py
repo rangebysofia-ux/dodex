@@ -2,13 +2,13 @@
 """Bygg ett cykliskt grundschema för vård och omsorg med OR-Tools CP-SAT.
 
 Användning:
-    python build_schedule.py indata.json [--ut schema.json] [--md schema.md] [--tid 20] [--tyst]
+    python -m schemamotor.build indata.json [--ut schema.json] [--md schema.md] [--tid 20] [--tyst]
 
-Indata beskrivs i references/indata-schema.md. Modellen beskrivs i references/optimering.md.
+Indata beskrivs i docs/indata-schema.md. Modellen beskrivs i docs/optimering.md.
 Hårda regler gäller alltid; målen optimeras lexikografiskt i ordningen
 vakanser → blocklängd → passlängd → rättvisa → önskemål.
 
-Exitkod: 0 = schema hittat, 1 = olösbart (kör explain_infeasibility.py), 2 = fel i indata.
+Exitkod: 0 = schema hittat, 1 = olösbart (kör schemamotor.explain), 2 = fel i indata.
 """
 import argparse
 import json
@@ -544,7 +544,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
         kontroll.parameters.num_workers = arbetare
         if kontroll.solve(mk) == cp_model.INFEASIBLE:
             return {"status": "INFEASIBLE", "steg": [], "orsak":
-                    "De hårda reglerna kan inte uppfyllas samtidigt. Kör explain_infeasibility.py "
+                    "De hårda reglerna kan inte uppfyllas samtidigt. Kör schemamotor.explain "
                     "för att se vilka regler som krockar."}
     m2, var2, mal2, _ = bygg_modell(prob)
     if r1:
@@ -567,8 +567,8 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
         return slutresultat(prob, var2, mal2, r3[1], r3[0])
     namn = "INFEASIBLE" if status3 == cp_model.INFEASIBLE else "UNKNOWN"
     return {"status": namn, "steg": [], "orsak":
-            "Inget schema uppfyller de hårda reglerna. Kör explain_infeasibility.py." if namn == "INFEASIBLE"
-            else "Inget schema hittades inom tidsgränsen. Öka --tid, eller kör explain_infeasibility.py "
+            "Inget schema uppfyller de hårda reglerna. Kör schemamotor.explain." if namn == "INFEASIBLE"
+            else "Inget schema hittades inom tidsgränsen. Öka --tid, eller kör schemamotor.explain "
                  "för att se om reglerna krockar."}
 
 

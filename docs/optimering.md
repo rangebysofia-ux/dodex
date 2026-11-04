@@ -13,7 +13,7 @@ Google OR-Tools CP-SAT (constraint programming med SAT-teknik). Installeras med 
 
 ## Hårda regler
 
-Varje regel kan få en egen literal per person (används av explain_infeasibility.py):
+Varje regel kan få en egen literal per person (används av schemamotor/explain.py):
 
 | Grupp | Villkor |
 |---|---|
@@ -47,7 +47,7 @@ Personer med samma villkor kan byta schema med varandra utan att något ändras.
 
 ## Förklaring av olösbarhet
 
-explain_infeasibility.py:
+schemamotor/explain.py:
 1. Aritmetiska förkontroller: kan antal pass × tillåtna passlängder ge rätt arbetstid?
 2. Mönstermodellen med alla regelgrupper påslagna. Olösbar → krymp: släpp hela personer i taget, sedan en regel i taget. Det som återstår är en minimal konflikt: varje regel i den behövs för att konflikten ska uppstå.
 3. För cykliska scheman prövas konflikten utan cykel. Går det då ihop ligger problemet vid periodgränsen.

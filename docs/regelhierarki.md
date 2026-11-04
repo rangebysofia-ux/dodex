@@ -47,10 +47,10 @@ Det betyder att en lägre nivå aldrig kan köpas på bekostnad av en högre. Et
 
 ## Växelkurs
 
-När användaren vill väga två mål mot varandra i stället för i strikt ordning, uttryck avvägningen i vakanstimmar: "hellre upp till 2 timmars vakans än att bryta detta". Det är lättare att ta ställning till än abstrakta straffsiffror. Skillen arbetar i strikt ordning; en växelkurs kräver att målen slås ihop till ett, vilket är en ändring i build_schedule.py.
+När användaren vill väga två mål mot varandra i stället för i strikt ordning, uttryck avvägningen i vakanstimmar: "hellre upp till 2 timmars vakans än att bryta detta". Det är lättare att ta ställning till än abstrakta straffsiffror. Skillen arbetar i strikt ordning; en växelkurs kräver att målen slås ihop till ett, vilket är en ändring i schemamotor/build.py.
 
 ## Krav och önskemål
 
 - "Vill", "föredrar", "helst" → önskemål (mjukt).
 - "Måste", "kan inte", "får inte" → krav (hårt).
-- Fråga när det är oklart. Ett krav som inte går att uppfylla gör hela schemat olösbart, och då pekar explain_infeasibility.py ut det.
+- Fråga när det är oklart. Ett krav som inte går att uppfylla gör hela schemat olösbart, och då pekar schemamotor/explain.py ut det.

@@ -8,10 +8,12 @@ Cykliska grundscheman för dygnet runt-verksamhet enligt Kommunals avtalsområde
 pip install -e ".[dev]"
 pytest -q
 
-python motor/build_schedule.py tests/fall/six_week_basic.json --ut schema.json --md schema.md
-python motor/validate_schedule.py tests/fall/six_week_basic.json schema.json
-python motor/explain_infeasibility.py tests/fall/wraparound_failure.json
+python -m schemamotor.build tests/fall/six_week_basic.json --ut schema.json --md schema.md
+python -m schemamotor.validate tests/fall/six_week_basic.json schema.json
+python -m schemamotor.explain tests/fall/wraparound_failure.json
 ```
+
+Efter `pip install -e .` finns samma kommandon även som `schema-build`, `schema-validate`, `schema-explain` och `schema-compare`.
 
 ## Dokumentation
 
