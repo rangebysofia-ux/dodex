@@ -1,0 +1,133 @@
+{
+  "beskrivning": "Dygnsvila: A1 är tvingad att arbeta kväll onsdag vecka 1 (slutar 22:00) och morgon torsdag (börjar 07:00). Det ger nio timmars vila. Ska vara olösbart, och förklaringen ska peka på dygnsvilan och kraven.",
+  "forvantat": {
+    "status": "INFEASIBLE",
+    "konflikt_innehaller": [
+      "DYGNSVILA|A1"
+    ]
+  },
+  "enhet": "Test – dygnsvila",
+  "veckor": 6,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 3,
+      "kvall": 3,
+      "natt": 1
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 2,
+      "natt": 1
+    }
+  },
+  "tidpunkter": {
+    "vardag": [
+      {
+        "tid": "14:00",
+        "antal": 3
+      }
+    ]
+  },
+  "personal": [
+    {
+      "id": "A1",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A2",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "A3",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A4",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "A5",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A6",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "B1",
+      "grad": 0.8,
+      "antal_pass": 28
+    },
+    {
+      "id": "B2",
+      "grad": 0.8,
+      "antal_pass": 29
+    },
+    {
+      "id": "C1",
+      "grad": 0.75,
+      "antal_pass": 28
+    },
+    {
+      "id": "C2",
+      "grad": 0.75,
+      "antal_pass": 29
+    },
+    {
+      "id": "N1",
+      "grad": 1.0,
+      "dygnsdelar": [
+        "natt"
+      ]
+    },
+    {
+      "id": "N2",
+      "grad": 1.0,
+      "dygnsdelar": [
+        "natt"
+      ]
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 15
+  },
+  "onskemal": [
+    {
+      "id": "O1",
+      "person": "A1",
+      "typ": "arbetar",
+      "dagindex": [
+        2,
+        3
+      ],
+      "krav": true
+    },
+    {
+      "id": "O2",
+      "person": "A1",
+      "typ": "endast_dygnsdel",
+      "varde": "kvall",
+      "dagindex": [
+        2
+      ],
+      "krav": true
+    },
+    {
+      "id": "O3",
+      "person": "A1",
+      "typ": "endast_dygnsdel",
+      "varde": "morgon",
+      "dagindex": [
+        3
+      ],
+      "krav": true
+    }
+  ]
+}

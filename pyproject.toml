@@ -1,0 +1,12 @@
+[project]
+name = "schemasystem"
+version = "0.1.0"
+description = "Cykliska grundscheman för dygnet runt-verksamhet inom vård och omsorg (Kommunal, HÖK/AB)"
+requires-python = ">=3.10"
+dependencies = ["ortools>=9.10"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

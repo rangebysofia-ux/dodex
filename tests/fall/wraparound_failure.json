@@ -1,0 +1,119 @@
+{
+  "beskrivning": "Cykelgränsen: A1 är tvingad att arbeta fredag–söndag i vecka 6 och måndag–onsdag i vecka 1. Var för sig är det tre dagar, men eftersom schemat är cykliskt följs vecka 6 av vecka 1 och det blir sex arbetsdagar i följd. Ska vara olösbart, och förklaringen ska peka på högst 5 dagar i följd för A1, kravet och cykelgränsen.",
+  "forvantat": {
+    "status": "INFEASIBLE",
+    "konflikt_innehaller": [
+      "BLOCK_MAX|A1",
+      "KRAV|O1"
+    ],
+    "cykelgrans": true
+  },
+  "enhet": "Test – cykelgräns",
+  "veckor": 6,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 3,
+      "kvall": 3,
+      "natt": 1
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 2,
+      "natt": 1
+    }
+  },
+  "tidpunkter": {
+    "vardag": [
+      {
+        "tid": "14:00",
+        "antal": 3
+      }
+    ]
+  },
+  "personal": [
+    {
+      "id": "A1",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A2",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "A3",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A4",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "A5",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A6",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "B1",
+      "grad": 0.8,
+      "antal_pass": 28
+    },
+    {
+      "id": "B2",
+      "grad": 0.8,
+      "antal_pass": 29
+    },
+    {
+      "id": "C1",
+      "grad": 0.75,
+      "antal_pass": 28
+    },
+    {
+      "id": "C2",
+      "grad": 0.75,
+      "antal_pass": 29
+    },
+    {
+      "id": "N1",
+      "grad": 1.0,
+      "dygnsdelar": [
+        "natt"
+      ]
+    },
+    {
+      "id": "N2",
+      "grad": 1.0,
+      "dygnsdelar": [
+        "natt"
+      ]
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 15
+  },
+  "onskemal": [
+    {
+      "id": "O1",
+      "person": "A1",
+      "typ": "arbetar",
+      "dagindex": [
+        39,
+        40,
+        41,
+        0,
+        1,
+        2
+      ],
+      "krav": true
+    }
+  ]
+}

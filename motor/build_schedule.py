@@ -1,0 +1,681 @@
+#!/usr/bin/env python3
+"""Bygg ett cykliskt grundschema för vård och omsorg med OR-Tools CP-SAT.
+
+Användning:
+    python build_schedule.py indata.json [--ut schema.json] [--md schema.md] [--tid 20] [--tyst]
+
+Indata beskrivs i references/indata-schema.md. Modellen beskrivs i references/optimering.md.
+Hårda regler gäller alltid; målen optimeras lexikografiskt i ordningen
+vakanser → blocklängd → passlängd → rättvisa → önskemål.
+
+Exitkod: 0 = schema hittat, 1 = olösbart (kör explain_infeasibility.py), 2 = fel i indata.
+"""
+import argparse
+import json
+import math
+import sys
+
+try:
+    from ortools.sat.python import cp_model
+except ImportError:  # pragma: no cover
+    sys.exit("OR-Tools saknas. Installera med: pip install ortools --break-system-packages")
+
+DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
+DYGN = 24 * 60
+
+STANDARDREGLER = {
+    "dygnsvila_minuter": 660,
+    "veckovila_minuter": 2160,
+    "dygnsbryt": "auto",
+    "veckobryt": "mån 00:00",
+    "rast_grans_minuter": 300,
+    "rast_minuter": 30,
+    "pass_per_vecka": 4.75,
+    "morgon_start": "07:00",
+    "kvall_slut": "22:00",
+    "kant_fran": "12:00",
+    "kant_till": "18:00",
+    "steg_minuter": 15,
+    "block_min": 2,
+    "block_max": 5,
+    "block_rekommenderat": 4,
+    "helg_start": "fre 22:00",
+    "helg_slut": "mån 06:00",
+    "hel_helg": True,
+    "helgfrekvens": "2/4",
+    "ingen_fredagskvall_fore_ledig_helg": True,
+    "tolerans_minuter": 60,
+    "langd_band_minuter": 120,
+}
+MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa", "onskemal"]
+
+
+class IndataFel(Exception):
+    pass
+
+
+# ---------------------------------------------------------------- hjälpfunktioner
+
+def tid(s):
+    h, m = s.strip().split(":")
+    return int(h) * 60 + int(m)
+
+
+def klocka(m):
+    m = int(m) % DYGN
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def veckotid(s):
+    """'fre 22:00' -> minuter från måndag 00:00."""
+    dag, kl = s.split()
+    return DAGNAMN.index(dag) * DYGN + tid(kl)
+
+
+def netto_for(pa_plats, rg, rl):
+    """Arbetstid för ett pass med given tid på plats; None om passet inte kan förekomma."""
+    if pa_plats <= rg:
+        return pa_plats
+    if pa_plats - rl <= rg:
+        return None  # glappet: rast krävs men passet blir då kortare än gränsen
+    return pa_plats - rl
+
+
+def dagar_for_val(val, veckor, start_iso):
+    """Dagindex för ett önskemål: 'dagindex' eller 'dagar' + 'veckor'."""
+    if "dagindex" in val:
+        return [d % (veckor * 7) for d in val["dagindex"]]
+    dagar = val.get("dagar", DAGNAMN)
+    vv = val.get("veckor", "alla")
+    res = []
+    for w in range(veckor):
+        nummer = (start_iso + w) if start_iso else (w + 1)
+        if vv == "alla" or (vv == "jämna" and nummer % 2 == 0) or (vv == "udda" and nummer % 2 == 1) \
+                or (isinstance(vv, list) and (w + 1) in vv):
+            res += [w * 7 + DAGNAMN.index(d) for d in dagar]
+    return res
+
+
+def expandera_dagvarden(spec, standard):
+    """{'vardag': X, 'helg': Y, 'fre': Z} -> lista med 7 värden (mån..sön)."""
+    ut = [standard() for _ in range(7)]
+    for nyckel, varde in (spec or {}).items():
+        idx = {"vardag": range(5), "helg": range(5, 7), "alla": range(7)}.get(nyckel)
+        if idx is None:
+            if nyckel not in DAGNAMN:
+                raise IndataFel(f"Okänd dag: {nyckel}")
+            idx = [DAGNAMN.index(nyckel)]
+        for i in idx:
+            ut[i] = varde
+    return ut
+
+
+# ---------------------------------------------------------------- förberedelse
+
+def forbered(indata):
+    """Validera indata och räkna fram passmallar, mål och dagval. Returnerar ett 'problem'."""
+    r = dict(STANDARDREGLER)
+    r.update(indata.get("regler", {}))
+    W = indata["veckor"]
+    N = W * 7
+    cykliskt = indata.get("cykliskt", True)
+    heltid_std = indata.get("heltid_minuter_per_vecka", 2220)
+    rg, rl, steg = r["rast_grans_minuter"], r["rast_minuter"], r["steg_minuter"]
+
+    # passmallar
+    mallar = []
+    ms, ks = tid(r["morgon_start"]), tid(r["kvall_slut"])
+    kf, kt = tid(r["kant_fran"]), tid(r["kant_till"])
+    for slut in range(kf, kt + 1, steg):
+        n = netto_for(slut - ms, rg, rl)
+        if n:
+            mallar.append({"id": f"M{klocka(ms)}-{klocka(slut)}", "dygnsdel": "morgon", "start": ms, "slut": slut,
+                           "netto": n, "rast": (slut - ms) - n})
+    for start in range(kf, kt + 1, steg):
+        n = netto_for(ks - start, rg, rl)
+        if n:
+            mallar.append({"id": f"K{klocka(start)}-{klocka(ks)}", "dygnsdel": "kvall", "start": start, "slut": ks,
+                           "netto": n, "rast": (ks - start) - n})
+    for np_ in indata.get("nattpass", [{"id": "N", "start": "21:45", "slut": "07:15", "maltidsuppehall": True}]):
+        s, e = tid(np_["start"]), tid(np_["slut"])
+        if e <= s:
+            e += DYGN
+        rast = 0 if np_.get("maltidsuppehall", True) else (rl if e - s > rg else 0)
+        mallar.append({"id": np_.get("id", "N"), "dygnsdel": "natt", "start": s, "slut": e,
+                       "netto": e - s - rast, "rast": rast, "maltidsuppehall": np_.get("maltidsuppehall", True)})
+    for em in indata.get("extra_passmallar", []):
+        s, e = tid(em["start"]), tid(em["slut"])
+        if e <= s:
+            e += DYGN
+        rast = em.get("rast", rl if e - s > rg else 0)
+        mallar.append({"id": em["id"], "dygnsdel": em["dygnsdel"], "start": s, "slut": e,
+                       "netto": e - s - rast, "rast": rast})
+
+    # behov
+    behov = expandera_dagvarden(indata.get("behov"), dict)
+    tidpunkter = expandera_dagvarden(indata.get("tidpunkter"), list)
+
+    # delperioder
+    delp = indata.get("delperioder") or [W]
+    if sum(delp) != W:
+        raise IndataFel(f"Delperioderna ({delp}) summerar inte till {W} veckor.")
+
+    # personal
+    personer = []
+    sedda = set()
+    for p in indata["personal"]:
+        pid = p["id"]
+        if pid in sedda:
+            raise IndataFel(f"Personen {pid} finns två gånger.")
+        sedda.add(pid)
+        delar = p.get("dygnsdelar", ["morgon", "kvall"])
+        natt = delar == ["natt"]
+        heltid = p.get("heltid_minuter_per_vecka", heltid_std)
+        minuter_vecka = heltid * p["grad"]
+        tillatna = [i for i, m in enumerate(mallar) if m["dygnsdel"] in delar]
+        if natt:
+            nnet = min(mallar[i]["netto"] for i in tillatna)
+            mal_pass = p.get("antal_pass") or round(minuter_vecka * W / nnet)
+            tol = p.get("tolerans_minuter", max(r["tolerans_minuter"], math.ceil(nnet / 2)))
+        else:
+            mal_pass = p.get("antal_pass")
+            if mal_pass is None:
+                x = r["pass_per_vecka"] * W
+                if abs(x - round(x)) > 1e-9:
+                    raise IndataFel(
+                        f"{W} veckor × {r['pass_per_vecka']} pass = {x:g}, inte ett heltal. Använd en periodlängd "
+                        "som är en multipel av 4 veckor, eller ange antal_pass per person (t.ex. [28, 29] med "
+                        "delperioder [6, 6]).")
+                mal_pass = round(x)
+            tol = p.get("tolerans_minuter", r["tolerans_minuter"])
+        pass_lista = mal_pass if isinstance(mal_pass, list) else (
+            [mal_pass] if len(delp) == 1 else None)
+        if pass_lista is None:
+            # fördela totalen på delperioderna proportionellt
+            andelar = [mal_pass * v / W for v in delp]
+            pass_lista = [math.floor(a) for a in andelar]
+            for i in sorted(range(len(delp)), key=lambda i: -(andelar[i] - pass_lista[i]))[:mal_pass - sum(pass_lista)]:
+                pass_lista[i] += 1
+        if len(pass_lista) != len(delp):
+            raise IndataFel(f"{pid}: antal_pass har {len(pass_lista)} värden men det finns {len(delp)} delperioder.")
+        total_pass = sum(pass_lista)
+        mal_min = round(minuter_vecka * W)
+        mal_langd = mal_min / total_pass if total_pass else 0
+        if not natt:
+            band = r["langd_band_minuter"]
+            tillatna = [i for i in tillatna if abs(mallar[i]["netto"] - mal_langd) <= band]
+        if not tillatna:
+            raise IndataFel(f"{pid}: inga passmallar passar (dygnsdelar {delar}, mållängd {mal_langd:.0f} min).")
+        personer.append({
+            "id": pid, "grad": p["grad"], "dygnsdelar": delar, "natt": natt, "tillatna": tillatna,
+            "pass_delperioder": pass_lista, "mal_minuter": mal_min, "tolerans": tol, "mal_langd": mal_langd,
+            "helgfrekvens": p.get("helgfrekvens", r["helgfrekvens"]), "helggrupp": p.get("helggrupp"),
+        })
+
+    onskemal = []
+    for i, o in enumerate(indata.get("onskemal", [])):
+        o = dict(o)
+        o.setdefault("id", f"O{i + 1}")
+        if o["person"] not in sedda:
+            raise IndataFel(f"Önskemål {o['id']} gäller okänd person {o['person']}.")
+        o["_dagar"] = dagar_for_val(o, W, indata.get("start_iso_vecka"))
+        onskemal.append(o)
+
+    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov,
+            "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
+            "enhet": indata.get("enhet", "")}
+
+
+# ---------------------------------------------------------------- modell
+
+def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
+    """Bygg CP-SAT-modellen. Med antaganden=True får varje hård regelgrupp en egen
+    literal (för explain_infeasibility). Returnerar (modell, variabler, mål, grupper)."""
+    r, W, N, M = prob["r"], prob["W"], prob["N"], prob["mallar"]
+    cyk = prob["cykliskt"] if cykliskt is None else cykliskt
+    m = cp_model.CpModel()
+    grupper = {}  # namn -> literal
+
+    def lit(namn):
+        if not antaganden:
+            return []
+        if namn not in grupper:
+            grupper[namn] = m.new_bool_var(namn)
+        return [grupper[namn]]
+
+    def nasta(d, k=1):
+        return (d + k) % N if cyk else (d + k if d + k < N else None)
+
+    x, work = {}, {}
+    for pi, p in enumerate(prob["personer"]):
+        for d in range(N):
+            vs = []
+            for s in p["tillatna"]:
+                x[pi, d, s] = m.new_bool_var(f"x_{p['id']}_{d}_{s}")
+                vs.append(x[pi, d, s])
+            work[pi, d] = m.new_bool_var(f"w_{p['id']}_{d}")
+            m.add(sum(vs) == work[pi, d])  # högst ett pass per dag
+
+    hs = veckotid(r["helg_start"]) - 4 * DYGN   # minuter efter fredag 00:00
+    he = veckotid(r["helg_slut"])                # minuter efter måndag 00:00
+
+    for pi, p in enumerate(prob["personer"]):
+        pid = p["id"]
+        T = p["tillatna"]
+        # --- dygnsvila mellan pass (avtal): ett pass får inte följas av ett pass som börjar för tidigt
+        L = lit(f"DYGNSVILA|{pid}")
+        for d in range(N):
+            d2 = nasta(d)
+            if d2 is None:
+                continue
+            for slut in sorted({M[s]["slut"] for s in T}):
+                tidiga = [x[pi, d2, t] for t in T if M[t]["start"] + DYGN - slut < r["dygnsvila_minuter"]]
+                if tidiga:
+                    sena = [x[pi, d, s] for s in T if M[s]["slut"] >= slut]
+                    m.add(sum(sena) + sum(tidiga) <= 1).only_enforce_if(L)
+        # --- veckovila per kalendervecka (avtal; tillräckligt villkor, exakt kontroll i validate)
+        L = lit(f"VECKOVILA|{pid}")
+        grans = 2 * DYGN - r["veckovila_minuter"]
+        for w in range(W):
+            alt = []
+            dagar = list(range(w * 7, w * 7 + 7))
+            for k in range(6):  # två lediga dagar i följd
+                a = m.new_bool_var("")
+                m.add(work[pi, dagar[k]] == 0).only_enforce_if(a)
+                m.add(work[pi, dagar[k + 1]] == 0).only_enforce_if(a)
+                alt.append(a)
+            for k in range(1, 6):  # en ledig dag med tillräckligt tidigt slut före och sen start efter
+                b = m.new_bool_var("")
+                m.add(work[pi, dagar[k]] == 0).only_enforce_if(b)
+                for slut in sorted({M[s]["slut"] for s in T}):
+                    tidiga = [x[pi, dagar[k + 1], t] for t in T if slut - M[t]["start"] > grans]
+                    if tidiga:
+                        sena = [x[pi, dagar[k - 1], s] for s in T if M[s]["slut"] >= slut]
+                        m.add(sum(sena) + sum(tidiga) <= 1).only_enforce_if(b)
+                alt.append(b)
+            m.add_bool_or(alt).only_enforce_if(L)
+        # --- block (lokal regel)
+        L = lit(f"BLOCK_MIN|{pid}")
+        for d in range(N):
+            if not cyk and d in (0, N - 1):
+                continue
+            m.add(work[pi, d] <= work[pi, (d - 1) % N] + work[pi, (d + 1) % N]).only_enforce_if(L)
+        L = lit(f"BLOCK_MAX|{pid}")
+        bm = r["block_max"]
+        for d in range(N if cyk else N - bm):
+            fonster = [work[pi, (d + k) % N] for k in range(bm + 1)]
+            m.add(sum(fonster) <= bm).only_enforce_if(L)
+        # --- helger (lokal regel)
+        L = lit(f"HELG|{pid}")
+        jobbar = []
+        for w in range(W):
+            fre, lor, son = w * 7 + 4, w * 7 + 5, w * 7 + 6
+            man = nasta(w * 7 + 6)
+            hw = m.new_bool_var(f"helg_{pid}_{w}")
+            jobbar.append(hw)
+            # ledig helg: inget pass som går in i helgfönstret
+            in_fre = [x[pi, fre, s] for s in T if M[s]["slut"] > hs
+                      or (r["ingen_fredagskvall_fore_ledig_helg"] and M[s]["dygnsdel"] in ("kvall", "natt"))]
+            in_man = [x[pi, man, s] for s in T if man is not None and M[s]["start"] < he]
+            for v in in_fre + in_man + [work[pi, lor], work[pi, son]]:
+                m.add(v == 0).only_enforce_if([hw.Not()] + L)
+            if r["hel_helg"]:
+                m.add(work[pi, lor] == 1).only_enforce_if([hw] + L)
+                m.add(work[pi, son] == 1).only_enforce_if([hw] + L)
+            else:
+                m.add(work[pi, lor] + work[pi, son] >= 1).only_enforce_if([hw] + L)
+        f = p["helgfrekvens"]
+        if f == "2/4":
+            if cyk and W % 2:
+                raise IndataFel(f"Varannan helg kräver ett jämnt antal veckor i ett cykliskt schema ({W}).")
+            p["_grupp"] = m.new_bool_var(f"grupp_{pid}")  # sann = grupp A (vecka 1, 3, 5 …)
+            if p.get("helggrupp") in ("A", "B"):
+                m.add(p["_grupp"] == (1 if p["helggrupp"] == "A" else 0))
+            for w, hw in enumerate(jobbar):
+                if w % 2 == 0:
+                    m.add(hw == p["_grupp"]).only_enforce_if(L)
+                else:
+                    m.add(hw == p["_grupp"].Not()).only_enforce_if(L)
+        elif f in ("alla", "4/4"):
+            for hw in jobbar:
+                m.add(hw == 1).only_enforce_if(L)
+        elif f in ("ingen", "0/4"):
+            for hw in jobbar:
+                m.add(hw == 0).only_enforce_if(L)
+        else:
+            t, n = map(int, f.split("/"))
+            antal = W * t / n
+            if abs(antal - round(antal)) > 1e-9:
+                raise IndataFel(f"{pid}: helgfrekvens {f} ger {antal:g} helger på {W} veckor.")
+            m.add(sum(jobbar) == round(antal)).only_enforce_if(L)
+        p["_helg"] = jobbar
+        # --- antal pass per delperiod (kontrakt)
+        L = lit(f"ANTAL_PASS|{pid}")
+        start = 0
+        for v, antal in zip(prob["delperioder"], p["pass_delperioder"]):
+            dagar = range(start * 7, (start + v) * 7)
+            uttr = sum(work[pi, d] for d in dagar)
+            m.add(uttr == antal).only_enforce_if(L)
+            start += v
+        # --- kontrakterad tid (kontrakt)
+        if utan_tid:
+            p["_avv"] = None
+            continue
+        L = lit(f"TID|{pid}")
+        tot = sum(x[pi, d, s] * M[s]["netto"] for d in range(N) for s in T)
+        avv = m.new_int_var(0, 100000, f"tidavvikelse_{pid}")
+        m.add(avv >= tot - p["mal_minuter"])
+        m.add(avv >= p["mal_minuter"] - tot)
+        p["_avv"] = avv
+        for c in (tot >= p["mal_minuter"] - p["tolerans"], tot <= p["mal_minuter"] + p["tolerans"]):
+            m.add(c).only_enforce_if(L)
+
+    # balanserade helggrupper (bryter symmetri)
+    for natt in (False, True):
+        fria = [p for p in prob["personer"] if p["natt"] == natt and p["helgfrekvens"] == "2/4"]
+        if len(fria) >= 2:
+            n = len(fria)
+            m.add(sum(p["_grupp"] for p in fria) >= n // 2)
+            m.add(sum(p["_grupp"] for p in fria) <= (n + 1) // 2)
+            # lås en person utan önskemål i grupp A, så att lösaren inte behöver pröva spegelvända lösningar
+            med_onskemal = {o["person"] for o in prob["onskemal"]}
+            utan = [p for p in fria if p["id"] not in med_onskemal]
+            if utan and not any(p.get("helggrupp") for p in fria):
+                m.add(utan[0]["_grupp"] == 1)
+
+    # --- önskemål
+    pidx = {p["id"]: i for i, p in enumerate(prob["personer"])}
+    onsk_straff = []
+    for o in prob["onskemal"]:
+        pi = pidx[o["person"]]
+        T = prob["personer"][pi]["tillatna"]
+        krav = o.get("krav", False)
+        L = lit(f"KRAV|{o['id']}") if krav else []
+        vikt = int(o.get("vikt", 1))
+        for d in o["_dagar"]:
+            typ = o["typ"]
+            if typ == "ledig":
+                brott = [work[pi, d]]
+            elif typ == "arbetar":
+                brott = [work[pi, d].Not()]
+            elif typ == "tidigast_start":
+                brott = [x[pi, d, s] for s in T if M[s]["start"] < tid(o["varde"])]
+            elif typ == "senast_slut":
+                brott = [x[pi, d, s] for s in T if M[s]["slut"] > tid(o["varde"])]
+            elif typ == "endast_dygnsdel":
+                ok = o["varde"] if isinstance(o["varde"], list) else [o["varde"]]
+                brott = [x[pi, d, s] for s in T if M[s]["dygnsdel"] not in ok]
+            else:
+                raise IndataFel(f"Okänd önskemålstyp: {typ}")
+            for b in brott:
+                if krav:
+                    m.add(b == 0).only_enforce_if(L)
+                else:
+                    onsk_straff.append(vikt * b)
+
+    # --- mål
+    mal = {}
+    vak = []
+    for d in range(N):
+        wd = d % 7
+        for del_, antal in prob["behov"][wd].items():
+            if not antal:
+                continue
+            tack = [x[pi, d, s] for pi, p in enumerate(prob["personer"]) for s in p["tillatna"]
+                    if M[s]["dygnsdel"] == del_]
+            v = m.new_int_var(0, antal, f"vak_{d}_{del_}")
+            m.add(sum(tack) + v >= antal)
+            vak.append((v, d, del_, None))
+        for tp in prob["tidpunkter"][wd]:
+            t = tid(tp["tid"])
+            tack = []
+            for pi, p in enumerate(prob["personer"]):
+                for s in p["tillatna"]:
+                    if M[s]["start"] <= t < M[s]["slut"]:
+                        tack.append(x[pi, d, s])
+                    dp = (d - 1) % N if cyk else d - 1
+                    if dp >= 0 and M[s]["start"] <= t + DYGN < M[s]["slut"]:
+                        tack.append(x[pi, dp, s])
+            v = m.new_int_var(0, tp["antal"], f"vakt_{d}_{tp['tid']}")
+            m.add(sum(tack) + v >= tp["antal"])
+            vak.append((v, d, None, tp["tid"]))
+    mal["vakanser"] = sum(v for v, *_ in vak)
+
+    rek = r["block_rekommenderat"]
+    over = []
+    for pi in range(len(prob["personer"])):
+        for d in range(N if cyk else N - rek):
+            fonster = [work[pi, (d + k) % N] for k in range(rek + 1)]
+            b = m.new_bool_var("")
+            m.add(sum(fonster) <= rek).only_enforce_if(b.Not())
+            over.append(b)
+    mal["blocklangd"] = sum(over)
+
+    # passlängd: avvikelse från mållängd per pass plus avvikelse från kontrakterad tid, i minuter
+    mal["passlangd"] = sum(x[pi, d, s] * int(round(abs(M[s]["netto"] - p["mal_langd"])))
+                           for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"]) \
+        + sum(p["_avv"] for p in prob["personer"] if p.get("_avv") is not None)
+
+    rattvisa = []
+    for del_ in ("kvall", "morgon"):
+        grupp = [pi for pi, p in enumerate(prob["personer"]) if "morgon" in p["dygnsdelar"] and "kvall" in p["dygnsdelar"]]
+        if len(grupp) >= 2:
+            antal = []
+            for pi in grupp:
+                a = m.new_int_var(0, N, "")
+                m.add(a == sum(x[pi, d, s] for d in range(N) for s in prob["personer"][pi]["tillatna"]
+                               if M[s]["dygnsdel"] == del_))
+                antal.append(a)
+            hi, lo = m.new_int_var(0, N, ""), m.new_int_var(0, N, "")
+            m.add_max_equality(hi, antal)
+            m.add_min_equality(lo, antal)
+            rattvisa.append(hi - lo)
+    mal["rattvisa"] = sum(rattvisa) if rattvisa else 0
+    mal["onskemal"] = sum(onsk_straff) if onsk_straff else 0
+
+    var = {"x": x, "work": work, "vak": vak}
+    return m, var, mal, grupper
+
+
+# ---------------------------------------------------------------- lösning
+
+def monsterproblem(prob):
+    """Förenklad kopia för fas 1: per person och dygnsdel bara kortaste, längsta och
+    mållängdens passmall. Med fasta morgonstarter och kvällsslut avgör dygnsdelen nästan
+    helt vilken vila som går, så ett mönster härifrån kan fyllas med rätt längder i fas 2."""
+    import copy
+    enkel = copy.deepcopy(prob)
+    M = prob["mallar"]
+    for p in enkel["personer"]:
+        val = set()
+        for del_ in p["dygnsdelar"]:
+            kand = [s for s in p["tillatna"] if M[s]["dygnsdel"] == del_]
+            if kand:
+                val.add(min(kand, key=lambda s: M[s]["netto"]))
+                val.add(max(kand, key=lambda s: M[s]["netto"]))
+                val.add(min(kand, key=lambda s: abs(M[s]["netto"] - p["mal_langd"])))
+        p["tillatna"] = sorted(val)
+    return enkel
+
+
+def lexikografiskt(m, var, mal, ordning, tid_s, arbetare, tyst, etikett=""):
+    """Optimera målen i tur och ordning och lås varje nivå innan nästa."""
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = tid_s
+    solver.parameters.num_workers = arbetare
+    steg, senast = [], None
+    for namn in ordning:
+        uttr = mal[namn]
+        if isinstance(uttr, int):
+            continue
+        m.clear_objective()
+        m.minimize(uttr)
+        status = solver.solve(m)
+        if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            if senast is None:
+                return None, status
+            break
+        varde = int(round(solver.objective_value))
+        steg.append({"fas": etikett.rstrip(" –") or "hela", "mal": namn, "varde": varde, "status": solver.status_name(status),
+                     "grans": int(round(solver.best_objective_bound))})
+        if not tyst:
+            print(f"  {etikett}{namn}: {varde} ({solver.status_name(status).lower()})", file=sys.stderr)
+        m.add(uttr <= varde)
+        m.clear_hints()
+        for v in list(var["x"].values()) + list(var["work"].values()):
+            m.add_hint(v, solver.value(v))
+        senast = {k: solver.value(v) for k, v in var["x"].items()}
+    return (steg, senast), status
+
+
+def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
+    M, N = prob["mallar"], prob["N"]
+    # Fas 1: arbetsmönster (vilka dagar och vilken dygnsdel) med alla hårda regler utom exakt arbetstid.
+    enkel = monsterproblem(prob)
+    m1, var1, mal1, _ = bygg_modell(enkel, utan_tid=True)
+    r1, status1 = lexikografiskt(m1, var1, mal1, ["vakanser", "blocklangd", "rattvisa", "onskemal"],
+                                 tid_per_steg, arbetare, tyst, "mönster – ")
+    if r1 is None and status1 == cp_model.INFEASIBLE:
+        # Mönstermodellen har färre passlängder. Kontrollera med alla längder (utan exakt arbetstid)
+        # innan schemat förklaras olösbart.
+        mk, _, _, _ = bygg_modell(prob, utan_tid=True)
+        kontroll = cp_model.CpSolver()
+        kontroll.parameters.max_time_in_seconds = tid_per_steg
+        kontroll.parameters.num_workers = arbetare
+        if kontroll.solve(mk) == cp_model.INFEASIBLE:
+            return {"status": "INFEASIBLE", "steg": [], "orsak":
+                    "De hårda reglerna kan inte uppfyllas samtidigt. Kör explain_infeasibility.py "
+                    "för att se vilka regler som krockar."}
+    m2, var2, mal2, _ = bygg_modell(prob)
+    if r1:
+        monster = {(pi, d): M[s]["dygnsdel"] for (pi, d, s), v in r1[1].items() if v}
+        # Fas 2: lås mönstret och välj passlängder som ger rätt arbetstid.
+        for pi, p in enumerate(prob["personer"]):
+            for d in range(N):
+                del_ = monster.get((pi, d))
+                m2.add(var2["work"][pi, d] == (1 if del_ else 0))
+                if del_:
+                    m2.add(sum(var2["x"][pi, d, s] for s in p["tillatna"] if M[s]["dygnsdel"] == del_) == 1)
+        r2, status2 = lexikografiskt(m2, var2, mal2, ["vakanser", "passlangd", "onskemal"],
+                                     tid_per_steg, arbetare, tyst, "längder – ")
+        if r2:
+            return slutresultat(prob, var2, mal2, r2[1], r1[0] + r2[0])
+        m2, var2, mal2, _ = bygg_modell(prob)  # mönstret gick inte att fylla: lös fritt nedan
+    # Reserv: hela modellen på en gång.
+    r3, status3 = lexikografiskt(m2, var2, mal2, MALORDNING, tid_per_steg * 2, arbetare, tyst, "hela – ")
+    if r3:
+        return slutresultat(prob, var2, mal2, r3[1], r3[0])
+    namn = "INFEASIBLE" if status3 == cp_model.INFEASIBLE else "UNKNOWN"
+    return {"status": namn, "steg": [], "orsak":
+            "Inget schema uppfyller de hårda reglerna. Kör explain_infeasibility.py." if namn == "INFEASIBLE"
+            else "Inget schema hittades inom tidsgränsen. Öka --tid, eller kör explain_infeasibility.py "
+                 "för att se om reglerna krockar."}
+
+
+def slutresultat(prob, var, mal, xvarden, steg):
+    """Räkna om alla mål på den slutliga lösningen så att KPI:erna stämmer."""
+    # utvärdera målen genom att fixera x och lösa en trivial modell
+    mm, v2, mal2, _ = bygg_modell(prob)
+    for k, v in v2["x"].items():
+        mm.add(v == xvarden[k])
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 30
+    kpi = {}
+    for namn in MALORDNING:
+        if isinstance(mal2[namn], int):
+            kpi[namn] = 0
+            continue
+        mm.clear_objective()
+        mm.minimize(mal2[namn])
+        solver.solve(mm)
+        kpi[namn] = int(round(solver.objective_value))
+        mm.add(mal2[namn] <= kpi[namn])
+    return tolka(prob, solver, v2, steg, kpi)
+
+
+def tolka(prob, solver, var, steg, kpi_mal):
+    M, N = prob["mallar"], prob["N"]
+    schema = {}
+    for pi, p in enumerate(prob["personer"]):
+        rad = []
+        for d in range(N):
+            pass_ = None
+            for s in p["tillatna"]:
+                if solver.value(var["x"][pi, d, s]):
+                    mm = M[s]
+                    pass_ = {"mall": mm["id"], "dygnsdel": mm["dygnsdel"], "start": klocka(mm["start"]),
+                             "slut": klocka(mm["slut"]), "rast": mm["rast"], "netto": mm["netto"]}
+                    if mm.get("maltidsuppehall"):
+                        pass_["maltidsuppehall"] = True
+            rad.append(pass_)
+        schema[p["id"]] = rad
+    vakanser = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "tid": t,
+                 "antal": solver.value(v)} for v, d, del_, t in var["vak"] if solver.value(v)]
+    kpi = dict(kpi_mal)
+    kpi["vakanta_pass"] = sum(v["antal"] for v in vakanser if v["dygnsdel"])
+    kpi["vakanta_tidpunkter"] = sum(v["antal"] for v in vakanser if v["tid"])
+    personer = {}
+    for p in prob["personer"]:
+        rad = [x for x in schema[p["id"]] if x]
+        personer[p["id"]] = {"pass": len(rad), "minuter": sum(x["netto"] for x in rad),
+                             "mal_minuter": p["mal_minuter"], "kvallspass": sum(x["dygnsdel"] == "kvall" for x in rad),
+                             "helggrupp": ("A" if solver.value(p["_grupp"]) else "B") if "_grupp" in p else None}
+    return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"],
+            "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "schema": schema}
+
+
+def markdown(res):
+    rad = [f"# Grundschema {res.get('enhet', '')} – {res['veckor']} veckor", ""]
+    rad += ["| Mål | Värde |", "|---|---|"]
+    rad += [f"| {k} | {v} |" for k, v in res["kpi"].items()]
+    for w in range(res["veckor"]):
+        rad += ["", f"## Vecka {w + 1}", "", "| Person | " + " | ".join(DAGNAMN) + " |", "|---|" + "---|" * 7]
+        for pid, dagar in res["schema"].items():
+            celler = []
+            for p in dagar[w * 7:w * 7 + 7]:
+                celler.append("" if not p else ("N" if p["dygnsdel"] == "natt" else f"{p['start']}–{p['slut']}"))
+            rad.append(f"| {pid} | " + " | ".join(celler) + " |")
+    if res["vakanser"]:
+        rad += ["", "## Vakanser"] + [f"- Vecka {v['vecka']} {v['veckodag']}: {v['antal']} "
+                                     + (v["dygnsdel"] or f"kl {v['tid']}") for v in res["vakanser"]]
+    rad += ["", "## Per person", "", "| Person | Pass | Arbetstid | Mål | Kvällspass | Helggrupp |",
+            "|---|---|---|---|---|---|"]
+    for pid, k in res["personer"].items():
+        rad.append(f"| {pid} | {k['pass']} | {k['minuter'] // 60} h {k['minuter'] % 60:02d} | "
+                   f"{k['mal_minuter'] // 60} h {k['mal_minuter'] % 60:02d} | {k['kvallspass']} | {k['helggrupp'] or '–'} |")
+    return "\n".join(rad)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("indata")
+    ap.add_argument("--ut", help="spara resultatet som JSON")
+    ap.add_argument("--md", help="spara schemat som markdown")
+    ap.add_argument("--tid", type=float, help="sekunder per optimeringssteg (standard 20)")
+    ap.add_argument("--tyst", action="store_true")
+    a = ap.parse_args()
+    with open(a.indata, encoding="utf-8") as f:
+        indata = json.load(f)
+    try:
+        prob = forbered(indata)
+        cfg = indata.get("losare", {})
+        import os
+        res = los(prob, a.tid or cfg.get("tid_per_steg_s", 20), cfg.get("arbetare", min(8, os.cpu_count() or 1)), a.tyst)
+    except IndataFel as e:
+        print(json.dumps({"status": "INDATAFEL", "orsak": str(e)}, ensure_ascii=False, indent=2))
+        sys.exit(2)
+    if a.ut:
+        with open(a.ut, "w", encoding="utf-8") as f:
+            json.dump(res, f, ensure_ascii=False, indent=2)
+    if a.md and res["status"] == "OK":
+        with open(a.md, "w", encoding="utf-8") as f:
+            f.write(markdown(res))
+    sammandrag = {k: res[k] for k in ("status", "steg", "kpi") if k in res}
+    if res["status"] != "OK":
+        sammandrag["orsak"] = res.get("orsak")
+    print(json.dumps(sammandrag, ensure_ascii=False, indent=2))
+    sys.exit(0 if res["status"] == "OK" else 1)
+
+
+if __name__ == "__main__":
+    main()

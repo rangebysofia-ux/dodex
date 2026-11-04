@@ -1,0 +1,61 @@
+{
+  "beskrivning": "Helgrotation: åtta med dag/kväll på fyra veckor. Två har fast helggrupp (A och B), en arbetar tre helger av fyra, en arbetar inga helger, övriga varannan helg med grupp som väljs av lösaren. Ska gå att lösa, och granskningen ska visa att varje person följer sin helgfrekvens.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true
+  },
+  "enhet": "Test – helgrotation",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "H1",
+      "grad": 1.0,
+      "helggrupp": "A"
+    },
+    {
+      "id": "H2",
+      "grad": 1.0,
+      "helggrupp": "B"
+    },
+    {
+      "id": "H3",
+      "grad": 1.0
+    },
+    {
+      "id": "H4",
+      "grad": 0.9
+    },
+    {
+      "id": "H5",
+      "grad": 0.8
+    },
+    {
+      "id": "H6",
+      "grad": 0.75,
+      "helgfrekvens": "3/4"
+    },
+    {
+      "id": "H7",
+      "grad": 1.0,
+      "helgfrekvens": "ingen"
+    },
+    {
+      "id": "H8",
+      "grad": 0.85
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "namn": "Standardprofil dygnet runt – Kommunal (HÖK/AB)",
+  "version": "2026-11-04",
+  "beskrivning": "Grundprofil för cykliska grundscheman i dygnet runt-verksamhet inom äldreomsorg och funktionsstöd. Kopiera och justera per verksamhet.",
+  "heltid_minuter_per_vecka": 2220,
+  "nivaer": {
+    "lag": "Arbetstidslagen. Får aldrig brytas.",
+    "avtal": "Kollektivavtal (AB/HÖK). Får aldrig brytas.",
+    "kontrakt": "Löften till medarbetaren: anställningens omfattning och antal pass.",
+    "verksamhet": "Brukarnas behov av bemanning per kvart.",
+    "lokal": "Lokalt beslutade regler för verksamheten.",
+    "princip": "Planeringsprinciper för hur schemat ska se ut.",
+    "onskemal": "Enskilda medarbetares önskemål."
+  },
+  "prioritetsordning": [
+    "DYGNSVILA",
+    "VECKOVILA",
+    "RAST",
+    "ANTAL_PASS",
+    "KONTRAKTERAD_TID",
+    "BEHOV",
+    "HELG",
+    "FREDAGSKVALL",
+    "BLOCK_GRANSER",
+    "PASSFONSTER",
+    "BLOCK_REKOMMENDERAT",
+    "PASSLANGD_MAL",
+    "RATTVISA",
+    "ONSKEMAL"
+  ],
+  "regler": [
+    {
+      "id": "DYGNSVILA",
+      "niva": "avtal",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "minuter": 660,
+        "dygnsbryt": "auto"
+      },
+      "forklaring": "Minst 11 timmars sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Dygnsbrytet föreslås där flest pass slutar och börjar, i regel vid skiftbytet mitt på dagen (oftast kring 15 för heltid). Värdet 'auto' betyder att förslaget räknas fram; ett fast klockslag används när verksamheten har bestämt det. Samma dygnsbryt ska gälla hela beräkningsperioden.",
+      "kalla": "AB (lydelse 2025-04-01) enligt SKR"
+    },
+    {
+      "id": "VECKOVILA",
+      "niva": "avtal",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "minuter": 2160,
+        "veckobryt": "mån 00:00"
+      },
+      "forklaring": "Minst 36 timmars sammanhängande vila per sjudagarsperiod, räknat från veckobrytet.",
+      "kalla": "AB (lydelse 2025-04-01) enligt SKR"
+    },
+    {
+      "id": "RAST",
+      "niva": "lag",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "grans_minuter": 300,
+        "standardlangd_minuter": 30,
+        "standardtyp": "obetald"
+      },
+      "forklaring": "Pass med mer än 5 timmars arbetstid får rast om inget annat anges i passmallen. Rasten placeras så att ingen arbetsdel före eller efter blir längre än 5 timmar. En passmall kan i stället ange måltidsuppehåll (betalt, räknas som arbetstid) eller annan rastlängd.",
+      "kalla": "Arbetstidslagen, högst 5 timmar i följd utan rast"
+    },
+    {
+      "id": "ANTAL_PASS",
+      "niva": "kontrakt",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "pass_per_vecka": 4.75,
+        "galler_dygnsdelar": [
+          "morgon",
+          "kvall"
+        ]
+      },
+      "forklaring": "Alla med dag- och kvällstjänstgöring arbetar i snitt 4,75 pass per vecka oavsett sysselsättningsgrad. Antalet pass väger tyngre än passens längd: längden anpassas, antalet ligger fast. Nattpersonal med fast passlängd räknas i stället fram från veckoarbetstid och nattpassets längd.",
+      "kalla": "Verksamhetens planeringsprincip"
+    },
+    {
+      "id": "KONTRAKTERAD_TID",
+      "niva": "kontrakt",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "tolerans_minuter_per_period": 60
+      },
+      "forklaring": "Summan av arbetstid över perioden ska motsvara sysselsättningsgraden. Avrundning till kvartssteg jämnas ut mot timbanken inom toleransen.",
+      "kalla": "Anställningsavtal"
+    },
+    {
+      "id": "BEHOV",
+      "niva": "verksamhet",
+      "typ": "mjuk",
+      "status": "beslutad",
+      "varde": {
+        "enhet": "minut vakans"
+      },
+      "forklaring": "Behovet avgör allt som går att ändra. Det är högsta mjuka nivå: när personalen inte räcker blir resultatet en synlig vakans med förklaring, aldrig ett avtalsbrott.",
+      "kalla": "Verksamhetens beslut"
+    },
+    {
+      "id": "HELG",
+      "niva": "lokal",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "frekvens": "2/4",
+        "strikt_vaxling": true,
+        "start": "fre 22:00",
+        "slut": "mån 06:00"
+      },
+      "forklaring": "Varannan helg. Ett pass räknas som helgarbete om någon del av det ligger i helgfönstret.",
+      "kalla": "Lokal regel"
+    },
+    {
+      "id": "FREDAGSKVALL",
+      "niva": "lokal",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "galler_dygnsdelar": [
+          "kvall",
+          "natt"
+        ]
+      },
+      "forklaring": "Den som är ledig helgen arbetar inte kväll eller natt fredagen innan. Följd: fredagskvällar kan bara bemannas av helggruppen, och eftersom kväll inte får följas av morgon blir fredagskvällarna begränsade av antalet kvällspass på lördagen.",
+      "kalla": "Lokal regel"
+    },
+    {
+      "id": "BLOCK_GRANSER",
+      "niva": "lokal",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "min_arbetsdagar_i_rad": 2,
+        "max_arbetsdagar_i_rad": 5
+      },
+      "forklaring": "Inga enstaka arbetsdagar. Aldrig mer än 5 arbetsdagar i följd.",
+      "kalla": "Lokal regel"
+    },
+    {
+      "id": "BLOCK_REKOMMENDERAT",
+      "niva": "princip",
+      "typ": "mjuk",
+      "status": "beslutad",
+      "varde": {
+        "rekommenderat_max_i_rad": 4
+      },
+      "forklaring": "Helst högst 4 arbetsdagar i följd.",
+      "kalla": "Planeringsprincip"
+    },
+    {
+      "id": "PASSFONSTER",
+      "niva": "princip",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "morgon_start": "07:00",
+        "kvall_slut": "22:00",
+        "rorlig_kant_fran": "12:00",
+        "rorlig_kant_till": "18:00",
+        "steg_minuter": 15
+      },
+      "forklaring": "Morgonpass börjar på fast tid och slutar inom fönstret. Kvällspass slutar på fast tid och börjar inom fönstret. Passens längd anpassas bara i fönstret.",
+      "kalla": "Planeringsprincip"
+    },
+    {
+      "id": "PASSLANGD_MAL",
+      "niva": "princip",
+      "typ": "mjuk",
+      "status": "beslutad",
+      "varde": {
+        "formel": "veckoarbetstid / pass_per_vecka"
+      },
+      "forklaring": "Målängden per pass följer sysselsättningsgraden. Enskilda pass får avvika så länge antal pass och total tid stämmer; avvikelse straffas lätt.",
+      "kalla": "Planeringsprincip"
+    },
+    {
+      "id": "PERIODLANGD",
+      "niva": "princip",
+      "typ": "hard",
+      "status": "beslutad",
+      "varde": {
+        "multipel_av_veckor": 4
+      },
+      "forklaring": "4,75 pass per vecka ger ett helt antal pass bara när perioden är en multipel av 4 veckor (19, 38, 57 pass).",
+      "kalla": "Följer av ANTAL_PASS"
+    },
+    {
+      "id": "RATTVISA",
+      "niva": "princip",
+      "typ": "mjuk",
+      "status": "beslutad",
+      "varde": {
+        "fordela": [
+          "kvallspass",
+          "helgpass",
+          "nattpass"
+        ]
+      },
+      "forklaring": "Fördela varje passtyp för sig, aldrig som summa av flera passtyper.",
+      "kalla": "Planeringsprincip"
+    },
+    {
+      "id": "ONSKEMAL",
+      "niva": "onskemal",
+      "typ": "mjuk",
+      "status": "beslutad",
+      "varde": {},
+      "forklaring": "Matas in strukturerat (dagar, veckor, passtyp, tider, krav eller önskemål) och godkänns av schemaläggaren innan generering.",
+      "kalla": "Medarbetare"
+    },
+    {
+      "id": "RAPPORT_OVERLAPP",
+      "niva": "lokal",
+      "typ": "hard",
+      "status": "forslag",
+      "varde": {
+        "minuter": 30
+      },
+      "forklaring": "Minsta överlappning mellan sista morgonpass och första kvällspass för överrapportering. Inte beslutad.",
+      "kalla": "Förslag"
+    },
+    {
+      "id": "UNDER_FONSTERGRANS",
+      "niva": "princip",
+      "typ": "hard",
+      "status": "oppen_fraga",
+      "varde": {
+        "alternativ": [
+          "farre_pass",
+          "kortare_kvallspass_efter_18"
+        ]
+      },
+      "forklaring": "Hur personer med så låg sysselsättningsgrad att 4,75 pass inte ryms i fönstret ska hanteras. Inte beslutad.",
+      "kalla": "Öppen fråga"
+    }
+  ]
+}
