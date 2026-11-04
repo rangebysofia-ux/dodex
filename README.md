@@ -15,6 +15,14 @@ python -m schemamotor.explain tests/fall/wraparound_failure.json
 
 Efter `pip install -e .` finns samma kommandon även som `schema-build`, `schema-validate`, `schema-explain` och `schema-compare`.
 
+## Förhandsvisning i webbläsaren
+
+```bash
+python -m schemamotor.webb --port 8000
+```
+
+Öppna http://127.0.0.1:8000. Välj ett testfall eller fyll i behov och personal, och klicka på *Lägg schema*. Sidan visar schemat vecka för vecka, vakanser, nyckeltal och granskningen, och förklarar varför när schemat inte går att lägga. Den använder bara Pythons standardbibliotek och är en enkel föregångare till punkt 5–7 i färdplanen.
+
 ## Dokumentation
 
 - `docs/regelhierarki.md` – vilka regler som gäller och i vilken ordning de väger

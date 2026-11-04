@@ -10,6 +10,7 @@ schema-build = "schemamotor.build:main"
 schema-validate = "schemamotor.validate:main"
 schema-explain = "schemamotor.explain:main"
 schema-compare = "schemamotor.compare:main"
+schema-webb = "schemamotor.webb:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
@@ -20,6 +21,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["schemamotor"]
+
+[tool.setuptools.package-data]
+schemamotor = ["*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
