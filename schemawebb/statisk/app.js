@@ -22,7 +22,7 @@ const REGLER = [
   { k: "rast_minuter", namn: "Rastens längd", niva: "lag", typ: "hård", visa: v => v + " min", last: true, std: 30 },
   { k: "dygnsbryt", namn: "Dygnsbryt", niva: "avtal", typ: "hård", visa: v => v === "auto" ? "föreslås automatiskt" : v, last: true, std: "auto" },
   { k: "pass_per_vecka", namn: "Pass per vecka, dag och kväll", niva: "lokal regel", typ: "hård", falt: "tal", steg: 0.25, std: 4.75 },
-  { k: "helgfrekvens", namn: "Helger som standard", niva: "lokal regel", typ: "hård", falt: "val", val: HELGER, std: "2/4" },
+  { k: "helgfrekvens", namn: "Varannan helg", niva: "lokal regel", typ: "hård", visa: () => "låst för enheten", last: true, std: "2/4" },
   { k: "hel_helg", namn: "Arbetshelg är både lördag och söndag", niva: "lokal regel", typ: "hård", falt: "check", std: true },
   { k: "ingen_fredagskvall_fore_ledig_helg", namn: "Ingen fredagskväll före ledig helg", niva: "lokal regel", typ: "hård", falt: "check", std: true },
   { k: "block_min", namn: "Minst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 2 },
@@ -178,13 +178,14 @@ function ritaFlik() {
           <td data-l="Id"><input data-s="personal.${n}.id" value="${esc(p.id)}" style="width:64px" aria-label="Id"></td>
           <td data-l="Grad %"><input data-s="personal.${n}.grad" data-t="procent" type="number" inputmode="numeric" min="10" max="100" step="5" value="${Math.round((p.grad ?? 1) * 100)}" style="width:70px" aria-label="Sysselsättningsgrad"></td>
           <td data-l="Arbetar"><select data-s="personal.${n}.dygnsdelar" data-t="dygnsdelar" aria-label="Arbetar">${Object.entries(ARBETAR).map(([v, t]) => `<option value="${v}"${v === del ? " selected" : ""}>${t}</option>`).join("")}</select></td>
-          <td data-l="Helger"><select data-s="personal.${n}.helgfrekvens" data-t="valfri" aria-label="Helger"><option value="">Standard</option>${Object.entries(HELGER).map(([v, t]) => `<option value="${v}"${v === p.helgfrekvens ? " selected" : ""}>${t}</option>`).join("")}</select></td>
+          <td data-l="Helger"><select data-s="personal.${n}.helgfrekvens" data-t="valfri" aria-label="Helger"${p.helgfrekvens && p.helgfrekvens !== "2/4" ? ' class="undantag"' : ""}><option value="">Varannan</option>${Object.entries(HELGER).filter(([v]) => v !== "2/4").map(([v, t]) => `<option value="${v}"${v === p.helgfrekvens ? " selected" : ""}>Undantag: ${t.toLowerCase()}</option>`).join("")}</select></td>
           <td data-l="Helggrupp"><select data-s="personal.${n}.helggrupp" data-t="valfri" aria-label="Helggrupp"><option value="">Auto</option><option${p.helggrupp === "A" ? " selected" : ""}>A</option><option${p.helggrupp === "B" ? " selected" : ""}>B</option></select></td>
           <td data-l="Antal pass"><input data-s="personal.${n}.antal_pass" data-t="pass" value="${esc(Array.isArray(p.antal_pass) ? p.antal_pass.join(", ") : p.antal_pass ?? "")}" placeholder="auto" style="width:64px" aria-label="Antal pass"></td>
           <td class="bort"><button class="liten fara" data-g="ta-bort-person" data-n="${n}" aria-label="Ta bort ${esc(p.id)}">×</button></td></tr>`;
       }).join("")}</tbody></table></div>
       <p style="margin-top:10px"><button data-g="ny-person">+ Lägg till person</button> <button data-g="ny-person" data-natt="1">+ Nattperson</button></p>
-      <p class="dampad liten">Helggrupp A arbetar helgerna i vecka 1, 3, 5 …, grupp B i vecka 2, 4, 6 … Auto låter lösaren välja med lika många i varje grupp.</p>`;
+      ${undantagText()}
+      <p class="dampad liten">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person under Helger, till exempel för den som enligt sitt kontrakt inte arbetar helg. Helggrupp A arbetar helgerna i vecka 1, 3, 5 …, grupp B i vecka 2, 4, 6 … Auto låter lösaren välja med lika många i varje grupp.</p>`;
 
     case "behov": {
       const b = i.behov || {};
@@ -217,7 +218,7 @@ function ritaFlik() {
       const r = i.regler || {};
       const np = (i.nattpass && i.nattpass[0]) || { start: "21:45", slut: "07:15" };
       return `
-      <p class="dampad liten">Nivån visar varifrån regeln kommer. Avtal och lag kan inte ändras. Lokala regler och principer är verksamhetens egna beslut.</p>
+      <p class="dampad liten">Nivån visar varifrån regeln kommer. Avtal och lag kan inte ändras, och inte heller varannan helg, som verksamheten har beslutat ska vara hård. Övriga lokala regler och principer går att justera.</p>
       ${REGLER.map(R => {
         const v = r[R.k] ?? R.std;
         let falt;
@@ -251,6 +252,14 @@ function ritaFlik() {
       <p style="margin-top:8px"><button data-g="anvand-json">Använd JSON</button> <span id="json-fel" class="liten" style="color:var(--dalig)"></span></p>`;
   }
   return "";
+}
+
+function undantag() {
+  return st.indata.personal.filter(p => p.helgfrekvens && p.helgfrekvens !== "2/4");
+}
+function undantagText() {
+  const u = undantag();
+  return u.length ? `<div class="banner varn liten" style="margin-top:10px"><strong>Undantag från varannan helg</strong>${u.map(p => `${esc(p.id)}: ${HELGER[p.helgfrekvens].toLowerCase()}`).join(", ")}</div>` : "";
 }
 
 function regel(k) { return st.indata.regler?.[k] ?? REGLER.find(r => r.k === k).std; }
@@ -370,6 +379,8 @@ function ritaKontroll() {
   if (b.atgarder.length) h += `<h3>Förslag</h3><ul class="punkter liten">${b.atgarder.map(a => `<li>${esc(a)}</li>`).join("")}</ul>`;
   const hv = b.helger.filter(x => x.vakanser);
   if (hv.length) h += `<p class="liten dampad">Helger med brist: ${hv.map(x => `v${x.vecka}`).join(", ")}.</p>`;
+  const u = undantag();
+  if (u.length) h += `<h3>Undantag från varannan helg</h3><p class="liten">${u.map(p => `${esc(p.id)}: ${HELGER[p.helgfrekvens].toLowerCase()}`).join(", ")}</p>`;
   if (k.onskemal.length) h += `<h3>Önskemål</h3><ul class="punkter liten">${k.onskemal.map(w => `<li>${esc(w.varning)}</li>`).join("")}</ul>`;
   b.varningar.forEach(v => (h += `<p class="dampad liten">${esc(v)}</p>`));
   return h;
@@ -478,7 +489,7 @@ function tolka(el) {
 document.addEventListener("input", e => {
   const el = e.target;
   if (!st.indata || !el.closest("#flik")) return;
-  if (el.dataset.s) { sattVarde(el.dataset.s, tolka(el)); markeraAndrad(false); }
+  if (el.dataset.s) { sattVarde(el.dataset.s, tolka(el)); markeraAndrad(el.dataset.s.endsWith(".helgfrekvens")); }
   else if (el.dataset.r) {
     st.indata.regler = st.indata.regler || {};
     const R = REGLER.find(r => r.k === el.dataset.r);

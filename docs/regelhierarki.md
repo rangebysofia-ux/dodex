@@ -26,7 +26,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 4. **Rast i pass över fem timmars arbetstid** om inget annat anges.
 5. **Periodlängd i multiplar av fyra veckor**, eftersom 4,75 × veckor bara då blir ett heltal (19, 38, 57). Vid 6-veckorsperioder anges antal pass per person, till exempel 28 och 29.
 6. **Ingen fredagskväll före ledig helg.** Den som är ledig helgen arbetar inte kväll eller natt fredagen innan. Hård lokal regel; kan stängas av med `"ingen_fredagskvall_fore_ledig_helg": false`.
-7. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
+7. **Varannan helg är hård för enheten.** Alla arbetar exakt varannan helg i fasta grupper (A och B). Enhetens standard kan inte ändras. Undantag görs bara per person (helgfrekvens 1/4, 3/4, alla eller ingen), till exempel när kontraktet säger något annat, och visas som undantag i gränssnittet. Beslutat av användaren 2026-11-05.
+8. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
 
 Öppna frågor, alltså inte beslutade:
 - Hur personer under cirka 51 procent ska hanteras, eftersom 4,75 pass inte ryms i fönstret för dem: färre pass eller kortare kvällspass efter 18.

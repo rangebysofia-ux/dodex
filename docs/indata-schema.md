@@ -51,7 +51,7 @@
 - `grad` – sysselsättningsgrad (0.75 = 75 %).
 - `dygnsdelar` – standard `["morgon", "kvall"]`. Nattpersonal: `["natt"]`.
 - `antal_pass` – heltal eller lista per delperiod. Utan värde: 4,75 × veckor för dag/kväll, arbetstid ÷ nattpassets längd för natt.
-- `helgfrekvens` – `2/4` (standard), `1/4`, `3/4`, `alla`, `ingen`.
+- `helgfrekvens` – `2/4` (standard, varannan helg), `1/4`, `3/4`, `alla`, `ingen`. Andra värden än `2/4` är undantag för just den personen. Enhetens `regler.helgfrekvens` är låst till `2/4`.
 - `helggrupp` – `A` (arbetar helgerna i vecka 1, 3, 5 …) eller `B`. Utan värde väljer lösaren, med lika många i varje grupp.
 - `tolerans_minuter`, `heltid_minuter_per_vecka`, `dygnsbryt` – valfria per person.
 

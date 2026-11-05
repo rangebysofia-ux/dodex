@@ -25,6 +25,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 3. Antal pass väger tyngre än passlängd. 4,75 pass per vecka för dag och kväll.
 4. Morgonpass har fast start, kvällspass fast slut, längden anpassas i fönstret 12–18.
 5. Ingen fredagskväll före ledig helg.
+5b. Varannan helg är hård och låst för enheten. Undantag får bara göras per person.
 6. Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass) får aldrig kallas avtalsregler i text eller gränssnitt.
 
 ## Arbetssätt

@@ -184,6 +184,9 @@ def _helhet(d: dict) -> list[str]:
         v = regler.get(nyckel)
         if isinstance(v, (int, float)) and not isinstance(v, bool) and jamfor(v, grans):
             fel.append(text)
+    if "helgfrekvens" in regler and regler["helgfrekvens"] != "2/4":
+        fel.append("Varannan helg är en hård lokal regel för enheten och kan inte ändras. Undantag görs per person "
+                   "med helgfrekvens på personen.")
     ppv = regler.get("pass_per_vecka", STANDARD_PASS_PER_VECKA)
     x = ppv * W
     heltal = abs(x - round(x)) < 1e-9
