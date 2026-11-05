@@ -13,6 +13,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/onskemal.py` – varningar för önskemål som inte påverkar något eller krockar.
 - `schemamotor/export.py` – Excel och PDF.
 - `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg).
+- `light/` – lättversion som körs helt i webbläsaren: `motor.js` (heuristisk schemaläggning, samma hårda regler), `granskning.js` (fristående översättning av validate.py, får inte dela kod med motor.js), `sida.html` (gränssnitt). `python light/bygg.py` bygger `light/schema-light.html`. Ändras en regel i Python ska den ändras här också.
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.
 - `tests/fall/` – testfall med fältet `forvantat`. `tests/test_motor.py` kör dem.
 
@@ -27,6 +28,22 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 5. Ingen fredagskväll före ledig helg.
 5b. Varannan helg är hård och låst för enheten. Undantag får bara göras per person.
 6. Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass) får aldrig kallas avtalsregler i text eller gränssnitt.
+
+## Kom igång
+
+```bash
+pip install -e ".[dev]"
+pytest -q
+uvicorn schemawebb.app:app --port 8000      # webbtjänsten, utan lösenord lokalt
+python light/bygg.py                         # bygger lättversionen
+```
+
+Kontrollera lättmotorn mot Python-granskningen (kräver Node):
+
+```bash
+node -e "const M=require('./light/motor.js');const fs=require('fs');fs.writeFileSync('/tmp/s.json',JSON.stringify(M.los(require('./tests/fall/six_week_basic.json'),{sekunder:5})))"
+python -m schemamotor.validate tests/fall/six_week_basic.json /tmp/s.json
+```
 
 ## Arbetssätt
 
