@@ -143,6 +143,7 @@ class Indata(BaseModel):
     personal: list[Person] = Field(min_length=1)
     onskemal: list[Onskemal] = Field(default_factory=list)
     losare: dict = Field(default_factory=dict)
+    budget_timmar_vecka: Optional[float] = Field(default=None, gt=0)
     # används bara i testfallen
     beskrivning: Optional[str] = None
     forvantat: Optional[dict] = None

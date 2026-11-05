@@ -1373,9 +1373,14 @@ function ritaKontroll() {
   const b = MOTOR_HUVUD.balans(st.enhet.indata);
   if (b.fel) { el.innerHTML = `<div class="banner dalig"><strong>Rätta först</strong></div><ul class="punkter liten" style="margin-top:8px">${b.fel.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`; return; }
   const und = st.enhet.indata.personal.filter(p => p.helgfrekvens && p.helgfrekvens !== "2/4");
+  const ht = (st.enhet.indata.heltid_minuter_per_vecka || 2220) / 60;
+  const kontr = Math.round(st.enhet.indata.personal.reduce((s, p) => s + (p.grad ?? 1) * ((p.heltid_minuter_per_vecka || 0) / 60 || ht), 0) * 100) / 100;
+  const bud = st.enhet.indata.budget_timmar_vecka;
+  const budText = bud ? `<p class="liten" style="margin:8px 0 0;${kontr > bud + 0.05 ? "color:var(--dalig)" : ""}">Kontrakterad tid ${sv(kontr)} h per vecka av budgeten ${sv(bud)} h${Math.abs(kontr - bud) < 0.05 ? "." : kontr > bud ? `: ${sv(Math.round((kontr - bud) * 100) / 100)} h över.` : `: ${sv(Math.round((bud - kontr) * 100) / 100)} h kvar.`}</p>` : `<p class="liten dampad" style="margin:8px 0 0">Kontrakterad tid ${sv(kontr)} h per vecka.</p>`;
   el.innerHTML = `<div class="banner ${b.forvantade_vakanser ? "varn" : "ok"}"><strong>${b.forvantade_vakanser ? `Cirka ${vakText(b.forvantade_vakanser)}` : "Personalen räcker"}</strong>
     <span class="liten">Dag och kväll: behov ${b.behovDK}, finns ${b.tillDK} · Natt: behov ${b.behovN}, finns ${b.tillN}</span></div>
     ${b.atgarder.length ? `<details style="margin-top:8px"><summary>${b.atgarder.length} förslag</summary><ul class="punkter liten" style="margin-top:6px">${b.atgarder.map(a => `<li>${esc(a)}</li>`).join("")}</ul></details>` : ""}
+    ${budText}
     ${und.length ? `<p class="liten" style="margin:8px 0 0;color:var(--varn)">Undantag från varannan helg: ${und.map(p => `${esc(p.id)} (${UNDANTAG[p.helgfrekvens]})`).join(", ")}</p>` : ""}`;
 }
 
@@ -1428,6 +1433,7 @@ function ritaFlik() {
       <p class="dampad liten" style="margin-top:8px">En vakans är alltid bättre än ett avtalsbrott: behovet ger efter först.</p>`;
   } else {
     el.innerHTML = `<div class="falt"><div><label for="p-v">Veckor</label><input id="p-v" type="number" min="1" max="16" data-i="veckor" value="${i.veckor}"></div>
+      <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-i="budget_timmar_vecka" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
       <div><label for="p-iso">Första veckans nummer</label><input id="p-iso" type="number" min="1" max="53" data-i="start_iso_vecka" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div></div>
       <p style="margin-top:10px"><label class="check"><input type="checkbox" data-i="cykliskt"${i.cykliskt === false ? "" : " checked"}> Cykliskt: sista veckan följs av vecka 1</label></p>
       <p class="dampad liten">Med 4,75 pass per vecka blir antalet pass ett heltal vid 4, 8, 12 eller 16 veckor. Vid andra längder anger du antal pass per person.</p>`;
@@ -1520,7 +1526,7 @@ document.addEventListener("input", ev => {
   } else if (el.dataset.i) {
     const k = el.dataset.i;
     if (k === "cykliskt") i.cykliskt = el.checked;
-    else if (el.value === "") delete i[k]; else i[k] = parseInt(el.value);
+    else if (el.value === "") delete i[k]; else i[k] = k === "budget_timmar_vecka" ? parseFloat(el.value.replace(",", ".")) : parseInt(el.value);
     andrad(false);
   }
 });

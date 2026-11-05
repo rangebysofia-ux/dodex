@@ -60,6 +60,8 @@
 - Dagar: `dagar` (veckodagar) med `veckor` (`alla`, `jämna`, `udda` eller lista med veckonummer), eller `dagindex` (0 = vecka 1 måndag).
 - `krav: true` gör önskemålet hårt. Annars är det mjukt med `vikt` (standard 1).
 
+**budget_timmar_vecka** – valfri budget för hela enheten. Påverkar inte lösningen; gränssnittet jämför den med summan av kontrakterad tid (sysselsättningsgrad × heltid).
+
 **forvantat** och **beskrivning** – används bara i testfallen.
 
 ### Kontroll
