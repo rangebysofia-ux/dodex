@@ -656,6 +656,11 @@ def main():
     a = ap.parse_args()
     with open(a.indata, encoding="utf-8") as f:
         indata = json.load(f)
+    from schemamotor.modell import kontrollera_indata
+    fel = kontrollera_indata(indata)
+    if fel:
+        print(json.dumps({"status": "INDATAFEL", "orsak": " ".join(fel), "fel": fel}, ensure_ascii=False, indent=2))
+        sys.exit(2)
     try:
         prob = forbered(indata)
         cfg = indata.get("losare", {})

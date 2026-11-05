@@ -1,0 +1,17 @@
+{
+  "beskrivning": "Fredagsregeln: åtta med dag/kväll på fyra veckor, varannan helg, så fyra arbetar varje helg. Fredag kväll behövs tre, lördag morgon två. Den som är ledig helgen får inte arbeta fredag kväll, och den som arbetar fredag kväll kan inte ta morgon på lördagen. Fem behövs men fyra finns, så varje helg får en vakans. Balansen ska förutsäga fyra vakanta pass.",
+  "forvantat": {"status": "OK", "validering_utan_fel": true, "vakanta_pass": 4},
+  "enhet": "Test – fredagsregeln",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {"morgon": 2, "kvall": 2},
+    "fre": {"morgon": 2, "kvall": 3},
+    "helg": {"morgon": 2, "kvall": 1}
+  },
+  "personal": [
+    {"id": "F1", "grad": 1.0}, {"id": "F2", "grad": 1.0}, {"id": "F3", "grad": 0.9}, {"id": "F4", "grad": 0.9},
+    {"id": "F5", "grad": 0.8}, {"id": "F6", "grad": 0.8}, {"id": "F7", "grad": 0.75}, {"id": "F8", "grad": 0.75}
+  ],
+  "losare": {"tid_per_steg_s": 10}
+}

@@ -33,6 +33,12 @@ def test_fall(fall, tmp_path):
         res = json.loads(granskning.stdout)
         if forv.get("validering_utan_fel"):
             assert res["giltigt"], res["brott"]
+        kpi = json.loads(ut.read_text(encoding="utf-8"))["kpi"]
+        if "vakanta_pass" in forv:
+            assert kpi["vakanta_pass"] == forv["vakanta_pass"], kpi
+        # bemanningsbalansen ska förutsäga lösarens vakanta pass
+        balans = json.loads(kor("balans", fall, "--json").stdout)
+        assert balans["forvantade_vakanser"] == kpi["vakanta_pass"], (balans, kpi)
     else:
         assert bygg.returncode == 1, bygg.stdout
         assert json.loads(bygg.stdout)["status"] == forv["status"]
@@ -70,3 +76,14 @@ def test_granskningen_ar_fristaende():
         else:
             continue
         assert not any("build" in n or n.startswith("schemamotor") for n in namn), namn
+
+
+def test_balans_utan_fredagsregel():
+    """Utan fredagsregeln ska fredagsfallet inte ge några vakanser."""
+    from schemamotor.balans import balans
+    indata = json.loads((ROT / "tests" / "fall" / "friday_rule_vacancy.json").read_text(encoding="utf-8"))
+    assert balans(indata)["forvantade_vakanser"] == 4
+    indata["regler"] = {"ingen_fredagskvall_fore_ledig_helg": False}
+    res = balans(indata)
+    assert res["forvantade_vakanser"] == 0
+    assert not any("Fredagskvällarna" in a for a in res["atgarder"])

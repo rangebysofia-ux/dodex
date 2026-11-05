@@ -1,0 +1,54 @@
+"""Kontroll av indata: typiska fel ska ge begripliga meddelanden på svenska."""
+import copy
+import json
+from pathlib import Path
+
+import pytest
+
+from schemamotor.modell import IndataKontrollFel, kontrollera_indata, las_indata
+
+FALL = Path(__file__).resolve().parent / "fall"
+
+
+@pytest.fixture
+def bas():
+    return json.loads((FALL / "six_week_basic.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("fil", sorted(FALL.glob("*.json")), ids=lambda f: f.stem)
+def test_testfallen_ar_giltiga(fil):
+    assert kontrollera_indata(json.loads(fil.read_text(encoding="utf-8"))) == []
+
+
+def test_okand_dag(bas):
+    bas["behov"]["fredag"] = {"morgon": 2}
+    fel = kontrollera_indata(bas)
+    assert fel == ["behov: okänd dag: fredag (använd vardag, helg, alla eller mån, tis, ons, tor, fre, lör, sön)"]
+
+
+def test_saknad_grad(bas):
+    del bas["personal"][6]["grad"]
+    assert kontrollera_indata(bas) == ["personal B1, sysselsättningsgrad: saknas"]
+
+
+def test_periodlangd_utan_heltal(bas):
+    for p in bas["personal"]:
+        p.pop("antal_pass", None)
+    fel = kontrollera_indata(bas)
+    assert len(fel) == 1
+    assert "6 veckor × 4,75 pass per vecka = 28,5" in fel[0]
+    assert "multipel av 4 veckor" in fel[0] and "A1" in fel[0] and "N1" not in fel[0]
+
+
+def test_flera_fel_pa_en_gang(bas):
+    x = copy.deepcopy(bas)
+    x["personal"][0]["grad"] = 1.5
+    x["personal"][1]["dygnsdelar"] = ["kväll"]
+    x["onskemal"] = [{"person": "Z9", "typ": "tidigast_start", "varde": "7"}]
+    with pytest.raises(IndataKontrollFel) as e:
+        las_indata(x)
+    texter = "\n".join(e.value.fel)
+    assert "A1, sysselsättningsgrad: får vara högst 1 (100 %)" in texter
+    assert "morgon, kvall eller natt" in texter
+    assert "Z9, som inte finns i personalen" in texter
+    assert "klockslag" in texter
