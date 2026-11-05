@@ -2,26 +2,41 @@
 
 Cykliska grundscheman för dygnet runt-verksamhet enligt Kommunals avtalsområde (HÖK/AB), med optimeringslösaren Google OR-Tools CP-SAT.
 
-## Kom igång
+Systemet har två delar:
+
+- **schemamotor** – lägger, granskar och förklarar scheman. Kan köras från kommandoraden.
+- **schemawebb** – webbtjänst med inloggning där man lägger in enheter, personal, behov, önskemål och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
+
+## Kom igång på egen dator
 
 ```bash
 pip install -e ".[dev]"
 pytest -q
+```
 
+Starta webbtjänsten och öppna http://127.0.0.1:8000:
+
+```bash
+uvicorn schemawebb.app:app --port 8000
+```
+
+Utan miljövariabeln `SCHEMA_LOSENORD` krävs ingen inloggning. Sätt alltid ett lösenord när tjänsten nås av andra. Databasen sparas i `./data`.
+
+## Kommandoraden
+
+```bash
+python -m schemamotor.balans tests/fall/six_week_basic.json
 python -m schemamotor.build tests/fall/six_week_basic.json --ut schema.json --md schema.md
 python -m schemamotor.validate tests/fall/six_week_basic.json schema.json
 python -m schemamotor.explain tests/fall/wraparound_failure.json
+python -m schemamotor.export schema.json --excel schema.xlsx --pdf schema.pdf
 ```
 
-Efter `pip install -e .` finns samma kommandon även som `schema-build`, `schema-validate`, `schema-explain` och `schema-compare`.
+Efter installationen finns kommandona även som `schema-balans`, `schema-build`, `schema-validate`, `schema-explain`, `schema-compare` och `schema-export`.
 
-## Förhandsvisning i webbläsaren
+## Driftsättning
 
-```bash
-python -m schemamotor.webb --port 8000
-```
-
-Öppna http://127.0.0.1:8000. Välj ett testfall eller fyll i behov och personal, och klicka på *Lägg schema*. Sidan visar schemat vecka för vecka, vakanser, nyckeltal och granskningen, och förklarar varför när schemat inte går att lägga. Den använder bara Pythons standardbibliotek och är en enkel föregångare till punkt 5–7 i färdplanen.
+Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad databas.
 
 ## Dokumentation
 
@@ -30,4 +45,5 @@ python -m schemamotor.webb --port 8000
 - `docs/indata-schema.md` – format för indata och schema
 - `docs/optimering.md` – hur modellen fungerar
 - `docs/hallbarhet.md`, `docs/ekonomi.md` – hur resultatet värderas
+- `docs/drift.md` – driftsättning, lösenord, säkerhetskopior
 - `ROADMAP.md` – vad som ska byggas härnäst

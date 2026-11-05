@@ -52,3 +52,12 @@ def test_flera_fel_pa_en_gang(bas):
     assert "morgon, kvall eller natt" in texter
     assert "Z9, som inte finns i personalen" in texter
     assert "klockslag" in texter
+
+
+def test_avtal_och_lag_kan_inte_forsvagas(bas):
+    bas["regler"] = {"dygnsvila_minuter": 540, "veckovila_minuter": 2400, "rast_grans_minuter": 360, "fel_regel": 1}
+    fel = kontrollera_indata(bas)
+    assert "Dygnsvilan kan inte vara kortare än 11 timmar (avtal)." in fel
+    assert "Rast krävs efter högst 5 timmars arbete (lag)." in fel
+    assert not any("Veckovilan" in f for f in fel)  # 40 timmar är en skärpning
+    assert any("Okända regler: fel_regel" in f for f in fel)

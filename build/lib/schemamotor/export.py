@@ -1,0 +1,235 @@
+"""Export av ett färdigt schema till Excel och PDF.
+
+Användning:
+    python -m schemamotor.export schema.json --excel schema.xlsx --pdf schema.pdf
+
+`schema.json` är utdata från schemamotor.build. Granskningen tas med om den finns i filen
+under nyckeln "granskning".
+"""
+import argparse
+import io
+import json
+
+DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
+KOD = {"morgon": "M", "kvall": "K", "natt": "N"}
+DEL = {"morgon": "Morgon", "kvall": "Kväll", "natt": "Natt"}
+FARG = {"morgon": "FFF1C7", "kvall": "D8E6FF", "natt": "3A3366"}
+TEXTFARG = {"morgon": "6B4E00", "kvall": "1F3F86", "natt": "F0EDFF"}
+
+
+def _tim(m):
+    return f"{m // 60}:{m % 60:02d}"
+
+
+def _bemanning(res, d):
+    n = {"morgon": 0, "kvall": 0, "natt": 0}
+    for rad in res["schema"].values():
+        p = rad[d]
+        if p and p["dygnsdel"] in n:
+            n[p["dygnsdel"]] += 1
+    return n
+
+
+def _vakansdagar(res):
+    v = {}
+    for x in res.get("vakanser", []):
+        v.setdefault(x["dag"], []).append(x)
+    return v
+
+
+# ---------------------------------------------------------------- Excel
+
+def excel(res, granskning=None):
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Schema"
+    tunn = Side(style="thin", color="D0D5DD")
+    ram = Border(left=tunn, right=tunn, top=tunn, bottom=tunn)
+    mitt = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    fet = Font(bold=True)
+    helgfarg = PatternFill("solid", fgColor="EEF1F5")
+    N = res["veckor"] * 7
+    pers = list(res["schema"])
+
+    ws["A1"] = res.get("enhet") or "Schema"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws["A2"] = (f"{res['veckor']} veckor{', cykliskt' if res.get('cykliskt') else ''} · "
+                f"vakanta pass {res['kpi']['vakanta_pass']} · vakanta tidpunkter {res['kpi']['vakanta_tidpunkter']}")
+    ws.cell(row=4, column=1, value="Vecka").font = fet
+    ws.cell(row=5, column=1, value="Person").font = fet
+    for d in range(N):
+        c = d + 2
+        if d % 7 == 0:
+            ws.cell(row=4, column=c, value=f"Vecka {d // 7 + 1}").font = fet
+            ws.merge_cells(start_row=4, start_column=c, end_row=4, end_column=c + 6)
+        h = ws.cell(row=5, column=c, value=DAGNAMN[d % 7])
+        h.font, h.alignment, h.border = fet, mitt, ram
+        if d % 7 >= 5:
+            h.fill = helgfarg
+        ws.column_dimensions[get_column_letter(c)].width = 11
+    ws.column_dimensions["A"].width = 12
+    for i, pid in enumerate(pers):
+        r = 6 + i
+        ws.cell(row=r, column=1, value=pid).font = fet
+        for d in range(N):
+            p = res["schema"][pid][d]
+            c = ws.cell(row=r, column=d + 2)
+            c.border, c.alignment = ram, mitt
+            if p:
+                c.value = f"{KOD.get(p['dygnsdel'], p.get('mall', '?'))} {p['start']}–{p['slut']}"
+                if p["dygnsdel"] in FARG:
+                    c.fill = PatternFill("solid", fgColor=FARG[p["dygnsdel"]])
+                    c.font = Font(color=TEXTFARG[p["dygnsdel"]], size=9)
+            elif d % 7 >= 5:
+                c.fill = helgfarg
+        ws.row_dimensions[r].height = 30
+    vak = _vakansdagar(res)
+    rod = Font(color="B92A2A", bold=True)
+    for j, del_ in enumerate(("morgon", "kvall", "natt")):
+        r = 6 + len(pers) + 1 + j
+        ws.cell(row=r, column=1, value=f"I tjänst {DEL[del_].lower()}").font = fet
+        for d in range(N):
+            c = ws.cell(row=r, column=d + 2, value=_bemanning(res, d)[del_])
+            c.alignment, c.border = mitt, ram
+            if any(x["dygnsdel"] == del_ for x in vak.get(d, [])):
+                c.font = rod
+    ws.freeze_panes = "B6"
+
+    wp = wb.create_sheet("Per person")
+    rubriker = ["Person", "Pass", "Arbetstid (h:mm)", "Mål (h:mm)", "Kvällspass", "Helggrupp"]
+    wp.append(rubriker)
+    for c in wp[1]:
+        c.font = fet
+    for pid, k in res["personer"].items():
+        wp.append([pid, k["pass"], _tim(k["minuter"]), _tim(k["mal_minuter"]), k["kvallspass"], k["helggrupp"] or "–"])
+    for i, w in enumerate((10, 8, 16, 12, 12, 11), 1):
+        wp.column_dimensions[get_column_letter(i)].width = w
+
+    wv = wb.create_sheet("Vakanser")
+    wv.append(["Vecka", "Dag", "Dygnsdel / klockslag", "Antal"])
+    for c in wv[1]:
+        c.font = fet
+    for x in res.get("vakanser", []):
+        wv.append([x["vecka"], x["veckodag"], DEL.get(x["dygnsdel"], f"kl {x['tid']}"), x["antal"]])
+    if not res.get("vakanser"):
+        wv.append(["Inga vakanser"])
+
+    if granskning:
+        wg = wb.create_sheet("Granskning")
+        wg.append(["Regel", "Nivå", "Person", "Beskrivning", "Typ"])
+        for c in wg[1]:
+            c.font = fet
+        for b in granskning.get("brott", []):
+            wg.append([b["regel"], b["niva"], b["person"] or "–", b["text"], "Brott"])
+        for b in granskning.get("varningar", []):
+            wg.append([b["regel"], b["niva"], b["person"] or "–", b["text"], "Att notera"])
+        if not granskning.get("brott"):
+            wg.append(["", "", "", "Inga brott mot hårda regler.", ""])
+        wg.column_dimensions["D"].width = 80
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------- PDF
+
+def pdf(res, granskning=None):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=12 * mm, rightMargin=12 * mm,
+                            topMargin=12 * mm, bottomMargin=12 * mm, title=res.get("enhet") or "Schema")
+    st = getSampleStyleSheet()
+    liten = st["BodyText"].clone("liten", fontSize=8, leading=10)
+    hex_ = lambda h: colors.HexColor("#" + h)  # noqa: E731
+    delar = []
+    pers = list(res["schema"])
+    vak = _vakansdagar(res)
+    kpi = res["kpi"]
+    rubrik = (f"{res['veckor']} veckor{', cykliskt' if res.get('cykliskt') else ''} · vakanta pass "
+              f"{kpi['vakanta_pass']} · vakanta tidpunkter {kpi['vakanta_tidpunkter']}"
+              + (f" · brott i granskningen {len(granskning['brott'])}" if granskning else ""))
+
+    for v in range(res["veckor"]):
+        delar.append(Paragraph(f"{res.get('enhet') or 'Schema'} – vecka {v + 1}", st["Heading2"]))
+        delar.append(Paragraph(rubrik, liten))
+        delar.append(Spacer(1, 4 * mm))
+        data = [["Person"] + DAGNAMN]
+        stil = [("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D5DD")),
+                ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 9), ("FONT", (0, 1), (0, -1), "Helvetica-Bold", 9),
+                ("FONT", (1, 1), (-1, -1), "Helvetica", 8.5), ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("BACKGROUND", (6, 0), (7, 0), hex_("EEF1F5"))]
+        for i, pid in enumerate(pers):
+            rad = [pid]
+            for j in range(7):
+                p = res["schema"][pid][v * 7 + j]
+                rad.append(f"{KOD.get(p['dygnsdel'], '?')} {p['start']}–{p['slut']}" if p else "")
+                if p and p["dygnsdel"] in FARG:
+                    stil += [("BACKGROUND", (j + 1, i + 1), (j + 1, i + 1), hex_(FARG[p["dygnsdel"]])),
+                             ("TEXTCOLOR", (j + 1, i + 1), (j + 1, i + 1), hex_(TEXTFARG[p["dygnsdel"]]))]
+            data.append(rad)
+        rad = ["I tjänst"]
+        for j in range(7):
+            d = v * 7 + j
+            n = _bemanning(res, d)
+            rad.append(f"M{n['morgon']} K{n['kvall']} N{n['natt']}" + (" – vakans" if d in vak else ""))
+            if d in vak:
+                stil.append(("TEXTCOLOR", (j + 1, len(data)), (j + 1, len(data)), hex_("B92A2A")))
+        data.append(rad)
+        stil.append(("FONT", (0, len(data) - 1), (-1, len(data) - 1), "Helvetica-Bold", 8))
+        t = Table(data, colWidths=[24 * mm] + [34 * mm] * 7, repeatRows=1)
+        t.setStyle(TableStyle(stil))
+        delar += [t, Spacer(1, 3 * mm), Paragraph("M morgon, K kväll, N natt.", liten), PageBreak()]
+
+    delar.append(Paragraph("Per person", st["Heading2"]))
+    data = [["Person", "Pass", "Arbetstid", "Mål", "Kvällspass", "Helggrupp"]]
+    data += [[pid, k["pass"], _tim(k["minuter"]), _tim(k["mal_minuter"]), k["kvallspass"], k["helggrupp"] or "–"]
+             for pid, k in res["personer"].items()]
+    t = Table(data, colWidths=[30 * mm, 20 * mm, 30 * mm, 30 * mm, 25 * mm, 25 * mm], repeatRows=1)
+    t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D5DD")),
+                           ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 9), ("FONT", (0, 1), (-1, -1), "Helvetica", 9)]))
+    delar.append(t)
+    if res.get("vakanser"):
+        delar.append(Paragraph("Vakanser", st["Heading2"]))
+        for x in res["vakanser"]:
+            delar.append(Paragraph(f"Vecka {x['vecka']} {x['veckodag']}: {x['antal']} "
+                                   f"{DEL[x['dygnsdel']].lower() + 'pass' if x['dygnsdel'] else 'för få kl ' + x['tid']}",
+                                   liten))
+    if granskning:
+        delar.append(Paragraph("Granskning", st["Heading2"]))
+        if granskning["brott"]:
+            for b in granskning["brott"]:
+                delar.append(Paragraph(f"<b>{b['niva']}</b> {b['person'] or ''} {b['text']}", liten))
+        else:
+            delar.append(Paragraph("Inga brott mot hårda regler.", liten))
+    doc.build(delar)
+    return buf.getvalue()
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("schema")
+    ap.add_argument("--excel")
+    ap.add_argument("--pdf")
+    a = ap.parse_args()
+    with open(a.schema, encoding="utf-8") as f:
+        res = json.load(f)
+    if a.excel:
+        with open(a.excel, "wb") as f:
+            f.write(excel(res, res.get("granskning")))
+    if a.pdf:
+        with open(a.pdf, "wb") as f:
+            f.write(pdf(res, res.get("granskning")))
+
+
+if __name__ == "__main__":
+    main()

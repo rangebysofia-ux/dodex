@@ -1,0 +1,22 @@
+# Render Blueprint: skapar webbtjänsten med en disk för databasen.
+# Lösenordet anges i Render när tjänsten skapas (SCHEMA_LOSENORD).
+services:
+  - type: web
+    name: schemasystem
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /halsa
+    envVars:
+      - key: SCHEMA_LOSENORD
+        sync: false
+      - key: SCHEMA_HEMLIGHET
+        generateValue: true
+      - key: SCHEMA_DATA
+        value: /var/data
+      - key: SCHEMA_MAX_TID
+        value: "60"
+    disk:
+      name: schemadata
+      mountPath: /var/data
+      sizeGB: 1

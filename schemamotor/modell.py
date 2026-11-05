@@ -31,6 +31,21 @@ FALTNAMN = {
 Klocka = Annotated[str, Field(pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")]
 
 
+STANDARDREGLER = {
+    "dygnsvila_minuter", "veckovila_minuter", "dygnsbryt", "veckobryt", "rast_grans_minuter", "rast_minuter",
+    "pass_per_vecka", "morgon_start", "kvall_slut", "kant_fran", "kant_till", "steg_minuter", "block_min",
+    "block_max", "block_rekommenderat", "helg_start", "helg_slut", "hel_helg", "helgfrekvens",
+    "ingen_fredagskvall_fore_ledig_helg", "tolerans_minuter", "langd_band_minuter",
+}
+# Avtal och lag får aldrig försvagas (AGENTS.md). Skärpningar är tillåtna.
+SKYDDADE = {
+    "dygnsvila_minuter": (660, lambda v, g: v < g, "Dygnsvilan kan inte vara kortare än 11 timmar (avtal)."),
+    "veckovila_minuter": (2160, lambda v, g: v < g, "Veckovilan kan inte vara kortare än 36 timmar (avtal)."),
+    "rast_grans_minuter": (300, lambda v, g: v > g, "Rast krävs efter högst 5 timmars arbete (lag)."),
+    "rast_minuter": (30, lambda v, g: v < g, "Rasten kan inte vara kortare än 30 minuter."),
+}
+
+
 class IndataKontrollFel(ValueError):
     def __init__(self, fel: list[str]):
         super().__init__("\n".join(fel))
@@ -162,6 +177,13 @@ def _helhet(d: dict) -> list[str]:
     if dubbla:
         fel.append(f"Samma id finns flera gånger: {', '.join(dubbla)}.")
     regler = d.get("regler") if isinstance(d.get("regler"), dict) else {}
+    okanda = sorted(set(regler) - set(STANDARDREGLER))
+    if okanda:
+        fel.append(f"Okända regler: {', '.join(okanda)}. Se docs/indata-schema.md för giltiga namn.")
+    for nyckel, (grans, jamfor, text) in SKYDDADE.items():
+        v = regler.get(nyckel)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and jamfor(v, grans):
+            fel.append(text)
     ppv = regler.get("pass_per_vecka", STANDARD_PASS_PER_VECKA)
     x = ppv * W
     heltal = abs(x - round(x)) < 1e-9

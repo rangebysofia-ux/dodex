@@ -62,6 +62,10 @@
 
 **forvantat** och **beskrivning** – används bara i testfallen.
 
+### Kontroll
+
+`schemamotor/modell.py` kontrollerar indata innan lösaren startar och ger alla fel på en gång, på svenska. Okända fält och regler avvisas. Regler från avtal och lag kan bara skärpas: dygnsvila minst 660 minuter, veckovila minst 2160, rast efter högst 300 minuters arbete och minst 30 minuter lång.
+
 ## Utdata från schemamotor/build.py
 
 ```json

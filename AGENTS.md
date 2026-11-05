@@ -8,6 +8,11 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/validate.py` – fristående granskning av ett färdigt schema. **Får aldrig importera något från build.py.** Ett test kontrollerar det. Den ska kunna fånga fel i motorn.
 - `schemamotor/explain.py` – hittar en minimal uppsättning regler som krockar.
 - `schemamotor/compare.py` – kör och jämför scenarier.
+- `schemamotor/modell.py` – kontroll av indata med Pydantic och felmeddelanden på svenska. Avtal och lag kan inte försvagas här.
+- `schemamotor/balans.py` – bemanningsbalans före schemaläggningen. Ska förutsäga lösarens vakanta pass för testfallen.
+- `schemamotor/onskemal.py` – varningar för önskemål som inte påverkar något eller krockar.
+- `schemamotor/export.py` – Excel och PDF.
+- `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg).
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.
 - `tests/fall/` – testfall med fältet `forvantat`. `tests/test_motor.py` kör dem.
 
