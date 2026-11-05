@@ -1,0 +1,599 @@
+<title>Schema light</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: en kolumn för mobilen; kontroll överst, flikar för indata, fast knapp för att lägga schemat. */
+:root {
+  --bg: #f3f5f7; --yta: #ffffff; --yta2: #f8f9fb; --text: #18202b; --dampad: #5b6676; --linje: #dce1e8; --helg: #eef1f5;
+  --accent: #1f5f8b; --accent-text: #ffffff; --accent-svag: #e4eef6;
+  --morgon: #fdecc4; --morgon-text: #6a4a00; --kvall: #d6e5fb; --kvall-text: #1b3d78; --natt: #33305e; --natt-text: #eeebff;
+  --bra: #1c7a45; --bra-bg: #e3f4ea; --dalig: #b92a2a; --dalig-bg: #fbe9e9; --varn: #8a5a00; --varn-bg: #fff4dc;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --yta: #1a2029; --yta2: #161b23; --text: #e5e9ef; --dampad: #97a2b3; --linje: #2c3440; --helg: #20262f;
+  --accent: #6fb0e0; --accent-text: #0c1620; --accent-svag: #1b2b3a;
+  --morgon: #4b3b10; --morgon-text: #ffe2a0; --kvall: #1d3359; --kvall-text: #d2e2ff; --natt: #4a4590; --natt-text: #f0eeff;
+  --bra: #6fd39a; --bra-bg: #163023; --dalig: #ff8080; --dalig-bg: #3b1d20; --varn: #ffcf70; --varn-bg: #3a3018; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --yta: #1a2029; --yta2: #161b23; --text: #e5e9ef; --dampad: #97a2b3; --linje: #2c3440; --helg: #20262f;
+  --accent: #6fb0e0; --accent-text: #0c1620; --accent-svag: #1b2b3a;
+  --morgon: #4b3b10; --morgon-text: #ffe2a0; --kvall: #1d3359; --kvall-text: #d2e2ff; --natt: #4a4590; --natt-text: #f0eeff;
+  --bra: #6fd39a; --bra-bg: #163023; --dalig: #ff8080; --dalig-bg: #3b1d20; --varn: #ffcf70; --varn-bg: #3a3018; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--sans); }
+.sida { max-width: 820px; margin: 0 auto; padding-block: 14px 110px; display: grid; gap: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 21px; margin: 0; text-wrap: balance; }
+h2 { font-size: 16px; margin: 0 0 8px; }
+h3 { font-size: 12px; margin: 14px 0 6px; color: var(--dampad); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+p { margin: 0 0 8px; }
+.kort { background: var(--yta); border: 1px solid var(--linje); border-radius: 10px; padding: 14px; min-width: 0; }
+.rad { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.dampad { color: var(--dampad); } .liten { font-size: 13px; }
+.tom { color: var(--dampad); text-align: center; padding: 20px 0; }
+button { font: inherit; font-size: 14px; border: 1px solid var(--linje); background: var(--yta); color: var(--text); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+button.primar { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+button.fara { color: var(--dalig); }
+button.lank { border: 0; background: none; color: var(--accent); padding: 4px 2px; }
+button.liten { padding: 3px 9px; font-size: 13px; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label { display: block; color: var(--dampad); font-size: 12.5px; margin-bottom: 3px; }
+input, select { font: inherit; font-size: 16px; color: var(--text); background: var(--yta2); border: 1px solid var(--linje); border-radius: 6px; padding: 6px 8px; width: 100%; min-width: 0; }
+input[type=checkbox], input[type=radio] { width: auto; accent-color: var(--accent); }
+.falt { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.check { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 14px; margin: 0; }
+.flikar { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--linje); margin: -2px -2px 12px; }
+.flikar button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 8px 10px; white-space: nowrap; color: var(--dampad); }
+.flikar button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips label { display: inline-flex; gap: 5px; align-items: center; border: 1px solid var(--linje); border-radius: 999px; padding: 4px 10px; color: var(--text); font-size: 14px; margin: 0; cursor: pointer; }
+.chips label:has(input:checked) { background: var(--accent-svag); border-color: var(--accent); }
+.person { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 40px 10px 0; border-bottom: 1px solid var(--linje); position: relative; }
+.person .bort { position: absolute; right: 0; top: 28px; }
+@media (max-width: 480px) { .person { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+select.undantag { border-color: var(--varn); color: var(--varn); background: var(--varn-bg); }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--linje); }
+th { color: var(--dampad); font-weight: 600; font-size: 12.5px; }
+td.tal, th.tal { text-align: right; } td.nw { white-space: nowrap; }
+.rull { overflow-x: auto; }
+.banner { border-radius: 8px; padding: 10px 12px; }
+.banner strong { display: block; font-size: 16px; }
+.banner.ok { background: var(--bra-bg); color: var(--bra); } .banner.dalig { background: var(--dalig-bg); color: var(--dalig); }
+.banner.varn { background: var(--varn-bg); color: var(--varn); } .banner.info { background: var(--accent-svag); }
+ul.punkter { margin: 0; padding-left: 18px; } ul.punkter li { margin-bottom: 4px; }
+.niva { display: inline-block; font-size: 11.5px; padding: 0 7px; border-radius: 10px; border: 1px solid var(--linje); color: var(--dampad); white-space: nowrap; }
+.niva.skarp { border-color: var(--dalig); color: var(--dalig); }
+.regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linje); }
+.regel .lat { font-family: var(--mono); font-size: 14px; color: var(--dampad); text-align: right; }
+.regel input[type=number], .regel input[type=time] { width: 110px; }
+.kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin-top: 10px; }
+.kpi div { border: 1px solid var(--linje); border-radius: 8px; padding: 8px 10px; }
+.kpi b { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
+.kpi span { color: var(--dampad); font-size: 12.5px; line-height: 1.3; display: block; }
+.kpi .fel b { color: var(--dalig); }
+.veckor { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.veckor button { border-radius: 999px; padding: 4px 11px; font-size: 13px; }
+.veckor button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+table.schema { table-layout: fixed; }
+table.schema th, table.schema td { text-align: center; padding: 2px; font-size: 12px; }
+table.schema th:first-child, table.schema td:first-child { text-align: left; width: 40px; font-weight: 600; padding-left: 3px; overflow: hidden; text-overflow: ellipsis; }
+table.schema .helg { background: var(--helg); }
+.pass { border: 0; width: 100%; border-radius: 5px; padding: 4px 1px; line-height: 1.15; font: inherit; cursor: pointer; display: block; }
+.pass b { display: block; font-size: 12.5px; } .pass small { font: 10.5px var(--mono); }
+.pass.morgon { background: var(--morgon); color: var(--morgon-text); } .pass.kvall { background: var(--kvall); color: var(--kvall-text); } .pass.natt { background: var(--natt); color: var(--natt-text); }
+.pass.vald { outline: 2px solid var(--accent); outline-offset: 1px; }
+tr.bem td { font-size: 11px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.25; }
+tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dalig-bg); }
+.mono { font-family: var(--mono); font-size: 13px; }
+.fot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--yta); border-top: 1px solid var(--linje);
+  padding-block: 10px max(10px, env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.fot > div { max-width: 820px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+.fot button.primar { flex: 1; padding: 11px; font-size: 16px; }
+.fot select { width: auto; }
+.matare { height: 6px; background: var(--linje); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.matare div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.onsk { display: flex; gap: 10px; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--linje); }
+.formular { background: var(--yta2); border: 1px solid var(--linje); border-radius: 8px; padding: 12px; display: grid; gap: 10px; margin-bottom: 10px; }
+.status { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+.status.ok { background: var(--bra-bg); color: var(--bra); } .status.dalig { background: var(--dalig-bg); color: var(--dalig); } .status.varn { background: var(--varn-bg); color: var(--varn); }
+#meddelande { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg);
+  border-radius: 8px; padding: 9px 14px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); z-index: 20; }
+#meddelande.syns { opacity: 1; }
+@media (max-width: 560px) { .pass small { display: none; } .pass { padding: 6px 0; } }
+@media (prefers-reduced-motion: reduce) { .matare div, #meddelande { transition: none; } }
+details summary { cursor: pointer; color: var(--dampad); }
+</style>
+
+<div class="sida" id="sida"><p class="tom">Laddar …</p></div>
+<div class="fot" id="fot" hidden></div>
+<div id="meddelande" role="status" aria-live="polite"></div>
+
+<script type="text/plain" id="motor-kod">__MOTOR__</script>
+<script>__GRANSKNING__</script>
+<script>__MOTOR_HUVUDTRAD__</script>
+<script type="application/json" id="exempel">__EXEMPEL__</script>
+<script>
+"use strict";
+const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
+const DELAR = { morgon: "Morgon", kvall: "Kväll", natt: "Natt" };
+const ARBETAR = { "morgon,kvall": "Dag och kväll", "morgon": "Bara morgon", "kvall": "Bara kväll", "natt": "Natt" };
+const UNDANTAG = { "1/4": "var fjärde", "3/4": "tre av fyra", "alla": "alla", "ingen": "inga" };
+const ONSKTYP = { ledig: "Ledig", arbetar: "Arbetar", tidigast_start: "Börjar tidigast", senast_slut: "Slutar senast", endast_dygnsdel: "Bara dygnsdel" };
+const DAGNYCKEL = { vardag: "Vardagar", helg: "Helg", alla: "Alla dagar", mån: "Måndag", tis: "Tisdag", ons: "Onsdag", tor: "Torsdag", fre: "Fredag", lör: "Lördag", sön: "Söndag" };
+const KPI = [["vakanta_pass", "Vakanta pass"], ["hardregelbrott", "Brutna hårda regler"], ["blocklangd", "Arbetsdagar i följd över 4"], ["rattvisa", "Rättvisa, spridning i kvällar"], ["onskemal", "Brutna önskemål"]];
+const EXEMPEL = JSON.parse(document.getElementById("exempel").textContent);
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sv = x => String(x).replace(".", ",");
+const timmar = m => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
+const datum = t => new Date(t).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" });
+const vakText = n => `${n} ${n === 1 ? "vakant pass" : "vakanta pass"}`;
+const nyttId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function meddela(t) { const m = $("#meddelande"); m.textContent = t; m.classList.add("syns"); clearTimeout(meddela.t); meddela.t = setTimeout(() => m.classList.remove("syns"), 2600); }
+
+// ------------------------------------------------------------------ lagring
+// I Claude: privat i ditt konto (syns i mobil och dator). Annars: bara i den här webbläsaren.
+const lager = {
+  typ: "lokal", db: null, bas: null,
+  async init() {
+    try {
+      const use = window.claude && window.claude.use;
+      if (use) {
+        const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+        const uid = user ? await user.id() : null;
+        if (db && uid) { this.db = db; this.bas = "data/users/" + uid; this.typ = "konto"; }
+      }
+    } catch (e) { /* lokalt */ }
+  },
+  lokal() { try { return JSON.parse(localStorage.getItem("schema-light") || '{"enheter":{},"korningar":{}}'); } catch { return { enheter: {}, korningar: {} }; } },
+  lokalSpara(d) { try { localStorage.setItem("schema-light", JSON.stringify(d)); } catch { meddela("Kunde inte spara i webbläsaren."); } },
+  async enheter() {
+    if (this.db) {
+      const s = await medTidsgrans(this.db.collection(this.bas).get());
+      return s.docs.filter(d => d.id.startsWith("e_")).map(d => ({ id: d.id.slice(2), ...d.data() })).sort((a, b) => b.andrad - a.andrad);
+    }
+    return Object.values(this.lokal().enheter).sort((a, b) => b.andrad - a.andrad);
+  },
+  async sparaEnhet(e) {
+    const rad = { id: e.id, namn: e.namn, indata: e.indata, andrad: Date.now() };
+    if (this.db) return this.db.doc(`${this.bas}/e_${e.id}`).set(rad);
+    const d = this.lokal(); d.enheter[e.id] = rad; this.lokalSpara(d);
+  },
+  async taBortEnhet(id) {
+    if (this.db) {
+      const k = await this.db.collection(`${this.bas}/e_${id}/korningar`).get();
+      for (const d of k.docs) await this.db.doc(`${this.bas}/e_${id}/korningar/${d.id}`).delete();
+      return this.db.doc(`${this.bas}/e_${id}`).delete();
+    }
+    const d = this.lokal(); delete d.enheter[id];
+    Object.keys(d.korningar).forEach(k => { if (d.korningar[k].enhet === id) delete d.korningar[k]; }); this.lokalSpara(d);
+  },
+  async korningar(eid) {
+    if (this.db) {
+      const s = await medTidsgrans(this.db.collection(`${this.bas}/e_${eid}/korningar`).get());
+      return s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.skapad - a.skapad);
+    }
+    return Object.values(this.lokal().korningar).filter(k => k.enhet === eid).sort((a, b) => b.skapad - a.skapad);
+  },
+  async sparaKorning(k) {
+    if (this.db) return this.db.doc(`${this.bas}/e_${k.enhet}/korningar/${k.id}`).set(k);
+    const d = this.lokal(); d.korningar[k.id] = k; this.lokalSpara(d);
+  },
+  async taBortKorning(k) {
+    if (this.db) return this.db.doc(`${this.bas}/e_${k.enhet}/korningar/${k.id}`).delete();
+    const d = this.lokal(); delete d.korningar[k.id]; this.lokalSpara(d);
+  },
+};
+function medTidsgrans(p) { return Promise.race([p, new Promise((_, nej) => setTimeout(() => nej(new Error("Lagringen svarar inte just nu.")), 10000))]); }
+
+// ------------------------------------------------------------------ tillstånd
+const st = { vy: "lista", enheter: [], enhet: null, flik: "personal", korningar: [], korning: null, vecka: 0, cell: null, onskForm: null, sekunder: 8, kor: false };
+let sparaTimer = null;
+function andrad(rita) {
+  if (rita) ritaFlik();
+  ritaKontroll();
+  clearTimeout(sparaTimer);
+  sparaTimer = setTimeout(async () => { try { await lager.sparaEnhet(st.enhet); } catch (e) { meddela("Kunde inte spara: " + e.message); } }, 800);
+}
+
+// ------------------------------------------------------------------ vy: lista
+async function visaLista() {
+  st.vy = "lista"; st.enhet = null; $("#fot").hidden = true;
+  $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
+  try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
+  $("#sida").innerHTML = `
+    <header class="kort"><h1>Schema light</h1>
+      <p class="dampad" style="margin:6px 0 0">Lägg cykliska grundscheman direkt i mobilen. Samma hårda regler som det fullständiga systemet: dygnsvila och veckovila (avtal), rast (lag), antal pass, varannan helg och block på 2–5 dagar.</p>
+      <p class="liten dampad" style="margin:6px 0 0">${lager.typ === "konto" ? "Sparas privat i ditt Claude-konto och syns i mobil och dator." : "Sparas bara i den här webbläsaren."}</p></header>
+    <section class="kort"><div class="rad"><h2 style="margin:0">Enheter</h2><button class="primar" data-g="ny">Ny enhet</button></div>
+      ${st.enheter.length ? st.enheter.map(e => `<div class="onsk"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${esc(e.namn)}</button>
+        <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div></div>
+        <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>`).join("")
+      : `<p class="tom">Inga enheter än. Skapa en ny eller börja från ett exempel.</p>`}</section>
+    <section class="kort"><h2>Exempel</h2><p class="dampad liten">Testfall från projektet, med id-koder i stället för namn.</p>
+      ${EXEMPEL.map((x, i) => `<div class="onsk"><div><b>${esc(x.namn)}</b><div class="dampad liten">${esc(x.beskrivning)}</div></div><button class="liten" data-g="exempel" data-i="${i}">Använd</button></div>`).join("")}</section>`;
+}
+
+const NY = () => ({ veckor: 4, cykliskt: true, behov: { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 2, natt: 1 } },
+  personal: [{ id: "A1", grad: 1 }, { id: "A2", grad: 1 }, { id: "A3", grad: 0.9 }, { id: "A4", grad: 0.9 }, { id: "A5", grad: 0.8 }, { id: "A6", grad: 0.75 }, { id: "N1", grad: 1, dygnsdelar: ["natt"] }, { id: "N2", grad: 0.9, dygnsdelar: ["natt"] }],
+  onskemal: [] });
+
+async function skapa(namn, indata) {
+  const e = { id: nyttId(), namn, indata: structuredClone(indata) };
+  delete e.indata.losare; delete e.indata.tidpunkter; delete e.indata.delperioder;
+  try { await lager.sparaEnhet(e); } catch (err) { meddela("Kunde inte spara: " + err.message); }
+  oppna(e);
+}
+
+// ------------------------------------------------------------------ vy: enhet
+async function oppna(e) {
+  st.vy = "enhet"; st.enhet = e; st.onskForm = null; st.korning = null;
+  $("#sida").innerHTML = `
+    <header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button><span class="dampad liten">${lager.typ === "konto" ? "Sparas automatiskt" : "Sparas i webbläsaren"}</span></div>
+      <label for="namn" style="margin-top:6px">Enhet</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px"></header>
+    <section class="kort" id="kontroll"></section>
+    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
+      `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
+    <section class="kort" id="korningar"><h2>Körningar</h2><p class="dampad liten">Laddar …</p></section>`;
+  $("#namn").oninput = ev => { st.enhet.namn = ev.target.value; andrad(false); };
+  ritaFlik(); ritaKontroll(); ritaFot();
+  try { st.korningar = await lager.korningar(e.id); } catch { st.korningar = []; }
+  ritaKorningar();
+}
+
+function ritaFot() {
+  const f = $("#fot"); f.hidden = false;
+  f.innerHTML = `<div><select id="sek" aria-label="Söktid"><option value="5"${st.sekunder === 5 ? " selected" : ""}>Snabb</option><option value="8"${st.sekunder === 8 ? " selected" : ""}>Normal</option><option value="20"${st.sekunder === 20 ? " selected" : ""}>Noggrann</option></select>
+    <button class="primar" data-g="lagg" ${st.kor ? "disabled" : ""}>${st.kor ? "Lägger schema …" : "Lägg schema"}</button></div>`;
+  $("#sek").onchange = ev => (st.sekunder = +ev.target.value);
+}
+
+function ritaKontroll() {
+  const el = $("#kontroll"); if (!el) return;
+  const b = MOTOR_HUVUD.balans(st.enhet.indata);
+  if (b.fel) { el.innerHTML = `<div class="banner dalig"><strong>Rätta först</strong></div><ul class="punkter liten" style="margin-top:8px">${b.fel.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`; return; }
+  const und = st.enhet.indata.personal.filter(p => p.helgfrekvens && p.helgfrekvens !== "2/4");
+  el.innerHTML = `<div class="banner ${b.forvantade_vakanser ? "varn" : "ok"}"><strong>${b.forvantade_vakanser ? `Cirka ${vakText(b.forvantade_vakanser)}` : "Personalen räcker"}</strong>
+    <span class="liten">Dag och kväll: behov ${b.behovDK}, finns ${b.tillDK} · Natt: behov ${b.behovN}, finns ${b.tillN}</span></div>
+    ${b.atgarder.length ? `<details style="margin-top:8px"><summary>${b.atgarder.length} förslag</summary><ul class="punkter liten" style="margin-top:6px">${b.atgarder.map(a => `<li>${esc(a)}</li>`).join("")}</ul></details>` : ""}
+    ${und.length ? `<p class="liten" style="margin:8px 0 0;color:var(--varn)">Undantag från varannan helg: ${und.map(p => `${esc(p.id)} (${UNDANTAG[p.helgfrekvens]})`).join(", ")}</p>` : ""}`;
+}
+
+function ritaFlik() {
+  const i = st.enhet.indata, el = $("#flik"); if (!el) return;
+  document.querySelectorAll("[data-g=flik]").forEach(b => b.setAttribute("aria-selected", b.dataset.f === st.flik));
+  if (st.flik === "personal") {
+    el.innerHTML = `<p class="dampad liten">Använd id-koder, inte namn. Antal pass räknas ut om fältet är tomt.</p>` +
+      i.personal.map((p, n) => {
+        const del = (p.dygnsdelar || ["morgon", "kvall"]).join(",");
+        return `<div class="person">
+        <div><label>Id</label><input data-p="${n}" data-f="id" value="${esc(p.id)}"></div>
+        <div><label>Grad %</label><input data-p="${n}" data-f="grad" type="number" inputmode="numeric" min="10" max="100" step="5" value="${Math.round((p.grad ?? 1) * 100)}"></div>
+        <div><label>Arbetar</label><select data-p="${n}" data-f="dygnsdelar">${Object.entries(ARBETAR).map(([v, t]) => `<option value="${v}"${v === del ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+        <div><label>Helger</label><select data-p="${n}" data-f="helgfrekvens"${p.helgfrekvens && p.helgfrekvens !== "2/4" ? ' class="undantag"' : ""}><option value="">Varannan</option>${Object.entries(UNDANTAG).map(([v, t]) => `<option value="${v}"${v === p.helgfrekvens ? " selected" : ""}>Undantag: ${v === "alla" || v === "ingen" ? t : v}</option>`).join("")}</select></div>
+        <div><label>Helggrupp</label><select data-p="${n}" data-f="helggrupp"><option value="">Auto</option><option${p.helggrupp === "A" ? " selected" : ""}>A</option><option${p.helggrupp === "B" ? " selected" : ""}>B</option></select></div>
+        <div><label>Antal pass</label><input data-p="${n}" data-f="antal_pass" inputmode="numeric" value="${p.antal_pass ?? ""}" placeholder="auto"></div>
+        <button class="liten fara bort" data-g="ta-bort-person" data-n="${n}" aria-label="Ta bort ${esc(p.id)}">×</button></div>`;
+      }).join("") +
+      `<div class="chips" style="margin-top:10px"><button data-g="ny-person">+ Person</button><button data-g="ny-person" data-natt="1">+ Nattperson</button></div>
+      <p class="dampad liten" style="margin-top:8px">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person. Grupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
+  } else if (st.flik === "behov") {
+    const b = i.behov || (i.behov = {});
+    el.innerHTML = `<p class="dampad liten">Antal pass per dygnsdel. Rader längre ned gäller före rader ovanför.</p>
+      <div class="rull"><table><thead><tr><th>Dagar</th><th>Morgon</th><th>Kväll</th><th>Natt</th><th></th></tr></thead><tbody>
+      ${Object.keys(b).map(k => `<tr><th>${DAGNYCKEL[k] || esc(k)}</th>${["morgon", "kvall", "natt"].map(d => `<td><input type="number" inputmode="numeric" min="0" data-b="${k}" data-d="${d}" value="${b[k][d] ?? 0}" style="width:64px" aria-label="${DAGNYCKEL[k]} ${DELAR[d]}"></td>`).join("")}
+        <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
+      <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
+      <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>`;
+  } else if (st.flik === "onskemal") {
+    const l = i.onskemal || (i.onskemal = []);
+    el.innerHTML = (st.onskForm ? onskForm() : `<p><button class="primar" data-g="nytt-onsk">+ Nytt önskemål</button></p>`) +
+      (l.length ? l.map((o, n) => `<div class="onsk"><div>${o.krav ? `<span class="niva skarp">krav</span> ` : ""}${esc(beskriv(o))}</div>
+        <div class="chips"><button class="liten" data-g="andra-onsk" data-n="${n}">Ändra</button><button class="liten fara" data-g="ta-bort-onsk" data-n="${n}" aria-label="Ta bort">×</button></div></div>`).join("") : `<p class="tom">Inga önskemål.</p>`);
+    kopplaOnsk();
+  } else if (st.flik === "regler") {
+    const r = i.regler || {};
+    const last = (namn, niva, varde) => `<div class="regel"><div>${namn}<br><span class="niva skarp">${niva}</span> <span class="niva">hård</span></div><span class="lat">${varde}</span></div>`;
+    const tal = (k, namn, niva, std, steg) => `<div class="regel"><div>${namn}<br><span class="niva">${niva}</span></div><input type="number" step="${steg}" data-r="${k}" value="${r[k] ?? std}"></div>`;
+    el.innerHTML = `<p class="dampad liten">Avtal, lag och varannan helg är låsta. Övriga lokala regler och principer går att justera.</p>
+      ${last("Dygnsvila", "avtal", "11 h")}${last("Veckovila", "avtal", "36 h")}${last("Rast efter högst", "lag", "5 h arbete")}
+      <div class="regel"><div>Varannan helg<br><span class="niva">lokal regel</span> <span class="niva">hård</span></div><span class="lat">låst</span></div>
+      <div class="regel"><div>Ingen fredagskväll före ledig helg<br><span class="niva">lokal regel</span></div><input type="checkbox" data-r="ingen_fredagskvall_fore_ledig_helg" data-t="check"${r.ingen_fredagskvall_fore_ledig_helg === false ? "" : " checked"} aria-label="På"></div>
+      ${tal("pass_per_vecka", "Pass per vecka, dag och kväll", "lokal regel", 4.75, 0.25)}
+      ${tal("block_min", "Minst antal arbetsdagar i följd", "lokal regel", 2, 1)}
+      ${tal("block_max", "Högst antal arbetsdagar i följd", "lokal regel", 5, 1)}
+      <div class="regel"><div>Morgonpass börjar<br><span class="niva">princip</span></div><input type="time" data-r="morgon_start" value="${r.morgon_start ?? "07:00"}"></div>
+      <div class="regel"><div>Kvällspass slutar<br><span class="niva">princip</span></div><input type="time" data-r="kvall_slut" value="${r.kvall_slut ?? "22:00"}"></div>
+      ${tal("tolerans_minuter", "Tolerans för arbetstid (minuter)", "kontrakt", 60, 15)}
+      <p class="dampad liten" style="margin-top:8px">En vakans är alltid bättre än ett avtalsbrott: behovet ger efter först.</p>`;
+  } else {
+    el.innerHTML = `<div class="falt"><div><label for="p-v">Veckor</label><input id="p-v" type="number" min="1" max="16" data-i="veckor" value="${i.veckor}"></div>
+      <div><label for="p-iso">Första veckans nummer</label><input id="p-iso" type="number" min="1" max="53" data-i="start_iso_vecka" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div></div>
+      <p style="margin-top:10px"><label class="check"><input type="checkbox" data-i="cykliskt"${i.cykliskt === false ? "" : " checked"}> Cykliskt: sista veckan följs av vecka 1</label></p>
+      <p class="dampad liten">Med 4,75 pass per vecka blir antalet pass ett heltal vid 4, 8, 12 eller 16 veckor. Vid andra längder anger du antal pass per person.</p>`;
+  }
+}
+
+function beskriv(o) {
+  const vill = o.krav ? "måste" : "vill";
+  const vad = o.typ === "ledig" ? "vara ledig" : o.typ === "arbetar" ? "arbeta" : o.typ === "tidigast_start" ? `börja tidigast ${o.varde}` : o.typ === "senast_slut" ? `sluta senast ${o.varde}` : `bara arbeta ${(DELAR[o.varde] || o.varde).toLowerCase()}`;
+  let nar = Array.isArray(o.dagindex) ? o.dagindex.map(d => `v${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}`).join(", ") : (o.dagar && o.dagar.length ? o.dagar.join(", ") : "alla dagar");
+  if (o.veckor === "jämna" || o.veckor === "udda") nar += `, ${o.veckor} veckor`;
+  else if (Array.isArray(o.veckor)) nar += `, vecka ${o.veckor.join(", ")}`;
+  return `${o.person} ${vill} ${vad} – ${nar}${!o.krav && (o.vikt || 1) > 1 ? ` (vikt ${o.vikt})` : ""}`;
+}
+
+function onskForm() {
+  const o = st.onskForm.data, vv = Array.isArray(o.veckor) ? "vissa" : (o.veckor || "alla");
+  return `<form class="formular" id="of">
+    <div class="falt"><div><label for="of-p">Person</label><select id="of-p">${st.enhet.indata.personal.map(p => `<option${p.id === o.person ? " selected" : ""}>${esc(p.id)}</option>`).join("")}</select></div>
+      <div><label for="of-t">Önskemål</label><select id="of-t">${Object.entries(ONSKTYP).map(([k, t]) => `<option value="${k}"${k === o.typ ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div id="of-v"></div></div>
+    ${Array.isArray(o.dagindex) ? `<p class="dampad liten">Gäller enskilda dagar: ${esc(o.dagindex.join(", "))}.</p>` : `
+    <div><label>Dagar (inga valda = alla)</label><div class="chips">${DAGAR.map(d => `<label><input type="checkbox" name="of-d" value="${d}"${(o.dagar || []).includes(d) ? " checked" : ""}>${d}</label>`).join("")}</div></div>
+    <div class="falt"><div><label for="of-w">Veckor</label><select id="of-w">${[["alla", "Alla"], ["jämna", "Jämna"], ["udda", "Udda"], ["vissa", "Vissa"]].map(([k, t]) => `<option value="${k}"${k === vv ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div id="of-wl"${vv === "vissa" ? "" : " hidden"}><label for="of-wlista">Vilka (1, 3)</label><input id="of-wlista" value="${Array.isArray(o.veckor) ? o.veckor.join(", ") : ""}"></div></div>`}
+    <div class="falt"><div><label>Hur viktigt</label><div class="chips"><label><input type="radio" name="of-k" value="0"${o.krav ? "" : " checked"}>Önskemål</label><label><input type="radio" name="of-k" value="1"${o.krav ? " checked" : ""}>Krav</label></div></div>
+      <div id="of-vikt"${o.krav ? " hidden" : ""}><label for="of-vi">Vikt 1–10</label><input id="of-vi" type="number" min="1" max="10" value="${o.vikt || 1}"></div></div>
+    <div class="chips"><button class="primar" type="submit">${st.onskForm.n == null ? "Lägg till" : "Spara"}</button><button type="button" data-g="avbryt-onsk">Avbryt</button></div></form>`;
+}
+
+function kopplaOnsk() {
+  const f = $("#of"); if (!f) return;
+  const o = st.onskForm.data;
+  const varde = () => {
+    const t = $("#of-t").value;
+    $("#of-v").innerHTML = t === "tidigast_start" || t === "senast_slut" ? `<label for="of-va">Klockslag</label><input id="of-va" type="time" value="${esc(String(o.varde || "").includes(":") ? o.varde : t === "tidigast_start" ? "08:00" : "14:00")}">`
+      : t === "endast_dygnsdel" ? `<label for="of-va">Dygnsdel</label><select id="of-va">${Object.entries(DELAR).map(([k, n]) => `<option value="${k}"${k === o.varde ? " selected" : ""}>${n}</option>`).join("")}</select>` : "";
+  };
+  varde(); $("#of-t").onchange = varde;
+  if ($("#of-w")) $("#of-w").onchange = () => ($("#of-wl").hidden = $("#of-w").value !== "vissa");
+  f.querySelectorAll("[name=of-k]").forEach(x => (x.onchange = () => ($("#of-vikt").hidden = f.querySelector("[name=of-k]:checked").value === "1")));
+  f.onsubmit = ev => {
+    ev.preventDefault();
+    const n = { id: o.id || "O" + (Math.max(0, ...(st.enhet.indata.onskemal || []).map(x => +String(x.id || "O0").slice(1) || 0)) + 1), person: $("#of-p").value, typ: $("#of-t").value };
+    if ($("#of-va")) n.varde = $("#of-va").value;
+    if (Array.isArray(o.dagindex)) n.dagindex = o.dagindex;
+    else {
+      const d = [...f.querySelectorAll("[name=of-d]:checked")].map(x => x.value); if (d.length && d.length < 7) n.dagar = d;
+      const w = $("#of-w").value;
+      if (w === "vissa") { const l = $("#of-wlista").value.split(/[,; ]+/).map(Number).filter(x => x > 0); if (!l.length) return meddela("Ange vilka veckor."); n.veckor = l; }
+      else if (w !== "alla") n.veckor = w;
+    }
+    n.krav = f.querySelector("[name=of-k]:checked").value === "1";
+    if (!n.krav) n.vikt = Math.max(1, Math.min(10, +$("#of-vi").value || 1));
+    const l = st.enhet.indata.onskemal;
+    if (st.onskForm.n == null) l.push(n); else l[st.onskForm.n] = n;
+    st.onskForm = null; andrad(true);
+  };
+}
+
+function ritaKorningar() {
+  const el = $("#korningar"); if (!el) return;
+  el.innerHTML = `<h2>Körningar</h2>` + (st.korningar.length ? st.korningar.map(k => {
+    const s = k.status === "OK" ? (k.vakanta ? ["varn", vakText(k.vakanta)] : ["ok", "Klart"]) : ["dalig", "Regler bryts"];
+    return `<div class="onsk"><div><button class="lank" data-g="visa-korning" data-id="${k.id}">${esc(k.namn)}</button><br><span class="status ${s[0]}">${s[1]}</span> <span class="dampad liten">${datum(k.skapad)}</span></div>
+      <button class="liten fara" data-g="ta-bort-korning" data-id="${k.id}" aria-label="Ta bort">×</button></div>`;
+  }).join("") : `<p class="dampad liten">Inga körningar än. Tryck på Lägg schema.</p>`);
+}
+
+// ------------------------------------------------------------------ ändringar
+document.addEventListener("input", ev => {
+  const el = ev.target; if (!st.enhet || !el.closest("#flik")) return;
+  const i = st.enhet.indata;
+  if (el.dataset.p !== undefined) {
+    const p = i.personal[+el.dataset.p], f = el.dataset.f, v = el.value.trim();
+    if (f === "id") { const gammal = p.id; p.id = v; (i.onskemal || []).forEach(o => { if (o.person === gammal) o.person = v; }); }
+    else if (f === "grad") { if (v) p.grad = Math.round(+v.replace(",", ".")) / 100; }
+    else if (f === "dygnsdelar") { if (v === "morgon,kvall") delete p.dygnsdelar; else p.dygnsdelar = v.split(","); }
+    else if (f === "antal_pass") { if (v) p.antal_pass = parseInt(v) || undefined; else delete p.antal_pass; }
+    else { if (v) p[f] = v; else delete p[f]; }
+    andrad(f === "helgfrekvens");
+  } else if (el.dataset.b) { i.behov[el.dataset.b][el.dataset.d] = parseInt(el.value) || 0; andrad(false); }
+  else if (el.dataset.r) {
+    i.regler = i.regler || {};
+    const k = el.dataset.r;
+    if (el.dataset.t === "check") { if (el.checked) delete i.regler[k]; else i.regler[k] = false; }
+    else if (el.type === "time") i.regler[k] = el.value;
+    else { const v = parseFloat(el.value.replace(",", ".")); if (isNaN(v)) delete i.regler[k]; else i.regler[k] = v; }
+    andrad(false);
+  } else if (el.dataset.i) {
+    const k = el.dataset.i;
+    if (k === "cykliskt") i.cykliskt = el.checked;
+    else if (el.value === "") delete i[k]; else i[k] = parseInt(el.value);
+    andrad(false);
+  }
+});
+document.addEventListener("change", ev => { if (ev.target.tagName === "SELECT" && ev.target.closest("#flik") && ev.target.dataset.p !== undefined) ev.target.dispatchEvent(new Event("input", { bubbles: true })); });
+
+document.addEventListener("click", async ev => {
+  const el = ev.target.closest("[data-g]"); if (!el) return;
+  const g = el.dataset.g, i = st.enhet && st.enhet.indata;
+  switch (g) {
+    case "ny": return skapa("Ny enhet", NY());
+    case "exempel": { const x = EXEMPEL[+el.dataset.i]; return skapa(x.namn, x.indata); }
+    case "oppna": return oppna(structuredClone(st.enheter.find(e => e.id === el.dataset.id)));
+    case "kopiera": { const e = st.enheter.find(x => x.id === el.dataset.id); await lager.sparaEnhet({ id: nyttId(), namn: e.namn + " (kopia)", indata: e.indata }); meddela("Kopia skapad."); return visaLista(); }
+    case "ta-bort":
+      if (el.dataset.ok !== "1") { el.dataset.ok = "1"; el.textContent = "Säker?"; setTimeout(() => { el.dataset.ok = ""; el.textContent = "Ta bort"; }, 4000); return; }
+      await lager.taBortEnhet(el.dataset.id); meddela("Borttagen."); return visaLista();
+    case "tillbaka": clearTimeout(sparaTimer); if (st.enhet) await lager.sparaEnhet(st.enhet).catch(() => {}); return visaLista();
+    case "flik": st.flik = el.dataset.f; st.onskForm = null; return ritaFlik();
+    case "ny-person": {
+      const natt = el.dataset.natt === "1", ids = new Set(i.personal.map(p => p.id)), pre = natt ? "N" : "P";
+      let n = i.personal.length + 1; while (ids.has(pre + n)) n++;
+      i.personal.push(natt ? { id: pre + n, grad: 1, dygnsdelar: ["natt"] } : { id: pre + n, grad: 0.75 }); return andrad(true);
+    }
+    case "ta-bort-person": {
+      const p = i.personal[+el.dataset.n];
+      if ((i.onskemal || []).some(o => o.person === p.id)) return meddela(`${p.id} har önskemål. Ta bort dem först.`);
+      i.personal.splice(+el.dataset.n, 1); return andrad(true);
+    }
+    case "ny-behov": { const k = $("#ny-dag").value; if (!k) return; i.behov[k] = { ...(["lör", "sön", "helg"].includes(k) ? i.behov.helg : i.behov.vardag) }; return andrad(true); }
+    case "ta-bort-behov": delete i.behov[el.dataset.k]; return andrad(true);
+    case "nytt-onsk": if (!i.personal.length) return; st.onskForm = { n: null, data: { person: i.personal[0].id, typ: "ledig", krav: false, vikt: 1 } }; return ritaFlik();
+    case "andra-onsk": st.onskForm = { n: +el.dataset.n, data: structuredClone(i.onskemal[+el.dataset.n]) }; return ritaFlik();
+    case "avbryt-onsk": st.onskForm = null; return ritaFlik();
+    case "ta-bort-onsk": i.onskemal.splice(+el.dataset.n, 1); return andrad(true);
+    case "lagg": return laggSchema();
+    case "visa-korning": return visaKorning(st.korningar.find(k => k.id === el.dataset.id));
+    case "ta-bort-korning": { const k = st.korningar.find(x => x.id === el.dataset.id); await lager.taBortKorning(k); st.korningar = st.korningar.filter(x => x !== k); return ritaKorningar(); }
+    case "till-enhet": return oppna(st.enhet);
+    case "vecka": st.vecka = +el.dataset.v; st.cell = null; return ritaResultat();
+    case "cell": {
+      st.cell = st.cell === el.dataset.c ? null : el.dataset.c;
+      document.querySelectorAll(".pass.vald").forEach(b => b.classList.remove("vald")); if (st.cell) el.classList.add("vald");
+      $("#info").innerHTML = cellInfo(); return;
+    }
+    case "excel": return excel();
+    case "kopiera-tabell": return kopieraTabell();
+  }
+});
+
+// ------------------------------------------------------------------ lägga schema
+let arbetare = null;
+function laggSchema() {
+  const b = MOTOR_HUVUD.balans(st.enhet.indata);
+  if (b.fel) { meddela("Rätta felen i kontrollen först."); $("#kontroll").scrollIntoView({ behavior: "smooth" }); return; }
+  st.kor = true; ritaFot();
+  const kontroll = $("#kontroll");
+  kontroll.innerHTML = `<div class="banner info"><strong>Lägger schemat …</strong><span class="liten">Söker ett schema som håller alla hårda regler med så få vakanser som möjligt.</span><div class="matare"><div id="matare"></div></div></div>`;
+  kontroll.scrollIntoView({ behavior: "smooth", block: "start" });
+  const klar = res => { st.kor = false; ritaFot(); efterKorning(res, b); };
+  try {
+    if (!arbetare) arbetare = new Worker(URL.createObjectURL(new Blob([$("#motor-kod").textContent], { type: "text/javascript" })));
+    arbetare.onmessage = e => {
+      if (e.data.typ === "framsteg") { const m = $("#matare"); if (m) m.style.width = Math.round(e.data.andel * 100) + "%"; }
+      else if (e.data.typ === "klar") klar(e.data.resultat);
+      else { st.kor = false; ritaFot(); ritaKontroll(); meddela("Fel i motorn: " + e.data.fel); }
+    };
+    arbetare.onerror = () => { arbetare = null; setTimeout(() => klar(MOTOR_HUVUD.los(st.enhet.indata, { sekunder: st.sekunder })), 30); };
+    arbetare.postMessage({ indata: st.enhet.indata, sekunder: st.sekunder, seed: Date.now() % 100000 });
+  } catch {
+    setTimeout(() => klar(MOTOR_HUVUD.los(st.enhet.indata, { sekunder: st.sekunder, seed: Date.now() % 100000 })), 30);
+  }
+}
+
+async function efterKorning(res, bal) {
+  if (res.status === "INDATAFEL") { ritaKontroll(); meddela(res.fel[0]); return; }
+  const granskning = GRANSKNING.kontrollera(st.enhet.indata, res);
+  const k = { id: nyttId(), enhet: st.enhet.id, namn: `Körning ${st.korningar.length + 1}`, skapad: Date.now(), status: res.status === "OK" && granskning.giltigt ? "OK" : "BROTT",
+    vakanta: res.kpi.vakanta_pass, data: JSON.stringify({ resultat: res, granskning, balans: bal.forvantade_vakanser, indata: st.enhet.indata }) };
+  st.korningar.unshift(k);
+  try { await lager.sparaKorning(k); } catch (e) { meddela("Körningen kunde inte sparas: " + e.message); }
+  visaKorning(k);
+}
+
+// ------------------------------------------------------------------ resultat
+function visaKorning(k) {
+  st.vy = "resultat"; st.korning = { ...k, ...JSON.parse(k.data) }; st.vecka = 0; st.cell = null;
+  $("#fot").hidden = true; ritaResultat(); window.scrollTo(0, 0);
+}
+
+function ritaResultat() {
+  const k = st.korning, res = k.resultat, g = k.granskning;
+  const brott = (res.brott || []).concat(g.brott);
+  const ok = !brott.length;
+  let h = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button><span class="dampad liten">${datum(k.skapad)}</span></div>
+    <h1 style="margin-top:4px">${esc(k.namn)}</h1>
+    <div class="chips" style="margin-top:10px"><button data-g="excel">Ladda ner Excel</button><button data-g="kopiera-tabell">Kopiera tabell</button></div></header>
+    <section class="kort"><div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
+      <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · ${sv(res.sekunder)} s · bemanningsbalansen förutsåg ${vakText(k.balans)}</span></div>
+      <div class="kpi">${KPI.map(([n, t]) => `<div class="${(n === "vakanta_pass" || n === "hardregelbrott") && res.kpi[n] ? "fel" : ""}"><b>${n === "hardregelbrott" ? brott.length : res.kpi[n]}</b><span>${t}</span></div>`).join("")}</div>`;
+  if (!ok) h += `<h3>Regler som bryts</h3><ul class="punkter">${brott.map(b => `<li><b>${esc(b.person || "")}</b> <span class="niva skarp">${esc(b.niva)}</span> ${esc(b.text)}</li>`).join("")}</ul>
+    <p class="liten dampad" style="margin-top:8px">Lättversionen hittade inget schema som håller alla hårda regler. Antingen krockar reglerna, eller så räckte inte sökningen: pröva Noggrann. Kontrollera krav i önskemålen först. Det fullständiga systemet kan bevisa vilka regler som krockar.</p>`;
+  h += `</section><section class="kort"><h2>Schema</h2><div class="veckor">` +
+    Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
+    `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">Alla</button></div>` +
+    (st.vecka === -1 ? Array.from({ length: res.veckor }, (_, v) => `<h3>Vecka ${v + 1}</h3>` + vecka(res, v)).join("") : vecka(res, st.vecka)) +
+    `<p class="liten" id="info" style="margin-top:8px">${cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Röd ruta = vakans.</p></section>`;
+  if (res.vakanser.length) h += `<section class="kort"><h2>Vakanser</h2><ul class="punkter">${res.vakanser.map(x => `<li>Vecka ${x.vecka} ${x.veckodag}: ${x.antal} ${DELAR[x.dygnsdel].toLowerCase()}pass</li>`).join("")}</ul></section>`;
+  h += `<section class="kort"><h2>Per person</h2><div class="rull"><table><thead><tr><th>Person</th><th class="tal">Pass</th><th class="tal">Tid</th><th class="tal">Mål</th><th class="tal">Kvällar</th><th>Helg</th></tr></thead><tbody>
+    ${Object.entries(res.personer).map(([p, x]) => `<tr><td><b>${esc(p)}</b></td><td class="tal">${x.pass}</td><td class="tal nw">${timmar(x.minuter)}</td><td class="tal nw">${timmar(x.mal_minuter)}</td><td class="tal">${x.kvallspass}</td><td>${x.helggrupp || x.helgfrekvens || "–"}</td></tr>`).join("")}</tbody></table></div></section>
+    <section class="kort"><h2>Granskning</h2><p class="dampad liten">Fristående kontroll av schemat, oberoende av motorn. Dygnsvila räknad från dygnsbryt ${esc(g.dygnsbryt)}, veckovila från måndag 00:00.</p>
+    ${g.brott.length ? `<ul class="punkter">${g.brott.map(b => `<li><b>${esc(b.person || "")}</b> <span class="niva skarp">${esc(b.niva)}</span> ${esc(b.text)}</li>`).join("")}</ul>` : `<p style="color:var(--bra);font-weight:600">Inga brott mot hårda regler.</p>`}
+    ${g.varningar.length ? `<details><summary>${g.varningar.length} saker att notera</summary><ul class="punkter liten" style="margin-top:6px">${g.varningar.map(b => `<li>${esc(b.person || "")} ${esc(b.text)}</li>`).join("")}</ul></details>` : ""}</section>`;
+  $("#sida").innerHTML = h;
+}
+
+function vecka(res, v) {
+  const pers = Object.keys(res.schema), vak = {};
+  res.vakanser.forEach(x => (vak[x.dag] = 1));
+  let h = `<div class="rull"><table class="schema"><thead><tr><th>V${v + 1}</th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}</tr></thead><tbody>`;
+  for (const p of pers) h += `<tr><td title="${esc(p)}">${esc(p)}</td>` + DAGAR.map((_, i) => {
+    const d = v * 7 + i, x = res.schema[p][d], n = p + "|" + d;
+    return `<td class="${i > 4 ? "helg" : ""}">${x ? `<button class="pass ${x.dygnsdel}${st.cell === n ? " vald" : ""}" data-g="cell" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[i]} ${x.start} till ${x.slut}"><b>${{ morgon: "M", kvall: "K", natt: "N" }[x.dygnsdel]}</b><small>${x.start}–${x.slut}</small></button>` : ""}</td>`;
+  }).join("") + `</tr>`;
+  h += `<tr class="bem"><td>I tj.</td>` + DAGAR.map((_, i) => {
+    const d = v * 7 + i, c = { morgon: 0, kvall: 0, natt: 0 };
+    pers.forEach(p => { const x = res.schema[p][d]; if (x) c[x.dygnsdel]++; });
+    return `<td class="${vak[d] ? "vakans" : ""}">M${c.morgon}<br>K${c.kvall}<br>N${c.natt}</td>`;
+  }).join("") + `</tr></tbody></table></div>`;
+  return h;
+}
+
+function cellInfo() {
+  if (!st.cell) return `<span class="dampad">Tryck på ett pass för tider och rast.</span>`;
+  const [p, d] = st.cell.split("|"), x = st.korning.resultat.schema[p][+d];
+  return `<b>${esc(p)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[x.dygnsdel].toLowerCase()} <span class="mono">${x.start}–${x.slut}</span>, rast ${x.rast} min, arbetstid ${timmar(x.netto)}.`;
+}
+
+// ------------------------------------------------------------------ export
+function tabellRader() {
+  const res = st.korning.resultat, N = res.veckor * 7;
+  const rader = [["Person", ...Array.from({ length: N }, (_, d) => `V${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}`)]];
+  for (const [p, rad] of Object.entries(res.schema)) rader.push([p, ...rad.map(x => x ? `${{ morgon: "M", kvall: "K", natt: "N" }[x.dygnsdel]} ${x.start}-${x.slut}` : "")]);
+  for (const del of ["morgon", "kvall", "natt"]) rader.push([`I tjänst ${DELAR[del].toLowerCase()}`, ...Array.from({ length: N }, (_, d) => Object.values(res.schema).filter(r => r[d] && r[d].dygnsdel === del).length)]);
+  return rader;
+}
+
+async function kopieraTabell() {
+  const text = tabellRader().map(r => r.join("\t")).join("\n");
+  try { await navigator.clipboard.writeText(text); meddela("Tabellen är kopierad. Klistra in i Excel eller Numbers."); }
+  catch { meddela("Kopieringen tilläts inte här."); }
+}
+
+function laddaXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ja, nej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = ja; s.onerror = () => nej(new Error("Kunde inte ladda Excel-stödet."));
+    document.head.appendChild(s);
+  });
+}
+
+async function excel() {
+  let dl = null;
+  try { dl = window.claude && await window.claude.use("downloads"); } catch { dl = null; }
+  if (!dl) { meddela("Nedladdning går inte här. Använd Kopiera tabell."); return; }
+  try {
+    await laddaXlsx();
+    const res = st.korning.resultat, wb = XLSX.utils.book_new();
+    const s1 = XLSX.utils.aoa_to_sheet(tabellRader()); s1["!cols"] = [{ wch: 14 }, ...Array(res.veckor * 7).fill({ wch: 13 })];
+    XLSX.utils.book_append_sheet(wb, s1, "Schema");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Person", "Pass", "Arbetstid (h)", "Mål (h)", "Kvällspass", "Helger"],
+      ...Object.entries(res.personer).map(([p, x]) => [p, x.pass, +(x.minuter / 60).toFixed(2), +(x.mal_minuter / 60).toFixed(2), x.kvallspass, x.helggrupp || UNDANTAG[x.helgfrekvens] || ""])]), "Per person");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Vecka", "Dag", "Dygnsdel", "Antal"], ...res.vakanser.map(x => [x.vecka, x.veckodag, DELAR[x.dygnsdel], x.antal])]), "Vakanser");
+    const g = st.korning.granskning;
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Typ", "Regel", "Nivå", "Person", "Beskrivning"],
+      ...(res.brott || []).concat(g.brott).map(b => ["Brott", b.regel, b.niva, b.person || "", b.text]),
+      ...g.varningar.map(b => ["Att notera", b.regel, b.niva, b.person || "", b.text])]), "Granskning");
+    const data = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const namn = (st.enhet.namn || "schema").replace(/[^\wåäöÅÄÖ -]/g, "").trim() || "schema";
+    await dl.save({ filename: `${namn} – ${st.korning.namn}.xlsx`, data: new Uint8Array(data) });
+  } catch (e) {
+    if (e && e.code === "declined") return;
+    meddela(e && e.message ? e.message : "Nedladdningen misslyckades.");
+  }
+}
+
+// ------------------------------------------------------------------ start
+(async () => { await lager.init(); visaLista(); })();
+</script>

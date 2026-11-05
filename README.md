@@ -7,6 +7,10 @@ Systemet har två delar:
 - **schemamotor** – lägger, granskar och förklarar scheman. Kan köras från kommandoraden.
 - **schemawebb** – webbtjänst med inloggning där man lägger in enheter, personal, behov, önskemål och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
 
+## Schema light
+
+`light/` är en lättversion som körs helt i webbläsaren, utan server: `motor.js` lägger schemat med en heuristik (simulerad glödgning) i stället för OR-Tools, och `granskning.js` är en fristående översättning av `schemamotor/validate.py`. `python light/bygg.py` sätter ihop `light/schema-light.html`. Samma hårda regler gäller, men lättversionen kan inte bevisa att ett schema är olösbart och saknar behov vid klockslag och delperioder.
+
 ## Kom igång på egen dator
 
 ```bash
