@@ -1,0 +1,67 @@
+1
+00:00:00,600 --> 00:00:05,900
+Att lägga ett schema för dygnet runt tar veckor.
+
+2
+00:00:06,100 --> 00:00:11,600
+Avtal, vila, helger, behov och rättvisa ska gå ihop – och det räcker med ett misstag.
+
+3
+00:00:12,600 --> 00:00:15,600
+DODEX Scheduler lägger schemat åt dig.
+
+4
+00:00:20,600 --> 00:00:27,000
+Du svarar på några frågor om gruppen, behovet och tiderna.
+
+5
+00:00:27,300 --> 00:00:34,600
+Systemet räknar direkt ut vad behovet kräver.
+
+6
+00:00:35,500 --> 00:00:38,600
+Låt AI lägga schemat, eller lägg det själv.
+
+7
+00:00:38,800 --> 00:00:41,800
+Varje pass granskas mot reglerna medan du arbetar.
+
+8
+00:00:42,600 --> 00:00:48,000
+På någon minut finns ett schema som täcker behovet,
+
+9
+00:00:48,200 --> 00:00:54,600
+med jämn fördelning av morgnar, kvällar och helger.
+
+10
+00:00:55,400 --> 00:00:58,500
+Dygnsvila, veckovila och rast följer avtal och lag.
+
+11
+00:00:58,700 --> 00:01:01,600
+En fristående kontroll granskar varje schema.
+
+12
+00:01:01,800 --> 00:01:04,700
+Hellre en synlig vakans än ett avtalsbrott.
+
+13
+00:01:05,400 --> 00:01:08,800
+Se timmar, OB och kostnad för varje medarbetare –
+
+14
+00:01:09,000 --> 00:01:12,700
+beräknat på riktiga datum, med helger och storhelger.
+
+15
+00:01:13,400 --> 00:01:16,400
+Pröva bemanningen innan du ändrar något –
+
+16
+00:01:16,600 --> 00:01:19,700
+inom budget, och med konsekvenserna synliga.
+
+17
+00:01:20,600 --> 00:01:24,600
+DODEX Scheduler. I datorn och i mobilen.

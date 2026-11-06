@@ -1,0 +1,36 @@
+const { chromium } = require('playwright');
+const D = process.argv[2], E = process.argv[3], K = process.argv[4];
+(async () => {
+  const b = await chromium.launch(); const errs = [];
+  const p = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  p.on('pageerror', e => errs.push(e.message));
+  const U = 'http://localhost:8000/';
+  const bild = async (namn, opt = {}) => { await p.mouse.move(1900, 1070); await p.waitForTimeout(400); await p.screenshot({ path: `${D}/${namn}.png`, ...opt }); };
+  const nasta = async () => { await p.click('[data-guide=nasta]'); await p.waitForTimeout(250); };
+  await p.goto(U); await p.waitForSelector('text=Vad vill du göra?'); await bild('01-start');
+  await p.click('.valruta[data-guide=ny]'); await p.fill('#g-namn', 'Björken'); await p.locator('#g-namn').blur(); await nasta();
+  await p.fill('#g-dk', '8'); await p.locator('#g-dk').blur(); await p.waitForTimeout(200); await bild('02-antal'); await nasta();
+  await p.fill('#g-grad', '90'); await p.locator('#g-grad').blur(); await p.waitForTimeout(200); await bild('03-grad'); await nasta();
+  await p.click('[data-varde=ja]'); await p.waitForTimeout(200); await p.selectOption('[data-gp="1.arbetar"]', 'kvall'); await p.waitForTimeout(200); await bild('04-undantag'); await nasta();
+  await bild('05-behov'); await nasta(); await nasta(); await nasta(); await bild('06-valj');
+  await p.goto(U + `#/e/${E}/schema/${K}`); await p.waitForSelector('table.schema'); await p.waitForTimeout(800); await bild('07-schema');
+  await p.click('[data-g=vecka][data-v="-1"]'); await p.waitForTimeout(500); await bild('08-period');
+  await p.goto(U + `#/e/${E}/oversikt`); await p.waitForSelector('.nyckeltal'); await p.waitForTimeout(1200); await bild('09-oversikt');
+  await p.goto(U + `#/e/${E}/regelkontroll/${K}`); await p.waitForSelector('.regellista'); await p.waitForTimeout(800); await bild('10-regler');
+  await p.goto(U + `#/e/${E}/personer/${K}?p=A1`); await p.waitForTimeout(1500);
+  await (await p.$('text=Dygnsvila och veckovila')).scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -40)); await bild('11-vila');
+  await (await p.$('text=Timmar, OB och kostnad')).scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -40)); await bild('12-ob');
+  await p.goto(U + `#/e/${E}/analys`); await p.waitForSelector('#analysform'); await p.fill('#a-budget', '357'); await p.fill('#a-tk', '310'); await p.selectOption('#a-tid', '3');
+  await p.click('#analysform button[type=submit]'); await p.waitForSelector('text=Rekommenderas', { timeout: 300000 }); await p.waitForTimeout(800);
+  await bild('13-sim-topp');
+  await (await p.$('text=Nuläge mot alternativ')).scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -40)); await bild('14-sim-nulage');
+  // mobilen
+  const m = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  m.on('pageerror', e => errs.push(e.message));
+  await m.goto('file:///home/user/dodex/light/schema-light.html'); await m.waitForSelector('text=Vad vill du göra?');
+  await m.screenshot({ path: `${D}/15-mobil-start.png` });
+  await m.click('[data-g=exempel] >> nth=0'); await m.waitForTimeout(500); await m.selectOption('#sek', '5'); await m.click('[data-g=lagg]');
+  await m.waitForSelector('.nyckeltal', { timeout: 60000 }); await m.waitForTimeout(500); await m.screenshot({ path: `${D}/16-mobil-oversikt.png` });
+  await m.click('[data-g=rflik][data-f=schema]'); await m.waitForTimeout(500); await m.screenshot({ path: `${D}/17-mobil-schema.png` });
+  console.log('fel', errs); await b.close();
+})().catch(e => { console.error(e); process.exit(1); });

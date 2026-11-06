@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="sv"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&family=Cinzel:wght@600;700&display=swap">
+<style>
+:root { --bg:#F8F9F7; --skog:#193F38; --salvia:#A8C5B0; --bla:#B8D7E8; --sand:#E9DFD0; --guld:#D5B46A; --text:#25332F; --dampad:#5d6b67; --rod:#c0614f; }
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); overflow: hidden; }
+body { font-family: "DM Sans", sans-serif; color: var(--text); }
+#stage { position: relative; overflow: hidden; background: var(--bg); }
+.lager { position: absolute; inset: 0; opacity: 0; will-change: opacity, transform; }
+/* textskylt för speakertexten */
+#text { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-weight: 500; color: var(--text); width: 86%; }
+#text span { display: inline-block; background: rgba(255,255,255,.88); border-radius: 18px; padding: .35em .8em; box-shadow: 0 6px 24px rgba(25,63,56,.10); }
+/* fönster med skärmbild */
+.fonster { position: absolute; border-radius: 22px; overflow: hidden; background: #fff; box-shadow: 0 30px 80px rgba(25,63,56,.18), 0 0 0 1px rgba(25,63,56,.06); }
+.fonster .list { height: 34px; background: #eef1ee; display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+.fonster .list i { width: 11px; height: 11px; border-radius: 50%; background: #d6dbd6; }
+.fonster .vy { position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
+.fonster img { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#pekare { position: absolute; width: 34px; height: 34px; z-index: 5; filter: drop-shadow(0 3px 6px rgba(0,0,0,.25)); }
+.ring { position: absolute; border: 3px solid var(--guld); border-radius: 50%; z-index: 4; }
+/* problemet */
+.lapp { position: absolute; background: #fffdf8; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.08); padding: 18px; }
+.lapp b { display: block; height: 9px; border-radius: 5px; background: #d9d2c4; margin: 11px 0; }
+.ark { position: absolute; background: #fff; border-radius: 10px; box-shadow: 0 14px 40px rgba(0,0,0,.08); display: grid; gap: 4px; padding: 14px; }
+.ark i { display: block; border-radius: 3px; background: #ecefec; }
+.ark i.r { background: #e7b3a8; }
+.varning { position: absolute; background: #fff; border-left: 6px solid var(--rod); border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.12); font-weight: 700; padding: .55em .9em; white-space: nowrap; }
+/* logga */
+.logga { display: flex; align-items: center; gap: .45em; position: absolute; left: 50%; top: 50%; }
+.logga b { font-family: "Cinzel", serif; color: var(--guld); font-weight: 700; letter-spacing: .06em; display: block; line-height: 1; }
+.logga small { display: block; letter-spacing: .42em; font-weight: 700; color: var(--skog); margin-top: .35em; }
+.tagline { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; color: var(--skog); font-weight: 500; white-space: nowrap; }
+/* rutnät */
+#grid { position: absolute; display: grid; gap: 4px; }
+#grid .c { border-radius: 5px; background: #eef1ee; }
+#grid .h { font-size: 13px; font-weight: 700; color: var(--dampad); display: flex; align-items: center; }
+#grid .p { border-radius: 5px; }
+.p.m { background: var(--salvia); } .p.k { background: var(--bla); } .p.n { background: #d9c4a2; }
+#grid .bem { border-radius: 5px; background: #e3f0e7; color: #2f7a4a; font-weight: 800; display: grid; place-items: center; font-size: 13px; }
+.kpikort { position: absolute; background: #fff; border-radius: 22px; box-shadow: 0 14px 40px rgba(25,63,56,.10); border: 1px solid #e4e8e3; padding: 22px 26px; }
+.kpikort span { display: block; color: var(--dampad); font-size: 19px; }
+.kpikort b { display: block; font-size: 46px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.kpikort small { display: inline-block; margin-top: 6px; background: #e3f0e7; color: #2f7a4a; border-radius: 999px; padding: 3px 12px; font-size: 15px; font-weight: 700; }
+/* regler */
+#regler { position: absolute; background: #fff; border-radius: 26px; box-shadow: 0 20px 60px rgba(25,63,56,.12); padding: 34px 40px; }
+#regler h2 { font-size: 36px; margin-bottom: 18px; }
+.regel { display: flex; align-items: center; gap: 18px; padding: 14px 18px; border-radius: 14px; background: #f3f5f2; margin-top: 10px; font-size: 26px; }
+.bock { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: #e3e8e3; color: #fff; font-weight: 900; font-size: 22px; flex: none; }
+.niv { margin-left: auto; font-size: 17px; font-weight: 700; color: var(--dampad); border: 1px solid #d6dbd6; border-radius: 999px; padding: 3px 12px; }
+/* slut */
+#slut { background: var(--skog); }
+#slut .logga small { color: var(--salvia); }
+#slut .tagline { color: #f1ede3; }
+#slut .copy { position: absolute; left: 50%; transform: translateX(-50%); color: var(--salvia); font-size: 18px; letter-spacing: .04em; }
+.enhet { position: absolute; }
+.telefon { position: absolute; border-radius: 46px; background: #1d2a27; padding: 14px; box-shadow: 0 30px 80px rgba(25,63,56,.25); }
+.telefon .skarm { border-radius: 34px; overflow: hidden; width: 100%; height: 100%; position: relative; background: #fff; }
+.telefon img { width: 100%; display: block; }
+.robot { position: absolute; border-radius: 50%; background: var(--guld); display: grid; place-items: center; box-shadow: 0 8px 22px rgba(25,63,56,.25); }
+</style></head>
+<body><div id="stage"></div>
+<script src="schema.js"></script>
+<script>
+"use strict";
+const Q = new URLSearchParams(location.search), VERT = Q.get("format") === "9x16";
+const W = VERT ? 1080 : 1920, H = VERT ? 1920 : 1080, U = Math.min(W, H) / 1080;
+const stage = document.getElementById("stage"); stage.style.width = W + "px"; stage.style.height = H + "px";
+const el = (tag, cls, html, parent = stage) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; parent.appendChild(e); return e; };
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const ut = x => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, x) => a + (b - a) * x;
+const fonster = (t, a, b, fi = .6, fo = .6) => clamp(Math.min((t - a) / fi, (b - t) / fo));
+const LOGGA = `<svg viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc95"/><stop offset=".55" stop-color="#cfa246"/><stop offset="1" stop-color="#94691f"/></linearGradient></defs><circle cx="32" cy="32" r="29" fill="#141310"/><circle class="guldring" cx="32" cy="32" r="29" fill="none" stroke="url(#g)" stroke-width="3" stroke-dasharray="182.2" transform="rotate(-90 32 32)"/><circle cx="32" cy="32" r="24.5" fill="none" stroke="url(#g)" stroke-width="0.9" opacity=".8"/>${Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6, l = i % 3 === 0 ? 4.5 : 2.5, r1 = 18.5 + 4.5 - l; return `<line x1="${32 + Math.sin(a) * r1}" y1="${32 - Math.cos(a) * r1}" x2="${32 + Math.sin(a) * 23}" y2="${32 - Math.cos(a) * 23}" stroke="url(#g)" stroke-width="${i % 3 === 0 ? 2.6 : 1.4}" stroke-linecap="round"/>`; }).join("")}<line class="tim" x1="32" y1="32" x2="32" y2="21" stroke="url(#g)" stroke-width="2.6" stroke-linecap="round"/><line class="min" x1="32" y1="32" x2="32" y2="15" stroke="url(#g)" stroke-width="1.8" stroke-linecap="round"/><circle cx="32" cy="32" r="2.4" fill="#f0d58e"/></svg>`;
+
+// ------------------------------------------------------------------ speakertext
+const TEXT = [
+  [0.6, 5.9, "Att lägga ett schema för dygnet runt tar veckor."],
+  [6.1, 11.6, "Avtal, vila, helger, behov och rättvisa ska gå ihop – och det räcker med ett misstag."],
+  [12.6, 15.6, "DODEX Scheduler lägger schemat åt dig."],
+  [20.6, 27.0, "Du svarar på några frågor om gruppen, behovet och tiderna."],
+  [27.3, 34.6, "Systemet räknar direkt ut vad behovet kräver."],
+  [35.5, 38.6, "Låt AI lägga schemat, eller lägg det själv."],
+  [38.8, 41.8, "Varje pass granskas mot reglerna medan du arbetar."],
+  [42.6, 48.0, "På någon minut finns ett schema som täcker behovet,"],
+  [48.2, 54.6, "med jämn fördelning av morgnar, kvällar och helger."],
+  [55.4, 58.5, "Dygnsvila, veckovila och rast följer avtal och lag."],
+  [58.7, 61.6, "En fristående kontroll granskar varje schema."],
+  [61.8, 64.7, "Hellre en synlig vakans än ett avtalsbrott."],
+  [65.4, 68.8, "Se timmar, OB och kostnad för varje medarbetare –"],
+  [69.0, 72.7, "beräknat på riktiga datum, med helger och storhelger."],
+  [73.4, 76.4, "Pröva bemanningen innan du ändrar något –"],
+  [76.6, 79.7, "inom budget, och med konsekvenserna synliga."],
+  [80.6, 84.6, "DODEX Scheduler. I datorn och i mobilen."],
+];
+const text = el("div", null, "<span></span>"); text.id = "text";
+text.style.fontSize = (VERT ? 46 : 38) * U + "px"; text.style.bottom = (VERT ? 150 : 46) + "px";
+
+// ------------------------------------------------------------------ scen 1: problemet
+const s1 = el("div", "lager");
+const lappar = [[.10, .14, -8], [.24, .30, 6], [.06, .50, -3], [.30, .58, 9], [.16, .74, -6]].map(([x, y, r], i) => {
+  const l = el("div", "lapp", "<b></b><b style='width:70%'></b><b></b><b style='width:55%'></b><b style='width:80%'></b>", s1);
+  Object.assign(l.style, { left: x * W + "px", top: y * H * (VERT ? .7 : 1) + (VERT ? .12 * H : 0) + "px", width: 250 * U + "px", height: 230 * U + "px" }); l.dataset.r = r; l.dataset.i = i; return l;
+});
+const ark = el("div", "ark", Array.from({ length: 7 * 8 }, (_, i) => `<i class="${[9, 20, 27, 38, 44, 51].includes(i) ? "r" : ""}"></i>`).join(""), s1);
+Object.assign(ark.style, { gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: 30 * U + "px", width: 560 * U + "px", left: (VERT ? .35 : .5) * W + "px", top: (VERT ? .55 : .22) * H + "px", transform: "rotate(2deg)" });
+const klocka1 = el("div", null, LOGGA, s1); Object.assign(klocka1.style, { position: "absolute", width: 170 * U + "px", left: (VERT ? .66 : .80) * W + "px", top: (VERT ? .10 : .10) * H + "px" });
+const varningar = ["Vakans fredag kväll", "För kort vila", "Vem tar helgen?"].map((t, i) => {
+  const v = el("div", "varning", "⚠ " + t, s1);
+  Object.assign(v.style, { fontSize: 30 * U + "px", left: (VERT ? [.08, .40, .14] : [.52, .60, .46])[i] * W + "px", top: (VERT ? [.40, .50, .82] : [.62, .45, .78])[i] * H + "px" });
+  return v;
+});
+
+// ------------------------------------------------------------------ scen 2: logga
+const s2 = el("div", "lager");
+const logga2 = el("div", "logga", `<div style="width:${170 * U}px">${LOGGA}</div><div><b style="font-size:${92 * U}px">DODEX</b><small style="font-size:${26 * U}px">SCHEDULER</small></div>`, s2);
+const tag2 = el("div", "tagline", "Planering som skapar balans – idag och imorgon.", s2);
+tag2.style.fontSize = (VERT ? 40 : 40) * U + "px"; tag2.style.top = (H / 2 + 150 * U) + "px";
+const linjer = el("div", null, "", s2); linjer.style.cssText = `position:absolute;inset:0;background-image:linear-gradient(#e4e8e3 1px,transparent 1px),linear-gradient(90deg,#e4e8e3 1px,transparent 1px);background-size:${64 * U}px ${64 * U}px;`;
+s2.insertBefore(linjer, s2.firstChild);
+
+// ------------------------------------------------------------------ skärmbilder
+// varje bild: [start, slut, fil, startutsnitt, slututsnitt] i skärmbildens koordinater (1920 × 1080)
+const FW = VERT ? 1000 : 1560, FH = VERT ? 900 : 840;
+const fx = (W - FW) / 2, fy = VERT ? 420 : 40;
+const fon = el("div", "fonster", `<div class="list"><i></i><i></i><i></i></div><div class="vy"></div>`);
+Object.assign(fon.style, { left: fx + "px", top: fy + "px", width: FW + "px", height: FH + "px", opacity: 0 });
+const vyEl = fon.querySelector(".vy"); vyEl.style.top = "34px";
+const VH = FH - 34, ASP = FW / VH;
+const R = (x, y, w) => [x, y, w, w / ASP];  // utsnitt med fönstrets proportioner
+const C = VERT ? 1280 : 1920;
+const Rc = (y, w) => R(1088 - w / 2, y, w);  // centrerat på innehållet (x 448–1728)
+const Rv = y => R(452, y, 1272);  // stående: hela innehållsbredden
+const SKOTT = VERT ? [
+  [20.0, 23.4, "01-start", Rv(0), R(470, 200, 1100)],
+  [23.0, 27.4, "02-antal", Rv(0), R(460, 20, 1200)],
+  [27.0, 30.0, "03-grad", Rv(0), R(460, 20, 1200)],
+  [29.6, 32.6, "04-undantag", Rv(0), R(460, 40, 1200)],
+  [32.2, 35.4, "05-behov", Rv(0), R(460, 60, 1200)],
+  [35.0, 42.4, "06-valj", Rv(0), R(460, 90, 1200)],
+  [59.6, 65.4, "11-person", Rv(820), R(460, 840, 1200)],
+  [65.0, 73.4, "11-person", Rv(1270), R(460, 1290, 1200)],
+  [73.0, 76.8, "13-sim", Rv(500), R(460, 520, 1200)],
+  [76.4, 80.4, "13-sim", Rv(1500), R(460, 1640, 1200)],
+] : [
+  [20.0, 23.4, "01-start", R(0, 0, 1920), Rc(150, 1350)],
+  [23.0, 27.4, "02-antal", Rc(0, 1500), Rc(30, 1200)],
+  [27.0, 30.0, "03-grad", Rc(0, 1500), Rc(30, 1200)],
+  [29.6, 32.6, "04-undantag", Rc(0, 1500), Rc(40, 1250)],
+  [32.2, 35.4, "05-behov", Rc(0, 1500), Rc(100, 1200)],
+  [35.0, 42.4, "06-valj", Rc(0, 1500), Rc(100, 1300)],
+  [59.6, 65.4, "11-person", Rc(820, 1600), Rc(840, 1300)],
+  [65.0, 73.4, "11-person", Rc(1270, 1600), Rc(1290, 1300)],
+  [73.0, 76.8, "13-sim", Rc(500, 1600), Rc(520, 1350)],
+  [76.4, 80.4, "13-sim", Rc(1500, 1600), Rc(1660, 1250)],
+];
+const bilder = SKOTT.map(s => { const i = el("img", null, null, vyEl); i.src = `bilder/${s[2]}.png`; i.style.opacity = 0; return i; });
+const pekare = el("div", null, `<svg viewBox="0 0 24 24" width="34" height="34"><path d="M4 2l15 9-6.5 1.5L16 20l-2.6 1.2-3.4-7.4L4 18z" fill="#25332F" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`); pekare.id = "pekare";
+const ring = el("div", "ring");
+// pekarens väg i skärmbildens koordinater: [tid, x, y]; klick: [tid, x, y]
+const VAG = [[20.4, 1500, 900], [22.2, 636, 393], [24.6, 636, 393], [35.6, 1300, 800], [38.6, 786, 350], [42.4, 786, 350]];
+const KLICK = [[22.4, 636, 393], [38.9, 786, 350]];
+
+function skarmLage(t) {
+  let vis = 0;
+  SKOTT.forEach((s, i) => {
+    const o = fonster(t, s[0], s[1], .45, .45); bilder[i].style.opacity = o; vis = Math.max(vis, o);
+    {
+      const k = ease((t - s[0]) / (s[1] - s[0])), r = s[3].map((v, j) => lerp(v, s[4][j], k)), sk = FW / r[2];
+      bilder[i].style.transform = `scale(${sk}) translate(${-r[0]}px, ${-r[1]}px)`; bilder[i]._r = r; bilder[i]._sk = sk;
+    }
+  });
+  fon.style.opacity = clamp(Math.min((t - 19.6) / .6, (42.6 - t) / .6)) || clamp(Math.min((t - 59.2) / .6, (80.8 - t) / .6));
+  fon.style.transform = `translateY(${(1 - ease((t - 19.6) / .8)) * 40}px)`;
+  // pekaren och klicket i bild 01 och 06
+  const aktiv = SKOTT.findIndex((s, i) => t >= s[0] && t <= s[1] && (s[2] === "01-start" || s[2] === "06-valj"));
+  if (aktiv < 0 || t < 20.4 || t > 42.4) { pekare.style.opacity = 0; ring.style.opacity = 0; return; }
+  const b = bilder[aktiv], r = b._r, sk = b._sk;
+  let p = VAG[0];
+  for (let i = 0; i < VAG.length - 1; i++) if (t >= VAG[i][0] && t <= VAG[i + 1][0]) { const k = ease((t - VAG[i][0]) / (VAG[i + 1][0] - VAG[i][0])); p = [t, lerp(VAG[i][1], VAG[i + 1][1], k), lerp(VAG[i][2], VAG[i + 1][2], k)]; }
+  const sx = fx + (p[1] - r[0]) * sk, sy = fy + 34 + (p[2] - r[1]) * sk;
+  pekare.style.opacity = 1; pekare.style.left = sx + "px"; pekare.style.top = sy + "px";
+  const kl = KLICK.find(k => t >= k[0] && t < k[0] + .9);
+  if (kl) { const k = (t - kl[0]) / .9, d = 20 + 90 * ut(k); Object.assign(ring.style, { opacity: 1 - k, width: d + "px", height: d + "px", left: sx - d / 2 + "px", top: sy - d / 2 + "px" }); } else ring.style.opacity = 0;
+}
+
+// ------------------------------------------------------------------ scen 5: schemat växer fram
+const s5 = el("div", "lager");
+const pers = Object.keys(SCHEMA), N = 28, cell = VERT ? 30 : 44, cellH = VERT ? 46 : 40;
+const grid = el("div", null, "", s5); grid.id = "grid";
+grid.style.gridTemplateColumns = `${VERT ? 44 : 56}px repeat(${N}, ${cell}px)`; grid.style.gridAutoRows = cellH + "px";
+const gx = (W - ((VERT ? 44 : 56) + N * (cell + 4))) / 2; grid.style.left = gx + "px"; grid.style.top = (VERT ? 360 : 70) + "px";
+const pass = [];
+el("div", "h", "", grid); for (let d = 0; d < N; d++) el("div", "h", ["M", "T", "O", "T", "F", "L", "S"][d % 7], grid).style.justifyContent = "center";
+pers.forEach((p, r) => {
+  el("div", "h", p, grid);
+  for (let d = 0; d < N; d++) { const c = el("div", "c", "", grid); const k = SCHEMA[p][d]; if (k) { const q = el("div", "p " + k, "", c); q.style.cssText = "width:100%;height:100%;"; pass.push({ q, d, r }); } }
+});
+el("div", "h", "Behov", grid); const bemRad = Array.from({ length: N }, () => el("div", "bem", "✓", grid));
+pass.sort((a, b) => a.d - b.d || a.r - b.r);
+const kpiData = [["Bemanningsgrad", 100, v => `${Math.round(v)} %`, "176 av 176 pass"], ["Personalkostnad", 530, v => `${Math.round(v)} tkr`, "per månad, med OB"], ["Obemannade pass", 0, v => "0", "inga vakanser"], ["Planerad övertid", 1, v => `${Math.round(v)} h`, "per vecka"]];
+const kpi = kpiData.map(([n, , , s], i) => {
+  const k = el("div", "kpikort", `<span>${n}</span><b>0</b><small>${s}</small>`, s5);
+  const kw = VERT ? 470 : 400, kx = VERT ? (W - 2 * kw - 20) / 2 + (i % 2) * (kw + 20) : (W - 4 * kw - 60) / 2 + i * (kw + 20);
+  Object.assign(k.style, { width: kw + "px", left: kx + "px", top: (VERT ? 360 + 12 * (cellH + 4) + 50 + Math.floor(i / 2) * 200 : 70 + 12 * (cellH + 4) + 30) + "px" });
+  return k;
+});
+
+// ------------------------------------------------------------------ scen 6: regler
+const s6 = el("div", "lager");
+const REG = [["Dygnsvila 11 h", "Avtal"], ["Veckovila 36 h", "Avtal"], ["Rast efter högst 5 h", "Lag"], ["Antal pass och arbetstid", "Kontrakt"], ["Helger och fredagskvällar", "Lokal regel"], ["Högst 5 dagar i följd", "Lokal regel"]];
+const regler = el("div", null, `<h2>Regelkontroll</h2>${REG.map(([n, v]) => `<div class="regel"><span class="bock">✓</span>${n}<span class="niv">${v}</span></div>`).join("")}`, s6); regler.id = "regler";
+const rw = VERT ? 940 : 1100; Object.assign(regler.style, { width: rw + "px", left: (W - rw) / 2 + "px", top: (VERT ? 420 : 80) + "px" });
+const bockar = [...regler.querySelectorAll(".bock")];
+
+// ------------------------------------------------------------------ scen 9: dator och mobil, slutbild
+const s9 = el("div", "lager");
+const dator = el("div", "fonster", `<div class="list"><i></i><i></i><i></i></div><div class="vy" style="top:34px"><img src="bilder/09-oversikt.png"></div>`, s9);
+const dw = VERT ? 980 : 1240, dh = VERT ? 620 : 760; Object.assign(dator.style, { width: dw + "px", height: dh + "px", left: (VERT ? (W - dw) / 2 : 120) + "px", top: (VERT ? 300 : 110) + "px" });
+const dimg = dator.querySelector("img"); const dr = [448, 30, 1280]; dimg.style.transform = `scale(${dw / dr[2]}) translate(${-dr[0]}px,${-dr[1]}px)`;
+const tel = el("div", "telefon", `<div class="skarm"><img src="bilder/16-mobil-oversikt.png"></div>`, s9);
+const tw = VERT ? 400 : 380, th = tw * 2.05; Object.assign(tel.style, { width: tw + "px", height: th + "px", left: (VERT ? (W - tw) / 2 + 220 : 1420) + "px", top: (VERT ? 780 : 130) + "px" });
+const robot = el("div", "robot", `<span style="font-size:${40 * U}px">🤖</span>`, s9);
+const rb = 84 * U; Object.assign(robot.style, { width: rb + "px", height: rb + "px", left: (VERT ? (W - tw) / 2 + 220 + tw - rb - 30 : 1420 + tw - rb - 30) + "px", top: (VERT ? 780 + th - rb - 40 : 130 + th - rb - 40) + "px" });
+
+const slut = el("div", "lager"); slut.id = "slut";
+const logga9 = el("div", "logga", `<div style="width:${150 * U}px">${LOGGA}</div><div><b style="font-size:${84 * U}px">DODEX</b><small style="font-size:${24 * U}px">SCHEDULER</small></div>`, slut);
+const tag9 = el("div", "tagline", VERT ? "Planering som skapar balans,<br>idag och imorgon." : "Planering som skapar balans, idag och imorgon.", slut);
+tag9.style.fontSize = 40 * U + "px"; tag9.style.top = (H / 2 + 140 * U) + "px"; tag9.style.color = "#f1ede3";
+const copy = el("div", "copy", "© Sofia Rångeby", slut); copy.style.bottom = 70 * U + "px";
+
+const toppLogga = el("div", "logga", `<div style="width:${70 * U}px">${LOGGA}</div><div><b style="font-size:${42 * U}px">DODEX</b><small style="font-size:${13 * U}px">SCHEDULER</small></div>`);
+toppLogga.style.cssText += `left:50%;top:${VERT ? 200 : -200}px;transform:translateX(-50%);opacity:0;`;
+stage.appendChild(text);
+document.querySelectorAll(".fonster, #pekare, .ring").forEach(x => x.style.zIndex = 3);
+
+function placeraLogga(l, t, a) {
+  const w = l.offsetWidth, h = l.offsetHeight;
+  l.style.transform = `translate(${-w / 2}px, ${-h / 2 - (VERT ? 60 : 30) * U}px) scale(${lerp(.9, 1, ut(a))})`;
+}
+function klocka(svg, t) {
+  svg.querySelectorAll(".min").forEach(x => x.setAttribute("transform", `rotate(${t * 36} 32 32)`));
+  svg.querySelectorAll(".tim").forEach(x => x.setAttribute("transform", `rotate(${t * 3} 32 32)`));
+}
+
+// ------------------------------------------------------------------ tidslinjen
+function render(t) {
+  // speakertext
+  const rad = TEXT.find(r => t >= r[0] - .3 && t <= r[1] + .3);
+  text.firstChild.textContent = rad ? rad[2] : ""; text.style.opacity = rad ? fonster(t, rad[0] - .3, rad[1] + .3, .3, .3) : 0;
+  text.style.display = rad ? "" : "none";
+  // 1. problemet
+  s1.style.opacity = fonster(t, 0, 13.2, .8, 1.4);
+  lappar.forEach((l, i) => { const k = ut((t - .2 - i * .25) / 1.2), upp = ut((t - 11.4) / 1.6);
+    l.style.opacity = k * (1 - upp); l.style.transform = `translateY(${(1 - k) * 60 + Math.sin(t * .8 + i) * 4}px) rotate(${+l.dataset.r + Math.sin(t * .5 + i) * 1.5}deg) scale(${1 - .3 * upp})`; });
+  ark.style.opacity = ut((t - 1.2) / 1) * (1 - ut((t - 11.4) / 1.6)); ark.style.transform = `rotate(${2 - ut((t - 11.4) / 1.6) * 2}deg) translateY(${(1 - ut((t - 1.2) / 1)) * 40}px)`;
+  klocka1.style.opacity = ut((t - .8) / 1) * (1 - ut((t - 11.4) / 1)); klocka(klocka1, t * 6);
+  varningar.forEach((v, i) => { const a = 3 + i * 2.2, k = ut((t - a) / .5);
+    v.style.opacity = k * (1 - ut((t - 11.2) / .8)); v.style.transform = `scale(${lerp(.85, 1, k)}) translateY(${(1 - k) * 12}px)`; });
+  // 2. logga
+  s2.style.opacity = fonster(t, 11.8, 20.0, 1.2, .7);
+  linjer.style.opacity = .55 * ut((t - 11.8) / 1.5);
+  logga2.style.opacity = ut((t - 12.6) / .9); placeraLogga(logga2, t, (t - 12.6) / 1.2);
+  logga2.querySelector(".guldring").style.strokeDashoffset = 182.2 * (1 - ease((t - 12.8) / 1.8)); klocka(logga2, t * 2);
+  tag2.style.opacity = ut((t - 16) / .9); tag2.style.transform = `translateX(-50%) translateY(${(1 - ut((t - 16) / .9)) * 16}px)`;
+  // skärmbilder
+  skarmLage(t);
+  toppLogga.style.opacity = VERT ? Math.max(+fon.style.opacity || 0, s5.style.opacity * 1 || 0, fonster(t, 54.9, 60.0, .6, .5)) : 0;
+  // 5. schemat
+  s5.style.opacity = fonster(t, 42.2, 55.3, .7, .7);
+  pass.forEach((p, i) => { const a = 43 + i / pass.length * 6.2, k = ut((t - a) / .35); p.q.style.opacity = k; p.q.style.transform = `scale(${lerp(.4, 1, k)})`; });
+  bemRad.forEach((b, d) => { const k = ut((t - (43 + (d + 1) / N * 6.2)) / .4); b.style.opacity = k; });
+  kpi.forEach((k, i) => { const a = 49.4 + i * .5, x = ut((t - a) / .6), v = kpiData[i]; k.style.opacity = x; k.style.transform = `translateY(${(1 - x) * 30}px)`;
+    k.querySelector("b").textContent = v[2](v[1] * ease((t - a) / 1.8)); });
+  // 6. regler
+  s6.style.opacity = fonster(t, 54.9, 60.0, .6, .5);
+  bockar.forEach((b, i) => { const k = ut((t - (55.6 + i * .55)) / .4); b.style.background = k > .5 ? "#2f7a4a" : "#e3e8e3"; b.style.transform = `scale(${1 + .25 * Math.sin(Math.PI * k)})`; });
+  // 9. dator och mobil
+  s9.style.opacity = fonster(t, 80.2, 85.6, .8, .9);
+  dator.style.transform = `translateX(${(1 - ut((t - 80.2) / 1)) * -40}px)`; tel.style.transform = `translateY(${(1 - ut((t - 80.6) / 1)) * 50}px)`;
+  robot.style.transform = `scale(${1 + .08 * Math.sin((t - 80) * 4)})`;
+  slut.style.opacity = clamp((t - 84.6) / 1.2);
+  logga9.style.opacity = ut((t - 85.2) / 1); placeraLogga(logga9, t, (t - 85.2) / 1); klocka(logga9, t * 2);
+  logga9.querySelector(".guldring").style.strokeDashoffset = 182.2 * (1 - ease((t - 85.2) / 1.6));
+  tag9.style.opacity = ut((t - 86.4) / 1); tag9.style.transform = `translateX(-50%) translateY(${(1 - ut((t - 86.4) / 1)) * 14}px)`;
+  copy.style.opacity = ut((t - 87.4) / 1);
+}
+window.render = render;
+window.klar = Promise.all([document.fonts.ready, ...[...document.images].map(i => i.complete ? 1 : new Promise(r => { i.onload = r; i.onerror = r; }))]);
+render(0);
+</script></body></html>
