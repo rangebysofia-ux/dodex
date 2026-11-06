@@ -742,64 +742,10 @@ function ritaAnalys() {
     ${rad("Brott mot hårda regler", n => kons(n).brott, v => `<b class="${v ? "minus" : ""}">${v}</b>`)}
     <tr><td></td>${ordning.map(n => `<td>${S[n].status === "klar" && S[n].resultat?.status === "OK" ? `<button class="liten primar" data-g="anvand-forslag" data-n="${n}">Använd som ny enhet</button>` : S[n].status === "fel" ? `<span class="minus liten">${esc(S[n].fel)}</span>` : S[n].status === "klar" ? `<span class="minus liten">Går inte att lägga</span>` : ""}</td>`).join("")}</tr>
     </tbody></table></div>
-    ${klar ? analysGrafer(S, ordning, tk) : ""}</section>
-    ${klar ? nulageMotAlternativ(S, ordning, tk) : ""}`;
+    ${klar ? GRAF.analysstaplar(S, ordning, tk) : ""}</section>
+    ${klar ? GRAF.nulage(S, ordning, tk, IKON.varning) : ""}`;
   vy().innerHTML = h;
   kopplaAnalysform();
-}
-
-function analysGrafer(S, ordning, tk) {
-  const stapel = (rubrik, f, enhet, klass) => {
-    const max = Math.max(1, ...ordning.filter(n => S[n].konsekvenser?.status === "OK").map(n => f(n) || 0));
-    return `<div><h3>${rubrik}</h3>${ordning.map(n => { const v = f(n) || 0, ok = S[n].konsekvenser?.status === "OK";
-      return `<div class="hstapel"><span class="liten">${esc(S[n].namn)}</span>${ok ? `<div><i class="${klass}" style="width:${Math.max(v ? 2 : 0, v / max * 100)}%"></i></div><b class="liten">${sv(v, 1)}${enhet}</b>` : `<span class="liten minus" style="grid-column:span 2">Inget schema</span>`}</div>`; }).join("")}</div>`;
-  };
-  const k = n => S[n].konsekvenser || {};
-  return `<div class="tva" style="margin-top:14px">${stapel("Vakanta pass", n => k(n).vakanta_pass, "", "vak")}${stapel("Överkapacitet, timmar per vecka", n => k(n).overkapacitet_timmar_vecka, " h", "over")}</div>
-    <div style="margin-top:14px">${tk ? stapel("Personalkostnad per månad, tkr", n => S[n].kontrakt_timmar_vecka * tk * 52 / 12 / 1000, " tkr", "kost") : stapel("Kontrakterad tid, timmar per vecka", n => S[n].kontrakt_timmar_vecka, " h", "kost")}</div>`;
-}
-
-// Nuläge mot alternativ: skillnaden mot nuvarande bemanning, och förslag till förbättringar.
-function nulageMotAlternativ(S, ordning, tk) {
-  const nu = S.findIndex(x => x.id === "nuvarande");
-  if (nu < 0) return "";
-  const k = n => S[n].konsekvenser || {}, alt = ordning.filter(n => n !== nu && k(n).status === "OK");
-  if (k(nu).status !== "OK") {
-    const ok = alt.length ? alt.slice().sort((a, b) => S[a].kontrakt_timmar_vecka - S[b].kontrakt_timmar_vecka)[0] : null;
-    return `<section class="kort"><h2>Nuläge mot alternativ</h2><div class="banner varn">${IKON.varning}<div><strong>Nuvarande bemanning går inte att lägga utan regelbrott</strong>
-      ${ok != null ? `Det billigaste alternativet som går att lägga är <b>${esc(S[ok].namn)}</b> med ${sv(S[ok].kontrakt_timmar_vecka, 1)} h per vecka (nu ${sv(S[nu].kontrakt_timmar_vecka, 1)} h${tk ? `, ${S[ok].kontrakt_timmar_vecka >= S[nu].kontrakt_timmar_vecka ? "+" : "−"}${kr(Math.abs(S[ok].kontrakt_timmar_vecka - S[nu].kontrakt_timmar_vecka) * tk * 52 / 12)} per månad` : ""}).` : "Inget av alternativen gick heller att lägga."}</div></div></section>`;
-  }
-  if (!alt.length) return "";
-  const matt = [
-    ["Vakanta pass", n => k(n).vakanta_pass, v => `${v > 0 ? "+" : ""}${v}`, true],
-    [tk ? "Kostnad per månad" : "Kontrakterad tid per vecka", n => tk ? S[n].kontrakt_timmar_vecka * tk * 52 / 12 : S[n].kontrakt_timmar_vecka, v => tk ? `${v > 0 ? "+" : "−"}${kr(Math.abs(v))}` : `${v > 0 ? "+" : ""}${sv(v, 1)} h`, true],
-    ["Överkapacitet per vecka", n => k(n).overkapacitet_timmar_vecka, v => `${v > 0 ? "+" : ""}${sv(v, 1)} h`, true],
-    ["Veckor utan blandning", n => k(n).veckor_utan_blandning, v => `${v > 0 ? "+" : ""}${v}`, true],
-  ];
-  const cell = (f, fmt, n) => {
-    const d = f(n) - f(nu), max = Math.max(1e-9, ...alt.map(m => Math.abs(f(m) - f(nu))));
-    const b = Math.abs(d) / max * 50, klass = Math.abs(d) < 1e-6 ? "" : d < 0 ? "battre" : "samre";
-    return `<td><div class="divbar"><i class="${klass}" style="${d < 0 ? `right:50%;width:${b}%` : `left:50%;width:${b}%`}"></i></div><span class="liten ${klass}">${Math.abs(d) < 1e-6 ? "som nu" : fmt(d)}</span></td>`;
-  };
-  // förbättringsförslag
-  const tips = [];
-  const vakNu = k(nu).vakanta_pass;
-  const farre = alt.filter(n => k(n).vakanta_pass < vakNu).sort((a, b) => k(a).vakanta_pass - k(b).vakanta_pass || S[a].kontrakt_timmar_vecka - S[b].kontrakt_timmar_vecka);
-  if (farre.length) { const n = farre[0], dk = S[n].kontrakt_timmar_vecka - S[nu].kontrakt_timmar_vecka;
-    tips.push(`<b>${esc(S[n].namn)}</b> minskar vakanserna från ${vakNu} till ${k(n).vakanta_pass}${Math.abs(dk) > 0.05 ? ` och ${dk > 0 ? "kostar" : "sparar"} ${tk ? kr(Math.abs(dk) * tk * 52 / 12) + " per månad" : sv(Math.abs(dk), 1) + " h per vecka"}` : " utan mer tid"}.`); }
-  const billigare = alt.filter(n => k(n).vakanta_pass <= vakNu && S[n].kontrakt_timmar_vecka < S[nu].kontrakt_timmar_vecka - 0.05);
-  if (billigare.length) { const n = billigare.sort((a, b) => S[a].kontrakt_timmar_vecka - S[b].kontrakt_timmar_vecka)[0];
-    tips.push(`<b>${esc(S[n].namn)}</b> klarar behovet lika bra med ${sv(S[nu].kontrakt_timmar_vecka - S[n].kontrakt_timmar_vecka, 1)} h mindre per vecka.`); }
-  if (k(nu).overkapacitet_timmar_vecka > 4) tips.push(`I nuläget är det ${sv(k(nu).overkapacitet_timmar_vecka, 1)} h per vecka mer i tjänst än behovet. Tiden kan läggas där behovet är störst, eller behovet höjas där det gör mest nytta.`);
-  const vak = k(nu).vakanser || {};
-  if (vak.fredagskvall) tips.push(`${vak.fredagskvall} vakanser i nuläget ligger på fredagskvällar. Fredagsregeln gör att den som arbetar fredag kväll också arbetar helgen; jämför alternativen som rör fredagen.`);
-  if (vak.helg && !vak.fredagskvall) tips.push(`Vakanserna i nuläget ligger på helger. Fler personer per helg kräver fler som arbetar varannan helg.`);
-  if (k(nu).veckor_utan_blandning > k(nu).personveckor * 0.3) tips.push(`Många veckor har bara morgnar eller bara kvällar. Inställningen ”Fördela morgon och kväll” under Inställningar kan sättas till stark.`);
-  return `<section class="kort"><h2>Nuläge mot alternativ</h2><p class="dampad liten">Skillnad mot nuvarande bemanning. Grönt är bättre än i dag, rött sämre.</p>
-    <div class="rull"><table class="nulage"><thead><tr><th></th>${matt.map(m => `<th>${m[0]}</th>`).join("")}</tr></thead><tbody>
-    <tr class="nu"><td><b>Nuläge</b><div class="liten dampad">${esc(S[nu].sammanfattning)}</div></td>${matt.map(([, f], j) => `<td class="liten"><b>${j === 1 && tk ? kr(f(nu)) : sv(f(nu), 1) + (j === 2 || (j === 1 && !tk) ? " h" : "")}</b></td>`).join("")}</tr>
-    ${alt.map(n => `<tr><td><b>${esc(S[n].namn)}</b></td>${matt.map(([, f, fmt]) => cell(f, fmt, n)).join("")}</tr>`).join("")}</tbody></table></div>
-    ${tips.length ? `<h3>Förslag till förbättringar</h3><ul class="punkter">${tips.map(t => `<li>${t}</li>`).join("")}</ul>` : ""}</section>`;
 }
 
 function kopplaAnalysform() {

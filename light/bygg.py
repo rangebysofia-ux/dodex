@@ -1,4 +1,5 @@
-"""Bygger light/schema-light.html av sida.html, motor.js, granskning.js och tre testfall.
+"""Bygger light/schema-light.html av sida.html, motor.js, granskning.js, analys.js, de delade
+assistent.js och grafer.js från webben, och tre testfall.
 
 Kör: python light/bygg.py
 """
@@ -29,6 +30,8 @@ def main():
                 .replace("__GRANSKNING__", skydda((HAR / "granskning.js").read_text(encoding="utf-8")))
                 .replace("__MOTOR_HUVUDTRAD__", skydda(motor) + "\nconst MOTOR_HUVUD = MOTOR;")
                 .replace("__ASSISTENT__", skydda((HAR.parent / "schemawebb" / "statisk" / "assistent.js").read_text(encoding="utf-8")))
+                .replace("__GRAFER__", skydda((HAR.parent / "schemawebb" / "statisk" / "grafer.js").read_text(encoding="utf-8")))
+                .replace("__ANALYS__", skydda((HAR / "analys.js").read_text(encoding="utf-8")))
                 .replace("__EXEMPEL__", json.dumps(exempel, ensure_ascii=False).replace("</", "<\\/")))
     ut = HAR / "schema-light.html"
     ut.write_text(sida, encoding="utf-8")
