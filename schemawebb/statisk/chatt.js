@@ -18,7 +18,7 @@ document.body.insertAdjacentHTML("beforeend", `
 function chattKontext() {
   const k = st.korning && st.enhet && st.korning.enhet_id === st.enhet.id && st.korning.status === "klar" ? st.korning : chatt.korning;
   return { indata: st.indata, resultat: k?.resultat || null, granskning: k?.granskning || null, forklaring: k?.forklaring || null,
-    onForslag: f => { chatt.forslag = f; } };
+    onForslag: f => { chatt.forslag = { ...f, korningId: k?.id ?? null, schema: k?.resultat?.schema, veckor: k?.resultat?.veckor }; } };
 }
 
 async function hamtaSenasteKorning() {
@@ -125,14 +125,26 @@ document.addEventListener("click", async e => {
   if (el.dataset.g === "chatt-fraga") skickaChatt(el.textContent);
   if (el.dataset.g === "chatt-avvisa") { chatt.notis = "[Användaren avvisade förslaget. Inget ändrades.]"; chatt.visning.push({ roll: "verktyg", text: "Förslaget avvisades." }); chatt.forslag = null; ritaChatt(); }
   if (el.dataset.g === "chatt-godkann") {
+    const f = chatt.forslag;
     try {
-      ASSISTENT.tillampa(st.indata, chatt.forslag.andringar);
-      chatt.visning.push({ roll: "verktyg", text: "Förslaget är godkänt och sparat. Tryck på Lägg schema för ett nytt schema." });
-      chatt.notis = "[Användaren godkände förslaget och det är sparat i indata.]";
-      chatt.forslag = null;
-      markeraAndrad(true);
-      if (st.vy === "indata") ritaEnhet();
-      await spara();
+      if (f.pass) {
+        // passen blir exakt så som användaren sa, som en ny körning; originalet finns kvar
+        const ny = ASSISTENT.tillampaSchema(f.schema, f.andringar, f.veckor);
+        const { id } = await api("POST", `korningar/${f.korningId}/justera`, { schema: ny, spara: true, namn: "Ändrad av 🤖: " + f.sammanfattning.slice(0, 60) });
+        const k = await api("GET", "korningar/" + id), brott = k.granskning?.brott.length || 0;
+        chatt.visning.push({ roll: "verktyg", text: `Godkänt. Schemat är ändrat precis så och sparat som en ny körning.${brott ? ` Granskningen hittar ${brott} brott mot hårda regler – se Regelkontroll.` : " Alla hårda regler följs."}` });
+        chatt.notis = `[Användaren godkände passändringen. Den är sparad som en ny körning med ${brott} brott mot hårda regler.]`;
+        chatt.forslag = null; chatt.korning = k; st.korning = null;
+        location.hash = `#/e/${st.enhet.id}/schema/${id}`;
+      } else {
+        ASSISTENT.tillampa(st.indata, f.andringar);
+        chatt.visning.push({ roll: "verktyg", text: "Godkänt och sparat. Schemat läggs om nu …" });
+        chatt.notis = "[Användaren godkände förslaget. Det är sparat i indata och schemat läggs om.]";
+        chatt.forslag = null;
+        markeraAndrad(true);
+        if (st.vy === "indata") ritaEnhet();
+        if (await spara()) { chatt.korning = null; await laggSchema(); }
+      }
     } catch (err) { chatt.visning.push({ roll: "fel", text: "Kunde inte tillämpa förslaget: " + err.message }); }
     ritaChatt();
   }

@@ -1060,7 +1060,7 @@ const FRAGOR = ["Hur många kvällar har var och en?", "Hur ser fredagskvällarn
 function chattKontext() {
   const k = st.korningar.find(x => x.status === "OK") || st.korningar[0];
   const d = k ? JSON.parse(k.data) : null;
-  return { indata: st.enhet.indata, resultat: d ? d.resultat : null, granskning: d ? d.granskning : null, onForslag: f => { chatt.forslag = f; } };
+  return { indata: st.enhet.indata, resultat: d ? d.resultat : null, granskning: d ? d.granskning : null, onForslag: f => { chatt.forslag = { ...f, korning: k }; } };
 }
 function ritaChatt() {
   $("#chatt-knapp").hidden = !st.enhet || chatt.oppen;
@@ -1102,19 +1102,34 @@ $("#chatt-knapp").onclick = () => { chatt.oppen = true; ritaChatt(); $("#chatt-t
 $("#chatt-stang").onclick = () => { chatt.oppen = false; ritaChatt(); };
 $("#chatt-form").onsubmit = e => { e.preventDefault(); const t = $("#chatt-text").value; $("#chatt-text").value = ""; skickaChatt(t); };
 $("#chatt-text").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#chatt-form").requestSubmit(); } };
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
   const el = e.target.closest("[data-g^=chatt-]"); if (!el) return;
   if (el.dataset.g === "chatt-fraga") skickaChatt(el.textContent);
   if (el.dataset.g === "chatt-avvisa") { chatt.notis = "[Användaren avvisade förslaget.]"; chatt.visning.push({ roll: "verktyg", text: "Förslaget avvisades." }); chatt.forslag = null; ritaChatt(); }
   if (el.dataset.g === "chatt-godkann") {
+    const f = chatt.forslag;
     try {
-      ASSISTENT.tillampa(st.enhet.indata, chatt.forslag.andringar);
-      chatt.visning.push({ roll: "verktyg", text: "Godkänt och sparat. Tryck på Lägg schema för ett nytt schema." });
-      chatt.notis = "[Användaren godkände förslaget och det är sparat.]"; chatt.forslag = null;
-      if (st.vy === "enhet") andrad(true); else { clearTimeout(sparaTimer); lager.sparaEnhet(st.enhet); }
+      if (f.pass) {
+        // passen blir exakt så som användaren sa, som en ny körning; originalet finns kvar
+        const d = JSON.parse(f.korning.data), schema = ASSISTENT.tillampaSchema(d.resultat.schema, f.andringar, d.resultat.veckor);
+        const res = raknaOm(d.indata, schema, d.resultat), g = GRANSKNING.kontrollera(d.indata, res);
+        const k = { id: nyttId(), enhet: st.enhet.id, namn: "Ändrad av 🤖", skapad: Date.now(), status: g.brott.length ? "BROTT" : "OK", vakanta: res.kpi.vakanta_pass,
+          data: JSON.stringify({ resultat: res, granskning: g, balans: d.balans, indata: d.indata }) };
+        st.korningar.unshift(k); await lager.sparaKorning(k);
+        chatt.visning.push({ roll: "verktyg", text: `Godkänt. Schemat är ändrat precis så och sparat som en ny körning.${g.brott.length ? ` Granskningen hittar ${g.brott.length} brott mot hårda regler – se Regelkontroll.` : " Alla hårda regler följs."}` });
+        chatt.notis = `[Användaren godkände passändringen. Den är sparad med ${g.brott.length} brott mot hårda regler.]`; chatt.forslag = null;
+        st.rflik = "schema"; visaKorning(k);
+      } else {
+        ASSISTENT.tillampa(st.enhet.indata, f.andringar);
+        chatt.visning.push({ roll: "verktyg", text: "Godkänt och sparat. Schemat läggs om nu …" });
+        chatt.notis = "[Användaren godkände förslaget. Det är sparat och schemat läggs om.]"; chatt.forslag = null;
+        clearTimeout(sparaTimer); await lager.sparaEnhet(st.enhet);
+        await oppna(st.enhet); laggSchema();
+      }
     } catch (err) { chatt.visning.push({ roll: "fel", text: "Kunde inte tillämpa: " + err.message }); }
     ritaChatt();
   }
+
 });
 setInterval(() => { if (!chatt.oppen) $("#chatt-knapp").hidden = !st.enhet; }, 800);
 

@@ -45,7 +45,7 @@ def test_person_hittas_oavsett_skiftlage(ut):
 
 
 def test_forslag_tillampas_och_ar_giltig_indata(ut):
-    assert "Inget är ändrat" in ut["svar"]
+    assert "schemat läggs om automatiskt" in ut["svar"] and ut["forslag"]["pass"] is False
     assert len(ut["forslag"]["texter"]) == 3
     ny = ut["ny_indata"]
     assert any(p["id"] == "P9" and p["grad"] == 0.75 and p["dygnsdelar"] == ["kvall"] for p in ny["personal"])
@@ -56,3 +56,21 @@ def test_forslag_tillampas_och_ar_giltig_indata(ut):
 def test_felaktiga_forslag_stoppas(ut):
     assert "finns redan" in ut["dubblett"]
     assert "Natt kan inte kombineras" in ut["nattfel"]
+
+
+def test_passandring_blir_exakt_som_sagt(ut):
+    assert ut["pass_forslag"]["pass"] is True
+    f1 = ut["pass_ny"]["f1"]
+    assert f1["dygnsdel"] == "kvall" and f1["start"] == "14:00" and f1["slut"] == "21:30" and f1["manuell"]
+    assert ut["pass_ny"]["f2"] is None
+    assert ut["pass_ny"]["orort"] != f1  # originalet ändras inte
+
+
+def test_flytta_pass_till_annan_person(ut):
+    r = ut["flytta_res"]
+    assert r["f4"]["start"] == r["var"]["start"] and r["f4"]["dygnsdel"] == r["var"]["dygnsdel"]
+
+
+def test_blanda_inte_och_fel_vecka(ut):
+    assert "Blanda inte" in ut["blandat"]
+    assert "Vecka 99 finns inte" in ut["felvecka"]

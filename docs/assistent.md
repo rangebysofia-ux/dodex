@@ -29,3 +29,13 @@ Utan nyckel visar assistenten att den inte är påslagen; resten av systemet fun
 ## Personuppgifter
 
 Assistenten skickar enhetens indata och schema till Anthropic. Använd id-koder i stället för namn. Ska riktiga namn användas krävs en dataskyddsbedömning först.
+
+
+## Schemat blir som du säger
+
+Assistenten skiljer på två sorters ändringar. Båda godkänns med ett tryck.
+
+- **Passändringar** (`satt_pass`, `ta_bort_pass`, `flytta_pass`): när användaren säger hur ett visst pass ska vara, till exempel ”A1 ska jobba kväll tisdag vecka 2”. Passet blir exakt så i det lagda schemat. Resten av schemat ändras inte. Ändringen sparas som en ny körning (`POST /api/korningar/{id}/justera` i webben, lokalt i lättversionen) och granskas direkt mot reglerna. Originalet finns kvar.
+- **Ändringar i indata** (personer, behov, önskemål, period): när något ska gälla generellt. Det användaren säger ”ska”, ”måste” eller ”kan inte” blir krav. Schemat läggs om automatiskt när förslaget godkänns.
+
+De två sorterna blandas inte i samma förslag. Assistenten ändrar aldrig regler, och en passändring som bryter mot en regel visas som regelbrott i granskningen.
