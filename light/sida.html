@@ -104,6 +104,12 @@ tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dali
 #meddelande { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--text); color: var(--bg);
   border-radius: 8px; padding: 9px 14px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); z-index: 20; }
 #meddelande.syns { opacity: 1; }
+.pass.vakant { background: none; border: 2px dashed; padding: 2px 0; cursor: default; }
+.pass.vakant.morgon { border-color: var(--morgon-text); color: var(--morgon-text); } .pass.vakant.kvall { border-color: var(--kvall-text); color: var(--kvall-text); } .pass.vakant.natt { border-color: var(--natt); color: var(--text); }
+tr.vakantrad td:first-child { color: var(--dalig); }
+.minus { color: var(--dalig); font-weight: 800; } .plus { color: var(--accent); font-weight: 800; } tr.bem td.over { background: var(--accent-svag); }
+table.schema.period th:first-child, table.schema.period td:first-child { position: sticky; left: 0; background: var(--yta); z-index: 1; }
+table.schema.period td, table.schema.period th { padding: 1px; } table.schema.period .ny-vecka { border-left: 2px solid var(--linje); }
 @media (max-width: 560px) { .pass small { display: none; } .pass { padding: 6px 0; } }
 @media (prefers-reduced-motion: reduce) { .matare div, #meddelande { transition: none; } }
 details summary { cursor: pointer; color: var(--dampad); }
@@ -516,9 +522,9 @@ function ritaResultat() {
     <p class="liten dampad" style="margin-top:8px">Lättversionen hittade inget schema som håller alla hårda regler. Antingen krockar reglerna, eller så räckte inte sökningen: pröva Noggrann. Kontrollera krav i önskemålen först. Det fullständiga systemet kan bevisa vilka regler som krockar.</p>`;
   h += `</section><section class="kort"><h2>Schema</h2><div class="veckor">` +
     Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
-    `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">Alla</button></div>` +
-    (st.vecka === -1 ? Array.from({ length: res.veckor }, (_, v) => `<h3>Vecka ${v + 1}</h3>` + vecka(res, v)).join("") : vecka(res, st.vecka)) +
-    `<p class="liten" id="info" style="margin-top:8px">${cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Röd ruta = vakans.</p></section>`;
+    `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">Hela perioden</button></div>` +
+    (st.vecka === -1 ? dagTabell(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), true) : vecka(res, st.vecka)) +
+    `<p class="liten" id="info" style="margin-top:8px">${cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans, <span class="plus">+1</span> över behovet.</p></section>`;
   if (res.vakanser.length) h += `<section class="kort"><h2>Vakanser</h2><ul class="punkter">${res.vakanser.map(x => `<li>Vecka ${x.vecka} ${x.veckodag}: ${x.antal} ${DELAR[x.dygnsdel].toLowerCase()}pass</li>`).join("")}</ul></section>`;
   h += `<section class="kort"><h2>Per person</h2><div class="rull"><table><thead><tr><th>Person</th><th class="tal">Pass</th><th class="tal">Tid</th><th class="tal">Mål</th><th class="tal">Kvällar</th><th>Helg</th></tr></thead><tbody>
     ${Object.entries(res.personer).map(([p, x]) => `<tr><td><b>${esc(p)}</b></td><td class="tal">${x.pass}</td><td class="tal nw">${timmar(x.minuter)}</td><td class="tal nw">${timmar(x.mal_minuter)}</td><td class="tal">${x.kvallspass}</td><td>${x.helggrupp || x.helgfrekvens || "–"}</td></tr>`).join("")}</tbody></table></div></section>
@@ -528,18 +534,54 @@ function ritaResultat() {
   $("#sida").innerHTML = h;
 }
 
-function vecka(res, v) {
-  const pers = Object.keys(res.schema), vak = {};
-  res.vakanser.forEach(x => (vak[x.dag] = 1));
-  let h = `<div class="rull"><table class="schema"><thead><tr><th>V${v + 1}</th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}</tr></thead><tbody>`;
-  for (const p of pers) h += `<tr><td title="${esc(p)}">${esc(p)}</td>` + DAGAR.map((_, i) => {
-    const d = v * 7 + i, x = res.schema[p][d], n = p + "|" + d;
-    return `<td class="${i > 4 ? "helg" : ""}">${x ? `<button class="pass ${x.dygnsdel}${st.cell === n ? " vald" : ""}" data-g="cell" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[i]} ${x.start} till ${x.slut}"><b>${{ morgon: "M", kvall: "K", natt: "N" }[x.dygnsdel]}</b><small>${x.start}–${x.slut}</small></button>` : ""}</td>`;
+function vakansPass(res) {
+  const tider = {};
+  for (const rad of Object.values(res.schema)) for (const x of rad) if (x) { const k = x.start + "–" + x.slut; (tider[x.dygnsdel] = tider[x.dygnsdel] || {})[k] = (tider[x.dygnsdel][k] || 0) + 1; }
+  const reserv = { morgon: "07:00–15:00", kvall: "14:00–22:00", natt: "21:45–07:15" };
+  const perDag = Array.from({ length: res.veckor * 7 }, () => []);
+  for (const v of res.vakanser) for (let i = 0; i < v.antal; i++) {
+    const [start, slut] = (tider[v.dygnsdel] ? Object.entries(tider[v.dygnsdel]).sort((a, b) => b[1] - a[1])[0][0] : reserv[v.dygnsdel]).split("–");
+    perDag[v.dag].push({ dygnsdel: v.dygnsdel, start, slut });
+  }
+  perDag.forEach(l => l.sort((a, b) => "mkn".indexOf(a.dygnsdel[0]) - "mkn".indexOf(b.dygnsdel[0])));
+  return perDag;
+}
+
+function behovDag(indata) {
+  const ut = Array.from({ length: 7 }, () => ({ morgon: 0, kvall: 0, natt: 0 }));
+  for (const [k, v] of Object.entries(indata.behov || {})) {
+    const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(k)];
+    idx.forEach(i => { if (i >= 0) ut[i] = { morgon: v.morgon || 0, kvall: v.kvall || 0, natt: v.natt || 0 }; });
+  }
+  return ut;
+}
+
+function vecka(res, v) { return dagTabell(res, Array.from({ length: 7 }, (_, i) => v * 7 + i), false); }
+
+function dagTabell(res, dagar, period) {
+  const pers = Object.keys(res.schema), vak = {}, vp = vakansPass(res);
+  const kod = { morgon: "M", kvall: "K", natt: "N" };
+  res.vakanser.forEach(x => (vak[x.dag] = (vak[x.dag] || 0) + x.antal));
+  const kl = d => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}"`;
+  let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${46 + dagar.length * 30}px"` : ""}><thead>`;
+  if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">V${w + 1}</th>`).join("")}</tr>`;
+  h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>${dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7][0] : DAGAR[d % 7]}</th>`).join("")}</tr></thead><tbody>`;
+  for (const p of pers) h += `<tr><td title="${esc(p)}">${esc(p)}</td>` + dagar.map(d => {
+    const x = res.schema[p][d], n = p + "|" + d;
+    return `<td ${kl(d)}>${x ? `<button class="pass ${x.dygnsdel}${st.cell === n ? " vald" : ""}" data-g="cell" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
-  h += `<tr class="bem"><td>I tj.</td>` + DAGAR.map((_, i) => {
-    const d = v * 7 + i, c = { morgon: 0, kvall: 0, natt: 0 };
+  const rader = Math.max(0, ...dagar.map(d => vp[d].length));
+  for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
+    const x = vp[d][r];
+    return `<td ${kl(d)}>${x ? `<span class="pass vakant ${x.dygnsdel}" aria-label="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass ${x.start} till ${x.slut}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</span>` : ""}</td>`;
+  }).join("") + `</tr>`;
+  const bd = behovDag(st.korning.indata || st.enhet.indata);
+  h += `<tr class="bem"><td>I tj.</td>` + dagar.map(d => {
+    const c = { morgon: 0, kvall: 0, natt: 0 };
     pers.forEach(p => { const x = res.schema[p][d]; if (x) c[x.dygnsdel]++; });
-    return `<td class="${vak[d] ? "vakans" : ""}">M${c.morgon}<br>K${c.kvall}<br>N${c.natt}</td>`;
+    const over = ["morgon", "kvall", "natt"].reduce((s, k) => s + Math.max(0, c[k] - bd[d % 7][k]), 0);
+    const marke = `${vak[d] ? `<span class="minus">−${vak[d]}</span>` : ""}${over ? `<span class="plus">+${over}</span>` : ""}`;
+    return `<td ${kl(d).replace('class="', `class="${vak[d] ? "vakans " : over ? "over " : ""}`)}>${period ? (marke || "✓") : `M${c.morgon}<br>K${c.kvall}<br>N${c.natt}${marke ? "<br>" + marke : ""}`}</td>`;
   }).join("") + `</tr></tbody></table></div>`;
   return h;
 }

@@ -234,3 +234,24 @@ select.undantag { border-color: var(--varn); color: var(--varn); background: var
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } #meddelande, #tips { transition: none; } }
 details summary { cursor: pointer; color: var(--dampad); font-weight: 600; }
 main:focus, main:focus-visible { outline: none; }
+
+/* vakanta pass: streckad kant i dygnsdelens färg */
+.pass.vakant { background: none; box-shadow: none; cursor: default; border: 2px dashed; padding: 3px 0; }
+.pass.vakant.morgon { border-color: var(--morgon); color: var(--morgon-text); }
+.pass.vakant.kvall { border-color: var(--kvall); color: var(--kvall-text); }
+.pass.vakant.natt { border-color: var(--natt); color: var(--natt-text); }
+tr.vakantrad td:first-child { color: var(--kritisk); }
+/* hela perioden i en tabell */
+table.schema.period th:first-child, table.schema.period td:first-child { position: sticky; left: 0; background: var(--yta); z-index: 1; width: 54px; }
+table.schema.period td, table.schema.period th { padding: 1px; }
+table.schema.period .pass { padding: 5px 0; border-radius: 6px; }
+table.schema.period .pass.vakant { padding: 3px 0; }
+table.schema.period .ny-vecka { border-left: 2px solid var(--linje); }
+table.schema.period tr.bem td { font-size: 11px; }
+
+/* vakans och överkapacitet */
+.minus { color: var(--kritisk); font-weight: 800; }
+.plus { color: var(--accent); font-weight: 800; }
+tr.bem td.over { background: var(--accent-svag); border-radius: 8px; }
+tr.bem td .minus, tr.bem td .plus { margin: 0 2px; }
+.kpi .over b { color: var(--accent); }

@@ -30,6 +30,26 @@ def _bemanning(res, d):
     return n
 
 
+def _vakanspass(res):
+    """Vakanta pass per dag, med dygnsdelens vanligaste tider i schemat."""
+    from collections import Counter
+    tider = {}
+    for rad in res["schema"].values():
+        for p in rad:
+            if p:
+                tider.setdefault(p["dygnsdel"], Counter())[(p["start"], p["slut"])] += 1
+    reserv = {"morgon": ("07:00", "15:00"), "kvall": ("14:00", "22:00"), "natt": ("21:45", "07:15")}
+    ut = {}
+    for v in res.get("vakanser", []):
+        if v.get("dygnsdel"):
+            s, e = tider[v["dygnsdel"]].most_common(1)[0][0] if v["dygnsdel"] in tider else reserv[v["dygnsdel"]]
+            ut.setdefault(v["dag"], []).extend([{"dygnsdel": v["dygnsdel"], "start": s, "slut": e}] * v["antal"])
+    ordning = {"morgon": 0, "kvall": 1, "natt": 2}
+    for lista in ut.values():
+        lista.sort(key=lambda x: ordning[x["dygnsdel"]])
+    return ut
+
+
 def _vakansdagar(res):
     v = {}
     for x in res.get("vakanser", []):
@@ -87,10 +107,26 @@ def excel(res, granskning=None):
             elif d % 7 >= 5:
                 c.fill = helgfarg
         ws.row_dimensions[r].height = 30
+    vp = _vakanspass(res)
+    streck = Side(style="dashed", color="D03B3B")
+    rader_vak = max((len(x) for x in vp.values()), default=0)
+    for k in range(rader_vak):
+        r = 6 + len(pers) + k
+        ws.cell(row=r, column=1, value="Vakant").font = Font(bold=True, color="D03B3B")
+        for d in range(N):
+            c = ws.cell(row=r, column=d + 2)
+            c.alignment = mitt
+            lista = vp.get(d, [])
+            if k < len(lista):
+                x = lista[k]
+                c.value = f"{KOD[x['dygnsdel']]} {x['start']}–{x['slut']}"
+                c.font = Font(color=TEXTFARG[x["dygnsdel"]], size=9, italic=True)
+                c.border = Border(left=streck, right=streck, top=streck, bottom=streck)
+        ws.row_dimensions[r].height = 30
     vak = _vakansdagar(res)
     rod = Font(color="B92A2A", bold=True)
     for j, del_ in enumerate(("morgon", "kvall", "natt")):
-        r = 6 + len(pers) + 1 + j
+        r = 6 + len(pers) + rader_vak + 1 + j
         ws.cell(row=r, column=1, value=f"I tjänst {DEL[del_].lower()}").font = fet
         for d in range(N):
             c = ws.cell(row=r, column=d + 2, value=_bemanning(res, d)[del_])
@@ -154,6 +190,7 @@ def pdf(res, granskning=None):
     delar = []
     pers = list(res["schema"])
     vak = _vakansdagar(res)
+    vp = _vakanspass(res)
     kpi = res["kpi"]
     rubrik = (f"{res['veckor']} veckor{', cykliskt' if res.get('cykliskt') else ''} · vakanta pass "
               f"{kpi['vakanta_pass']} · vakanta tidpunkter {kpi['vakanta_tidpunkter']}"
@@ -177,6 +214,19 @@ def pdf(res, granskning=None):
                     stil += [("BACKGROUND", (j + 1, i + 1), (j + 1, i + 1), hex_(FARG[p["dygnsdel"]])),
                              ("TEXTCOLOR", (j + 1, i + 1), (j + 1, i + 1), hex_(TEXTFARG[p["dygnsdel"]]))]
             data.append(rad)
+        vecka_vak = [vp.get(v * 7 + j, []) for j in range(7)]
+        for k in range(max((len(x) for x in vecka_vak), default=0)):
+            rad = ["Vakant"]
+            for j in range(7):
+                if k < len(vecka_vak[j]):
+                    x = vecka_vak[j][k]
+                    rad.append(f"{KOD[x['dygnsdel']]} {x['start']}–{x['slut']}")
+                    stil += [("BOX", (j + 1, len(data)), (j + 1, len(data)), 1.2, hex_("D03B3B"), None, (3, 2)),
+                             ("TEXTCOLOR", (j + 1, len(data)), (j + 1, len(data)), hex_(TEXTFARG[x["dygnsdel"]]))]
+                else:
+                    rad.append("")
+            stil.append(("TEXTCOLOR", (0, len(data)), (0, len(data)), hex_("D03B3B")))
+            data.append(rad)
         rad = ["I tjänst"]
         for j in range(7):
             d = v * 7 + j
@@ -188,7 +238,7 @@ def pdf(res, granskning=None):
         stil.append(("FONT", (0, len(data) - 1), (-1, len(data) - 1), "Helvetica-Bold", 8))
         t = Table(data, colWidths=[24 * mm] + [34 * mm] * 7, repeatRows=1)
         t.setStyle(TableStyle(stil))
-        delar += [t, Spacer(1, 3 * mm), Paragraph("M morgon, K kväll, N natt.", liten), PageBreak()]
+        delar += [t, Spacer(1, 3 * mm), Paragraph("M morgon, K kväll, N natt. Vakant = pass som saknar personal (streckad ram).", liten), PageBreak()]
 
     delar.append(Paragraph("Per person", st["Heading2"]))
     data = [["Person", "Pass", "Arbetstid", "Mål", "Kvällspass", "Helggrupp"]]
