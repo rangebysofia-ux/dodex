@@ -388,3 +388,24 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 
 /* Schemaassistentens knapp: en rund symbol */
 .chatt-knapp { width: 58px; height: 58px; padding: 0 !important; border-radius: 50% !important; display: grid !important; place-items: center; font-size: 28px; line-height: 1; }
+
+/* ---------- Startguiden ---------- */
+.valkommen .logga svg { width: 54px; height: 54px; }
+.valrutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.valruta { display: grid; gap: 6px; text-align: left; align-content: start; padding: 18px; border-radius: 18px; border: 1px solid var(--linje); background: var(--yta2); cursor: pointer; font: inherit; color: var(--text); min-height: 150px; }
+.valruta:hover { border-color: var(--salvia); background: var(--accent-svag); }
+.valruta.huvud { background: var(--accent-svag); border-color: var(--salvia); }
+.valruta b { font-size: 17px; } .valruta > span:last-child { color: var(--dampad); font-size: 13.5px; line-height: 1.45; }
+.valikon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--yta); font-size: 22px; color: var(--skog); }
+.valruta.huvud .valikon { background: var(--guld); color: var(--text); }
+.nyttigt { margin-top: 14px; } .nyttigt summary { cursor: pointer; font-weight: 700; color: var(--skog); }
+.guide h2 { margin-top: 6px; }
+.guidesteg { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--dampad); }
+.guidesteg li { display: flex; align-items: center; gap: 6px; }
+.guidesteg span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--yta2); border: 1px solid var(--linje); font-weight: 700; font-size: 12px; }
+.guidesteg li.aktiv { color: var(--text); font-weight: 700; } .guidesteg li.aktiv span { background: var(--skog); color: #fff; border-color: var(--skog); }
+.guidesteg li.klar span { background: var(--salvia); border-color: var(--salvia); color: var(--skog); }
+.guidetips { margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--accent-svag); font-size: 14px; }
+.guidetips.varn { background: var(--varn-bg); color: var(--varn); }
+.guidetabell { width: auto; } .guidetabell input { width: 76px; text-align: center; } .guidetabell th { text-align: left; padding-right: 10px; }
+.guidenav { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--linje); }

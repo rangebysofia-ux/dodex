@@ -152,12 +152,12 @@ async function visaEnheter() {
   sokvag([["Enheter"]]);
   const [enheter, exempel] = await Promise.all([api("GET", "enheter"), api("GET", "exempel")]);
   st.exempel = exempel;
+  if (st.guide) { vy().innerHTML = GUIDE.html(st.guide); return; }
   vy().innerHTML = `
-    <section class="kort">
-      <div class="rubrikrad"><div style="display:block"><h1>Välkommen till DODEX Scheduler</h1>
-        <p class="dampad" style="margin:6px 0 0">Smart schemaplanering för en hållbar verksamhet. En enhet är en arbetsgrupp med personal, behov, önskemål och regler; varje schema du lägger sparas som en körning.</p></div>
-        <div><button class="primar" data-g="ny-enhet">+ Ny enhet</button></div></div>
-    </section>
+    <section class="kort valkommen"><div class="logga ljus">${loggaText()}</div>
+      <p class="dampad" style="margin:8px 0 0">Planering som skapar balans – idag och imorgon. En enhet är en arbetsgrupp med medarbetare, behov, önskemål och regler; varje schema du lägger sparas som en körning.</p></section>
+    ${GUIDE.val({ harEnheter: enheter.length > 0 })}
+    <h2 id="mina-enheter" style="margin:6px 4px 0">Mina enheter</h2>
     <section class="lista-enheter">${enheter.length ? enheter.map(e => `
       <div class="kort enhet">
         <a class="namn" href="#/e/${e.id}/oversikt">${esc(e.namn)}</a>
@@ -166,7 +166,7 @@ async function visaEnheter() {
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
           <button class="liten fara" data-g="ta-bort-enhet" data-id="${e.id}" data-namn="${esc(e.namn)}">Ta bort</button></div>
       </div>`).join("") : `<div class="kort tom">Inga enheter än. Skapa en ny eller börja från ett exempel nedan.</div>`}</section>
-    <section class="kort">
+    <section class="kort" id="exempel">
       <h2>Börja från ett exempel</h2>
       <p class="dampad liten">Testfallen från projektet. De använder id-koder i stället för namn.</p>
       ${exempel.map((x, i) => `<div class="onsk"><div><b>${esc(x.namn)}</b><div class="dampad liten">${esc(x.beskrivning)}</div></div>
@@ -679,6 +679,38 @@ function regelInput(el) {
 }
 
 // ---------------------------------------------------------------- klick
+// startguiden (guide.js)
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-guide]"); if (!el) return;
+  const g = st.guide, val = el.dataset.guide;
+  try {
+    switch (val) {
+      case "ny": st.guide = GUIDE.ny(); return visaEnheter();
+      case "exempel": return $("#exempel")?.scrollIntoView({ behavior: "smooth" });
+      case "enheter": return $("#mina-enheter")?.scrollIntoView({ behavior: "smooth" });
+      case "ai": {
+        const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: GUIDE.tomIndata("Ny enhet") });
+        st.enhet = null; st.enhetLista = null; st.oppnaAssistent = true; location.hash = `#/e/${id}/medarbetare`; return;
+      }
+      case "avbryt": st.guide = null; return visaEnheter();
+      case "tillbaka": g.steg--; return visaEnheter();
+      case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; return visaEnheter(); }
+      case "minsta": { const r = GUIDE.berakna(g); g.dagkvall = r.minDag; g.natt = r.minNatt; return visaEnheter(); }
+      case "anvand-behov": g.budget = String(Math.round(GUIDE.berakna(g).behovTimmar * 2) / 2); return visaEnheter();
+      case "skapa": case "skapa-lagg": {
+        const ind = GUIDE.indata(g);
+        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: ind });
+        st.guide = null; st.enhet = null; st.enhetLista = null;
+        if (val === "skapa-lagg") { await laddaEnhet(id); await laggSchema(); }
+        else location.hash = `#/e/${id}/oversikt`;
+        meddela("Enheten är skapad."); return;
+      }
+    }
+  } catch (err) { meddela(err.message); }
+});
+document.addEventListener("change", e => { if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target)) visaEnheter(); });
+document.addEventListener("input", e => { if (st.guide && e.target.closest(".guide")) GUIDE.las(st.guide, e.target); });
+
 document.addEventListener("click", async e => {
   const el = e.target.closest("[data-g]");
   if (!el) return;
@@ -686,7 +718,8 @@ document.addEventListener("click", async e => {
   try {
     switch (g) {
       case "logga-ut": await api("POST", "logga-ut"); visaInloggning(); break;
-      case "ny-enhet": {
+      case "ny-enhet": { st.guide = GUIDE.ny(); location.hash = "#/"; visaEnheter(); break; }
+      case "ny-enhet-tom": {
         const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: NY_INDATA() });
         st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/medarbetare`; break;
       }
@@ -802,6 +835,7 @@ async function route() {
     } else if (d[0] === "jamfor") await visaJamfor(d[1].split(",").map(Number));
     else await visaEnheter();
     vy().focus({ preventScroll: true });
+    if (st.oppnaAssistent && st.enhet && typeof oppnaAssistent === "function") { st.oppnaAssistent = false; oppnaAssistent(GUIDE.AI_START); }
   } catch (e) {
     if (e.message !== "Logga in först.") vy().innerHTML = `<section class="kort"><div class="banner dalig">${IKON.stopp}<div><strong>Något gick fel</strong>${esc(e.message)}</div></div><p style="margin-top:10px"><a href="#/">Till enheterna</a></p></section>`;
   }

@@ -186,6 +186,22 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 .pass.manuell { box-shadow: inset 0 0 0 2px var(--guld) !important; }
 .chatt-knapp { width: 56px; height: 56px; padding: 0 !important; border-radius: 50% !important; display: grid; place-items: center; font-size: 28px; line-height: 1; }
 .chatt-knapp[hidden] { display: none; }
+.valrutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.valruta { display: grid; gap: 4px; text-align: left; align-content: start; padding: 14px; border-radius: 14px; border: 1px solid var(--linje); background: var(--yta2); font: inherit; color: var(--text); }
+.valruta.huvud { background: var(--accent-svag); border-color: var(--accent); }
+.valruta b { font-size: 16px; } .valruta > span:last-child { color: var(--dampad); font-size: 13.5px; line-height: 1.4; }
+.valikon { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--yta); font-size: 20px; }
+.valruta.huvud .valikon { background: var(--guld); color: #25332f; }
+.nyttigt { margin-top: 12px; } .nyttigt summary { cursor: pointer; font-weight: 700; }
+.guidesteg { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 0; margin: 0 0 12px; font-size: 12.5px; color: var(--dampad); }
+.guidesteg li { display: flex; align-items: center; gap: 5px; }
+.guidesteg span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--yta2); border: 1px solid var(--linje); font-weight: 700; font-size: 12px; }
+.guidesteg li.aktiv { color: var(--text); font-weight: 700; } .guidesteg li.aktiv span { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.guidesteg li.klar span { background: var(--accent-svag); }
+.guidetips { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-svag); font-size: 14px; }
+.guidetips.varn { background: var(--varn-bg); color: var(--varn); }
+.guidetabell input { width: 64px; text-align: center; } .guidetabell th { text-align: left; padding-right: 8px; }
+.guidenav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--linje); }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -205,6 +221,7 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 <script>__ASSISTENT__</script>
 <script>__OB__</script>
 <script>__GRAFER__</script>
+<script>__GUIDE__</script>
 <script>__ANALYS__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
 <script>
@@ -298,16 +315,18 @@ async function visaLista() {
   st.vy = "lista"; st.enhet = null; $("#fot").hidden = true;
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
+  if (st.guide) { $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
-    <header class="kort"><div class="logga" style="margin-bottom:10px">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div><h1>Välkommen till DODEX Scheduler</h1>
+    <header class="kort"><div class="logga" style="margin-bottom:10px">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
       <p class="dampad" style="margin:6px 0 0">Lägg cykliska grundscheman direkt i mobilen. Samma hårda regler som det fullständiga systemet: dygnsvila och veckovila (avtal), rast (lag), antal pass, varannan helg och block på 2–5 dagar.</p>
       <p class="liten dampad" style="margin:6px 0 0">${lager.typ === "konto" ? "Sparas privat i ditt Claude-konto och syns i mobil och dator." : "Sparas bara i den här webbläsaren."}</p></header>
-    <section class="kort"><div class="rad"><h2 style="margin:0">Enheter</h2><button class="primar" data-g="ny">Ny enhet</button></div>
+    ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
+    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><button class="primar" data-guide="ny">Ny enhet</button></div>
       ${st.enheter.length ? st.enheter.map(e => `<div class="onsk"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${esc(e.namn)}</button>
         <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div></div>
         <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>`).join("")
       : `<p class="tom">Inga enheter än. Skapa en ny eller börja från ett exempel.</p>`}</section>
-    <section class="kort"><h2>Exempel</h2><p class="dampad liten">Testfall från projektet, med id-koder i stället för namn.</p>
+    <section class="kort" id="exempel"><h2>Exempel</h2><p class="dampad liten">Testfall från projektet, med id-koder i stället för namn.</p>
       ${EXEMPEL.map((x, i) => `<div class="onsk"><div><b>${esc(x.namn)}</b><div class="dampad liten">${esc(x.beskrivning)}</div></div><button class="liten" data-g="exempel" data-i="${i}">Använd</button></div>`).join("")}</section>`;
 }
 
@@ -868,6 +887,26 @@ async function anvandForslag(n) {
   meddela("Förslaget är sparat som en ny enhet."); st.sim = null;
   await oppna(e);
 }
+
+// ------------------------------------------------------------------ startguiden (guide.js, delad med webben)
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-guide]"); if (!el) return;
+  const g = st.guide, val = el.dataset.guide;
+  switch (val) {
+    case "ny": st.guide = GUIDE.ny(); window.scrollTo(0, 0); return visaLista();
+    case "exempel": return $("#exempel")?.scrollIntoView({ behavior: "smooth" });
+    case "enheter": return $("#mina-enheter")?.scrollIntoView({ behavior: "smooth" });
+    case "ai": await skapa("Ny enhet", GUIDE.tomIndata("Ny enhet")); chatt.oppen = true; ritaChatt(); $("#chatt-text").value = GUIDE.AI_START; $("#chatt-text").focus(); return;
+    case "avbryt": st.guide = null; return visaLista();
+    case "tillbaka": g.steg--; return visaLista();
+    case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaLista(); }
+    case "minsta": { const r = GUIDE.berakna(g); g.dagkvall = r.minDag; g.natt = r.minNatt; return visaLista(); }
+    case "anvand-behov": g.budget = String(Math.round(GUIDE.berakna(g).behovTimmar * 2) / 2); return visaLista();
+    case "skapa": case "skapa-lagg": { st.guide = null; await skapa(g.namn || "Ny enhet", GUIDE.indata(g)); meddela("Enheten är skapad."); if (val === "skapa-lagg") laggSchema(); return; }
+  }
+});
+document.addEventListener("change", e => { if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target)) visaLista(); });
+document.addEventListener("input", e => { if (st.guide && e.target.closest(".guide")) GUIDE.las(st.guide, e.target); });
 
 // verktygstips för graferna: håll över eller tryck
 document.addEventListener("pointerover", e => {

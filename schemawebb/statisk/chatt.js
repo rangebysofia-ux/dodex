@@ -112,6 +112,11 @@ $("#chatt-knapp").onclick = async () => {
   chatt.oppen = true; ritaChatt(); $("#chatt-text").focus();
   if (chatt.tillganglig === null) { try { chatt.tillganglig = (await api("GET", "assistent/status")).tillganglig; } catch { chatt.tillganglig = false; } ritaChatt(); }
 };
+// Öppna assistenten med ett förifyllt meddelande (startguidens AI-väg). Användaren skickar själv.
+async function oppnaAssistent(text) {
+  await $("#chatt-knapp").onclick();
+  if (text) { $("#chatt-text").value = text; $("#chatt-text").focus(); }
+}
 $("#chatt-stang").onclick = () => { chatt.oppen = false; ritaChatt(); };
 $("#chatt-form").onsubmit = e => { e.preventDefault(); const t = $("#chatt-text").value; $("#chatt-text").value = ""; skickaChatt(t); };
 $("#chatt-text").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#chatt-form").requestSubmit(); } };

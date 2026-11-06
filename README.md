@@ -42,6 +42,14 @@ Efter installationen finns kommandona även som `schema-balans`, `schema-build`,
 
 ## Gränssnittet: DODEX Scheduler
 
+Det första man möter är **Vad vill du göra?**:
+
+- **Skapa ny enhet** öppnar en guide i fem steg: enheten, behov, budget, medarbetare och sammanfattning. Guiden räknar ut hur många timmar behovet motsvarar och hur många som behövs för helgerna med varannan helg och fredagsregeln, och kan fördela budgeten på medarbetarna.
+- **Få hjälp av AI-assistenten** skapar en tom enhet och öppnar 🤖 med en förifylld fråga. Assistenten föreslår indata som användaren godkänner.
+- **Börja från ett exempel** och **Fortsätt med en enhet**.
+
+Guiden finns i `schemawebb/statisk/guide.js` och delas med lättversionen.
+
 Webbgränssnittet har en sidomeny med:
 
 - **Översikt** – fyra nyckeltal (bemanningsgrad, personalkostnad, obemannade pass, planerad övertid), bemanningsgrad och kostnad per vecka, behov mot planerad bemanning per dag, passfördelning och en värmekarta över under- och överbemanning.
