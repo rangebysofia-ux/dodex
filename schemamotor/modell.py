@@ -37,7 +37,7 @@ STANDARDREGLER = {
     "pass_per_vecka", "morgon_start", "kvall_slut", "kant_fran", "kant_till", "steg_minuter", "block_min",
     "block_max", "block_rekommenderat", "helg_start", "helg_slut", "hel_helg", "helgfrekvens",
     "ingen_fredagskvall_fore_ledig_helg", "tolerans_minuter", "langd_band_minuter", "min_passlangd_minuter",
-    "spridning_kvallar", "spridning_tolerans",
+    "spridning_kvallar", "spridning_tolerans", "jamn_bemanning",
 }
 # Avtal och lag får aldrig försvagas (AGENTS.md). Skärpningar är tillåtna.
 SKYDDADE = {
@@ -209,17 +209,8 @@ def _helhet(d: dict) -> list[str]:
     if "helgfrekvens" in regler and regler["helgfrekvens"] != "2/4" and "helgfrekvens" not in avvikelser:
         fel.append("Varannan helg är en hård lokal regel för enheten och kan inte ändras. Undantag görs per person "
                    "med helgfrekvens på personen.")
-    ppv = regler.get("pass_per_vecka", STANDARD_PASS_PER_VECKA)
-    x = ppv * W
-    heltal = abs(x - round(x)) < 1e-9
-    utan = [str(p.get("id")) for p in personal
-            if p.get("antal_pass") is None and p.get("dygnsdelar") != ["natt"]]
-    if utan and not heltal:
-        sv = lambda v: f"{v:g}".replace(".", ",")  # noqa: E731
-        fel.append(
-            f"Perioden ger inte ett helt antal pass: {W} veckor × {sv(ppv)} pass per vecka = {sv(x)}. Välj en "
-            f"periodlängd som är en multipel av 4 veckor, eller ange antal pass (till exempel 28 eller 29) för "
-            f"{', '.join(utan)}.")
+    # Går 4,75 × veckor inte jämnt ut får dag- och kvällspersonalen växelvis avrundat nedåt och uppåt
+    # (build.py, validate.py och lättversionen gör likadant), så alla periodlängder fungerar.
     for p in personal:
         if isinstance(p.get("antal_pass"), list) and isinstance(delp, list) and len(p["antal_pass"]) != len(delp):
             fel.append(f"{p.get('id')}: antal pass har {len(p['antal_pass'])} värden men det finns {len(delp)} "

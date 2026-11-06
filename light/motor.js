@@ -11,7 +11,7 @@ const MOTOR = (() => {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
     block_min: 2, block_max: 5, block_rekommenderat: 4, helgfrekvens: "2/4", hel_helg: true,
-    ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1,
+    ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
   const DELNAMN = { 1: "morgon", 2: "kvall", 3: "natt" };
@@ -20,6 +20,7 @@ const MOTOR = (() => {
   const WB = 60;       // arbetsdagar i följd över rekommenderat
   const WF = 8;        // rättvisa (kvadratisk avvikelse i antal kvällar)
   const WO = 4;        // brutet önskemål per vikt
+  const WJ = 40;       // jämn bemanning: över- och underbemanning lika mellan dag och kväll
 
   const tid = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return String(m / 60 | 0).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
@@ -52,6 +53,7 @@ const MOTOR = (() => {
     }
 
     const pers = [], ids = new Set();
+    let vaxel = 0;  // för perioder där antal pass inte går jämnt ut
     for (const p of ind.personal || []) {
       if (!p.id) { fel.push("En person saknar id."); continue; }
       if (ids.has(p.id)) fel.push(`Samma id finns två gånger: ${p.id}.`);
@@ -64,12 +66,10 @@ const MOTOR = (() => {
       if (P == null) {
         if (natt) P = Math.round(malMin / nnet);
         else {
+          // går det inte jämnt ut (28,5 på 6 veckor) får dag/kväll växelvis nedåt och uppåt: 28, 29, 28 …
           const x = r.pass_per_vecka * W;
-          if (Math.abs(x - Math.round(x)) > 1e-9) {
-            fel.push(`${p.id}: ${W} veckor × ${String(r.pass_per_vecka).replace(".", ",")} pass = ${String(x).replace(".", ",")}, inte ett heltal. Välj 4, 8, 12 eller 16 veckor, eller ange antal pass.`);
-            continue;
-          }
-          P = Math.round(x);
+          P = Math.abs(x - Math.round(x)) < 1e-9 ? Math.round(x) : (vaxel % 2 === 0 ? Math.floor(x) : Math.ceil(x));
+          vaxel++;
           if (r.min_passlangd_minuter && malMin / P < r.min_passlangd_minuter) P = Math.max(1, Math.floor(malMin / r.min_passlangd_minuter));
         }
       }
@@ -289,6 +289,24 @@ const MOTOR = (() => {
     }
 
     function vakans(cnt, d, t) { return Math.max(0, behov[d % 7][t] - cnt[d][t]); }
+    // jämn bemanning: det som blir över eller saknas på dag och kväll sprids jämnt (per vecka och för perioden),
+    // och ett andra extra pass samma dag och dygnsdel kostar extra
+    const medJamn = r.jamn_bemanning !== "av";
+    function jamnKost(cnt) {
+      if (!medJamn) return 0;
+      let k = 0, toM = 0, toK = 0, tvM = 0, tvK = 0;
+      for (let w = 0; w < W; w++) {
+        let om = 0, ok = 0, vm = 0, vk = 0;
+        for (let d = w * 7; d < w * 7 + 7; d++) {
+          const bm = behov[d % 7][M], bk = behov[d % 7][K], nm = cnt[d][M], nk = cnt[d][K];
+          const o1 = Math.max(0, nm - bm), o2 = Math.max(0, nk - bk);
+          om += o1; ok += o2; vm += Math.max(0, bm - nm); vk += Math.max(0, bk - nk);
+          k += 2 * (Math.max(0, o1 - 1) + Math.max(0, o2 - 1));
+        }
+        k += Math.abs(om - ok) + Math.abs(vm - vk); toM += om; toK += ok; tvM += vm; tvK += vk;
+      }
+      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ;
+    }
 
     let bastX = null, bastKost = Infinity;
     const start = Date.now();
@@ -300,7 +318,8 @@ const MOTOR = (() => {
       const pk = X.map((x, pi) => personKost(pi, x));
       let vak = 0;
       for (let d = 0; d < N; d++) for (let t = 1; t <= 3; t++) vak += vakans(cnt, d, t);
-      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV;
+      let jk = jamnKost(cnt);
+      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk;
       let lokalBast = kost, lokalX = X.map(x => x.slice());
       const budget = tidsgrans * 1000 / omstarter;
       const t0 = Date.now();
@@ -318,17 +337,26 @@ const MOTOR = (() => {
         const v = rnd();
         let andrade = [];  // [pi, d, gammal]
         let pj = -1;
-        if (v < 0.55) {  // flytta ett pass mellan två vardagar
+        if (v < 0.5) {  // flytta ett pass mellan två vardagar
           const d1 = Math.floor(rnd() * N), d2 = Math.floor(rnd() * N);
           if (d1 % 7 >= 5 || d2 % 7 >= 5 || !x[d1] || x[d2]) continue;
           const a = per[pi].tillat[d2]; if (!a.length) continue;
           andrade = [[pi, d1, x[d1]], [pi, d2, OFF]];
           x[d2] = a[Math.floor(rnd() * a.length)]; x[d1] = OFF;
-        } else if (v < 0.85) {  // byt dygnsdel
+        } else if (v < 0.75) {  // byt dygnsdel
           if (p.typer.length < 2) continue;
           const d = Math.floor(rnd() * N); if (!x[d]) continue;
           const a = per[pi].tillat[d].filter(t => t !== x[d]); if (!a.length) continue;
           andrade = [[pi, d, x[d]]]; x[d] = a[Math.floor(rnd() * a.length)];
+        } else if (v < 0.9) {  // byt dygnsdel för en del av ett arbetsblock: kvällar sist och morgnar först, så att vilan håller
+          if (p.typer.length < 2) continue;
+          const d = Math.floor(rnd() * N); if (x[d] !== M && x[d] !== K) continue;
+          const mal = x[d] === M ? K : M;
+          let a = d, b = d; while (a > 0 && x[a - 1]) a--; while (b < N - 1 && x[b + 1]) b++;
+          const dagar = []; if (mal === K) for (let i = d; i <= b; i++) dagar.push(i); else for (let i = a; i <= d; i++) dagar.push(i);
+          if (dagar.length > 5 || dagar.some(i => !per[pi].tillat[i].includes(mal))) continue;
+          andrade = dagar.filter(i => x[i] !== mal).map(i => [pi, i, x[i]]); if (!andrade.length) continue;
+          for (const [, i] of andrade) x[i] = mal;
         } else {  // två personer byter dygnsdel samma dag
           pj = Math.floor(rnd() * P); if (pj === pi) continue;
           const d = Math.floor(rnd() * N), y = X[pj];
@@ -346,10 +374,11 @@ const MOTOR = (() => {
         }
         for (const [q, d, gammal] of andrade) { if (gammal) cnt[d][gammal]--; if (X[q][d]) cnt[d][X[q][d]]++; }
         for (const n in vakFore) delta += (vakans(cnt, Math.floor(n / 4), n % 4) - vakFore[n]) * WV;
+        const jkNy = medJamn ? jamnKost(cnt) : 0; delta += jkNy - jk;
         const nya = {};
         for (const q of berorda) { nya[q] = personKost(q, X[q]); delta += nya[q].summa - pk[q].summa; }
         if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
-          kost += delta;
+          kost += delta; jk = jkNy;
           for (const q of berorda) pk[q] = nya[q];
           if (kost < lokalBast - 1e-9) { lokalBast = kost; lokalX = X.map(x => x.slice()); }
         } else {

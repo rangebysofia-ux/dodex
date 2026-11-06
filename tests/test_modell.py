@@ -34,10 +34,11 @@ def test_saknad_grad(bas):
 def test_periodlangd_utan_heltal(bas):
     for p in bas["personal"]:
         p.pop("antal_pass", None)
-    fel = kontrollera_indata(bas)
-    assert len(fel) == 1
-    assert "6 veckor × 4,75 pass per vecka = 28,5" in fel[0]
-    assert "multipel av 4 veckor" in fel[0] and "A1" in fel[0] and "N1" not in fel[0]
+    # 6 veckor går bra: dag- och kvällspersonalen får växelvis 28 och 29 pass (docs/regelhierarki.md, punkt 5)
+    assert kontrollera_indata(bas) == []
+    from schemamotor.build import forbered
+    pass_ = [p["pass_delperioder"][0] for p in forbered(bas)["personer"] if not p["natt"]]
+    assert pass_[:4] == [28, 29, 28, 29]
 
 
 def test_flera_fel_pa_en_gang(bas):

@@ -24,7 +24,7 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 2. **Antal pass väger tyngre än passlängd.** Dag- och kvällspersonal arbetar i snitt 4,75 pass per vecka. Snittlängden följer sysselsättningsgraden, men enskilda pass får variera så länge antal och total tid stämmer.
 3. **Passlängden anpassas i fönstret 12–18.** Morgonpass har fast start och rörligt slut, kvällspass har fast slut och rörlig start.
 4. **Rast i pass över fem timmars arbetstid** om inget annat anges.
-5. **Periodlängd i multiplar av fyra veckor**, eftersom 4,75 × veckor bara då blir ett heltal (19, 38, 57). Vid 6-veckorsperioder anges antal pass per person, till exempel 28 och 29.
+5. **Periodlängd.** 4,75 × veckor blir ett heltal vid 4, 8 och 12 veckor (19, 38, 57 pass). Vid andra längder, till exempel 6 veckor (28,5), får dag- och kvällspersonalen utan angivet antal pass växelvis avrundat nedåt och uppåt i den ordning de står: 28, 29, 28, 29 … Antal pass kan fortfarande anges per person. Beslutat av användaren 2026-11-06.
 6. **Ingen fredagskväll före ledig helg.** Den som är ledig helgen arbetar inte kväll eller natt fredagen innan. Hård lokal regel; kan stängas av med `"ingen_fredagskvall_fore_ledig_helg": false`.
 7. **Varannan helg är hård för enheten.** Alla arbetar exakt varannan helg i fasta grupper (A och B). Enhetens standard kan inte ändras. Undantag görs bara per person (helgfrekvens 1/4, 3/4, alla eller ingen), till exempel när kontraktet säger något annat, och visas som undantag i gränssnittet. Beslutat av användaren 2026-11-05.
 8. **Låsta regler kan låsas upp.** Dygnsvila, veckovila, rast och varannan helg är låsta som standard, men kan ändras under Regler när användaren bekräftar att det finns ett lokalt avtal eller beslut. Bekräftelsen sparas i `avvikelser` i indata, och avvikelsen visas på alla scheman från enheten. Utan bekräftelse avvisas försvagningen. Beslutat av användaren 2026-11-06.
@@ -33,6 +33,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 11. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
 
 12. **OB-prognos efter avtalet.** Efter sista kontrollerade OB-nivån (HÖK 25, till och med 2027-03-31) räknas OB upp med 3 % per avtalsår. Det är en prognos för budget, inte avtal, och märks så i gränssnittet. `ob_prognos_procent`, 0 stänger av. Beslutat av användaren 2026-11-06.
+
+13. **Jämn bemanning mellan dag och kväll (princip, mjuk).** Det som blir över eller saknas fördelas efter behovet, jämnt mellan dag- och kvällspass, per vecka och för hela perioden, och inte flera extra på samma dag och pass. Vägs ihop med rättvisan mellan personer (rättvisan väger dubbelt). `jamn_bemanning`: "mjuk" (standard) eller "av". Beslutat av användaren 2026-11-06.
 
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
@@ -45,7 +47,7 @@ De mjuka målen löses i ordning, och varje nivå låses innan nästa optimeras:
 1. Vakanser (pass per dygnsdel och tidpunkter)
 2. Blocklängd (antal tillfällen med fler än 4 dagar i följd)
 3. Passlängd (avvikelse från mållängd per pass och från kontrakterad tid, i minuter)
-4. Rättvisa (spridning i antal kvälls- och morgonpass mellan personer)
+4. Rättvisa och jämn bemanning (spridning i antal kvälls- och morgonpass mellan personer, vägd dubbelt, plus skillnaden mellan dag och kväll i över- och underbemanning)
 5. Spridning (veckor med bara morgnar eller bara kvällar; med inställningen "stark" direkt efter vakanser)
 6. Önskemål (viktade brutna önskemål)
 

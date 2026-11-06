@@ -158,7 +158,7 @@ const REGELGRUPPER = [
   ["ANTAL_PASS", "Antal pass enligt kontrakt", "Lokal regel"], ["TID", "Arbetstid enligt kontrakt", "Kontrakt"],
   ["HELG", "Helger och fredagskvällar", "Lokal regel"], ["BLOCK_MIN", "Inga enstaka arbetsdagar", "Lokal regel"],
   ["BLOCK_MAX", "Högst antal arbetsdagar i följd", "Lokal regel"], ["PASSFONSTER", "Passbyte i fönstret 12–18", "Lokal regel"],
-  ["BLOCK_REKOMMENDERAT", "Rekommenderad blocklängd", "Mjuk"], ["SPRIDNING", "Morgon och kväll varje vecka", "Mjuk"], ["BEHOV", "Bemanningsbehov", "Mjuk"],
+  ["BLOCK_REKOMMENDERAT", "Rekommenderad blocklängd", "Mjuk"], ["SPRIDNING", "Morgon och kväll varje vecka", "Mjuk"], ["JAMN_BEMANNING", "Jämn bemanning mellan dag och kväll", "Mjuk"], ["BEHOV", "Bemanningsbehov", "Mjuk"],
 ];
 
 // ---------------------------------------------------------------- simulering

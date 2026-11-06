@@ -34,7 +34,6 @@ const ANALYS = (() => {
     const r = regler(indata);
     let W = indata.veckor;
     const ppv = r.pass_per_vecka;
-    if (Math.abs(ppv * W - Math.round(ppv * W)) > 1e-9) W = 4;
     const heltid = (indata.heltid_minuter_per_vecka || FORSTA_HELTID) / 60;
     const behov = dagvarden(indata.behov), b = (d, k) => behov[d][k] || 0;
     const np = (indata.nattpass || [{ start: "21:45", slut: "07:15" }])[0];

@@ -13,6 +13,7 @@ Exitkod: 0 = inga brott mot hårda regler, 1 = minst ett brott, 2 = fel i indata
 """
 import argparse
 import json
+import math
 import sys
 from collections import Counter
 
@@ -24,11 +25,12 @@ STANDARD = {
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
     "block_rekommenderat": 4, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
-    "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1,
+    "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1, "jamn_bemanning": "mjuk",
 }
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
-        "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip"}
+        "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
+        "JAMN_BEMANNING": "princip"}
 
 
 def tid(s):
@@ -132,6 +134,9 @@ def kontrollera(indata, schema_dok):
     brytpunkter = {}
     vb = veckotid(r["veckobryt"])
     personer = {p["id"]: p for p in indata["personal"]}
+    # ordningen bland dag- och kvällspersonal utan angivet antal pass (för perioder som inte går jämnt ut)
+    utan_antal = [p["id"] for p in indata["personal"] if p.get("antal_pass") is None and p.get("dygnsdelar") != ["natt"]]
+    vaxel = {pid: i for i, pid in enumerate(utan_antal)}
 
     for pid, lista in alla.items():
         iv = upptaget(lista)
@@ -238,7 +243,8 @@ def kontrollera(indata, schema_dok):
         mal_min = round(heltid * pers.get("grad", 1) * W)
         mal = pers.get("antal_pass")
         if mal is None and not natt:
-            mal = round(r["pass_per_vecka"] * W)
+            x = r["pass_per_vecka"] * W  # växelvis nedåt och uppåt när det inte går jämnt ut
+            mal = round(x) if abs(x - round(x)) < 1e-9 else (math.floor(x) if vaxel[pid] % 2 == 0 else math.ceil(x))
             if r["min_passlangd_minuter"] and mal_min / mal < r["min_passlangd_minuter"]:
                 mal = max(1, mal_min // r["min_passlangd_minuter"])
         if mal is not None:
@@ -280,6 +286,22 @@ def kontrollera(indata, schema_dok):
     for nyckel, v in (indata.get("tidpunkter") or {}).items():
         for i in dagindex(nyckel):
             tidp[i] = v
+    # jämn bemanning (princip, mjuk): över- och underbemanning ska fördelas jämnt mellan dag och kväll
+    if r.get("jamn_bemanning", "mjuk") != "av":
+        for w in range(N // 7):
+            summa = {("over", "morgon"): 0, ("over", "kvall"): 0, ("under", "morgon"): 0, ("under", "kvall"): 0}
+            for d in range(w * 7, w * 7 + 7):
+                for del_ in ("morgon", "kvall"):
+                    antal = behov[d % 7].get(del_, 0)
+                    n = sum(1 for lista in alla.values() for dd, _, _, p in lista if dd == d and p.get("dygnsdel") == del_)
+                    summa["over", del_] += max(0, n - antal)
+                    summa["under", del_] += max(0, antal - n)
+            for sort, text in (("over", "över behovet"), ("under", "vakanta")):
+                mo, kv = summa[sort, "morgon"], summa[sort, "kvall"]
+                if abs(mo - kv) >= 3:
+                    brott("JAMN_BEMANNING", None, f"Vecka {w + 1}: {mo} pass {text} på dagen men {kv} på kvällen; "
+                          "fördelningen mellan dag och kväll är ojämn.", hard=False)
+
     vakanser = 0
     for d in range(N):
         for del_, antal in behov[d % 7].items():

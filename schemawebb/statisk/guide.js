@@ -95,7 +95,7 @@ const GUIDE = (() => {
       <details class="nyttigt"><summary>Bra att veta</summary><ul class="punkter liten">
         <li>Reglerna (dygnsvila 11 h, veckovila 36 h, rast, varannan helg) gäller från start. Ändra under Inställningar eller Regler.</li>
         <li>Behovet är det som styr. Räcker inte personalen blir det en synlig vakans, aldrig ett avtalsbrott.</li>
-        <li>Perioder på 4, 8 eller 12 veckor går jämnt ut med 4,75 pass per vecka.</li>
+        <li>Med 4,75 pass per vecka går 4, 8 och 12 veckor jämnt ut. Vid till exempel 6 veckor får hälften 28 pass och hälften 29.</li>
         <li>Ange startdatum och timkostnad så räknas OB och personalkostnad.</li>
         <li>🤖 finns på varje sida. Fråga till exempel ”hur många kvällar har var och en?”.</li>
       </ul></details></section>`;
@@ -141,7 +141,7 @@ const GUIDE = (() => {
           <div><label for="g-ne">Nattpass slutar</label><input id="g-ne" type="time" data-gt="nattSlut" value="${g.tider.nattSlut}"></div></div>` +
         tips("Dagpassets slut och kvällspassets start anpassas efter sysselsättningsgraden, med passbyte mellan kl. 12 och 18. Nattpasset är " + sv(nattTimmarPass(g)) + " h med måltidsuppehåll."); break;
       case 7: h = fraga("Hur lång är schemaperioden, och när börjar den?") +
-        `<div class="falt" style="max-width:640px"><div><label for="g-veckor">Period</label><select id="g-veckor" data-gf="veckor">${[4, 8, 12].map(v => `<option value="${v}"${+g.veckor === v ? " selected" : ""}>${v} veckor</option>`).join("")}</select></div>
+        `<div class="falt" style="max-width:640px"><div><label for="g-veckor">Period</label><select id="g-veckor" data-gf="veckor">${[4, 6, 8, 12].map(v => `<option value="${v}"${+g.veckor === v ? " selected" : ""}>${v} veckor</option>`).join("")}</select></div>
           <div><label for="g-start">Startdatum, måndag (valfritt)</label><input id="g-start" type="date" data-gf="startdatum" value="${esc(g.startdatum)}"></div>
           <div><label for="g-tk">Timkostnad, kr (valfritt)</label><input id="g-tk" type="number" min="0" inputmode="decimal" data-gf="timkostnad" value="${esc(g.timkostnad)}"></div></div>` +
         tips("Startdatum och timkostnad behövs för OB och personalkostnad. De kan anges senare."); break;

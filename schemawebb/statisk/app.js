@@ -595,6 +595,7 @@ const REGLER = [
   { grupp: "Principer", k: "block_rekommenderat", namn: "Helst högst antal dagar i följd", niva: "princip", typ: "mjuk", falt: "tal", steg: 1, std: 4 },
   { grupp: "Principer", k: "spridning_kvallar", namn: "Blandning av morgon och kväll varje vecka", beskr: "För den som arbetar både morgon och kväll. Mjuk väger in efter rättvisan, Stark väger tyngst efter vakanserna.", niva: "princip", typ: "mjuk", falt: "val", val: { av: "Av", mjuk: "Mjuk", stark: "Stark" }, std: "mjuk" },
   { grupp: "Principer", k: "spridning_tolerans", namn: "Hur jämn blandningen ska vara", niva: "princip", typ: "mjuk", falt: "val", tal: true, val: { 1: "Båda sorterna varje vecka", 0: "Nästan lika många av varje" }, std: 1 },
+  { grupp: "Principer", k: "jamn_bemanning", namn: "Jämn bemanning mellan dag och kväll", beskr: "Det som blir över eller saknas fördelas efter behovet, jämnt mellan dag- och kvällspass och över veckorna, i stället för att allt hamnar på samma pass.", niva: "princip", typ: "mjuk", falt: "val", val: { av: "Av", mjuk: "På" }, std: "mjuk" },
   { grupp: "Principer", k: "morgon_start", namn: "Morgonpass börjar", niva: "princip", typ: "hård", falt: "tid", std: "07:00" },
   { grupp: "Principer", k: "kvall_slut", namn: "Kvällspass slutar", niva: "princip", typ: "hård", falt: "tid", std: "22:00" },
   { grupp: "Principer", k: "kant_fran", namn: "Passbyte tidigast", niva: "princip", typ: "hård", falt: "tid", std: "12:00" },

@@ -36,6 +36,17 @@ def test_fall(fall, tmp_path):
         kpi = json.loads(ut.read_text(encoding="utf-8"))["kpi"]
         if "vakanta_pass" in forv:
             assert kpi["vakanta_pass"] == forv["vakanta_pass"], kpi
+        if "jamn_dag_kvall_max_skillnad" in forv:
+            # det som blir över ska fördelas jämnt mellan dag och kväll (jämn bemanning)
+            from schemamotor.build import expandera_dagvarden
+            ind = json.loads(fall.read_text(encoding="utf-8"))
+            beh, sch = expandera_dagvarden(ind["behov"], dict), json.loads(ut.read_text(encoding="utf-8"))["schema"]
+            over = {"morgon": 0, "kvall": 0}
+            for d in range(ind["veckor"] * 7):
+                for del_ in over:
+                    n = sum(1 for rad in sch.values() if rad[d] and rad[d]["dygnsdel"] == del_)
+                    over[del_] += max(0, n - beh[d % 7].get(del_, 0))
+            assert abs(over["morgon"] - over["kvall"]) <= forv["jamn_dag_kvall_max_skillnad"], over
         # bemanningsbalansen ska förutsäga lösarens vakanta pass
         balans = json.loads(kor("balans", fall, "--json").stdout)
         assert balans["forvantade_vakanser"] == kpi["vakanta_pass"], (balans, kpi)

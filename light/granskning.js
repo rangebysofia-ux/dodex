@@ -10,11 +10,11 @@ const GRANSKNING = (() => {
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
     block_rekommenderat: 4, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
-    helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1,
+    helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", PASSFONSTER: "princip",
-    BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" };
+    BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
@@ -65,6 +65,8 @@ const GRANSKNING = (() => {
     const dbDag = r.dygnsbryt === "auto" ? foreslaDygnsbryt(alla, r) : tid(r.dygnsbryt);
     const vb = veckotid(r.veckobryt);
     const personer = Object.fromEntries((indata.personal || []).map(p => [p.id, p]));
+    // ordningen bland dag- och kvällspersonal utan angivet antal pass (för perioder som inte går jämnt ut)
+    const vaxel = Object.fromEntries((indata.personal || []).filter(p => p.antal_pass == null && !(p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt")).map((p, i) => [p.id, i]));
 
     for (const [pid, lista] of Object.entries(alla)) {
       let iv = lista.map(([, s, e]) => [s, e]);
@@ -141,7 +143,8 @@ const GRANSKNING = (() => {
       let mal = pers.antal_pass;
       if (Array.isArray(mal)) mal = mal.reduce((a, b) => a + b, 0);
       if (mal == null && !natt) {
-        mal = Math.round(r.pass_per_vecka * W);
+        const x = r.pass_per_vecka * W;  // växelvis nedåt och uppåt när det inte går jämnt ut
+        mal = Math.abs(x - Math.round(x)) < 1e-9 ? Math.round(x) : (vaxel[pid] % 2 === 0 ? Math.floor(x) : Math.ceil(x));
         if (r.min_passlangd_minuter && malMin / mal < r.min_passlangd_minuter) mal = Math.max(1, Math.floor(malMin / r.min_passlangd_minuter));
       }
       const faktiskt = work.reduce((a, b) => a + b, 0);
@@ -165,6 +168,17 @@ const GRANSKNING = (() => {
     for (const [k, v] of Object.entries(indata.behov || {})) {
       const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGNAMN.indexOf(k)];
       idx.forEach(i => (behov[i] = v));
+    }
+    // jämn bemanning (princip, mjuk): över- och underbemanning ska fördelas jämnt mellan dag och kväll
+    if (r.jamn_bemanning !== "av") for (let w = 0; w < Math.floor(N / 7); w++) {
+      const s = { over: { morgon: 0, kvall: 0 }, under: { morgon: 0, kvall: 0 } };
+      for (let d = w * 7; d < w * 7 + 7; d++) for (const del of ["morgon", "kvall"]) {
+        const antal = behov[d % 7][del] || 0;
+        let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
+        s.over[del] += Math.max(0, n - antal); s.under[del] += Math.max(0, antal - n);
+      }
+      for (const [sort, text] of [["over", "över behovet"], ["under", "vakanta"]])
+        if (Math.abs(s[sort].morgon - s[sort].kvall) >= 3) brott("JAMN_BEMANNING", null, `Vecka ${w + 1}: ${s[sort].morgon} pass ${text} på dagen men ${s[sort].kvall} på kvällen; fördelningen mellan dag och kväll är ojämn.`, false);
     }
     let vakanser = 0;
     for (let d = 0; d < N; d++) for (const [del, antal] of Object.entries(behov[d % 7])) {

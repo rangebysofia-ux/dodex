@@ -31,8 +31,6 @@ def underlag(indata, budget=None):
     r = _r(indata)
     W = indata["veckor"]
     ppv = r["pass_per_vecka"]
-    if abs(ppv * W - round(ppv * W)) > 1e-9:
-        W = 4
     heltid = indata.get("heltid_minuter_per_vecka", FORSTA_HELTID) / 60
     behov = expandera_dagvarden(indata.get("behov"), dict)
     b = lambda d, k: behov[d].get(k, 0)  # noqa: E731

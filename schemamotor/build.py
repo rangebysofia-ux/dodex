@@ -50,8 +50,13 @@ STANDARDREGLER = {
     # Spridning av morgnar och kvällar över perioden för den som arbetar båda: "av", "mjuk" eller "stark".
     "spridning_kvallar": "mjuk",
     "spridning_tolerans": 1,
+    # Jämn bemanning: över- och underbemanning sprids jämnt mellan dag och kväll och över dagarna. "av" eller "mjuk".
+    "jamn_bemanning": "mjuk",
 }
-MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa", "spridning", "onskemal"]
+# Rättvisa mellan personer och jämn bemanning mellan dag och kväll vägs ihop i ett mål (rättvisan dubbelt),
+# så att lösaren kan väga dem mot varandra. Nyckeltalen redovisas var för sig (KPI_MAL).
+MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
+KPI_MAL = ["vakanser", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
 
 
 def malordning(r, mal):
@@ -60,7 +65,8 @@ def malordning(r, mal):
     if r.get("spridning_kvallar") == "stark":
         ordning.insert(1, "spridning")
     elif r.get("spridning_kvallar") != "av":
-        ordning.insert(ordning.index("rattvisa") + 1 if "rattvisa" in ordning else len(ordning) - 1, "spridning")
+        bas = "rattvisa_jamn" if "rattvisa_jamn" in ordning else "rattvisa"
+        ordning.insert(ordning.index(bas) + 1 if bas in ordning else len(ordning) - 1, "spridning")
     return ordning
 
 
@@ -177,6 +183,7 @@ def forbered(indata):
     # personal
     personer = []
     sedda = set()
+    vaxel = 0  # för perioder där antal pass inte går jämnt ut
     for p in indata["personal"]:
         pid = p["id"]
         if pid in sedda:
@@ -194,13 +201,11 @@ def forbered(indata):
         else:
             mal_pass = p.get("antal_pass")
             if mal_pass is None:
+                # Går 4,75 × veckor inte jämnt ut (till exempel 28,5 på 6 veckor) får dag- och kvällspersonalen
+                # växelvis avrundat nedåt och uppåt, i den ordning de står: 28, 29, 28, 29 …
                 x = r["pass_per_vecka"] * W
-                if abs(x - round(x)) > 1e-9:
-                    raise IndataFel(
-                        f"{W} veckor × {r['pass_per_vecka']} pass = {x:g}, inte ett heltal. Använd en periodlängd "
-                        "som är en multipel av 4 veckor, eller ange antal_pass per person (t.ex. [28, 29] med "
-                        "delperioder [6, 6]).")
-                mal_pass = round(x)
+                mal_pass = round(x) if abs(x - round(x)) < 1e-9 else (math.floor(x) if vaxel % 2 == 0 else math.ceil(x))
+                vaxel += 1
                 # Lokal regel: blir passen kortare än minsta passlängd tas pass bort i stället.
                 minsta = r["min_passlangd_minuter"]
                 if minsta and minuter_vecka * W / mal_pass < minsta:
@@ -459,6 +464,36 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             vak.append((v, d, None, tp["tid"]))
     mal["vakanser"] = sum(v for v, *_ in vak)
 
+    # jämn bemanning (princip, mjuk): det som blir över eller saknas på dag- och kvällspassen sprids jämnt.
+    # Ingen enskild dag och dygnsdel ska få mycket mer än andra, och dag och kväll ska få lika mycket varje vecka.
+    jamn = []
+    if r.get("jamn_bemanning", "mjuk") != "av":
+        vak_slot = {(d, del_): v for v, d, del_, t in vak if del_ in ("morgon", "kvall")}
+        over_slot = {}
+        for d in range(N):
+            for del_ in ("morgon", "kvall"):
+                antal = prob["behov"][d % 7].get(del_, 0)
+                tack = [x[pi, d, s] for pi, p in enumerate(prob["personer"]) for s in p["tillatna"] if M[s]["dygnsdel"] == del_]
+                if not tack:
+                    continue
+                # överskottet exakt: i tjänst − behov + vakans (vakansen är redan exakt när vakanserna är låsta)
+                o = m.new_int_var(0, len(tack), "")
+                m.add(o == sum(tack) - antal + vak_slot.get((d, del_), 0))
+                over_slot[d, del_] = o
+                extra = m.new_int_var(0, len(tack), "")  # ett andra extra pass samma dag och dygnsdel
+                m.add(extra >= o - 1)
+                jamn.append(2 * extra)
+        for slot in (over_slot, vak_slot):
+            # per vecka och för hela perioden: dag och kväll ska få lika mycket
+            for dagar in [range(w * 7, w * 7 + 7) for w in range(N // 7)] + [range(N)]:
+                mo = sum(slot.get((d, "morgon"), 0) for d in dagar)
+                kv = sum(slot.get((d, "kvall"), 0) for d in dagar)
+                skillnad = m.new_int_var(0, 1000, "")
+                m.add(skillnad >= mo - kv)
+                m.add(skillnad >= kv - mo)
+                jamn.append(2 * skillnad if len(dagar) == N else skillnad)
+    mal["jamn_bemanning"] = sum(jamn) if jamn else 0
+
     rek = r["block_rekommenderat"]
     over = []
     for pi in range(len(prob["personer"])):
@@ -489,6 +524,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             m.add_min_equality(lo, antal)
             rattvisa.append(hi - lo)
     mal["rattvisa"] = sum(rattvisa) if rattvisa else 0
+    mal["rattvisa_jamn"] = 2 * mal["rattvisa"] + mal["jamn_bemanning"]
 
     # spridning: den som arbetar både morgon och kväll ska ha båda i varje vecka (och, med toleransen 0,
     # högst en kvälls skillnad mot halva veckans pass). Målet räknar veckor som bara har den ena sorten.
@@ -575,7 +611,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
     # Fas 1: arbetsmönster (vilka dagar och vilken dygnsdel) med alla hårda regler utom exakt arbetstid.
     enkel = monsterproblem(prob)
     m1, var1, mal1, _ = bygg_modell(enkel, utan_tid=True)
-    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "blocklangd", "rattvisa", "spridning", "onskemal"]),
+    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"]),
                                  tid_per_steg, arbetare, tyst, "mönster – ")
     if r1 is None and status1 == cp_model.INFEASIBLE:
         # Mönstermodellen har färre passlängder. Kontrollera med alla längder (utan exakt arbetstid)
@@ -623,7 +659,7 @@ def slutresultat(prob, var, mal, xvarden, steg):
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 30
     kpi = {}
-    for namn in malordning(prob["r"], MALORDNING):
+    for namn in malordning(prob["r"], KPI_MAL):
         if isinstance(mal2[namn], int):
             kpi[namn] = 0
             continue

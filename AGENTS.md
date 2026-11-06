@@ -53,7 +53,7 @@ python -m schemamotor.validate tests/fall/six_week_basic.json /tmp/s.json
 
 ## Arbetssätt
 
-- Kör `pytest -q` före och efter varje ändring. Alla tester ska passera. Testerna tar cirka två minuter.
+- Kör `pytest -q` före och efter varje ändring. Alla tester ska passera. Testerna tar cirka fem minuter.
 - Lägg till ett testfall i `tests/fall/` för varje ny regel: ett som ska gå att lösa och ett som ska vara olösbart, med förväntad konflikt.
 - Ny regel = tre ställen: modellen (build), granskningen (validate, skriven oberoende) och förklaringen (en regelgrupp med text och nivå i explain).
 - Lägg inte till beroenden utan att motivera dem i commit-meddelandet.
