@@ -28,10 +28,10 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 6. **Ingen fredagskväll före ledig helg.** Den som är ledig helgen arbetar inte kväll eller natt fredagen innan. Hård lokal regel; kan stängas av med `"ingen_fredagskvall_fore_ledig_helg": false`.
 7. **Varannan helg är hård för enheten.** Alla arbetar exakt varannan helg i fasta grupper (A och B). Enhetens standard kan inte ändras. Undantag görs bara per person (helgfrekvens 1/4, 3/4, alla eller ingen), till exempel när kontraktet säger något annat, och visas som undantag i gränssnittet. Beslutat av användaren 2026-11-05.
 8. **Låsta regler kan låsas upp.** Dygnsvila, veckovila, rast och varannan helg är låsta som standard, men kan ändras under Regler när användaren bekräftar att det finns ett lokalt avtal eller beslut. Bekräftelsen sparas i `avvikelser` i indata, och avvikelsen visas på alla scheman från enheten. Utan bekräftelse avvisas försvagningen. Beslutat av användaren 2026-11-06.
-9. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
+9. **Minsta passlängd 5 timmar (lokal regel).** Med 4,75 pass per vecka blir passen kortare än 5 timmars arbetstid för den som har under cirka 64 % (heltid 37 h). Då tas pass bort i stället, tills varje pass är minst 5 timmar: antal pass = arbetstid ÷ 5 h, avrundat nedåt. Kontrakterad tid ändras inte. Gäller bara när antal pass räknas fram, inte när det anges för personen. `min_passlangd_minuter` (standard 300, 0 stänger av). Exempel för 4 veckor: 60 % ger 17 pass, 50 % ger 14 pass. Beslutat av användaren 2026-11-06.
+10. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
 
 Öppna frågor, alltså inte beslutade:
-- Hur personer under cirka 51 procent ska hanteras, eftersom 4,75 pass inte ryms i fönstret för dem: färre pass eller kortare kvällspass efter 18.
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.
 

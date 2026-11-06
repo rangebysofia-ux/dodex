@@ -106,3 +106,22 @@ def test_granskning_foljer_godkand_avvikelse(tmp_path):
     ny.write_text(json.dumps(indata), encoding="utf-8")
     res = json.loads(kor("validate", ny, ut, "--json").stdout)
     assert not any(b["regel"] == "DYGNSVILA" and "mellan passet" in b["text"] for b in res["brott"]), res["brott"]
+
+
+def test_minsta_passlangd_tar_bort_pass(tmp_path):
+    """Under cirka 64 % blir 4,75 pass i veckan kortare än 5 timmar; då tas pass bort i stället."""
+    fall = ROT / "tests" / "fall" / "low_grade_shifts.json"
+    ut = tmp_path / "schema.json"
+    assert kor("build", fall, "--ut", ut, "--tyst").returncode == 0
+    res = json.loads(ut.read_text(encoding="utf-8"))
+    antal = {pid: k["pass"] for pid, k in res["personer"].items()}
+    assert antal["L1"] == 19 and antal["L4"] == 19
+    assert antal["L5"] == 17 and antal["L7"] == 14
+    kortast = min(p["netto"] for rad in res["schema"].values() for p in rad if p)
+    assert kortast >= 300, kortast
+    # med regeln avstängd blir det 19 pass även för 50 %, och passen kortare än 5 timmar
+    indata = json.loads(fall.read_text(encoding="utf-8"))
+    indata["regler"] = {"min_passlangd_minuter": 0}
+    from schemamotor.build import forbered
+    prob = forbered(indata)
+    assert [sum(p["pass_delperioder"]) for p in prob["personer"]][-1] == 19

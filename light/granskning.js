@@ -10,7 +10,7 @@ const GRANSKNING = (() => {
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
     block_rekommenderat: 4, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
-    helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60,
+    helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300,
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", PASSFONSTER: "princip",
@@ -140,7 +140,10 @@ const GRANSKNING = (() => {
       const malMin = Math.round(heltid * (pers.grad ?? 1) * W);
       let mal = pers.antal_pass;
       if (Array.isArray(mal)) mal = mal.reduce((a, b) => a + b, 0);
-      if (mal == null && !natt) mal = Math.round(r.pass_per_vecka * W);
+      if (mal == null && !natt) {
+        mal = Math.round(r.pass_per_vecka * W);
+        if (r.min_passlangd_minuter && malMin / mal < r.min_passlangd_minuter) mal = Math.max(1, Math.floor(malMin / r.min_passlangd_minuter));
+      }
       const faktiskt = work.reduce((a, b) => a + b, 0);
       if (mal != null && faktiskt !== mal) brott("ANTAL_PASS", pid, `${faktiskt} pass, ska vara ${mal}.`);
       let tol = pers.tolerans_minuter;

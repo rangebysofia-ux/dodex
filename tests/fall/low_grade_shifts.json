@@ -1,0 +1,16 @@
+{
+  "beskrivning": "Låg sysselsättningsgrad: åtta med dag/kväll på fyra veckor, varav två på 60 % och två på 50 %. Med 19 pass skulle deras pass bli kortare än 5 timmar, så pass tas bort i stället: 60 % får 17 pass och 50 % får 14 pass, alla minst 5 timmar. Övriga får 19 pass. Ska gå att lösa utan vakanser och avtalsbrott.",
+  "forvantat": {"status": "OK", "validering_utan_fel": true, "vakanta_pass": 0},
+  "enhet": "Test – låg sysselsättningsgrad",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {"morgon": 2, "kvall": 2},
+    "helg": {"morgon": 2, "kvall": 1}
+  },
+  "personal": [
+    {"id": "L1", "grad": 1.0}, {"id": "L2", "grad": 1.0}, {"id": "L3", "grad": 0.9}, {"id": "L4", "grad": 0.75},
+    {"id": "L5", "grad": 0.6}, {"id": "L6", "grad": 0.6}, {"id": "L7", "grad": 0.5}, {"id": "L8", "grad": 0.5}
+  ],
+  "losare": {"tid_per_steg_s": 10}
+}

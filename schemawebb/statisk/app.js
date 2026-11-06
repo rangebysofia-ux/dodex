@@ -556,6 +556,7 @@ const REGLER = [
   { grupp: "Lokala regler", k: "hel_helg", namn: "Arbetshelg är både lördag och söndag", niva: "lokal regel", typ: "hård", falt: "check", std: true },
   { grupp: "Lokala regler", k: "ingen_fredagskvall_fore_ledig_helg", namn: "Ingen fredagskväll före ledig helg", niva: "lokal regel", typ: "hård", falt: "check", std: true },
   { grupp: "Lokala regler", k: "pass_per_vecka", namn: "Pass per vecka, dag och kväll", niva: "lokal regel", typ: "hård", falt: "tal", steg: 0.25, std: 4.75 },
+  { grupp: "Lokala regler", k: "min_passlangd_minuter", namn: "Minsta passlängd", beskr: "Blir passen kortare än så (vid låg sysselsättningsgrad) tas pass bort i stället. 0 stänger av.", niva: "lokal regel", typ: "hård", falt: "timmar", std: 300 },
   { grupp: "Lokala regler", k: "block_min", namn: "Minst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 2 },
   { grupp: "Lokala regler", k: "block_max", namn: "Högst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 5 },
   { grupp: "Principer", k: "block_rekommenderat", namn: "Helst högst antal dagar i följd", niva: "princip", typ: "mjuk", falt: "tal", steg: 1, std: 4 },

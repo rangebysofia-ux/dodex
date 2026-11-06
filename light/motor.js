@@ -11,7 +11,7 @@ const MOTOR = (() => {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
     block_min: 2, block_max: 5, block_rekommenderat: 4, helgfrekvens: "2/4", hel_helg: true,
-    ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60,
+    ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300,
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
   const DELNAMN = { 1: "morgon", 2: "kvall", 3: "natt" };
@@ -70,6 +70,7 @@ const MOTOR = (() => {
             continue;
           }
           P = Math.round(x);
+          if (r.min_passlangd_minuter && malMin / P < r.min_passlangd_minuter) P = Math.max(1, Math.floor(malMin / r.min_passlangd_minuter));
         }
       }
       if (!(P > 0)) { fel.push(`${p.id}: antal pass måste vara minst 1.`); continue; }

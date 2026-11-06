@@ -35,7 +35,7 @@ STANDARDREGLER = {
     "dygnsvila_minuter", "veckovila_minuter", "dygnsbryt", "veckobryt", "rast_grans_minuter", "rast_minuter",
     "pass_per_vecka", "morgon_start", "kvall_slut", "kant_fran", "kant_till", "steg_minuter", "block_min",
     "block_max", "block_rekommenderat", "helg_start", "helg_slut", "hel_helg", "helgfrekvens",
-    "ingen_fredagskvall_fore_ledig_helg", "tolerans_minuter", "langd_band_minuter",
+    "ingen_fredagskvall_fore_ledig_helg", "tolerans_minuter", "langd_band_minuter", "min_passlangd_minuter",
 }
 # Avtal och lag får aldrig försvagas (AGENTS.md). Skärpningar är tillåtna.
 SKYDDADE = {

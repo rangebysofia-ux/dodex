@@ -46,6 +46,7 @@ STANDARDREGLER = {
     "ingen_fredagskvall_fore_ledig_helg": True,
     "tolerans_minuter": 60,
     "langd_band_minuter": 120,
+    "min_passlangd_minuter": 300,
 }
 MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa", "onskemal"]
 
@@ -187,6 +188,10 @@ def forbered(indata):
                         "som är en multipel av 4 veckor, eller ange antal_pass per person (t.ex. [28, 29] med "
                         "delperioder [6, 6]).")
                 mal_pass = round(x)
+                # Lokal regel: blir passen kortare än minsta passlängd tas pass bort i stället.
+                minsta = r["min_passlangd_minuter"]
+                if minsta and minuter_vecka * W / mal_pass < minsta:
+                    mal_pass = max(1, math.floor(minuter_vecka * W / minsta))
             tol = p.get("tolerans_minuter", r["tolerans_minuter"])
         pass_lista = mal_pass if isinstance(mal_pass, list) else (
             [mal_pass] if len(delp) == 1 else None)

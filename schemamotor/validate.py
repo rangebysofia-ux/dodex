@@ -24,6 +24,7 @@ STANDARD = {
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
     "block_rekommenderat": 4, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
+    "min_passlangd_minuter": 300,
 }
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
@@ -238,6 +239,8 @@ def kontrollera(indata, schema_dok):
         mal = pers.get("antal_pass")
         if mal is None and not natt:
             mal = round(r["pass_per_vecka"] * W)
+            if r["min_passlangd_minuter"] and mal_min / mal < r["min_passlangd_minuter"]:
+                mal = max(1, mal_min // r["min_passlangd_minuter"])
         if mal is not None:
             mal_lista = mal if isinstance(mal, list) else [mal]
             if len(mal_lista) == len(delp):
