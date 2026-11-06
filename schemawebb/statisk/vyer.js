@@ -246,7 +246,7 @@ function cellInfo(res) {
   if (!st.valdCell) return `<span class="dampad">Tryck på ett pass för tider, rast och arbetstid. Tryck på ett namn för personens schema.</span>`;
   const i = st.valdCell.lastIndexOf(":"), pid = st.valdCell.slice(0, i), d = +st.valdCell.slice(i + 1), p = res.schema[pid]?.[d];
   if (!p) return "";
-  return `<b>${esc(pid)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]?.toLowerCase() || ""}pass <span class="mono">${p.start}–${p.slut}</span>, rast ${p.rast} min, arbetstid ${timmar(p.netto)}.`;
+  return `<b>${esc(pid)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]?.toLowerCase() || ""}pass <span class="mono">${p.start}–${p.slut}</span>, rast ${p.rast} min, arbetstid ${timmar(p.netto)}.${GRAF.obPassText(pid, d, res, st.korning.indata).replace("\n", " ")}`;
 }
 
 // Klockslag: hur många som är i tjänst under dygnet, och vem som arbetar när.
@@ -318,21 +318,22 @@ function allaPersoner() {
   const k = st.korning, res = k.resultat, ind = k.indata, f = fordelning(res, ind);
   const W = res.veckor;
   let sumMin = 0, sumAA = 0, sumKontr = 0;
+  const ob = GRAF.obFor(res, ind);
   const rader = Object.entries(res.personer).map(([pid, x]) => {
     const ht = heltidFor(ind, pid), aa = x.minuter / W / ht, p = ind.personal.find(q => q.id === pid) || {};
     sumMin += x.minuter; sumAA += aa; sumKontr += (p.grad ?? 1) * ht / 60;
     const r = f.rader.find(q => q.pid === pid);
     return `<tr><td><a href="#/e/${st.enhet.id}/personer/${k.id}?p=${encodeURIComponent(pid)}"><b>${esc(pid)}</b></a></td><td class="tal">${Math.round((p.grad ?? 1) * 100)} %</td><td class="tal">${x.pass}</td>
       <td class="tal nw">${timmar(x.minuter)}</td><td class="tal nw">${sv(x.minuter / 60 / W, 1)} h</td><td class="tal">${sv(aa)}</td>
-      <td class="tal">${r.c.morgon}</td><td class="tal">${r.c.kvall}</td><td class="tal">${r.c.natt}</td><td>${x.helggrupp || (p.helgfrekvens ? HELGER[p.helgfrekvens] : "–")}</td></tr>`;
+      <td class="tal">${r.c.morgon}</td><td class="tal">${r.c.kvall}</td><td class="tal">${r.c.natt}</td><td>${x.helggrupp || (p.helgfrekvens ? HELGER[p.helgfrekvens] : "–")}</td><td class="tal nw">${ob ? kr(ob.per[pid].ar.kr) : "–"}</td></tr>`;
   }).join("");
   const bud = ind.budget_timmar_vecka;
   let h = `<section class="kort"><h2>Timmar och årsarbetare</h2>
     <div class="kpi" style="margin-bottom:12px"><div><b>${sv(sumMin / 60 / W, 1)} h</b><span>schemalagt per vecka</span></div><div><b>${sv(sumAA)}</b><span>årsarbetare (schemalagt)</span></div>
       <div><b>${sv(sumKontr, 1)} h</b><span>kontrakterat per vecka</span></div>${bud ? `<div class="${sumMin / 60 / W > bud + 0.05 ? "fel" : "bra"}"><b>${sv(bud - sumMin / 60 / W, 1)} h</b><span>${sumMin / 60 / W > bud + 0.05 ? "över" : "kvar av"} budget ${sv(bud, 1)} h</span></div>` : ""}</div>
-    <div class="rull"><table><thead><tr><th>Person</th><th class="tal">Grad</th><th class="tal">Pass</th><th class="tal">Tid totalt</th><th class="tal">Per vecka</th><th class="tal">Årsarbetare</th><th class="tal">Morgon</th><th class="tal">Kväll</th><th class="tal">Natt</th><th>Helg</th></tr></thead>
-    <tbody>${rader}<tr><td><b>Totalt</b></td><td></td><td class="tal"><b>${Object.values(res.personer).reduce((s, x) => s + x.pass, 0)}</b></td><td class="tal nw"><b>${timmar(sumMin)}</b></td><td class="tal nw"><b>${sv(sumMin / 60 / W, 1)} h</b></td><td class="tal"><b>${sv(sumAA)}</b></td><td colspan="4"></td></tr></tbody></table></div>
-    <p class="dampad liten" style="margin-top:8px">En årsarbetare är en heltid (${sv(heltidFor(ind, "") / 60, 2)} h per vecka). Schemalagd tid kan skilja några minuter från kontraktet inom toleransen.</p></section>`;
+    <div class="rull"><table><thead><tr><th>Person</th><th class="tal">Grad</th><th class="tal">Pass</th><th class="tal">Tid totalt</th><th class="tal">Per vecka</th><th class="tal">Årsarbetare</th><th class="tal">Morgon</th><th class="tal">Kväll</th><th class="tal">Natt</th><th>Helg</th><th class="tal">OB per år</th></tr></thead>
+    <tbody>${rader}<tr><td><b>Totalt</b></td><td></td><td class="tal"><b>${Object.values(res.personer).reduce((s, x) => s + x.pass, 0)}</b></td><td class="tal nw"><b>${timmar(sumMin)}</b></td><td class="tal nw"><b>${sv(sumMin / 60 / W, 1)} h</b></td><td class="tal"><b>${sv(sumAA)}</b></td><td colspan="4"></td><td class="tal nw"><b>${ob ? kr(Object.values(ob.per).reduce((s, x) => s + x.ar.kr, 0)) : "–"}</b></td></tr></tbody></table></div>
+    <p class="dampad liten" style="margin-top:8px">Tryck på en person för hela schemat med timmar, OB och kostnad. OB per år räknas enligt AB 25 § 21 från ${esc(ob?.start || "")}${ob?.antaget ? " (antaget startdatum)" : ""}. En årsarbetare är en heltid (${sv(heltidFor(ind, "") / 60, 2)} h per vecka). Schemalagd tid kan skilja några minuter från kontraktet inom toleransen.</p></section>`;
   return h + fordelningKort(f);
 }
 
@@ -375,10 +376,11 @@ function personkort(pid) {
     <div class="legend">${["morgon", "kvall", "natt"].filter(d => r.c[d]).map(d => `<span><i style="background:${FARG[d]}"></i>${r.c[d]} ${DELAR[d].toLowerCase()}</span>`).join("")}${r.typ === "bada" ? `<span>Jämn andel: ${sv(r.mal, 1)} kvällar</span>` : ""}</div>
     ${onsk.length ? `<h3>Önskemål</h3><ul class="punkter liten">${onsk.map(o => `<li>${o.krav ? "Krav" : "Önskemål"}: ${esc(ONSKTYP[o.typ])}${o.varde ? " " + esc(o.varde) : ""}${o.dagar ? " · " + o.dagar.join(", ") : ""}${o.veckor && o.veckor !== "alla" ? " · " + (Array.isArray(o.veckor) ? "vecka " + o.veckor.join(", ") : o.veckor + " veckor") : ""}</li>`).join("")}</ul>` : ""}
   </section>
+  ${GRAF.obKort(pid, res, ind, { installningar: "Inställningar → Period" })}
   <section class="kort"><h2>${esc(pid)}s schema</h2><div class="rull"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veckMin = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small></span>` : ""}</td>`; }).join("")}
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small></span>` : ""}</td>`; }).join("")}
       <td class="tal nw liten">${sv(veckMin / 60, 1)} h</td></tr>`;
   }
   return h + `</tbody></table></div></section>`;

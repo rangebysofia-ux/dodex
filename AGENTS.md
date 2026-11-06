@@ -16,6 +16,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/analys.py` – underlag, bemanningsförslag inom budget och konsekvenser av lagda scheman. Se `docs/analys.md`.
 - `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg).
 - `light/` – lättversion som körs helt i webbläsaren: `motor.js` (heuristisk schemaläggning, samma hårda regler), `granskning.js` (fristående översättning av validate.py, får inte dela kod med motor.js), `sida.html` (gränssnitt), `analys.js` (översättning av analys.py för Simulering, jämförs med `tests/test_analys_light.py`). `python light/bygg.py` bygger `light/schema-light.html`. Ändras en regel i Python ska den ändras här också.
+- `schemawebb/statisk/ob.js` – OB enligt AB 25 § 21, kalenderstyrt med daterade beloppsnivåer. Delas av webben och lättversionen. Se `docs/ob.md`. Belopp läggs bara till efter kontroll mot primärkälla, aldrig med procentuell uppräkning.
 - `schemawebb/statisk/grafer.js` – nyckeltal och grafer (översikt, värmekarta, simulering), delas av webben och lättversionen. Fristående, inga regler.
 - `schemawebb/statisk/assistent.js` – schemaassistentens verktyg, delas av webben (`chatt.js`, `/api/assistent`) och lättversionen. Assistenten får bara föreslå ändringar; de tillämpas först när användaren godkänner. Den får aldrig ändra regler eller skriva kod som körs i lösaren. Se `docs/assistent.md`.
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.

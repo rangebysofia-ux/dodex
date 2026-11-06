@@ -9,6 +9,7 @@ första som lösaren stöter på.
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator  # noqa: F401
@@ -148,9 +149,18 @@ class Indata(BaseModel):
     avvikelser: list[str] = Field(default_factory=list)
     budget_timmar_vecka: Optional[float] = Field(default=None, gt=0)
     timkostnad_kr: Optional[float] = Field(default=None, gt=0, le=10000)
+    # första dagen i schemat (en måndag), för OB och kalender; utan den antas nästa måndag
+    startdatum: Optional[date] = None
     # används bara i testfallen
     beskrivning: Optional[str] = None
     forvantat: Optional[dict] = None
+
+    @field_validator("startdatum")
+    @classmethod
+    def mandag(cls, v):
+        if v is not None and v.weekday() != 0:
+            raise ValueError(f"startdatum ska vara en måndag ({v} är inte det)")
+        return v
 
     @field_validator("behov", "tidpunkter")
     @classmethod

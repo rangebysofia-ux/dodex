@@ -51,8 +51,9 @@ function nyckeltalFor(k) {
   const pass = { morgon: 0, kvall: 0, natt: 0 };
   for (const rad of Object.values(res.schema)) rad.forEach(p => { if (p && pass[p.dygnsdel] !== undefined) pass[p.dygnsdel]++; });
   const timkostnad = Number(ind.timkostnad_kr) || null;
+  const ob = obFor(res, ind), obVecka = ob ? Object.values(ob.per).reduce((s, x) => s + x.ar.kr, 0) / 52 : null;
   return { bem, behov, tackt, vak, over, grad: behov ? tackt / behov * 100 : 100, perVecka, timmarVecka: minuter / 60 / W,
-    overtid, pass, timkostnad, kostnadVecka: timkostnad ? minuter / 60 / W * timkostnad : null };
+    overtid, pass, timkostnad, obVecka, kostnadVecka: timkostnad ? minuter / 60 / W * timkostnad + (obVecka || 0) : null };
 }
 
 const kr = n => n >= 1e6 ? `${sv(n / 1e6, 2)} mkr` : n >= 1e4 ? `${sv(n / 1e3, 0)} tkr` : `${Math.round(n).toLocaleString("sv-SE")} kr`;
@@ -216,6 +217,54 @@ function nulage(S, ordning, tk, ikon = "") {
 }
 
 
-return { analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+// ---------------------------------------------------------------- OB och kostnad (kräver ob.js)
+const obCache = new WeakMap();
+// OB för alla i ett lagt schema: en period från startdatum och ett år (52 veckor). Null om ob.js saknas.
+function obFor(res, indata) {
+  if (typeof OB === "undefined") return null;
+  let c = obCache.get(res);
+  const start = indata.startdatum || OB.antagetStart();
+  if (!c || c.start !== start) { c = { start, antaget: !indata.startdatum, per: OB.forSchema(res.schema, start) }; obCache.set(res, c); }
+  return c;
+}
+
+const KAT_TEXT = { A: "A – storhelg", B: "B – helg, fredag kväll, natt mot måndag", C: "C – vardagsnatt", D: "D – vardagskväll 19–22" };
+const tim = min => sv(min / 60, 1) + " h";
+
+// Kort för en person: timmar, OB per kategori, kostnad per period och år.
+function obKort(pid, res, indata, { installningar = "Period" } = {}) {
+  const ob = obFor(res, indata); if (!ob) return "";
+  const x = ob.per[pid], p = res.personer[pid], W = res.veckor, tk = Number(indata.timkostnad_kr) || null;
+  const lonPeriod = tk ? p.minuter / 60 * tk : null, lonAr = tk ? p.minuter / 60 / W * 52 * tk : null;
+  const saknas = x.ar.saknarNiva > 0;
+  const rad = k => { const a = x.period.kategorier[k], b = x.ar.kategorier[k];
+    return a.min || b.min ? `<tr><td>${KAT_TEXT[k]}</td><td class="tal nw">${tim(a.min)}</td><td class="tal nw">${kr(a.kr)}</td><td class="tal nw">${tim(b.min)}</td><td class="tal nw">${kr(b.kr)}</td></tr>` : ""; };
+  return `<section class="kort"><h2>Timmar, OB och kostnad</h2>
+    <p class="dampad liten">OB enligt AB 25 § 21, räknat på verkliga datum från ${esc(ob.start)}${ob.antaget ? ` (antaget, så att hela året har kontrollerade avtalsbelopp – ange enhetens startdatum under ${installningar})` : ""}. Året är 52 veckor där schemat upprepas, med helgdagar och storhelger. Årets OB följer avtalets avrundning per kategori och månad.</p>
+    <div class="kpi" style="margin-top:10px">
+      <div><b>${tim(p.minuter)}</b><span>arbetstid på ${W} veckor</span></div>
+      <div><b>${tim(p.minuter / W * 52)}</b><span>arbetstid per år</span></div>
+      <div><b>${kr(x.ar.kr)}</b><span>OB per år${saknas ? " (delvis utan belopp)" : ""}</span></div>
+      ${tk ? `<div><b>${kr(lonAr + x.ar.kr)}</b><span>kostnad per år: ${kr(lonAr)} tid + ${kr(x.ar.kr)} OB</span></div>` : `<div><b>–</b><span>kostnad: ange timkostnad under ${installningar}</span></div>`}
+    </div>
+    <div class="rull" style="margin-top:12px"><table><thead><tr><th>OB-kategori</th><th class="tal">Tid, period</th><th class="tal">Kr, period</th><th class="tal">Tid, år</th><th class="tal">Kr, år</th></tr></thead><tbody>
+      ${["A", "B", "C", "D"].map(rad).join("") || `<tr><td colspan="5" class="dampad">Ingen OB-tid.</td></tr>`}
+      <tr><td><b>Totalt OB</b></td><td class="tal nw"><b>${tim(x.period.min)}</b></td><td class="tal nw"><b>${kr(x.period.kr)}</b></td><td class="tal nw"><b>${tim(x.ar.min)}</b></td><td class="tal nw"><b>${kr(x.ar.kr)}</b></td></tr>
+      ${tk ? `<tr><td>Arbetstid × ${sv(tk, 0)} kr</td><td></td><td class="tal nw">${kr(lonPeriod)}</td><td></td><td class="tal nw">${kr(lonAr)}</td></tr>
+      <tr><td><b>Kostnad totalt</b></td><td></td><td class="tal nw"><b>${kr(lonPeriod + x.period.kr)}</b></td><td></td><td class="tal nw"><b>${kr(lonAr + x.ar.kr)}</b></td></tr>` : ""}
+    </tbody></table></div>
+    ${saknas ? `<p class="liten" style="color:var(--varn)">${tim(x.ar.saknarNiva)} OB-tid ligger efter 2027-03-31, där det inte finns något kontrollerat avtalsbelopp. Den tiden räknas utan kronor.</p>` : ""}
+    <p class="dampad liten">Belopp: ${OB.NIVAER.map(n => `${n.kalla}`).join("; ")}. Uppskattning för planering; utbetalningen följer lönesystemet och eventuella lokala avtal.</p></section>`;
+}
+
+// OB för ett pass i schemat, som text till verktygstips.
+function obPassText(pid, d, res, indata) {
+  const ob = obFor(res, indata); if (!ob) return "";
+  const pp = ob.per[pid]?.perPass.find(x => x.dag === d); if (!pp || !pp.seg.length) return pp ? `\n${pp.datum}: ingen OB` : "";
+  const sum = {}; pp.seg.forEach(s => (sum[s.kat] = (sum[s.kat] || 0) + s.min));
+  return `\n${pp.datum}: OB ` + Object.entries(sum).map(([k, m]) => `${k.replace("_natt", " natt")} ${sv(m / 60, 2)} h`).join(", ");
+}
+
+return { obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

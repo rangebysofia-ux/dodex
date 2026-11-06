@@ -180,6 +180,10 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--d
 .etikett { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: var(--guld); color: #25332f; margin-bottom: 4px; }
 #tips { position: fixed; z-index: 40; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px; line-height: 1.4; padding: 7px 10px; border-radius: 10px; max-width: 240px; opacity: 0; transition: opacity .1s; white-space: pre-line; }
 #tips.syns { opacity: 1; }
+.bladpanel { position: fixed; z-index: 35; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-width: 560px; margin: 0 auto; background: var(--yta); border: 1px solid var(--linje); border-radius: 18px; padding: 14px; box-shadow: 0 -8px 30px rgba(25,63,56,.22); }
+.tomruta { width: 100%; min-height: 34px; border: 1.5px dashed var(--linje); background: none; color: var(--dampad); border-radius: 8px; font-size: 16px; padding: 0; }
+table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
+.pass.manuell { box-shadow: inset 0 0 0 2px var(--guld) !important; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -197,6 +201,7 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--d
 <script>__GRANSKNING__</script>
 <script>__MOTOR_HUVUDTRAD__</script>
 <script>__ASSISTENT__</script>
+<script>__OB__</script>
 <script>__GRAFER__</script>
 <script>__ANALYS__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
@@ -407,7 +412,8 @@ function ritaFlik() {
   } else {
     el.innerHTML = `<div class="falt"><div><label for="p-v">Veckor</label><input id="p-v" type="number" min="1" max="16" data-i="veckor" value="${i.veckor}"></div>
       <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-i="budget_timmar_vecka" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
-      <div><label for="p-kost">Timkostnad, kr</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-i="timkostnad_kr" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
+      <div><label for="p-kost">Timkostnad, kr (lön och PO, utan OB)</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-i="timkostnad_kr" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
+      <div><label for="p-start">Startdatum (måndag), för OB</label><input id="p-start" type="date" data-i="startdatum" value="${i.startdatum ?? ""}"></div>
       <div><label for="p-iso">Första veckans nummer</label><input id="p-iso" type="number" min="1" max="53" data-i="start_iso_vecka" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div></div>
       <p style="margin-top:10px"><label class="check"><input type="checkbox" data-i="cykliskt"${i.cykliskt === false ? "" : " checked"}> Cykliskt: sista veckan följs av vecka 1</label></p>
       <p class="dampad liten">Med 4,75 pass per vecka blir antalet pass ett heltal vid 4, 8, 12 eller 16 veckor. Vid andra längder anger du antal pass per person.</p>`;
@@ -501,6 +507,7 @@ document.addEventListener("input", ev => {
   } else if (el.dataset.i) {
     const k = el.dataset.i;
     if (k === "cykliskt") i.cykliskt = el.checked;
+    else if (k === "startdatum") { if (!el.value) delete i.startdatum; else if (OB.veckodag(OB.frånText(el.value)) !== 0) { meddela("Startdatum ska vara en måndag."); return; } else i.startdatum = el.value; }
     else if (el.value === "") delete i[k]; else i[k] = k === "budget_timmar_vecka" || k === "timkostnad_kr" ? parseFloat(el.value.replace(",", ".")) : parseInt(el.value);
     andrad(false);
   }
@@ -538,7 +545,16 @@ document.addEventListener("click", async ev => {
     case "ta-bort-onsk": i.onskemal.splice(+el.dataset.n, 1); return andrad(true);
     case "lagg": return laggSchema();
     case "senaste": if (st.korningar.length) { st.rflik = "oversikt"; return visaKorning(st.korningar[0]); } return;
-    case "rflik": st.rflik = el.dataset.f; ritaResultat(); return;
+    case "rflik": st.rflik = el.dataset.f; st.person = null; ritaResultat(); return;
+    case "person": st.person = el.dataset.p || null; st.rflik = "personer"; ritaResultat(); window.scrollTo(0, 0); return;
+    case "redigera": st.red = { schema: structuredClone(st.korning.resultat.schema), historik: [], andringar: 0, panel: null }; raknaOmUtkast(); return;
+    case "red-avbryt": if (st.red.andringar && !confirm("Avbryta utan att spara ändringarna?")) return; st.red = null; ritaResultat(); return;
+    case "red-angra": if (st.red.historik.length) { st.red.schema = st.red.historik.pop(); st.red.andringar--; st.red.panel = null; raknaOmUtkast(); } return;
+    case "red-cell": st.red.panel = { c: el.dataset.c }; ritaResultat(); return;
+    case "red-stang": st.red.panel = null; ritaResultat(); return;
+    case "red-ta-bort": { const [pid, d] = st.red.panel.c.split("|"); st.red.panel = null; return andraUtkast(sch => { sch[pid][+d] = null; }); }
+    case "red-spara-pass": return sparaPass();
+    case "red-spara": return sparaJustering();
     case "simulering": return visaSimulering();
     case "simulera": return simulera();
     case "anvand-forslag": return anvandForslag(+el.dataset.n);
@@ -592,14 +608,14 @@ async function efterKorning(res, bal) {
 
 // ------------------------------------------------------------------ resultat
 function visaKorning(k) {
-  st.vy = "resultat"; st.korning = { ...k, ...JSON.parse(k.data) }; st.vecka = 0; st.cell = null;
+  st.vy = "resultat"; st.korning = { ...k, ...JSON.parse(k.data) }; st.vecka = 0; st.cell = null; st.red = null; st.person = null;
   $("#fot").hidden = true; ritaResultat(); window.scrollTo(0, 0);
 }
 
 function ritaResultat() {
-  const k = st.korning, res = k.resultat, g = k.granskning;
+  const k = st.korning, res = st.red?.res || k.resultat, g = st.red?.g || k.granskning;
   const brott = (res.brott || []).concat(g.brott);
-  const ok = !brott.length, flik = st.rflik || "oversikt";
+  const ok = !brott.length, flik = st.red ? "schema" : st.rflik || "oversikt";
   const F = [["oversikt", "Översikt"], ["schema", "Schema"], ["personer", "Personer"], ["regler", "Regelkontroll"]];
   let h = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button><span class="dampad liten">${datum(k.skapad)}</span></div>
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
@@ -608,18 +624,130 @@ function ritaResultat() {
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
   if (flik === "oversikt") h += ritaOversikt(k, brott);
   else if (flik === "regler") h += ritaRegelkontroll(k, brott);
-  else if (flik === "personer") h += `<section class="kort"><h2>Per person</h2><div class="rull"><table><thead><tr><th>Person</th><th class="tal">Pass</th><th class="tal">Tid</th><th class="tal">Mål</th><th class="tal">Kvällar</th><th>Helg</th></tr></thead><tbody>
-    ${Object.entries(res.personer).map(([p, x]) => `<tr><td><b>${esc(p)}</b></td><td class="tal">${x.pass}</td><td class="tal nw">${timmar(x.minuter)}</td><td class="tal nw">${timmar(x.mal_minuter)}</td><td class="tal">${x.kvallspass}</td><td>${x.helggrupp || x.helgfrekvens || "–"}</td></tr>`).join("")}</tbody></table></div></section>`;
+  else if (flik === "personer" && st.person && res.schema[st.person]) h += ritaPerson(st.person, res, k.indata);
+  else if (flik === "personer") {
+    const ob = GRAF.obFor(res, k.indata);
+    h += `<section class="kort"><h2>Per person</h2><p class="dampad liten">Tryck på en person för hela schemat med timmar, OB och kostnad.</p><div class="rull"><table><thead><tr><th>Person</th><th class="tal">Pass</th><th class="tal">Tid</th><th class="tal">Mål</th><th class="tal">Kvällar</th><th class="tal">OB/år</th></tr></thead><tbody>
+    ${Object.entries(res.personer).map(([p, x]) => `<tr><td><button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)} ›</button></td><td class="tal">${x.pass}</td><td class="tal nw">${timmar(x.minuter)}</td><td class="tal nw">${timmar(x.mal_minuter)}</td><td class="tal">${x.kvallspass}</td><td class="tal nw">${ob ? GRAF.kr(ob.per[p].ar.kr) : "–"}</td></tr>`).join("")}</tbody></table></div>
+    ${ob ? `<p class="dampad liten" style="margin-top:8px">OB per år enligt AB 25 § 21 från ${esc(ob.start)}${ob.antaget ? " (antaget – ange startdatum under Period)" : ""}.</p>` : ""}</section>`;
+  }
   else {
-    h += `<section class="kort"><div class="rad"><h2 style="margin:0">Schema</h2><div class="chips"><button class="liten" data-g="excel">Excel</button><button class="liten" data-g="kopiera-tabell">Kopiera</button></div></div><div class="veckor" style="margin-top:8px">` +
+    if (st.red) h += redigeringsrad();
+    h += `<section class="kort"><div class="rad"><h2 style="margin:0">Schema</h2><div class="chips">${st.red ? "" : `<button class="liten" data-g="redigera">Justera schemat</button><button class="liten" data-g="excel">Excel</button><button class="liten" data-g="kopiera-tabell">Kopiera</button>`}</div></div><div class="veckor" style="margin-top:8px">` +
       Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
       `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button></div>` +
       (st.vecka === -1 ? dagTabell(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), true) : vecka(res, st.vecka)) +
-      `<p class="liten" id="info" style="margin-top:8px">${cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans, <span class="plus">+1</span> över behovet.</p></section>`;
+      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans, <span class="plus">+1</span> över behovet.</p></section>`;
     if (res.vakanser.length) h += `<section class="kort"><h2>Vakanser</h2><ul class="punkter">${res.vakanser.map(x => `<li>Vecka ${x.vecka} ${x.veckodag}: ${x.antal} ${DELAR[x.dygnsdel].toLowerCase()}pass</li>`).join("")}</ul></section>`;
   }
+  if (st.red?.panel) h += redigeringspanel(res);
   $("#sida").innerHTML = h;
 }
+
+// ------------------------------------------------------------------ person
+function ritaPerson(pid, res, ind) {
+  const x = res.personer[pid], rad = res.schema[pid], W = res.veckor, p = ind.personal.find(q => q.id === pid) || {};
+  const kod = { morgon: "M", kvall: "K", natt: "N" };
+  let h = `<section class="kort"><button class="lank" data-g="person" data-p="">‹ Alla personer</button><h2 style="margin:6px 0 0">${esc(pid)}</h2>
+    <p class="dampad" style="margin:2px 0 0">${Math.round((p.grad ?? 1) * 100)} % · ${(p.dygnsdelar || ["morgon", "kvall"]).map(d => DELAR[d].toLowerCase()).join(" och ")} · ${x.pass} pass · ${x.kvallspass} kvällar</p>
+    <div class="rull" style="margin-top:10px"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
+  for (let v = 0; v < W; v++) {
+    const veck = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small></span>` : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
+  }
+  h += `</tbody></table></div><p class="dampad liten" style="margin-top:6px">Tryck på ett pass för datum och OB.</p></section>`;
+  return h + `<div class="grafyta">${GRAF.obKort(pid, res, ind, { installningar: "Period" })}</div>`;
+}
+
+// ------------------------------------------------------------------ justera ett färdigt schema
+// Utkastet räknas om (rast, arbetstid, vakanser) och granskas av den fristående granskningen efter varje ändring.
+function raknaOm(indata, schema, grund) {
+  const r = indata.regler || {}, rg = r.rast_grans_minuter ?? 300, rl = r.rast_minuter ?? 30;
+  const maltid = (indata.nattpass?.[0]?.maltidsuppehall) !== false;
+  const min = t => { const [a, b] = t.split(":").map(Number); return a * 60 + b; };
+  const nytt = {};
+  for (const [pid, rad] of Object.entries(schema)) nytt[pid] = rad.map(p => {
+    if (!p) return null;
+    const s = min(p.start); let e = min(p.slut); if (e <= s) e += 1440;
+    const langd = e - s, rast = p.dygnsdel === "natt" && maltid ? 0 : langd > rg ? rl : 0;
+    return { ...p, rast, netto: langd - rast };
+  });
+  const N = grund.veckor * 7, bd = behovDag(indata), vakanser = [];
+  for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+    const n = Object.values(nytt).filter(rad => rad[d]?.dygnsdel === del).length, b = bd[d % 7][del];
+    if (n < b) vakanser.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: del, antal: b - n });
+  }
+  const personer = {};
+  for (const [pid, rad] of Object.entries(nytt)) {
+    const l = rad.filter(Boolean);
+    personer[pid] = { ...grund.personer[pid], pass: l.length, minuter: l.reduce((a, q) => a + q.netto, 0), kvallspass: l.filter(q => q.dygnsdel === "kvall").length };
+  }
+  return { ...grund, schema: nytt, personer, vakanser, brott: [], justerat: true, kpi: { ...grund.kpi, vakanta_pass: vakanser.reduce((a, v) => a + v.antal, 0) } };
+}
+
+function raknaOmUtkast() {
+  const k = st.korning;
+  st.red.res = raknaOm(k.indata, st.red.schema, k.resultat);
+  st.red.g = GRANSKNING.kontrollera(k.indata, st.red.res);
+  ritaResultat();
+}
+
+function andraUtkast(fn) {
+  st.red.historik.push(structuredClone(st.red.schema));
+  fn(st.red.schema); st.red.andringar++;
+  raknaOmUtkast();
+}
+
+function redigeringsrad() {
+  const r = st.red, brott = r.g.brott.length, b0 = st.korning.granskning.brott.length + (st.korning.resultat.brott || []).length;
+  const v0 = st.korning.resultat.kpi.vakanta_pass, v = r.res.kpi.vakanta_pass;
+  const diff = (nu, fore) => nu === fore ? "" : ` (${nu > fore ? "+" : "−"}${Math.abs(nu - fore)})`;
+  return `<section class="kort" style="border:2px solid var(--guld)"><h2 style="margin:0">Du justerar schemat</h2>
+    <p class="dampad liten" style="margin:4px 0 0">Varje ändring granskas direkt. Originalet finns kvar; justeringen sparas som en ny körning.</p>
+    <div class="kpi"><div><b>${r.andringar}</b><span>ändringar</span></div><div class="${brott ? "fel" : ""}"><b>${brott}</b><span>regelbrott${diff(brott, b0)}</span></div><div class="${v ? "fel" : ""}"><b>${v}</b><span>vakanta pass${diff(v, v0)}</span></div></div>
+    ${brott ? `<details class="liten" style="margin-top:6px"><summary>Visa regelbrotten</summary><ul class="punkter">${r.g.brott.slice(0, 20).map(b => `<li><b>${esc(b.person || "")}</b> ${esc(b.text)}</li>`).join("")}</ul></details>` : ""}
+    <div class="chips" style="margin-top:10px"><button data-g="red-angra" ${r.historik.length ? "" : "disabled"}>Ångra</button><button data-g="red-avbryt">Avbryt</button><button class="primar" data-g="red-spara" ${r.andringar ? "" : "disabled"}>Spara som ny körning</button></div></section>`;
+}
+
+function redigeringspanel(res) {
+  const [pid, ds] = st.red.panel.c.split("|"), d = +ds, p = st.red.schema[pid][d], N = res.veckor * 7;
+  const tider = { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "07:15"] };
+  for (const rad of Object.values(st.red.schema)) for (const q of rad) if (q) tider[q.dygnsdel] = [q.start, q.slut];
+  const v = p || { dygnsdel: "morgon", start: tider.morgon[0], slut: tider.morgon[1] };
+  return `<div class="bladpanel" role="dialog" aria-label="${p ? "Ändra pass" : "Nytt pass"}"><div class="rad"><b>${p ? "Ändra pass" : "Nytt pass"} – ${esc(pid)}, V${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}</b><button class="lank" data-g="red-stang" aria-label="Stäng">✕</button></div>
+    <div class="falt" style="margin-top:8px"><div><label for="rp-del">Pass</label><select id="rp-del">${Object.entries(DELAR).map(([k, t]) => `<option value="${k}"${v.dygnsdel === k ? " selected" : ""} data-start="${tider[k][0]}" data-slut="${tider[k][1]}">${t}</option>`).join("")}</select></div>
+      <div><label for="rp-start">Start</label><input id="rp-start" type="time" value="${v.start}"></div><div><label for="rp-slut">Slut</label><input id="rp-slut" type="time" value="${v.slut}"></div>
+      ${p ? `<div><label for="rp-person">Flytta till</label><select id="rp-person">${Object.keys(st.red.schema).map(x => `<option${x === pid ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></div>
+      <div><label for="rp-dag">Dag</label><select id="rp-dag">${Array.from({ length: N }, (_, i) => `<option value="${i}"${i === d ? " selected" : ""}>V${Math.floor(i / 7) + 1} ${DAGAR[i % 7]}</option>`).join("")}</select></div>` : ""}</div>
+    <div class="chips" style="margin-top:10px"><button class="primar" data-g="red-spara-pass">${p ? "Spara" : "Lägg till"}</button>${p ? `<button class="fara" data-g="red-ta-bort">Ta bort passet</button>` : ""}</div>
+    <p class="dampad liten" style="margin:6px 0 0">Rasten räknas ut efter passets längd. Finns ett pass där du flyttar till byter passen plats.</p></div>`;
+}
+
+function sparaPass() {
+  const [pid, ds] = st.red.panel.c.split("|"), d = +ds;
+  const v = { dygnsdel: $("#rp-del").value, start: $("#rp-start").value, slut: $("#rp-slut").value };
+  if (!v.start || !v.slut) { meddela("Ange start och slut."); return; }
+  const till = $("#rp-person") ? [$("#rp-person").value, +$("#rp-dag").value] : [pid, d];
+  st.red.panel = null;
+  andraUtkast(sch => {
+    const nytt = { ...(sch[pid][d] || {}), ...v, manuell: true };
+    if (till[0] === pid && till[1] === d) { sch[pid][d] = nytt; return; }
+    const b = sch[till[0]][till[1]]; sch[till[0]][till[1]] = nytt; sch[pid][d] = b ? { ...b, manuell: true } : null;
+  });
+}
+
+async function sparaJustering() {
+  const r = st.red, k0 = st.korning;
+  const k = { id: nyttId(), enhet: st.enhet.id, namn: `${k0.namn} (justerad)`, skapad: Date.now(), status: r.g.brott.length ? "BROTT" : "OK", vakanta: r.res.kpi.vakanta_pass,
+    data: JSON.stringify({ resultat: r.res, granskning: r.g, balans: k0.balans, indata: k0.indata }) };
+  st.korningar.unshift(k);
+  try { await lager.sparaKorning(k); } catch (e) { meddela("Kunde inte spara: " + e.message); return; }
+  st.red = null; meddela("Det justerade schemat är sparat som en ny körning."); st.rflik = "schema"; visaKorning(k);
+}
+
+document.addEventListener("change", e => {
+  if (e.target.id === "rp-del") { const o = e.target.selectedOptions[0]; $("#rp-start").value = o.dataset.start; $("#rp-slut").value = o.dataset.slut; }
+});
 
 // Fyra nyckeltal och graferna (samma som i webben, från grafer.js).
 function ritaOversikt(k, brott) {
@@ -779,9 +907,10 @@ function dagTabell(res, dagar, period) {
   let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${46 + dagar.length * 30}px"` : ""}><thead>`;
   if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">V${w + 1}</th>`).join("")}</tr>`;
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>${dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7][0] : DAGAR[d % 7]}</th>`).join("")}</tr></thead><tbody>`;
-  for (const p of pers) h += `<tr><td title="${esc(p)}">${esc(p)}</td>` + dagar.map(d => {
+  for (const p of pers) h += `<tr><td title="${esc(p)}">${st.red ? esc(p) : `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`}</td>` + dagar.map(d => {
     const x = res.schema[p][d], n = p + "|" + d;
-    return `<td ${kl(d)}>${x ? `<button class="pass ${x.dygnsdel}${st.cell === n ? " vald" : ""}" data-g="cell" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</button>` : ""}</td>`;
+    if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
+    return `<td ${kl(d)}>${x ? `<button class="pass ${x.dygnsdel}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
@@ -802,7 +931,7 @@ function dagTabell(res, dagar, period) {
 function cellInfo() {
   if (!st.cell) return `<span class="dampad">Tryck på ett pass för tider och rast.</span>`;
   const [p, d] = st.cell.split("|"), x = st.korning.resultat.schema[p][+d];
-  return `<b>${esc(p)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[x.dygnsdel].toLowerCase()} <span class="mono">${x.start}–${x.slut}</span>, rast ${x.rast} min, arbetstid ${timmar(x.netto)}.`;
+  return `<b>${esc(p)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[x.dygnsdel].toLowerCase()} <span class="mono">${x.start}–${x.slut}</span>, rast ${x.rast} min, arbetstid ${timmar(x.netto)}.${GRAF.obPassText(p, +d, st.korning.resultat, st.korning.indata).replace("\n", " ")}`;
 }
 
 // ------------------------------------------------------------------ export

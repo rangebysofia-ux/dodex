@@ -14,8 +14,8 @@ function nyckeltalskort(k, foregaende) {
   return `<div class="nyckeltal">
     <div class="nyckel"><div class="ikon">${IKON.behov}</div><div><span>Bemanningsgrad</span><b>${sv(n.grad, 1)} %</b><small class="${n.grad >= 99.95 ? "upp" : "ned"}">${n.tackt} av ${n.behov} pass täckta</small></div></div>
     <div class="nyckel"><div class="ikon sand">${IKON.kostnad}</div><div><span>Personalkostnad (uppskattad)</span>${n.kostnadVecka != null
-      ? `<b>${kr(n.kostnadVecka * 52 / 12)}</b><small>per månad · ${kr(n.kostnadVecka)} per vecka</small>`
-      : `<b>${sv(n.timmarVecka, 1)} h</b><a href="#/e/${st.enhet.id}/installningar">Ange timkostnad för kronor</a>`}</div></div>
+      ? `<b>${kr(n.kostnadVecka * 52 / 12)}</b><small>per månad${n.obVecka ? `, varav OB ${kr(n.obVecka * 52 / 12)}` : ""}</small>`
+      : `<b>${sv(n.timmarVecka, 1)} h</b>${n.obVecka ? `<small>OB ${kr(n.obVecka * 52 / 12)} per månad</small>` : ""}<a href="#/e/${st.enhet.id}/installningar">Ange timkostnad för kronor</a>`}</div></div>
     <div class="nyckel"><div class="ikon bla">${IKON.lucka}</div><div><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small class="${diff == null ? "" : diff <= 0 ? "upp" : "ned"}">${diff == null ? `${n.over} pass över behovet` : diff === 0 ? "samma som förra körningen" : `${diff > 0 ? "+" : ""}${diff} mot förra körningen`}</small></div></div>
     <div class="nyckel"><div class="ikon guld">${IKON.klocka}</div><div><span>Planerad övertid</span><b>${sv(n.overtid, 1)} h</b><small>per vecka, utöver kontrakterad tid</small></div></div>
   </div>`;

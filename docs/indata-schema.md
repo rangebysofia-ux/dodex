@@ -64,7 +64,9 @@
 
 **budget_timmar_vecka** – valfri budget för hela enheten. Påverkar inte lösningen; gränssnittet jämför den med summan av kontrakterad tid (sysselsättningsgrad × heltid).
 
-**timkostnad_kr** – valfri genomsnittlig timkostnad i kronor (lön med personalomkostnader och OB i snitt). Påverkar inte lösningen; används för att räkna om timmar till personalkostnad i översikten, nyckeltalen och simuleringen.
+**timkostnad_kr** – valfri genomsnittlig timkostnad i kronor: lön med personalomkostnader, **utan OB**. OB räknas separat enligt AB 25 § 21 (se `docs/ob.md`). Påverkar inte lösningen; används för att räkna om timmar till personalkostnad i översikten, nyckeltalen, personvyn och simuleringen.
+
+**startdatum** – valfritt datum (`ÅÅÅÅ-MM-DD`, en måndag) för schemats första dag. Kopplar grundschemat till verkliga datum för OB och helgdagar. Påverkar inte lösningen. Utan startdatum antas den senaste måndagen där ett helt år ryms inom kontrollerade avtalsbelopp.
 
 **forvantat** och **beskrivning** – används bara i testfallen.
 
