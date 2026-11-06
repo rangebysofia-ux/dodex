@@ -87,3 +87,22 @@ def test_balans_utan_fredagsregel():
     res = balans(indata)
     assert res["forvantade_vakanser"] == 0
     assert not any("Fredagskvällarna" in a for a in res["atgarder"])
+
+
+def test_granskning_foljer_godkand_avvikelse(tmp_path):
+    """Med godkänd dygnsvila på 9 timmar ska kväll följd av morgon inte vara ett brott."""
+    fall = ROT / "tests" / "fall" / "six_week_basic.json"
+    indata = json.loads(fall.read_text(encoding="utf-8"))
+    ut = tmp_path / "schema.json"
+    assert kor("build", fall, "--ut", ut, "--tyst").returncode == 0
+    schema = json.loads(ut.read_text(encoding="utf-8"))
+    rad = schema["schema"]["A1"]
+    rad[9] = {"mall": "K", "dygnsdel": "kvall", "start": "13:45", "slut": "22:00", "rast": 30, "netto": 465}
+    rad[10] = {"mall": "M", "dygnsdel": "morgon", "start": "07:00", "slut": "15:15", "rast": 30, "netto": 465}
+    ut.write_text(json.dumps(schema), encoding="utf-8")
+    indata["regler"] = {"dygnsvila_minuter": 540}
+    indata["avvikelser"] = ["dygnsvila_minuter"]
+    ny = tmp_path / "indata.json"
+    ny.write_text(json.dumps(indata), encoding="utf-8")
+    res = json.loads(kor("validate", ny, ut, "--json").stdout)
+    assert not any(b["regel"] == "DYGNSVILA" and "mellan passet" in b["text"] for b in res["brott"]), res["brott"]

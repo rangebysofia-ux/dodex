@@ -19,7 +19,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 
 ## Regler som aldrig får försvagas
 
-Ändra aldrig dessa utan att användaren uttryckligen ber om det:
+Ändra aldrig standardvärdena utan att användaren uttryckligen ber om det. Användaren kan låsa upp regel 1 och 5b för en enhet i gränssnittet (fältet `avvikelser` i indata); koden får aldrig göra det på egen hand, och en avvikelse ska alltid synas för användaren:
 
 1. Dygnsvila 11 h och veckovila 36 h (avtal) samt rast efter 5 h arbete (lag) är hårda.
 2. Behovet är högsta *mjuka* nivå. Gör det aldrig hårt: en vakans är bättre än ett avtalsbrott.

@@ -67,7 +67,17 @@ def test_varannan_helg_ar_last_for_enheten(bas):
 def test_avtal_och_lag_kan_inte_forsvagas(bas):
     bas["regler"] = {"dygnsvila_minuter": 540, "veckovila_minuter": 2400, "rast_grans_minuter": 360, "fel_regel": 1}
     fel = kontrollera_indata(bas)
-    assert "Dygnsvilan kan inte vara kortare än 11 timmar (avtal)." in fel
-    assert "Rast krävs efter högst 5 timmars arbete (lag)." in fel
+    assert any(f.startswith("Dygnsvilan kan inte vara kortare än 11 timmar (avtal).") for f in fel)
+    assert any(f.startswith("Rast krävs efter högst 5 timmars arbete (lag).") for f in fel)
     assert not any("Veckovilan" in f for f in fel)  # 40 timmar är en skärpning
     assert any("Okända regler: fel_regel" in f for f in fel)
+
+
+def test_avvikelse_kraver_bekraftelse(bas):
+    bas["regler"] = {"dygnsvila_minuter": 540, "helgfrekvens": "1/4"}
+    fel = kontrollera_indata(bas)
+    assert any("Dygnsvilan" in f for f in fel) and any("Varannan helg" in f for f in fel)
+    bas["avvikelser"] = ["dygnsvila_minuter", "helgfrekvens"]
+    assert kontrollera_indata(bas) == []
+    bas["avvikelser"] = ["pass_per_vecka"]
+    assert any("Avvikelser kan bara godkännas" in f for f in kontrollera_indata(bas))

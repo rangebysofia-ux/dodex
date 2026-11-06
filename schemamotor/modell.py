@@ -143,6 +143,8 @@ class Indata(BaseModel):
     personal: list[Person] = Field(min_length=1)
     onskemal: list[Onskemal] = Field(default_factory=list)
     losare: dict = Field(default_factory=dict)
+    # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
+    avvikelser: list[str] = Field(default_factory=list)
     budget_timmar_vecka: Optional[float] = Field(default=None, gt=0)
     # används bara i testfallen
     beskrivning: Optional[str] = None
@@ -181,11 +183,16 @@ def _helhet(d: dict) -> list[str]:
     okanda = sorted(set(regler) - set(STANDARDREGLER))
     if okanda:
         fel.append(f"Okända regler: {', '.join(okanda)}. Se docs/indata-schema.md för giltiga namn.")
+    avvikelser = d.get("avvikelser") if isinstance(d.get("avvikelser"), list) else []
+    okanda_avv = sorted(set(map(str, avvikelser)) - set(SKYDDADE) - {"helgfrekvens"})
+    if okanda_avv:
+        fel.append(f"Avvikelser kan bara godkännas för låsta regler, inte för: {', '.join(okanda_avv)}.")
     for nyckel, (grans, jamfor, text) in SKYDDADE.items():
         v = regler.get(nyckel)
-        if isinstance(v, (int, float)) and not isinstance(v, bool) and jamfor(v, grans):
-            fel.append(text)
-    if "helgfrekvens" in regler and regler["helgfrekvens"] != "2/4":
+        if (isinstance(v, (int, float)) and not isinstance(v, bool) and jamfor(v, grans)
+                and nyckel not in avvikelser):
+            fel.append(text + " Bekräfta avvikelsen under Inställningar om ni har ett lokalt avtal eller beslut.")
+    if "helgfrekvens" in regler and regler["helgfrekvens"] != "2/4" and "helgfrekvens" not in avvikelser:
         fel.append("Varannan helg är en hård lokal regel för enheten och kan inte ändras. Undantag görs per person "
                    "med helgfrekvens på personen.")
     ppv = regler.get("pass_per_vecka", STANDARD_PASS_PER_VECKA)
