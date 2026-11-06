@@ -93,3 +93,48 @@ def test_felaktig_indata_stoppas(klient):
     svar = klient.post(f"/api/enheter/{eid}/korningar", json={})
     assert svar.status_code == 422
     assert "personal A1, sysselsättningsgrad: saknas" in svar.json()["fel"]
+
+
+def test_assistent_utan_nyckel(klient, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    klient.post("/api/logga-in", json={"losenord": "hemligt-test"})
+    assert klient.get("/api/assistent/status").json() == {"tillganglig": False}
+    svar = klient.post("/api/assistent", json={"system": "s", "messages": [{"role": "user", "content": "hej"}], "tools": []})
+    assert svar.status_code == 503 and "API-nyckel" in svar.json()["detail"]
+
+
+def test_assistent_skickar_ratt_anrop(klient, monkeypatch):
+    import anthropic
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    anrop = {}
+
+    class Block:
+        def __init__(self, d):
+            self.d = d
+
+        def model_dump(self, **_):
+            return self.d
+
+    class Svar:
+        content = [Block({"type": "text", "text": "Hej"}),
+                   Block({"type": "tool_use", "id": "t1", "name": "las_schema", "input": {}})]
+        stop_reason = "tool_use"
+
+    class Falsk:
+        def __init__(self, *a, **k):
+            self.beta = self
+            self.messages = self
+
+        def create(self, **kw):
+            anrop.update(kw)
+            return Svar()
+
+    monkeypatch.setattr(anthropic, "Anthropic", Falsk)
+    klient.post("/api/logga-in", json={"losenord": "hemligt-test"})
+    svar = klient.post("/api/assistent", json={"system": "s", "messages": [{"role": "user", "content": "hej"}],
+                                               "tools": [{"name": "las_schema", "description": "d", "input_schema": {"type": "object"}}]})
+    assert svar.status_code == 200, svar.text
+    assert svar.json()["stop_reason"] == "tool_use" and svar.json()["content"][1]["name"] == "las_schema"
+    assert anrop["model"] == "claude-opus-5-5" and anrop["fallbacks"] == "default"
+    assert anrop["tools"][0]["name"] == "las_schema"

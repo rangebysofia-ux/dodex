@@ -40,6 +40,10 @@ python -m schemamotor.export schema.json --excel schema.xlsx --pdf schema.pdf
 
 Efter installationen finns kommandona även som `schema-balans`, `schema-build`, `schema-validate`, `schema-explain`, `schema-compare` och `schema-export`.
 
+## Schemaassistent
+
+En assistent (knappen Fråga) svarar på frågor om schemat och föreslår ändringar som du godkänner. På datorn behövs en API-nyckel från Anthropic, se `docs/assistent.md`. I lättversionen fungerar den direkt via Claude-kontot.
+
 ## Driftsättning
 
 Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad databas.

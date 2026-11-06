@@ -9,6 +9,8 @@ Miljövariabler:
     SCHEMA_DATA       katalog för databasen (standard ./data).
     SCHEMA_MAX_TID    högsta antal sekunder per optimeringssteg (standard 60).
     SCHEMA_EXEMPEL    katalog med exempelfall (standard tests/fall).
+    ANTHROPIC_API_KEY nyckel för schemaassistenten (console.anthropic.com). Utan den är assistenten avstängd.
+    SCHEMA_ASSISTENT_MODELL  Claude-modell för assistenten (standard claude-opus-5-5).
 """
 import base64
 import copy
@@ -312,6 +314,56 @@ def exempel():
         d.pop("forvantat", None)
         ut.append({"namn": d.get("enhet") or f.stem, "beskrivning": beskr, "indata": d})
     return ut
+
+
+# ---------------------------------------------------------------- schemaassistent
+# Webbläsaren kör verktygen (statisk/assistent.js) och skickar hela samtalet hit; servern lägger
+# till nyckeln och anropar Claude. Ändringar som assistenten föreslår godkänns i gränssnittet.
+
+class AssistentIn(BaseModel):
+    system: str
+    messages: list
+    tools: list
+
+
+@app.get("/api/assistent/status", dependencies=[Depends(inloggad)])
+def assistent_status():
+    return {"tillganglig": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))}
+
+
+@app.post("/api/assistent", dependencies=[Depends(inloggad)])
+def assistent(a: AssistentIn):
+    if not assistent_status()["tillganglig"]:
+        raise HTTPException(503, "Assistenten behöver en API-nyckel från Anthropic. Se docs/assistent.md.")
+    import anthropic
+    klient = anthropic.Anthropic()
+    try:
+        svar = klient.beta.messages.create(
+            model=os.environ.get("SCHEMA_ASSISTENT_MODELL", "claude-opus-5-5"),
+            max_tokens=16000,
+            system=a.system,
+            messages=a.messages,
+            tools=a.tools,
+            output_config={"effort": "medium"},
+            cache_control={"type": "ephemeral"},
+            # om en fråga nekas av säkerhetsfiltren tar en annan modell över i samma anrop
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+        )
+    except anthropic.AuthenticationError:
+        raise HTTPException(502, "API-nyckeln godkändes inte. Kontrollera ANTHROPIC_API_KEY.")
+    except anthropic.PermissionDeniedError:
+        raise HTTPException(502, "API-nyckeln saknar behörighet till modellen.")
+    except anthropic.RateLimitError:
+        raise HTTPException(429, "För många frågor just nu. Vänta en stund och försök igen.")
+    except anthropic.BadRequestError as e:
+        raise HTTPException(502, f"Claude kunde inte läsa frågan: {e.message}")
+    except anthropic.APIStatusError as e:
+        raise HTTPException(502, f"Claude svarade med fel {e.status_code}. Försök igen om en stund.")
+    except anthropic.APIConnectionError:
+        raise HTTPException(502, "Kunde inte nå Claude. Kontrollera internetanslutningen.")
+    return {"content": [b.model_dump(mode="json", exclude_none=True) for b in svar.content],
+            "stop_reason": svar.stop_reason}
 
 
 @app.get("/halsa")

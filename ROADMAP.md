@@ -24,7 +24,8 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 
 - [x] **9. Strukturerade önskemål.** Formulär: dagar, veckor (alla, jämna, udda, arbetshelger), passtyp, tider, krav eller önskemål med vikt. Kontroll som varnar för regler som inte påverkar något (tar bort noll passalternativ).
   *Kvar:* veckovalet "arbetshelger" (önskemål som bara gäller de helger personen arbetar) kräver en ändring i motorn och finns inte än.
-- [ ] **10. AI-tolkning av fritext.** En språkmodell fyller i formuläret från fritext. Tolkningen visas i klartext och måste godkännas innan den används. AI:n får aldrig skriva kod som körs i lösaren.
+- [x] **10. AI-tolkning av fritext.** *Byggt som schemaassistent (docs/assistent.md): frågor om schemat och förslag på ändringar som godkänns. Testfallen för "sina helger" och "varannan fredag" återstår.*
+  Ursprunglig beskrivning: En språkmodell fyller i formuläret från fritext. Tolkningen visas i klartext och måste godkännas innan den används. AI:n får aldrig skriva kod som körs i lösaren.
   *Klart när:* testfall med "sina helger", "vill" mot "måste" och "varannan fredag" ger rätt formulär eller en följdfråga.
 
 ## Fas 4 – Prioriteringsstöd och lärande

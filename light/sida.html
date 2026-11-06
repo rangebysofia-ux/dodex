@@ -113,15 +113,34 @@ table.schema.period td, table.schema.period th { padding: 1px; } table.schema.pe
 @media (max-width: 560px) { .pass small { display: none; } .pass { padding: 6px 0; } }
 @media (prefers-reduced-motion: reduce) { .matare div, #meddelande { transition: none; } }
 details summary { cursor: pointer; color: var(--dampad); }
+[hidden] { display: none !important; }
+.chatt-knapp { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 15; background: var(--accent); color: var(--accent-text); border: 0; border-radius: 999px; padding: 12px 20px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.chatt { position: fixed; z-index: 25; right: 0; top: 0; bottom: 0; width: min(440px, 100%); background: var(--yta); border-left: 1px solid var(--linje); display: flex; flex-direction: column; }
+.chatt header { display: flex; justify-content: space-between; align-items: center; padding: max(14px, env(safe-area-inset-top, 0px)) 16px 12px; border-bottom: 1px solid var(--linje); }
+.chatt-logg { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.bubbla { background: var(--yta2); border: 1px solid var(--linje); border-radius: 14px 14px 14px 4px; padding: 9px 12px; max-width: 92%; font-size: 14.5px; white-space: pre-wrap; }
+.bubbla.du { align-self: flex-end; background: var(--accent); color: var(--accent-text); border-color: var(--accent); border-radius: 14px 14px 4px 14px; }
+.bubbla.fel { background: var(--dalig-bg); color: var(--dalig); }
+.chatt-verktyg { color: var(--dampad); font-size: 12.5px; }
+.forslagskort { border: 2px dashed var(--accent); border-radius: 12px; padding: 12px; display: grid; gap: 8px; background: var(--accent-svag); }
+.chatt form { display: flex; gap: 8px; padding: 12px 16px max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--linje); }
+.chatt textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--yta2); border: 1px solid var(--linje); border-radius: 8px; padding: 8px; flex: 1; resize: none; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
 <div class="fot" id="fot" hidden></div>
 <div id="meddelande" role="status" aria-live="polite"></div>
+<button id="chatt-knapp" class="chatt-knapp" aria-label="Öppna schemaassistenten" hidden>Fråga</button>
+<aside id="chatt" class="chatt" aria-label="Schemaassistent" hidden>
+  <header><div><b>Schemaassistent</b><div class="dampad liten" id="chatt-enhet"></div></div><button class="lank" id="chatt-stang" aria-label="Stäng">✕</button></header>
+  <div id="chatt-logg" class="chatt-logg" aria-live="polite"></div>
+  <form id="chatt-form"><textarea id="chatt-text" rows="2" placeholder="Fråga om schemat, eller be om en ändring …" aria-label="Meddelande"></textarea><button class="primar" type="submit" id="chatt-skicka">Skicka</button></form>
+</aside>
 
 <script type="text/plain" id="motor-kod">__MOTOR__</script>
 <script>__GRANSKNING__</script>
 <script>__MOTOR_HUVUDTRAD__</script>
+<script>__ASSISTENT__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
 <script>
 "use strict";
@@ -641,6 +660,70 @@ async function excel() {
     meddela(e && e.message ? e.message : "Nedladdningen misslyckades.");
   }
 }
+
+// ------------------------------------------------------------------ schemaassistent (via Claude-kontot)
+const chatt = { oppen: false, enhet: null, turer: [], visning: [], forslag: null, upptagen: false, text: "", notis: "" };
+const FRAGOR = ["Hur många kvällar har var och en?", "Hur ser fredagskvällarna ut?", "Var finns vakanserna?", "Lägg till en person på 75 % som bara jobbar kväll"];
+function chattKontext() {
+  const k = st.korningar.find(x => x.status === "OK") || st.korningar[0];
+  const d = k ? JSON.parse(k.data) : null;
+  return { indata: st.enhet.indata, resultat: d ? d.resultat : null, granskning: d ? d.granskning : null, onForslag: f => { chatt.forslag = f; } };
+}
+function ritaChatt() {
+  $("#chatt-knapp").hidden = !st.enhet || chatt.oppen;
+  $("#chatt").hidden = !chatt.oppen;
+  if (!chatt.oppen) return;
+  $("#chatt-enhet").textContent = st.enhet ? st.enhet.namn : "";
+  let h = chatt.visning.length ? "" : `<p class="dampad liten">Jag svarar på frågor om personal, behov och det senaste schemat, och föreslår ändringar som du godkänner.</p><div class="chips">${FRAGOR.map(f => `<button class="liten" data-g="chatt-fraga">${esc(f)}</button>`).join("")}</div>`;
+  for (const m of chatt.visning) h += m.roll === "verktyg" ? `<div class="chatt-verktyg">${esc(m.text)}</div>` : `<div class="bubbla${m.roll === "du" ? " du" : m.roll === "fel" ? " fel" : ""}">${esc(m.text)}</div>`;
+  if (chatt.upptagen && chatt.text) h += `<div class="bubbla">${esc(chatt.text)}</div>`;
+  if (chatt.forslag) h += `<div class="forslagskort"><b>${esc(chatt.forslag.sammanfattning)}</b><ul class="punkter liten">${chatt.forslag.texter.map(x => `<li>${esc(x)}</li>`).join("")}</ul><div class="chips"><button class="primar liten" data-g="chatt-godkann">Godkänn</button><button class="liten" data-g="chatt-avvisa">Avvisa</button></div></div>`;
+  if (chatt.upptagen) h += `<div class="chatt-verktyg">${esc(chatt.status || "Tänker …")}</div>`;
+  const l = $("#chatt-logg"); l.innerHTML = h; l.scrollTop = l.scrollHeight;
+  $("#chatt-skicka").disabled = chatt.upptagen;
+}
+async function skickaChatt(text) {
+  if (!st.enhet || chatt.upptagen || !text.trim()) return;
+  let sample = null;
+  try { sample = window.claude && await window.claude.use("sample"); } catch { sample = null; }
+  if (!sample) { chatt.visning.push({ roll: "fel", text: "Assistenten fungerar bara när sidan är öppen i Claude." }); return ritaChatt(); }
+  if (chatt.enhet !== st.enhet.id) { chatt.enhet = st.enhet.id; chatt.turer = []; chatt.visning = []; chatt.forslag = null; }
+  chatt.visning.push({ roll: "du", text: text.trim() });
+  chatt.turer.push({ role: "user", content: (chatt.notis ? chatt.notis + "\n\n" : "") + text.trim() }); chatt.notis = "";
+  chatt.upptagen = true; chatt.text = ""; chatt.status = "Tänker …"; ritaChatt();
+  const ctx = chattKontext();
+  const tools = ASSISTENT.verktyg.map(v => ({ name: v.name, description: v.description, inputSchema: v.schema,
+    execute: inp => { chatt.status = { las_enhet: "Läser personal och behov …", las_schema: "Läser schemat …", las_dagar: "Tittar på dagarna …", las_person: "Tittar på personen …", foresla_andringar: "Förbereder ett förslag …" }[v.name]; ritaChatt(); return v.kor(ctx, inp || {}); } }));
+  const forsta = { role: "user", content: ASSISTENT.SYSTEM + "\n\nAnvändaren arbetar med enheten " + JSON.stringify(st.enhet.namn) + ". Första frågan:\n\n" + chatt.turer[0].content };
+  try {
+    const { text: svar } = await sample([forsta, ...chatt.turer.slice(1)], { tools, cache: false, onText: ({ text: t }) => { chatt.text = t; ritaChatt(); } });
+    chatt.turer.push({ role: "assistant", content: svar || "(inget svar)" });
+    chatt.visning.push({ roll: "assistent", text: svar });
+  } catch (e) {
+    chatt.turer.pop();
+    chatt.visning.push({ roll: "fel", text: e.code === "not_granted" ? "Assistenten fick inte tillåtelse att fråga Claude." : e.code === "rate_limited" ? "För många frågor just nu. Vänta en stund." : "Det gick inte att fråga Claude just nu." });
+  }
+  chatt.upptagen = false; chatt.text = ""; ritaChatt();
+}
+$("#chatt-knapp").onclick = () => { chatt.oppen = true; ritaChatt(); $("#chatt-text").focus(); };
+$("#chatt-stang").onclick = () => { chatt.oppen = false; ritaChatt(); };
+$("#chatt-form").onsubmit = e => { e.preventDefault(); const t = $("#chatt-text").value; $("#chatt-text").value = ""; skickaChatt(t); };
+$("#chatt-text").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#chatt-form").requestSubmit(); } };
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-g^=chatt-]"); if (!el) return;
+  if (el.dataset.g === "chatt-fraga") skickaChatt(el.textContent);
+  if (el.dataset.g === "chatt-avvisa") { chatt.notis = "[Användaren avvisade förslaget.]"; chatt.visning.push({ roll: "verktyg", text: "Förslaget avvisades." }); chatt.forslag = null; ritaChatt(); }
+  if (el.dataset.g === "chatt-godkann") {
+    try {
+      ASSISTENT.tillampa(st.enhet.indata, chatt.forslag.andringar);
+      chatt.visning.push({ roll: "verktyg", text: "Godkänt och sparat. Tryck på Lägg schema för ett nytt schema." });
+      chatt.notis = "[Användaren godkände förslaget och det är sparat.]"; chatt.forslag = null;
+      if (st.vy === "enhet") andrad(true); else { clearTimeout(sparaTimer); lager.sparaEnhet(st.enhet); }
+    } catch (err) { chatt.visning.push({ roll: "fel", text: "Kunde inte tillämpa: " + err.message }); }
+    ritaChatt();
+  }
+});
+setInterval(() => { if (!chatt.oppen) $("#chatt-knapp").hidden = !st.enhet; }, 800);
 
 // ------------------------------------------------------------------ start
 (async () => { await lager.init(); visaLista(); })();

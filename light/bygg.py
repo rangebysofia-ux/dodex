@@ -28,6 +28,7 @@ def main():
     sida = (sida.replace("__MOTOR__", skydda(motor))
                 .replace("__GRANSKNING__", skydda((HAR / "granskning.js").read_text(encoding="utf-8")))
                 .replace("__MOTOR_HUVUDTRAD__", skydda(motor) + "\nconst MOTOR_HUVUD = MOTOR;")
+                .replace("__ASSISTENT__", skydda((HAR.parent / "schemawebb" / "statisk" / "assistent.js").read_text(encoding="utf-8")))
                 .replace("__EXEMPEL__", json.dumps(exempel, ensure_ascii=False).replace("</", "<\\/")))
     ut = HAR / "schema-light.html"
     ut.write_text(sida, encoding="utf-8")

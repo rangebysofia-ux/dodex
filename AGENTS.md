@@ -14,6 +14,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/export.py` – Excel och PDF.
 - `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg).
 - `light/` – lättversion som körs helt i webbläsaren: `motor.js` (heuristisk schemaläggning, samma hårda regler), `granskning.js` (fristående översättning av validate.py, får inte dela kod med motor.js), `sida.html` (gränssnitt). `python light/bygg.py` bygger `light/schema-light.html`. Ändras en regel i Python ska den ändras här också.
+- `schemawebb/statisk/assistent.js` – schemaassistentens verktyg, delas av webben (`chatt.js`, `/api/assistent`) och lättversionen. Assistenten får bara föreslå ändringar; de tillämpas först när användaren godkänner. Den får aldrig ändra regler eller skriva kod som körs i lösaren. Se `docs/assistent.md`.
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.
 - `tests/fall/` – testfall med fältet `forvantat`. `tests/test_motor.py` kör dem.
 
