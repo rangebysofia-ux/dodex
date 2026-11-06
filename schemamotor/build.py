@@ -480,9 +480,11 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 o = m.new_int_var(0, len(tack), "")
                 m.add(o == sum(tack) - antal + vak_slot.get((d, del_), 0))
                 over_slot[d, del_] = o
-                extra = m.new_int_var(0, len(tack), "")  # ett andra extra pass samma dag och dygnsdel
-                m.add(extra >= o - 1)
-                jamn.append(2 * extra)
+                # växande straff (styckvis kvadratiskt): +6 på ett pass och +2 på ett annat kostar mer än +4 och +4
+                for steg in range(1, min(len(tack), 8)):
+                    extra = m.new_int_var(0, len(tack), "")
+                    m.add(extra >= o - steg)
+                    jamn.append(2 * extra)
         for slot in (over_slot, vak_slot):
             # per vecka och för hela perioden: dag och kväll ska få lika mycket
             for dagar in [range(w * 7, w * 7 + 7) for w in range(N // 7)] + [range(N)]:

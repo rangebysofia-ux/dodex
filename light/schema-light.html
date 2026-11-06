@@ -524,7 +524,8 @@ const MOTOR = (() => {
           const bm = behov[d % 7][M], bk = behov[d % 7][K], nm = cnt[d][M], nk = cnt[d][K];
           const o1 = Math.max(0, nm - bm), o2 = Math.max(0, nk - bk);
           om += o1; ok += o2; vm += Math.max(0, bm - nm); vk += Math.max(0, bk - nk);
-          k += 2 * (Math.max(0, o1 - 1) + Math.max(0, o2 - 1));
+          // växande straff (kvadratiskt): +6 på ett pass och +2 på ett annat kostar mer än +4 och +4
+          k += o1 * o1 + o2 * o2 + 2 * Math.max(0, bm - nm) ** 2 + 2 * Math.max(0, bk - nk) ** 2;
         }
         k += Math.abs(om - ok) + Math.abs(vm - vk); toM += om; toK += ok; tvM += vm; tvK += vk;
       }
@@ -1232,7 +1233,8 @@ const MOTOR = (() => {
           const bm = behov[d % 7][M], bk = behov[d % 7][K], nm = cnt[d][M], nk = cnt[d][K];
           const o1 = Math.max(0, nm - bm), o2 = Math.max(0, nk - bk);
           om += o1; ok += o2; vm += Math.max(0, bm - nm); vk += Math.max(0, bk - nk);
-          k += 2 * (Math.max(0, o1 - 1) + Math.max(0, o2 - 1));
+          // växande straff (kvadratiskt): +6 på ett pass och +2 på ett annat kostar mer än +4 och +4
+          k += o1 * o1 + o2 * o2 + 2 * Math.max(0, bm - nm) ** 2 + 2 * Math.max(0, bk - nk) ** 2;
         }
         k += Math.abs(om - ok) + Math.abs(vm - vk); toM += om; toK += ok; tvM += vm; tvK += vk;
       }

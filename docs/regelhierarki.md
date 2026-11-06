@@ -34,7 +34,7 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 12. **OB-prognos efter avtalet.** Efter sista kontrollerade OB-nivån (HÖK 25, till och med 2027-03-31) räknas OB upp med 3 % per avtalsår. Det är en prognos för budget, inte avtal, och märks så i gränssnittet. `ob_prognos_procent`, 0 stänger av. Beslutat av användaren 2026-11-06.
 
-13. **Jämn bemanning mellan dag och kväll (princip, mjuk).** Det som blir över eller saknas fördelas efter behovet, jämnt mellan dag- och kvällspass, per vecka och för hela perioden, och inte flera extra på samma dag och pass. Vägs ihop med rättvisan mellan personer (rättvisan väger dubbelt). `jamn_bemanning`: "mjuk" (standard) eller "av". Beslutat av användaren 2026-11-06.
+13. **Jämn bemanning mellan dag och kväll (princip, mjuk).** Det som blir över eller saknas fördelas efter behovet, jämnt mellan dag- och kvällspass, per vecka och för hela perioden, och jämnt över dagarna: straffet växer med överskottet på ett pass (ungefär kvadratiskt), så +6 på en dag och +2 på en annan väger tyngre än +4 och +4. Vägs ihop med rättvisan mellan personer (rättvisan väger dubbelt). `jamn_bemanning`: "mjuk" (standard) eller "av". Beslutat av användaren 2026-11-06.
 
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
