@@ -44,7 +44,7 @@ Efter installationen finns kommandona även som `schema-balans`, `schema-build`,
 
 Det första man möter är **Vad vill du göra?**:
 
-- **Skapa ny enhet** öppnar en guide i fem steg: enheten, behov, budget, medarbetare och sammanfattning. Guiden räknar ut hur många timmar behovet motsvarar och hur många som behövs för helgerna med varannan helg och fredagsregeln, och kan fördela budgeten på medarbetarna.
+- **Skapa ny enhet** öppnar en frågeguide med en fråga i taget: vad gruppen heter, hur många medarbetare (dag och kväll, natt), sysselsättning (samma, olika per person eller en budget som fördelas), undantag (bara dag, bara kväll, natt, andra helger), behovet i veckan (dag, kväll och natt för vardag och helg), tider för passen, och period. Guiden visar hur många timmar behovet motsvarar och hur många som behövs för helgerna. Sist väljer man **🤖 Låt AI lägga schemat** (motorn lägger det) eller **✋ Lägg schemat själv** (ett tomt schema i redigeringsläge, där varje pass granskas direkt; `POST /api/enheter/{id}/manuell`).
 - **Få hjälp av AI-assistenten** skapar en tom enhet och öppnar 🤖 med en förifylld fråga. Assistenten föreslår indata som användaren godkänner.
 - **Börja från ett exempel** och **Fortsätt med en enhet**.
 

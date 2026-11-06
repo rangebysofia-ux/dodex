@@ -279,6 +279,27 @@ def _klar(kid):
     return k
 
 
+@app.post("/api/enheter/{eid}/manuell", dependencies=[Depends(inloggad)], status_code=201)
+def manuell_korning(eid: int):
+    """Ett tomt schema som användaren lägger själv. Passen räknas om och granskas när de läggs till."""
+    e = db.enhet(eid)
+    if not e:
+        raise HTTPException(404, "Enheten finns inte.")
+    indata = e["indata"]
+    fel = kontrollera_indata(indata)
+    if fel:
+        return JSONResponse({"fel": fel}, status_code=422)
+    N = indata["veckor"] * 7
+    try:
+        res = justera(copy.deepcopy(indata), {p["id"]: [None] * N for p in indata["personal"]})
+    except IndataFel as err:
+        return JSONResponse({"fel": [str(err)]}, status_code=422)
+    g = validate.kontrollera(copy.deepcopy(indata), res)
+    kid = db.skapa_korning(eid, f"Körning {len(db.korningar(eid)) + 1} (manuell)", indata, None)
+    db.uppdatera_korning(kid, status="klar", steg=None, sekunder=0, resultat=res, granskning=g)
+    return {"id": kid}
+
+
 class JusteraIn(BaseModel):
     schemadata: dict = Field(alias="schema")
     namn: Optional[str] = None

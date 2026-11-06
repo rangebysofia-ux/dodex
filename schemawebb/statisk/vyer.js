@@ -85,6 +85,7 @@ async function visaKorningsvy(id, vyn, kid, q) {
     return;
   }
   ritaKorningsvy();
+  if (st.startaRedigering && vyn === "schema" && k.status === "klar" && k.resultat?.status === "OK") { st.startaRedigering = false; st.vecka = 0; startaRedigering(); }
   if (k.status === "i kö" || k.status === "kör") startaPollning(async () => {
     const n = await api("GET", "korningar/" + k.id);
     st.korning = n;
@@ -100,7 +101,8 @@ function huvud() {
   return `<section class="kort"><div class="rubrikrad">
     <div style="display:block;min-width:220px;flex:1"><label for="korningsval">Körning</label><select id="korningsval" style="max-width:420px">${val}</select></div>
     <div>${res?.status === "OK" ? `<a class="knapp liten" href="api/korningar/${k.id}/excel">${IKON.ladda} Excel</a><a class="knapp liten" href="api/korningar/${k.id}/pdf">${IKON.ladda} PDF</a>` : ""}
-      <button class="guld liten" data-g="lagg-schema">${IKON.spela} Lägg nytt schema</button></div></div></section>`;
+      <button class="liten" data-g="lagg-manuellt" title="Börja med ett tomt schema och lägg passen själv">✋ Lägg själv</button>
+      <button class="guld liten" data-g="lagg-schema">🤖 Lägg nytt schema</button></div></div></section>`;
 }
 
 function sammanfattning() {
@@ -622,6 +624,7 @@ document.addEventListener("change", e => {
 
 // ---------------------------------------------------------------- klick i vyerna
 async function vyKlick(g, el) {
+  if (g === "lagg-manuellt") { if (!(await spara())) return; const k = await api("POST", `enheter/${st.enhet.id}/manuell`); st.startaRedigering = true; st.korning = null; location.hash = `#/e/${st.enhet.id}/schema/${k.id}`; return; }
   if (["redigera", "avsluta-red", "angra", "andra-pass", "ny-pass", "stang-panel", "ta-bort-pass", "spara-pass", "spara-red"].includes(g)) return redigeringsKlick(g, el);
   switch (g) {
     case "anvand-forslag": {

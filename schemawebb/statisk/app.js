@@ -147,12 +147,12 @@ function visaInloggning() {
 // ---------------------------------------------------------------- vy: enheter
 async function visaEnheter() {
   st.vy = "hem"; st.enhet = null; st.korning = null;
+  if (st.guide) { if (!$(".guide")) { ritaMeny(); sokvag([["Enheter", "#/"], ["Ny enhet"]]); } vy().innerHTML = GUIDE.html(st.guide); return; }
   try { st.enhetLista = await api("GET", "enheter"); } catch { /* behåll */ }
   ritaMeny();
   sokvag([["Enheter"]]);
   const [enheter, exempel] = await Promise.all([api("GET", "enheter"), api("GET", "exempel")]);
   st.exempel = exempel;
-  if (st.guide) { vy().innerHTML = GUIDE.html(st.guide); return; }
   vy().innerHTML = `
     <section class="kort valkommen"><div class="logga ljus">${loggaText()}</div>
       <p class="dampad" style="margin:8px 0 0">Planering som skapar balans – idag och imorgon. En enhet är en arbetsgrupp med medarbetare, behov, önskemål och regler; varje schema du lägger sparas som en körning.</p></section>
@@ -694,21 +694,21 @@ document.addEventListener("click", async e => {
       }
       case "avbryt": st.guide = null; return visaEnheter();
       case "tillbaka": g.steg--; return visaEnheter();
-      case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; return visaEnheter(); }
-      case "minsta": { const r = GUIDE.berakna(g); g.dagkvall = r.minDag; g.natt = r.minNatt; return visaEnheter(); }
-      case "anvand-behov": g.budget = String(Math.round(GUIDE.berakna(g).behovTimmar * 2) / 2); return visaEnheter();
-      case "skapa": case "skapa-lagg": {
-        const ind = GUIDE.indata(g);
-        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: ind });
+      case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaEnheter(); }
+      case "satt": GUIDE.satt(g, el.dataset.falt, el.dataset.varde); return visaEnheter();
+      case "minsta": { const r = GUIDE.berakna(g); g.antalDag = Math.max(g.antalDag, r.minDag); g.antalNatt = Math.max(g.antalNatt, r.minNatt); return visaEnheter(); }
+      case "skapa": case "skapa-ai": case "skapa-manuellt": {
+        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: GUIDE.indata(g) });
         st.guide = null; st.enhet = null; st.enhetLista = null;
-        if (val === "skapa-lagg") { await laddaEnhet(id); await laggSchema(); }
+        if (val === "skapa-ai") { await laddaEnhet(id); await laggSchema(); }
+        else if (val === "skapa-manuellt") { const k = await api("POST", `enheter/${id}/manuell`); st.startaRedigering = true; location.hash = `#/e/${id}/schema/${k.id}`; }
         else location.hash = `#/e/${id}/oversikt`;
         meddela("Enheten är skapad."); return;
       }
     }
   } catch (err) { meddela(err.message); }
 });
-document.addEventListener("change", e => { if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target)) visaEnheter(); });
+document.addEventListener("change", e => { if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target)) visaEnheter().then(() => document.getElementById(e.target.id)?.focus()); });
 document.addEventListener("input", e => { if (st.guide && e.target.closest(".guide")) GUIDE.las(st.guide, e.target); });
 
 document.addEventListener("click", async e => {

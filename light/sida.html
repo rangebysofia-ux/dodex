@@ -202,6 +202,12 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 .guidetips.varn { background: var(--varn-bg); color: var(--varn); }
 .guidetabell input { width: 64px; text-align: center; } .guidetabell th { text-align: left; padding-right: 8px; }
 .guidenav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--linje); }
+.guidefraga-nr { margin: 0; font-size: 12px; color: var(--dampad); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.guidefraga { font-size: 22px; margin: 4px 0 10px; }
+.guideprickar { display: flex; gap: 5px; margin-bottom: 12px; } .guideprickar i { flex: 1; height: 5px; border-radius: 3px; background: var(--linje); }
+.guideprickar i.klar { background: var(--accent-svag); } .guideprickar i.aktiv { background: var(--accent); }
+.valknappar { display: flex; flex-wrap: wrap; gap: 8px; } .valknapp { border-radius: 999px; padding: 9px 14px; }
+.valknapp[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -362,7 +368,8 @@ async function oppna(e) {
 function ritaFot() {
   const f = $("#fot"); f.hidden = false;
   f.innerHTML = `<div><select id="sek" aria-label="Söktid"><option value="5"${st.sekunder === 5 ? " selected" : ""}>Snabb</option><option value="8"${st.sekunder === 8 ? " selected" : ""}>Normal</option><option value="20"${st.sekunder === 20 ? " selected" : ""}>Noggrann</option></select>
-    <button class="primar" data-g="lagg" ${st.kor ? "disabled" : ""}>${st.kor ? "Lägger schema …" : "Lägg schema"}</button></div>`;
+    <button data-g="lagg-manuellt" ${st.kor ? "disabled" : ""} aria-label="Lägg schemat själv">✋ Själv</button>
+    <button class="primar" data-g="lagg" ${st.kor ? "disabled" : ""}>${st.kor ? "Lägger schema …" : "🤖 Lägg schema"}</button></div>`;
   $("#sek").onchange = ev => (st.sekunder = +ev.target.value);
 }
 
@@ -566,6 +573,7 @@ document.addEventListener("click", async ev => {
     case "avbryt-onsk": st.onskForm = null; return ritaFlik();
     case "ta-bort-onsk": i.onskemal.splice(+el.dataset.n, 1); return andrad(true);
     case "lagg": return laggSchema();
+    case "lagg-manuellt": { const b = MOTOR_HUVUD.balans(st.enhet.indata); if (b.fel) { meddela("Rätta felen i kontrollen först."); return; } return laggManuellt(); }
     case "senaste": if (st.korningar.length) { st.rflik = "oversikt"; return visaKorning(st.korningar[0]); } return;
     case "rflik": st.rflik = el.dataset.f; st.person = null; ritaResultat(); return;
     case "person": st.person = el.dataset.p || null; st.rflik = "personer"; ritaResultat(); window.scrollTo(0, 0); return;
@@ -679,6 +687,21 @@ function ritaPerson(pid, res, ind) {
   }
   h += `</tbody></table></div><p class="dampad liten" style="margin-top:6px">Tryck på ett pass för datum och OB.</p></section>`;
   return h + `<div class="grafyta">${GRAF.vilaKort(pid, res, ind)}${GRAF.obKort(pid, res, ind, { installningar: "Period" })}</div>`;
+}
+
+// Lägg schemat själv: en körning med tomt schema som öppnas i redigeringsläge.
+async function laggManuellt() {
+  const ind = st.enhet.indata, W = ind.veckor || 4, ht = ind.heltid_minuter_per_vecka || 2220;
+  const grund = { status: "OK", motor: "manuell", enhet: ind.enhet, veckor: W, cykliskt: ind.cykliskt !== false, sekunder: 0,
+    kpi: { vakanta_pass: 0, blocklangd: 0, rattvisa: 0, onskemal: 0 }, vakanser: [], schema: {},
+    personer: Object.fromEntries(ind.personal.map(p => [p.id, { pass: 0, minuter: 0, mal_minuter: Math.round((p.heltid_minuter_per_vecka || ht) * (p.grad ?? 1) * W), kvallspass: 0, helgfrekvens: p.helgfrekvens || null }])) };
+  const res = raknaOm(ind, GUIDE.tomtSchema(ind), grund), g = GRANSKNING.kontrollera(ind, res);
+  const k = { id: nyttId(), enhet: st.enhet.id, namn: `Körning ${st.korningar.length + 1} (manuell)`, skapad: Date.now(), status: "BROTT", vakanta: res.kpi.vakanta_pass,
+    data: JSON.stringify({ resultat: res, granskning: g, balans: 0, indata: ind }) };
+  st.korningar.unshift(k);
+  try { await lager.sparaKorning(k); } catch (e) { meddela("Kunde inte spara: " + e.message); }
+  visaKorning(k); st.rflik = "schema";
+  st.red = { schema: structuredClone(res.schema), historik: [], andringar: 0, panel: null }; raknaOmUtkast();
 }
 
 // ------------------------------------------------------------------ justera ett färdigt schema
@@ -900,9 +923,13 @@ document.addEventListener("click", async e => {
     case "avbryt": st.guide = null; return visaLista();
     case "tillbaka": g.steg--; return visaLista();
     case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaLista(); }
-    case "minsta": { const r = GUIDE.berakna(g); g.dagkvall = r.minDag; g.natt = r.minNatt; return visaLista(); }
-    case "anvand-behov": g.budget = String(Math.round(GUIDE.berakna(g).behovTimmar * 2) / 2); return visaLista();
-    case "skapa": case "skapa-lagg": { st.guide = null; await skapa(g.namn || "Ny enhet", GUIDE.indata(g)); meddela("Enheten är skapad."); if (val === "skapa-lagg") laggSchema(); return; }
+    case "satt": GUIDE.satt(g, el.dataset.falt, el.dataset.varde); return visaLista();
+    case "minsta": { const r = GUIDE.berakna(g); g.antalDag = Math.max(g.antalDag, r.minDag); g.antalNatt = Math.max(g.antalNatt, r.minNatt); return visaLista(); }
+    case "skapa": case "skapa-ai": case "skapa-manuellt": {
+      st.guide = null; await skapa(g.namn || "Ny enhet", GUIDE.indata(g)); meddela("Enheten är skapad.");
+      if (val === "skapa-ai") laggSchema(); else if (val === "skapa-manuellt") laggManuellt();
+      return;
+    }
   }
 });
 document.addEventListener("change", e => { if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target)) visaLista(); });
