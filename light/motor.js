@@ -11,12 +11,12 @@ const MOTOR = (() => {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
     block_min: 2, block_max: 5, block_rekommenderat: 4, helgfrekvens: "2/4", hel_helg: true,
-    ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300,
+    ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1,
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
   const DELNAMN = { 1: "morgon", 2: "kvall", 3: "natt" };
-  const HW = 1e6;      // hård regel
-  const WV = 1e3;      // vakant pass
+  const HW = 1e8;      // hård regel
+  const WV = 1e5;      // vakant pass (väger alltid tyngre än block, rättvisa, spridning och önskemål)
   const WB = 60;       // arbetsdagar i följd över rekommenderat
   const WF = 8;        // rättvisa (kvadratisk avvikelse i antal kvällar)
   const WO = 4;        // brutet önskemål per vikt
@@ -257,7 +257,17 @@ const MOTOR = (() => {
         let kv = 0; for (let d = 0; d < N; d++) if (x[d] === K) kv++;
         f = (kv - p.P * kAndel) ** 2;
       }
-      return { hard, block, onsk: onskStraff, f, summa: hard * HW + block * WB + onskStraff * WO + f * WF };
+      // spridning: veckor med bara morgnar eller bara kvällar
+      let spr = 0;
+      if (p.typer.length > 1 && r.spridning_kvallar !== "av" && W >= 2) {
+        for (let w = 0; w < W; w++) {
+          let km = 0, mm = 0;
+          for (let d = w * 7; d < w * 7 + 7; d++) { if (x[d] === K) km++; else if (x[d] === M) mm++; }
+          if (km + mm) { if (!km) spr++; if (!mm) spr++; if (Number(r.spridning_tolerans) < 1) spr += Math.max(0, Math.abs(km - mm) - 1); }
+        }
+      }
+      const ws = r.spridning_kvallar === "stark" ? 400 : 25;
+      return { hard, block, onsk: onskStraff, f, spr, summa: hard * HW + block * WB + onskStraff * WO + f * WF + spr * ws };
     }
 
     function bygg() {
@@ -358,12 +368,12 @@ const MOTOR = (() => {
   function resultat(pr, X, tider, personKost, sekunder) {
     const { r, W, N, cyk, behov, pers } = pr;
     const schema = {}, personer = {};
-    let hardTotalt = 0, block = 0, onskStraff = 0, passlangd = 0;
+    let hardTotalt = 0, block = 0, onskStraff = 0, passlangd = 0, spridning = 0;
     const brott = [];
     const kvallar = [];
     pers.forEach((p, pi) => {
       const x = X[pi], k = personKost(pi, x, brott);
-      hardTotalt += k.hard; block += k.block; onskStraff += k.onsk;
+      hardTotalt += k.hard; block += k.block; onskStraff += k.onsk; spridning += k.spr;
       const rad = x.map((t, d) => {
         if (!t) return null;
         if (t === NT) return { mall: "N", dygnsdel: "natt", start: klocka(pr.ns), slut: klocka(pr.ne), rast: pr.nRast, netto: pr.nnet, ...(pr.nRast ? {} : { maltidsuppehall: true }) };
@@ -402,7 +412,7 @@ const MOTOR = (() => {
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak, vakanta_pass: vak, vakanta_tidpunkter: 0, blocklangd: block, passlangd: Math.round(passlangd),
-        rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, onskemal: onskStraff, hardregelbrott: hardTotalt },
+        rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt },
       personer, vakanser, schema, brott,
     };
   }

@@ -338,6 +338,7 @@ function ritaFlik() {
       ${tal("pass_per_vecka", "Pass per vecka, dag och kväll", "lokal regel", 4.75, 0.25)}
       ${tal("block_min", "Minst antal arbetsdagar i följd", "lokal regel", 2, 1)}
       ${tal("block_max", "Högst antal arbetsdagar i följd", "lokal regel", 5, 1)}
+      <div class="regel"><div>Blandning av morgon och kväll varje vecka<br><span class="niva">princip</span></div><select data-r="spridning_kvallar">${[["av", "Av"], ["mjuk", "Mjuk"], ["stark", "Stark"]].map(([k, t]) => `<option value="${k}"${(r.spridning_kvallar || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="regel"><div>Morgonpass börjar<br><span class="niva">princip</span></div><input type="time" data-r="morgon_start" value="${r.morgon_start ?? "07:00"}"></div>
       <div class="regel"><div>Kvällspass slutar<br><span class="niva">princip</span></div><input type="time" data-r="kvall_slut" value="${r.kvall_slut ?? "22:00"}"></div>
       ${tal("tolerans_minuter", "Tolerans för arbetstid (minuter)", "kontrakt", 60, 15)}
@@ -431,6 +432,7 @@ document.addEventListener("input", ev => {
     i.regler = i.regler || {};
     const k = el.dataset.r;
     if (el.dataset.t === "check") { if (el.checked) delete i.regler[k]; else i.regler[k] = false; }
+    else if (el.tagName === "SELECT") { if (el.value === "mjuk") delete i.regler[k]; else i.regler[k] = el.value; }
     else if (el.type === "time") i.regler[k] = el.value;
     else { const v = parseFloat(el.value.replace(",", ".")); if (isNaN(v)) delete i.regler[k]; else i.regler[k] = v; }
     andrad(false);
@@ -441,7 +443,7 @@ document.addEventListener("input", ev => {
     andrad(false);
   }
 });
-document.addEventListener("change", ev => { if (ev.target.tagName === "SELECT" && ev.target.closest("#flik") && ev.target.dataset.p !== undefined) ev.target.dispatchEvent(new Event("input", { bubbles: true })); });
+document.addEventListener("change", ev => { if (ev.target.tagName === "SELECT" && ev.target.closest("#flik") && (ev.target.dataset.p !== undefined || ev.target.dataset.r)) ev.target.dispatchEvent(new Event("input", { bubbles: true })); });
 
 document.addEventListener("click", async ev => {
   const el = ev.target.closest("[data-g]"); if (!el) return;

@@ -47,8 +47,21 @@ STANDARDREGLER = {
     "tolerans_minuter": 60,
     "langd_band_minuter": 120,
     "min_passlangd_minuter": 300,
+    # Spridning av morgnar och kvällar över perioden för den som arbetar båda: "av", "mjuk" eller "stark".
+    "spridning_kvallar": "mjuk",
+    "spridning_tolerans": 1,
 }
-MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa", "onskemal"]
+MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa", "spridning", "onskemal"]
+
+
+def malordning(r, mal):
+    """Ordningen för målen. Spridningen väger tyngre med inställningen "stark", men aldrig före vakanser."""
+    ordning = [m for m in mal if m != "spridning"]
+    if r.get("spridning_kvallar") == "stark":
+        ordning.insert(1, "spridning")
+    elif r.get("spridning_kvallar") != "av":
+        ordning.insert(ordning.index("rattvisa") + 1 if "rattvisa" in ordning else len(ordning) - 1, "spridning")
+    return ordning
 
 
 class IndataFel(Exception):
@@ -476,6 +489,30 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             m.add_min_equality(lo, antal)
             rattvisa.append(hi - lo)
     mal["rattvisa"] = sum(rattvisa) if rattvisa else 0
+
+    # spridning: den som arbetar både morgon och kväll ska ha båda i varje vecka (och, med toleransen 0,
+    # högst en kvälls skillnad mot halva veckans pass). Målet räknar veckor som bara har den ena sorten.
+    spridning = []
+    W = prob["W"]
+    if r.get("spridning_kvallar", "mjuk") != "av" and W >= 2:
+        strikt = float(r.get("spridning_tolerans", 1)) < 1
+        for pi, p in enumerate(prob["personer"]):
+            if not ("morgon" in p["dygnsdelar"] and "kvall" in p["dygnsdelar"]):
+                continue
+            for w in range(W):
+                dagar = range(w * 7, w * 7 + 7)
+                kv = sum(x[pi, d, s] for d in dagar for s in p["tillatna"] if M[s]["dygnsdel"] == "kvall")
+                mo = sum(x[pi, d, s] for d in dagar for s in p["tillatna"] if M[s]["dygnsdel"] == "morgon")
+                for antal in (kv, mo):
+                    saknas = m.new_bool_var("")
+                    m.add(antal + saknas >= 1)
+                    spridning.append(saknas)
+                if strikt:
+                    avv = m.new_int_var(0, 7, "")
+                    m.add(avv >= kv - mo - 1)
+                    m.add(avv >= mo - kv - 1)
+                    spridning.append(avv)
+    mal["spridning"] = sum(spridning) if spridning else 0
     mal["onskemal"] = sum(onsk_straff) if onsk_straff else 0
 
     var = {"x": x, "work": work, "vak": vak}
@@ -538,7 +575,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
     # Fas 1: arbetsmönster (vilka dagar och vilken dygnsdel) med alla hårda regler utom exakt arbetstid.
     enkel = monsterproblem(prob)
     m1, var1, mal1, _ = bygg_modell(enkel, utan_tid=True)
-    r1, status1 = lexikografiskt(m1, var1, mal1, ["vakanser", "blocklangd", "rattvisa", "onskemal"],
+    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "blocklangd", "rattvisa", "spridning", "onskemal"]),
                                  tid_per_steg, arbetare, tyst, "mönster – ")
     if r1 is None and status1 == cp_model.INFEASIBLE:
         # Mönstermodellen har färre passlängder. Kontrollera med alla längder (utan exakt arbetstid)
@@ -567,7 +604,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
             return slutresultat(prob, var2, mal2, r2[1], r1[0] + r2[0])
         m2, var2, mal2, _ = bygg_modell(prob)  # mönstret gick inte att fylla: lös fritt nedan
     # Reserv: hela modellen på en gång.
-    r3, status3 = lexikografiskt(m2, var2, mal2, MALORDNING, tid_per_steg * 2, arbetare, tyst, "hela – ")
+    r3, status3 = lexikografiskt(m2, var2, mal2, malordning(prob["r"], MALORDNING), tid_per_steg * 2, arbetare, tyst, "hela – ")
     if r3:
         return slutresultat(prob, var2, mal2, r3[1], r3[0])
     namn = "INFEASIBLE" if status3 == cp_model.INFEASIBLE else "UNKNOWN"
@@ -586,7 +623,7 @@ def slutresultat(prob, var, mal, xvarden, steg):
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 30
     kpi = {}
-    for namn in MALORDNING:
+    for namn in malordning(prob["r"], MALORDNING):
         if isinstance(mal2[namn], int):
             kpi[namn] = 0
             continue
@@ -595,6 +632,7 @@ def slutresultat(prob, var, mal, xvarden, steg):
         solver.solve(mm)
         kpi[namn] = int(round(solver.objective_value))
         mm.add(mal2[namn] <= kpi[namn])
+    kpi.setdefault("spridning", 0)
     return tolka(prob, solver, v2, steg, kpi)
 
 

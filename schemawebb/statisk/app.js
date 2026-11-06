@@ -560,6 +560,8 @@ const REGLER = [
   { grupp: "Lokala regler", k: "block_min", namn: "Minst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 2 },
   { grupp: "Lokala regler", k: "block_max", namn: "Högst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 5 },
   { grupp: "Principer", k: "block_rekommenderat", namn: "Helst högst antal dagar i följd", niva: "princip", typ: "mjuk", falt: "tal", steg: 1, std: 4 },
+  { grupp: "Principer", k: "spridning_kvallar", namn: "Blandning av morgon och kväll varje vecka", beskr: "För den som arbetar både morgon och kväll. Mjuk väger in efter rättvisan, Stark väger tyngst efter vakanserna.", niva: "princip", typ: "mjuk", falt: "val", val: { av: "Av", mjuk: "Mjuk", stark: "Stark" }, std: "mjuk" },
+  { grupp: "Principer", k: "spridning_tolerans", namn: "Hur jämn blandningen ska vara", niva: "princip", typ: "mjuk", falt: "val", tal: true, val: { 1: "Båda sorterna varje vecka", 0: "Nästan lika många av varje" }, std: 1 },
   { grupp: "Principer", k: "morgon_start", namn: "Morgonpass börjar", niva: "princip", typ: "hård", falt: "tid", std: "07:00" },
   { grupp: "Principer", k: "kvall_slut", namn: "Kvällspass slutar", niva: "princip", typ: "hård", falt: "tid", std: "22:00" },
   { grupp: "Principer", k: "kant_fran", namn: "Passbyte tidigast", niva: "princip", typ: "hård", falt: "tid", std: "12:00" },
@@ -586,7 +588,7 @@ function ritaInstallningar() {
     const visa = R.falt === "timmar" ? sv(v / 60, 1) + " h" : R.falt === "minuter" ? v + " min" : R.falt === "val" ? R.val[v] : v;
     if (last) falt = `<span class="lat">${esc(visa)}</span><button class="liten" data-g="las-upp" data-k="${R.k}" aria-label="Lås upp ${R.namn}">${IKON.las} Lås upp</button>`;
     else if (R.falt === "check") falt = `<label class="check"><input type="checkbox" data-r="${R.k}" data-t="check"${v ? " checked" : ""}> ${v ? "På" : "Av"}</label>`;
-    else if (R.falt === "val") falt = `<select data-r="${R.k}">${Object.entries(R.val).map(([a, t]) => `<option value="${a}"${a === v ? " selected" : ""}>${t}</option>`).join("")}</select>`;
+    else if (R.falt === "val") falt = `<select data-r="${R.k}">${Object.entries(R.val).map(([a, t]) => `<option value="${a}"${String(a) === String(v) ? " selected" : ""}>${t}</option>`).join("")}</select>`;
     else if (R.falt === "tid") falt = `<input type="time" data-r="${R.k}" value="${esc(v)}">`;
     else if (R.falt === "timmar") falt = `<input type="number" inputmode="decimal" step="0.5" min="0" data-r="${R.k}" data-t="timmar" value="${v / 60}" aria-label="${R.namn} i timmar"> <span class="dampad">h</span>`;
     else if (R.falt === "minuter") falt = `<input type="number" inputmode="numeric" step="5" min="0" data-r="${R.k}" data-t="tal" value="${v}" aria-label="${R.namn} i minuter"> <span class="dampad">min</span>`;
@@ -629,7 +631,7 @@ function regelInput(el) {
   if (!el.dataset.r) return;
   const R = REGLER.find(r => r.k === el.dataset.r);
   st.indata.regler = st.indata.regler || {};
-  let v = el.dataset.t === "check" ? el.checked : el.dataset.t === "tal" ? parseFloat(el.value.replace(",", ".")) : el.dataset.t === "timmar" ? Math.round(parseFloat(el.value.replace(",", ".")) * 60) : el.value;
+  let v = el.dataset.t === "check" ? el.checked : el.dataset.t === "tal" || R.tal ? parseFloat(el.value.replace(",", ".")) : el.dataset.t === "timmar" ? Math.round(parseFloat(el.value.replace(",", ".")) * 60) : el.value;
   if (v === R.std || (typeof v === "number" && isNaN(v))) delete st.indata.regler[R.k]; else st.indata.regler[R.k] = v;
   if (!Object.keys(st.indata.regler).length) delete st.indata.regler;
   markeraAndrad(el.dataset.t === "check" || R.falt === "val");

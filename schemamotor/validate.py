@@ -24,11 +24,11 @@ STANDARD = {
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
     "block_rekommenderat": 4, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
-    "min_passlangd_minuter": 300,
+    "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1,
 }
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
-        "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet"}
+        "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip"}
 
 
 def tid(s):
@@ -252,6 +252,16 @@ def kontrollera(indata, schema_dok):
                     start += v
             elif sum(work) != sum(mal_lista):
                 brott("ANTAL_PASS", pid, f"{sum(work)} pass, ska vara {sum(mal_lista)}.")
+        # spridning: veckor med bara morgnar eller bara kvällar för den som arbetar båda
+        delar = pers.get("dygnsdelar", ["morgon", "kvall"])
+        if r["spridning_kvallar"] != "av" and "morgon" in delar and "kvall" in delar and W >= 2:
+            ensidiga = []
+            for w in range(W):
+                typer = [p.get("dygnsdel") for d, _, _, p in lista if w * 7 <= d < w * 7 + 7]
+                if typer and (typer.count("kvall") == 0 or typer.count("morgon") == 0):
+                    ensidiga.append(f"v{w + 1} ({'bara kväll' if typer.count('morgon') == 0 else 'bara morgon'})")
+            if ensidiga:
+                brott("SPRIDNING", pid, f"Veckor utan blandning av morgon och kväll: {', '.join(ensidiga)}.", False)
         tol = pers.get("tolerans_minuter")
         if tol is None:
             tol = r["tolerans_minuter"]

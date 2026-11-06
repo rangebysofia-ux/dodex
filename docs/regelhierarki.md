@@ -29,7 +29,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 7. **Varannan helg är hård för enheten.** Alla arbetar exakt varannan helg i fasta grupper (A och B). Enhetens standard kan inte ändras. Undantag görs bara per person (helgfrekvens 1/4, 3/4, alla eller ingen), till exempel när kontraktet säger något annat, och visas som undantag i gränssnittet. Beslutat av användaren 2026-11-05.
 8. **Låsta regler kan låsas upp.** Dygnsvila, veckovila, rast och varannan helg är låsta som standard, men kan ändras under Regler när användaren bekräftar att det finns ett lokalt avtal eller beslut. Bekräftelsen sparas i `avvikelser` i indata, och avvikelsen visas på alla scheman från enheten. Utan bekräftelse avvisas försvagningen. Beslutat av användaren 2026-11-06.
 9. **Minsta passlängd 5 timmar (lokal regel).** Med 4,75 pass per vecka blir passen kortare än 5 timmars arbetstid för den som har under cirka 64 % (heltid 37 h). Då tas pass bort i stället, tills varje pass är minst 5 timmar: antal pass = arbetstid ÷ 5 h, avrundat nedåt. Kontrakterad tid ändras inte. Gäller bara när antal pass räknas fram, inte när det anges för personen. `min_passlangd_minuter` (standard 300, 0 stänger av). Exempel för 4 veckor: 60 % ger 17 pass, 50 % ger 14 pass. Beslutat av användaren 2026-11-06.
-10. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
+10. **Blandning av morgon och kväll varje vecka (princip, mjuk).** Den som arbetar både morgon och kväll ska ha båda sorterna varje vecka, inte till exempel bara kvällar en vecka och bara morgnar nästa. `spridning_kvallar`: "av", "mjuk" (standard, efter rättvisan) eller "stark" (direkt efter vakanserna). `spridning_tolerans` 1 = båda sorterna varje vecka, 0 = dessutom högst en kvälls skillnad mot morgnarna. Fredagsregeln gör ofta helgveckor ensidiga: den som arbetar fredag kväll arbetar kväll hela helgen. Beslutat av användaren 2026-11-06.
+11. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
 
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
@@ -43,7 +44,8 @@ De mjuka målen löses i ordning, och varje nivå låses innan nästa optimeras:
 2. Blocklängd (antal tillfällen med fler än 4 dagar i följd)
 3. Passlängd (avvikelse från mållängd per pass och från kontrakterad tid, i minuter)
 4. Rättvisa (spridning i antal kvälls- och morgonpass mellan personer)
-5. Önskemål (viktade brutna önskemål)
+5. Spridning (veckor med bara morgnar eller bara kvällar; med inställningen "stark" direkt efter vakanser)
+6. Önskemål (viktade brutna önskemål)
 
 Det betyder att en lägre nivå aldrig kan köpas på bekostnad av en högre. Ett femte arbetspass i följd accepteras bara om det är nödvändigt för att undvika en vakans, aldrig för att få jämnare passlängder.
 

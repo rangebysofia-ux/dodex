@@ -36,6 +36,7 @@ STANDARDREGLER = {
     "pass_per_vecka", "morgon_start", "kvall_slut", "kant_fran", "kant_till", "steg_minuter", "block_min",
     "block_max", "block_rekommenderat", "helg_start", "helg_slut", "hel_helg", "helgfrekvens",
     "ingen_fredagskvall_fore_ledig_helg", "tolerans_minuter", "langd_band_minuter", "min_passlangd_minuter",
+    "spridning_kvallar", "spridning_tolerans",
 }
 # Avtal och lag får aldrig försvagas (AGENTS.md). Skärpningar är tillåtna.
 SKYDDADE = {

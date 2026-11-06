@@ -276,3 +276,7 @@ tr.bem td .minus, tr.bem td .plus { margin: 0 2px; }
 .forslagskort { border: 2px dashed var(--accent); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: var(--accent-svag); }
 .chatt form { display: flex; gap: 8px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--linje); }
 .chatt textarea { min-height: 44px; font: inherit; font-size: 15px; resize: none; }
+
+.veckomix { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+.veckomix span { font: 11px var(--mono); padding: 1px 6px; border-radius: 6px; background: var(--yta2); color: var(--dampad); }
+.veckomix span.ensidig { background: var(--kritisk-bg); color: var(--kritisk); font-weight: 700; }

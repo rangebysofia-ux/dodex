@@ -10,11 +10,11 @@ const GRANSKNING = (() => {
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
     block_rekommenderat: 4, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
-    helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300,
+    helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1,
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", PASSFONSTER: "princip",
-    BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet" };
+    BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
@@ -146,6 +146,15 @@ const GRANSKNING = (() => {
       }
       const faktiskt = work.reduce((a, b) => a + b, 0);
       if (mal != null && faktiskt !== mal) brott("ANTAL_PASS", pid, `${faktiskt} pass, ska vara ${mal}.`);
+      const delar = pers.dygnsdelar || ["morgon", "kvall"];
+      if (r.spridning_kvallar !== "av" && delar.includes("morgon") && delar.includes("kvall") && W >= 2) {
+        const ensidiga = [];
+        for (let w = 0; w < W; w++) {
+          const typer = lista.filter(([d]) => d >= w * 7 && d < w * 7 + 7).map(([, , , p]) => p.dygnsdel);
+          if (typer.length && (!typer.includes("kvall") || !typer.includes("morgon"))) ensidiga.push(`v${w + 1} (${typer.includes("morgon") ? "bara morgon" : "bara kväll"})`);
+        }
+        if (ensidiga.length) brott("SPRIDNING", pid, `Veckor utan blandning av morgon och kväll: ${ensidiga.join(", ")}.`, false);
+      }
       let tol = pers.tolerans_minuter;
       if (tol == null) { tol = r.tolerans_minuter; if (natt && arbetstider.length) tol = Math.max(tol, Math.ceil(Math.min(...arbetstider) / 2)); }
       const arb = arbetstider.reduce((a, b) => a + b, 0);

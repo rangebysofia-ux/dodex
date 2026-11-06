@@ -59,7 +59,14 @@ function fordelning(res, indata) {
   const totM = bada.reduce((s, r) => s + r.c.morgon, 0), totK = bada.reduce((s, r) => s + r.c.kvall, 0);
   const andel = totM + totK ? totK / (totM + totK) : 0.5;
   bada.forEach(r => { const n = r.c.morgon + r.c.kvall; r.mal = n * andel; r.avvikelse = r.c.kvall - r.mal; r.jamn = Math.abs(r.avvikelse) <= 1.5; });
-  return { rader, andel, jamn: bada.every(r => r.jamn), storst: bada.length ? Math.max(...bada.map(r => Math.abs(r.avvikelse))) : 0, antalBada: bada.length };
+  // vecka för vecka: antal kvällar och morgnar, och veckor som bara har den ena sorten
+  rader.forEach(r => {
+    const rad = res.schema[r.pid];
+    r.veckor = Array.from({ length: res.veckor }, (_, w) => { const v = rad.slice(w * 7, w * 7 + 7).filter(Boolean); return { k: v.filter(p => p.dygnsdel === "kvall").length, m: v.filter(p => p.dygnsdel === "morgon").length }; });
+    r.ensidiga = r.typ === "bada" ? r.veckor.filter(v => v.k + v.m && (!v.k || !v.m)).length : 0;
+  });
+  return { rader, andel, jamn: bada.every(r => r.jamn), storst: bada.length ? Math.max(...bada.map(r => Math.abs(r.avvikelse))) : 0, antalBada: bada.length,
+    ensidiga: bada.reduce((s, r) => s + r.ensidiga, 0), personveckor: bada.length * res.veckor };
 }
 
 // ---------------------------------------------------------------- körningsvy
@@ -330,14 +337,16 @@ function fordelningKort(f) {
   const rader = f.rader;
   let h = `<section class="kort"><div class="rubrikrad"><h2 style="margin:0">Fördelning morgon och kväll</h2>
     <span class="status ${f.jamn ? "ok" : "dalig"}">${f.jamn ? "Jämnt fördelat" : "Ojämnt fördelat"}</span></div>
-    <p class="dampad liten" style="margin:6px 0 10px">Alla som arbetar både dag och kväll ska ha ungefär samma andel kvällar: ${Math.round(f.andel * 100)} % i den här körningen. Strecket visar var varje person borde ligga. Jämnt betyder högst 1,5 pass ifrån.</p>`;
+    <p class="dampad liten" style="margin:6px 0 10px">Alla som arbetar både dag och kväll ska ha ungefär samma andel kvällar: ${Math.round(f.andel * 100)} % i den här körningen. Strecket visar var varje person borde ligga. Jämnt betyder högst 1,5 pass ifrån. Under varje stapel: kvällar/morgnar vecka för vecka, rött betyder en vecka med bara den ena sorten.</p>
+    ${f.antalBada ? `<div class="banner ${f.ensidiga ? "varn" : "ok"}" style="margin-bottom:10px">${f.ensidiga ? IKON.varning : IKON.ok}<div><strong>${f.ensidiga ? `${f.ensidiga} av ${f.personveckor} veckor utan blandning` : "Blandat varje vecka"}</strong><span class="liten">${f.ensidiga ? "Inställningen Blandning av morgon och kväll finns under Regler. Fredagsregeln (kväll hela helgen efter fredag kväll) gör ofta att helgveckor blir ensidiga." : "Alla som arbetar både morgon och kväll har båda sorterna varje vecka."}</span></div></div>` : ""}`;
   for (const r of rader) {
     const tot = r.c.morgon + r.c.kvall + r.c.natt || 1;
     const seg = ["morgon", "kvall", "natt"].filter(d => r.c[d]).map(d => `<i style="width:${r.c[d] / tot * 100}%;background:${FARG[d]}" data-tips="${esc(r.pid)}: ${r.c[d]} ${DELAR[d].toLowerCase()}pass"></i>`).join("");
     const etikett = r.typ === "bada" ? (r.jamn ? `<span class="status ok">Jämnt</span> <span class="dampad">${r.c.kvall} kvällar</span>` : `<span class="status dalig">${r.avvikelse > 0 ? "+" : ""}${sv(r.avvikelse, 1)} kvällar</span>`)
       : `<span class="niva avviker">Undantag: ${r.typ === "natt" ? "natt" : "bara " + DELAR[r.typ].toLowerCase()}</span>`;
     const mal = r.typ === "bada" ? `style="--mal:${(r.c.morgon + r.c.kvall - r.mal) / tot * 100}%"` : "";
-    h += `<div class="fordelningsrad"><span class="namn">${esc(r.pid)}</span><div class="${r.typ === "bada" ? "mal" : ""}" ${mal}><div class="fordelning">${seg}</div></div><span class="etikett liten">${etikett}</span></div>`;
+    const veckor = r.typ === "bada" ? `<div class="veckomix">${r.veckor.map((v, w) => `<span class="${v.k + v.m && (!v.k || !v.m) ? "ensidig" : ""}" data-tips="Vecka ${w + 1}: ${v.k} kvällar, ${v.m} morgnar">${v.k}/${v.m}</span>`).join("")}</div>` : "";
+    h += `<div class="fordelningsrad"><span class="namn">${esc(r.pid)}</span><div><div class="${r.typ === "bada" ? "mal" : ""}" ${mal}><div class="fordelning">${seg}</div></div>${veckor}</div><span class="etikett liten">${etikett}</span></div>`;
   }
   return h + `<div class="legend" style="margin-top:10px"><span><i style="background:var(--morgon)"></i>Morgon</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--text);width:3px"></i>Jämn andel</span></div></section>`;
 }
