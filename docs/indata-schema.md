@@ -66,7 +66,9 @@
 
 **timkostnad_kr** – valfri genomsnittlig timkostnad i kronor: lön med personalomkostnader, **utan OB**. OB räknas separat enligt AB 25 § 21 (se `docs/ob.md`). Påverkar inte lösningen; används för att räkna om timmar till personalkostnad i översikten, nyckeltalen, personvyn och simuleringen.
 
-**startdatum** – valfritt datum (`ÅÅÅÅ-MM-DD`, en måndag) för schemats första dag. Kopplar grundschemat till verkliga datum för OB och helgdagar. Påverkar inte lösningen. Utan startdatum antas den senaste måndagen där ett helt år ryms inom kontrollerade avtalsbelopp.
+**startdatum** – valfritt datum (`ÅÅÅÅ-MM-DD`, en måndag) för schemats första dag. Kopplar grundschemat till verkliga datum för OB och helgdagar. Påverkar inte lösningen. Utan startdatum antas nästa måndag.
+
+**ob_prognos_procent** – valfri uppräkning av OB i procent per år för tid efter sista kontrollerade avtalsnivån (2027-03-31). Standard 3. 0 stänger av; då räknas sådan tid utan kronor. Prognosen visas alltid som prognos, inte avtal (se `docs/ob.md`).
 
 **forvantat** och **beskrivning** – används bara i testfallen.
 

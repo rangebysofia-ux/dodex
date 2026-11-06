@@ -223,8 +223,8 @@ const obCache = new WeakMap();
 function obFor(res, indata) {
   if (typeof OB === "undefined") return null;
   let c = obCache.get(res);
-  const start = indata.startdatum || OB.antagetStart();
-  if (!c || c.start !== start) { c = { start, antaget: !indata.startdatum, per: OB.forSchema(res.schema, start) }; obCache.set(res, c); }
+  const prognos = OB.prognosFor(indata), start = indata.startdatum || OB.antagetStart(prognos);
+  if (!c || c.start !== start || c.prognos !== prognos) { c = { start, prognos, antaget: !indata.startdatum, per: OB.forSchema(res.schema, start, { prognos }) }; obCache.set(res, c); }
   return c;
 }
 
@@ -240,11 +240,11 @@ function obKort(pid, res, indata, { installningar = "Period" } = {}) {
   const rad = k => { const a = x.period.kategorier[k], b = x.ar.kategorier[k];
     return a.min || b.min ? `<tr><td>${KAT_TEXT[k]}</td><td class="tal nw">${tim(a.min)}</td><td class="tal nw">${kr(a.kr)}</td><td class="tal nw">${tim(b.min)}</td><td class="tal nw">${kr(b.kr)}</td></tr>` : ""; };
   return `<section class="kort"><h2>Timmar, OB och kostnad</h2>
-    <p class="dampad liten">OB enligt AB 25 § 21, räknat på verkliga datum från ${esc(ob.start)}${ob.antaget ? ` (antaget, så att hela året har kontrollerade avtalsbelopp – ange enhetens startdatum under ${installningar})` : ""}. Året är 52 veckor där schemat upprepas, med helgdagar och storhelger. Årets OB följer avtalets avrundning per kategori och månad.</p>
+    <p class="dampad liten">OB enligt AB 25 § 21, räknat på verkliga datum från ${esc(ob.start)}${ob.antaget ? ` (antaget – ange enhetens startdatum under ${installningar})` : ""}. Året är 52 veckor där schemat upprepas, med helgdagar och storhelger. Årets OB följer avtalets avrundning per kategori och månad.</p>
     <div class="kpi" style="margin-top:10px">
       <div><b>${tim(p.minuter)}</b><span>arbetstid på ${W} veckor</span></div>
       <div><b>${tim(p.minuter / W * 52)}</b><span>arbetstid per år</span></div>
-      <div><b>${kr(x.ar.kr)}</b><span>OB per år${saknas ? " (delvis utan belopp)" : ""}</span></div>
+      <div><b>${kr(x.ar.kr)}</b><span>OB per år${saknas ? " (delvis utan belopp)" : x.ar.prognosMin ? " (delvis prognos)" : ""}</span></div>
       ${tk ? `<div><b>${kr(lonAr + x.ar.kr)}</b><span>kostnad per år: ${kr(lonAr)} tid + ${kr(x.ar.kr)} OB</span></div>` : `<div><b>–</b><span>kostnad: ange timkostnad under ${installningar}</span></div>`}
     </div>
     <div class="rull" style="margin-top:12px"><table><thead><tr><th>OB-kategori</th><th class="tal">Tid, period</th><th class="tal">Kr, period</th><th class="tal">Tid, år</th><th class="tal">Kr, år</th></tr></thead><tbody>
@@ -253,8 +253,9 @@ function obKort(pid, res, indata, { installningar = "Period" } = {}) {
       ${tk ? `<tr><td>Arbetstid × ${sv(tk, 0)} kr</td><td></td><td class="tal nw">${kr(lonPeriod)}</td><td></td><td class="tal nw">${kr(lonAr)}</td></tr>
       <tr><td><b>Kostnad totalt</b></td><td></td><td class="tal nw"><b>${kr(lonPeriod + x.period.kr)}</b></td><td></td><td class="tal nw"><b>${kr(lonAr + x.ar.kr)}</b></td></tr>` : ""}
     </tbody></table></div>
+    ${x.ar.prognosMin ? `<p class="liten" style="color:var(--varn)">${tim(x.ar.prognosMin)} OB-tid ligger efter 2027-03-31 och räknas med en <b>prognos</b>: avtalsnivån från 2026-04-01 uppräknad med ${sv(ob.prognos, 1)} % per år. Det är inte avtalsbelopp. Prognosen ändras under ${installningar}.</p>` : ""}
     ${saknas ? `<p class="liten" style="color:var(--varn)">${tim(x.ar.saknarNiva)} OB-tid ligger efter 2027-03-31, där det inte finns något kontrollerat avtalsbelopp. Den tiden räknas utan kronor.</p>` : ""}
-    <p class="dampad liten">Belopp: ${OB.NIVAER.map(n => `${n.kalla}`).join("; ")}. Uppskattning för planering; utbetalningen följer lönesystemet och eventuella lokala avtal.</p></section>`;
+    <p class="dampad liten">Belopp: ${OB.NIVAER.map(n => `${n.kalla}`).join("; ")}${ob.prognos > 0 ? `; därefter prognos +${sv(ob.prognos, 1)} % per år` : ""}. Uppskattning för planering; utbetalningen följer lönesystemet och eventuella lokala avtal.</p></section>`;
 }
 
 // OB för ett pass i schemat, som text till verktygstips.

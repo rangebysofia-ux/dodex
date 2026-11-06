@@ -50,4 +50,9 @@ const t0 = Date.now(); const ar = OB.forSchema({ P1: rad, P2: rad, P3: rad, P4: 
 ut.arsSchema = { ms: Date.now() - t0, D: ar.P1.ar.kategorier.D.min, B: ar.P1.ar.kategorier.B.min, A: ar.P1.ar.kategorier.A.min, saknar: ar.P1.ar.saknarNiva };
 const st = OB.antagetStart(), arAnt = OB.forSchema({ P1: rad }, st);
 ut.antaget = { start: st, mandag: OB.veckodag(OB.frånText(st)) === 0, saknar: arAnt.P1.ar.saknarNiva };
+ut.prognos = { b2027: OB.niva(OB.frånText("2027-04-01"), 3).B, b2028: OB.niva(OB.frånText("2028-05-01"), 3).B,
+  avtal2026: OB.niva(OB.frånText("2027-03-31"), 3).B, utan: OB.niva(OB.frånText("2027-04-01"), 0), markt: OB.niva(OB.frånText("2027-04-01"), 3).prognos,
+  standard: OB.prognosFor({}), av: OB.prognosFor({ ob_prognos_procent: 0 }) };
+const arP = OB.forSchema({ P1: rad }, "2026-11-09", { prognos: 3 });
+ut.prognos.ar = { saknar: arP.P1.ar.saknarNiva, prognosMin: arP.P1.ar.prognosMin > 0 };
 console.log(JSON.stringify(ut, null, 1));

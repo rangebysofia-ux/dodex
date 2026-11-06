@@ -1606,7 +1606,8 @@ if (typeof module !== "undefined") module.exports = ASSISTENT;
 // för A och B. Ett cykliskt grundschema kopplas till verkliga datum med ett startdatum (en måndag).
 //
 // Källa och nivåer: se docs/ob.md. Belopp läggs till som nya daterade rader när ett nytt avtal har
-// kontrollerats; de räknas aldrig upp med procent. Datum utanför en kontrollerad nivå får tid men inga kronor.
+// kontrollerats. Efter sista kontrollerade nivån räknas en prognos (standard 3 % per år, användarens beslut
+// 2026-11-06), tydligt märkt som prognos och inte avtal. Med prognos 0 får sådana datum tid men inga kronor.
 
 const OB = (() => {
   const NIVAER = [
@@ -1701,9 +1702,30 @@ const OB = (() => {
     return null;
   }
 
-  function niva(n) {
+  // Prognos efter sista kontrollerade nivån: användarens val, inte avtal. Räknas upp med `procent` per
+  // avtalsår (1 april) från den sista kontrollerade nivån och märks som prognos överallt.
+  const STANDARD_PROGNOS = 3;
+  const prognosCache = new Map();
+  function prognosNiva(d, procent) {
+    const sista = NIVAER[NIVAER.length - 1];
+    const ar0 = Number(sista.till.slice(0, 4)), arD = Number(d.slice(0, 4)) - (d.slice(5) < "04-01" ? 1 : 0);
+    const steg = arD - ar0 + 1;
+    const nyckel = steg + "|" + procent;
+    if (!prognosCache.has(nyckel)) {
+      const f = (1 + procent / 100) ** steg, nv = { fran: `${ar0 + steg - 1}-04-01`, till: `${ar0 + steg}-03-31`, prognos: true,
+        kalla: `Prognos: ${String(procent).replace(".", ",")} % per år från ${sista.till.slice(0, 4)}-04-01 (inte avtal)` };
+      for (const k of ["A", "A_natt", "B", "B_natt", "C", "D"]) nv[k] = Math.round(sista[k] * f * 100) / 100;
+      prognosCache.set(nyckel, nv);
+    }
+    return prognosCache.get(nyckel);
+  }
+
+  // Beloppsnivå för dag n. Utan prognos (0 eller null) finns inga belopp efter sista kontrollerade nivån.
+  function niva(n, prognos = 0) {
     const d = iso(n);
-    return NIVAER.find(x => d >= x.fran && d <= x.till) || null;
+    const v = NIVAER.find(x => d >= x.fran && d <= x.till);
+    if (v) return v;
+    return prognos > 0 && d > NIVAER[NIVAER.length - 1].till ? prognosNiva(d, prognos) : null;
   }
 
   const minut = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
@@ -1718,7 +1740,7 @@ const OB = (() => {
   }
 
   // OB-minuter för ett pass på dag n. Rasten antas ligga mitt i passet (den är inte arbetstid).
-  function pass(n, p) {
+  function pass(n, p, prognos = 0) {
     const s = n * DYGN + minut(p.start); let e = n * DYGN + minut(p.slut); if (e <= s) e += DYGN;
     const rast = p.rast || 0, r0 = Math.round((s + e) / 2 - rast / 2), r1 = r0 + rast;
     const delar = rast ? [[s, r0], [r1, e]] : [[s, e]];
@@ -1730,7 +1752,7 @@ const OB = (() => {
         let i = 0; while (GRANSER[i + 1] <= m) i++;
         const slut = Math.min(b, dag * DYGN + GRANSER[i + 1]), k = dagKategorier(dag)[i];
         if (k) {
-          const man = manad(dag), nv = niva(dag), sista = ut[ut.length - 1];
+          const man = manad(dag), nv = niva(dag, prognos), sista = ut[ut.length - 1];
           if (sista && sista.kat === k && sista.manad === man && sista.niva === nv) sista.min += slut - t;
           else ut.push({ manad: man, kat: k, min: slut - t, niva: nv });
         }
@@ -1744,9 +1766,11 @@ const OB = (() => {
   // avrunda: AB:s regel för utbetalning (uppåt till hel/halv timme per kategori och månad, under en timme ger inget).
   function summera(segment, { avrunda = false } = {}) {
     const perManad = {};
+    let prognosMin = 0;
     for (const x of segment) {
       const bas = x.kat[0], m = (perManad[x.manad] = perManad[x.manad] || {});
-      const k = (m[bas] = m[bas] || { min: 0, kr: 0, natt: 0, utanNiva: 0 });
+      const k = (m[bas] = m[bas] || { min: 0, kr: 0, natt: 0, utanNiva: 0, prognos: 0 });
+      if (x.niva?.prognos) { k.prognos += x.min; prognosMin += x.min; }
       k.min += x.min;
       if (x.kat.endsWith("_natt")) k.natt += x.min;
       if (x.niva) k.kr += x.min / 60 * x.niva[x.kat]; else k.utanNiva += x.min;
@@ -1763,12 +1787,13 @@ const OB = (() => {
       tot[bas].min += min; tot[bas].kr += kr; saknarNiva += k.utanNiva;
     }
     const kr = KATEGORIER.reduce((s, k) => s + tot[k].kr, 0), min = KATEGORIER.reduce((s, k) => s + tot[k].min, 0);
-    return { kategorier: tot, min, kr, saknarNiva, perManad };
+    return { kategorier: tot, min, kr, saknarNiva, prognosMin, perManad };
   }
 
   // Antaget startdatum när enheten saknar ett: den senaste måndagen där ett helt år (52 veckor) ryms inom
   // kontrollerade avtalsbelopp, så att årskostnaden inte blir för låg av tid utan belopp.
-  function antagetStart() {
+  function antagetStart(prognos = 0) {
+    if (prognos > 0) { let n = Math.round(Date.now() / 864e5); while (veckodag(n) !== 0) n++; return iso(n); }
     let n = frånText(NIVAER[NIVAER.length - 1].till) - 52 * 7 + 1;
     while (veckodag(n) !== 0) n--;
     return iso(n);
@@ -1776,14 +1801,14 @@ const OB = (() => {
 
   // OB för ett grundschema: en period från startdatum och ett år (52 veckor, cykeln upprepad).
   // schema: {person: [pass eller null per dag i cykeln]}.
-  function forSchema(schema, startdatum, { veckorAr = 52 } = {}) {
+  function forSchema(schema, startdatum, { veckorAr = 52, prognos = 0 } = {}) {
     const start = frånText(startdatum), N = Object.values(schema)[0]?.length || 0;
     const ut = {};
     for (const [pid, rad] of Object.entries(schema)) {
       const period = [], helar = [], perPass = [];
       for (let d = 0; d < veckorAr * 7; d++) {
         const p = rad[d % N]; if (!p) continue;
-        const seg = pass(start + d, p);
+        const seg = pass(start + d, p, prognos);
         helar.push(...seg);
         if (d < N) { period.push(...seg); perPass.push({ dag: d, datum: iso(start + d), seg }); }
       }
@@ -1794,7 +1819,10 @@ const OB = (() => {
 
   function dagInfo(n) { return { datum: iso(n), veckodag: veckodag(n), helgdag: arsdagar(ar(n)).helg.get(n) || null, afton: afton(n) }; }
 
-  return { NIVAER, KATEGORIER, kategori, pass, summera, forSchema, niva, antagetStart, dagnr, iso, frånText, veckodag, dagInfo };
+  // Prognosprocent för en enhet: fältet ob_prognos_procent, annars standard (3 %). 0 stänger av.
+  const prognosFor = indata => indata.ob_prognos_procent ?? STANDARD_PROGNOS;
+
+  return { NIVAER, STANDARD_PROGNOS, prognosFor, prognosNiva, KATEGORIER, kategori, pass, summera, forSchema, niva, antagetStart, dagnr, iso, frånText, veckodag, dagInfo };
 })();
 if (typeof module !== "undefined") module.exports = OB;
 </script>
@@ -2023,8 +2051,8 @@ const obCache = new WeakMap();
 function obFor(res, indata) {
   if (typeof OB === "undefined") return null;
   let c = obCache.get(res);
-  const start = indata.startdatum || OB.antagetStart();
-  if (!c || c.start !== start) { c = { start, antaget: !indata.startdatum, per: OB.forSchema(res.schema, start) }; obCache.set(res, c); }
+  const prognos = OB.prognosFor(indata), start = indata.startdatum || OB.antagetStart(prognos);
+  if (!c || c.start !== start || c.prognos !== prognos) { c = { start, prognos, antaget: !indata.startdatum, per: OB.forSchema(res.schema, start, { prognos }) }; obCache.set(res, c); }
   return c;
 }
 
@@ -2040,11 +2068,11 @@ function obKort(pid, res, indata, { installningar = "Period" } = {}) {
   const rad = k => { const a = x.period.kategorier[k], b = x.ar.kategorier[k];
     return a.min || b.min ? `<tr><td>${KAT_TEXT[k]}</td><td class="tal nw">${tim(a.min)}</td><td class="tal nw">${kr(a.kr)}</td><td class="tal nw">${tim(b.min)}</td><td class="tal nw">${kr(b.kr)}</td></tr>` : ""; };
   return `<section class="kort"><h2>Timmar, OB och kostnad</h2>
-    <p class="dampad liten">OB enligt AB 25 § 21, räknat på verkliga datum från ${esc(ob.start)}${ob.antaget ? ` (antaget, så att hela året har kontrollerade avtalsbelopp – ange enhetens startdatum under ${installningar})` : ""}. Året är 52 veckor där schemat upprepas, med helgdagar och storhelger. Årets OB följer avtalets avrundning per kategori och månad.</p>
+    <p class="dampad liten">OB enligt AB 25 § 21, räknat på verkliga datum från ${esc(ob.start)}${ob.antaget ? ` (antaget – ange enhetens startdatum under ${installningar})` : ""}. Året är 52 veckor där schemat upprepas, med helgdagar och storhelger. Årets OB följer avtalets avrundning per kategori och månad.</p>
     <div class="kpi" style="margin-top:10px">
       <div><b>${tim(p.minuter)}</b><span>arbetstid på ${W} veckor</span></div>
       <div><b>${tim(p.minuter / W * 52)}</b><span>arbetstid per år</span></div>
-      <div><b>${kr(x.ar.kr)}</b><span>OB per år${saknas ? " (delvis utan belopp)" : ""}</span></div>
+      <div><b>${kr(x.ar.kr)}</b><span>OB per år${saknas ? " (delvis utan belopp)" : x.ar.prognosMin ? " (delvis prognos)" : ""}</span></div>
       ${tk ? `<div><b>${kr(lonAr + x.ar.kr)}</b><span>kostnad per år: ${kr(lonAr)} tid + ${kr(x.ar.kr)} OB</span></div>` : `<div><b>–</b><span>kostnad: ange timkostnad under ${installningar}</span></div>`}
     </div>
     <div class="rull" style="margin-top:12px"><table><thead><tr><th>OB-kategori</th><th class="tal">Tid, period</th><th class="tal">Kr, period</th><th class="tal">Tid, år</th><th class="tal">Kr, år</th></tr></thead><tbody>
@@ -2053,8 +2081,9 @@ function obKort(pid, res, indata, { installningar = "Period" } = {}) {
       ${tk ? `<tr><td>Arbetstid × ${sv(tk, 0)} kr</td><td></td><td class="tal nw">${kr(lonPeriod)}</td><td></td><td class="tal nw">${kr(lonAr)}</td></tr>
       <tr><td><b>Kostnad totalt</b></td><td></td><td class="tal nw"><b>${kr(lonPeriod + x.period.kr)}</b></td><td></td><td class="tal nw"><b>${kr(lonAr + x.ar.kr)}</b></td></tr>` : ""}
     </tbody></table></div>
+    ${x.ar.prognosMin ? `<p class="liten" style="color:var(--varn)">${tim(x.ar.prognosMin)} OB-tid ligger efter 2027-03-31 och räknas med en <b>prognos</b>: avtalsnivån från 2026-04-01 uppräknad med ${sv(ob.prognos, 1)} % per år. Det är inte avtalsbelopp. Prognosen ändras under ${installningar}.</p>` : ""}
     ${saknas ? `<p class="liten" style="color:var(--varn)">${tim(x.ar.saknarNiva)} OB-tid ligger efter 2027-03-31, där det inte finns något kontrollerat avtalsbelopp. Den tiden räknas utan kronor.</p>` : ""}
-    <p class="dampad liten">Belopp: ${OB.NIVAER.map(n => `${n.kalla}`).join("; ")}. Uppskattning för planering; utbetalningen följer lönesystemet och eventuella lokala avtal.</p></section>`;
+    <p class="dampad liten">Belopp: ${OB.NIVAER.map(n => `${n.kalla}`).join("; ")}${ob.prognos > 0 ? `; därefter prognos +${sv(ob.prognos, 1)} % per år` : ""}. Uppskattning för planering; utbetalningen följer lönesystemet och eventuella lokala avtal.</p></section>`;
 }
 
 // OB för ett pass i schemat, som text till verktygstips.
@@ -2481,6 +2510,7 @@ function ritaFlik() {
     el.innerHTML = `<div class="falt"><div><label for="p-v">Veckor</label><input id="p-v" type="number" min="1" max="16" data-i="veckor" value="${i.veckor}"></div>
       <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-i="budget_timmar_vecka" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
       <div><label for="p-kost">Timkostnad, kr (lön och PO, utan OB)</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-i="timkostnad_kr" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
+      <div><label for="p-obp">OB-prognos efter avtalet, % per år</label><input id="p-obp" type="number" inputmode="decimal" min="0" max="20" step="0.5" data-i="ob_prognos_procent" value="${i.ob_prognos_procent ?? ""}" placeholder="3 (standard)"></div>
       <div><label for="p-start">Startdatum (måndag), för OB</label><input id="p-start" type="date" data-i="startdatum" value="${i.startdatum ?? ""}"></div>
       <div><label for="p-iso">Första veckans nummer</label><input id="p-iso" type="number" min="1" max="53" data-i="start_iso_vecka" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div></div>
       <p style="margin-top:10px"><label class="check"><input type="checkbox" data-i="cykliskt"${i.cykliskt === false ? "" : " checked"}> Cykliskt: sista veckan följs av vecka 1</label></p>
@@ -2576,7 +2606,7 @@ document.addEventListener("input", ev => {
     const k = el.dataset.i;
     if (k === "cykliskt") i.cykliskt = el.checked;
     else if (k === "startdatum") { if (!el.value) delete i.startdatum; else if (OB.veckodag(OB.frånText(el.value)) !== 0) { meddela("Startdatum ska vara en måndag."); return; } else i.startdatum = el.value; }
-    else if (el.value === "") delete i[k]; else i[k] = k === "budget_timmar_vecka" || k === "timkostnad_kr" ? parseFloat(el.value.replace(",", ".")) : parseInt(el.value);
+    else if (el.value === "") delete i[k]; else i[k] = ["budget_timmar_vecka", "timkostnad_kr", "ob_prognos_procent"].includes(k) ? parseFloat(el.value.replace(",", ".")) : parseInt(el.value);
     andrad(false);
   }
 });

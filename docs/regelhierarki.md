@@ -32,6 +32,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 10. **Blandning av morgon och kväll varje vecka (princip, mjuk).** Den som arbetar både morgon och kväll ska ha båda sorterna varje vecka, inte till exempel bara kvällar en vecka och bara morgnar nästa. `spridning_kvallar`: "av", "mjuk" (standard, efter rättvisan) eller "stark" (direkt efter vakanserna). `spridning_tolerans` 1 = båda sorterna varje vecka, 0 = dessutom högst en kvälls skillnad mot morgnarna. Fredagsregeln gör ofta helgveckor ensidiga: den som arbetar fredag kväll arbetar kväll hela helgen. Beslutat av användaren 2026-11-06.
 11. **Dygnsbrytet föreslås där flest pass slutar och börjar, oftast kring 15 för en heltid. Nattpersonal får eget dygnsbryt.
 
+12. **OB-prognos efter avtalet.** Efter sista kontrollerade OB-nivån (HÖK 25, till och med 2027-03-31) räknas OB upp med 3 % per avtalsår. Det är en prognos för budget, inte avtal, och märks så i gränssnittet. `ob_prognos_procent`, 0 stänger av. Beslutat av användaren 2026-11-06.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

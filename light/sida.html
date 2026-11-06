@@ -415,6 +415,7 @@ function ritaFlik() {
     el.innerHTML = `<div class="falt"><div><label for="p-v">Veckor</label><input id="p-v" type="number" min="1" max="16" data-i="veckor" value="${i.veckor}"></div>
       <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-i="budget_timmar_vecka" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
       <div><label for="p-kost">Timkostnad, kr (lön och PO, utan OB)</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-i="timkostnad_kr" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
+      <div><label for="p-obp">OB-prognos efter avtalet, % per år</label><input id="p-obp" type="number" inputmode="decimal" min="0" max="20" step="0.5" data-i="ob_prognos_procent" value="${i.ob_prognos_procent ?? ""}" placeholder="3 (standard)"></div>
       <div><label for="p-start">Startdatum (måndag), för OB</label><input id="p-start" type="date" data-i="startdatum" value="${i.startdatum ?? ""}"></div>
       <div><label for="p-iso">Första veckans nummer</label><input id="p-iso" type="number" min="1" max="53" data-i="start_iso_vecka" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div></div>
       <p style="margin-top:10px"><label class="check"><input type="checkbox" data-i="cykliskt"${i.cykliskt === false ? "" : " checked"}> Cykliskt: sista veckan följs av vecka 1</label></p>
@@ -510,7 +511,7 @@ document.addEventListener("input", ev => {
     const k = el.dataset.i;
     if (k === "cykliskt") i.cykliskt = el.checked;
     else if (k === "startdatum") { if (!el.value) delete i.startdatum; else if (OB.veckodag(OB.frånText(el.value)) !== 0) { meddela("Startdatum ska vara en måndag."); return; } else i.startdatum = el.value; }
-    else if (el.value === "") delete i[k]; else i[k] = k === "budget_timmar_vecka" || k === "timkostnad_kr" ? parseFloat(el.value.replace(",", ".")) : parseInt(el.value);
+    else if (el.value === "") delete i[k]; else i[k] = ["budget_timmar_vecka", "timkostnad_kr", "ob_prognos_procent"].includes(k) ? parseFloat(el.value.replace(",", ".")) : parseInt(el.value);
     andrad(false);
   }
 });

@@ -151,6 +151,8 @@ class Indata(BaseModel):
     timkostnad_kr: Optional[float] = Field(default=None, gt=0, le=10000)
     # första dagen i schemat (en måndag), för OB och kalender; utan den antas nästa måndag
     startdatum: Optional[date] = None
+    # uppräkning av OB efter sista kontrollerade avtalsnivån, procent per år (prognos, inte avtal); 0 stänger av
+    ob_prognos_procent: Optional[float] = Field(default=None, ge=0, le=20)
     # används bara i testfallen
     beskrivning: Optional[str] = None
     forvantat: Optional[dict] = None

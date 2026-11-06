@@ -67,3 +67,12 @@ def test_ett_ar_gar_fort(ut):
 
 def test_antaget_startdatum_ger_helt_ar_med_belopp(ut):
     assert ut["antaget"]["mandag"] and ut["antaget"]["saknar"] == 0
+
+
+def test_prognos_efter_avtalet(ut):
+    p = ut["prognos"]
+    assert p["avtal2026"] == 68.1  # kontrollerade belopp ändras inte
+    assert p["b2027"] == 70.14 and p["b2028"] == 72.25  # 68,10 × 1,03 och × 1,03²
+    assert p["utan"] is None and p["markt"] is True
+    assert p["standard"] == 3 and p["av"] == 0
+    assert p["ar"] == {"saknar": 0, "prognosMin": True}

@@ -292,6 +292,7 @@ function ritaFlik() {
         <div><label for="p-veckor">Veckor i perioden</label><input id="p-veckor" type="number" min="1" max="16" data-s="veckor" data-t="heltal" value="${i.veckor}"></div>
         <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-s="budget_timmar_vecka" data-t="tal" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
         <div><label for="p-start">Startdatum (måndag), för OB och helgdagar</label><input id="p-start" type="date" data-s="startdatum" data-t="valfri" value="${i.startdatum ?? ""}"></div>
+        <div><label for="p-obp">OB-prognos efter avtalet, % per år</label><input id="p-obp" type="number" inputmode="decimal" min="0" max="20" step="0.5" data-s="ob_prognos_procent" data-t="tal" value="${i.ob_prognos_procent ?? ""}" placeholder="3 (standard)"></div>
         <div><label for="p-kost">Timkostnad, kr (lön och PO, utan OB)</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-s="timkostnad_kr" data-t="tal" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
         <div><label for="p-iso">Första veckans veckonummer</label><input id="p-iso" type="number" min="1" max="53" data-s="start_iso_vecka" data-t="valfritt-tal" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div>
         <div><label for="p-delp">Delperioder (veckor)</label><input id="p-delp" data-s="delperioder" data-t="lista" value="${esc((i.delperioder || []).join(", "))}" placeholder="hela perioden"></div>

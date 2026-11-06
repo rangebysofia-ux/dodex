@@ -4,7 +4,8 @@
 // för A och B. Ett cykliskt grundschema kopplas till verkliga datum med ett startdatum (en måndag).
 //
 // Källa och nivåer: se docs/ob.md. Belopp läggs till som nya daterade rader när ett nytt avtal har
-// kontrollerats; de räknas aldrig upp med procent. Datum utanför en kontrollerad nivå får tid men inga kronor.
+// kontrollerats. Efter sista kontrollerade nivån räknas en prognos (standard 3 % per år, användarens beslut
+// 2026-11-06), tydligt märkt som prognos och inte avtal. Med prognos 0 får sådana datum tid men inga kronor.
 
 const OB = (() => {
   const NIVAER = [
@@ -99,9 +100,30 @@ const OB = (() => {
     return null;
   }
 
-  function niva(n) {
+  // Prognos efter sista kontrollerade nivån: användarens val, inte avtal. Räknas upp med `procent` per
+  // avtalsår (1 april) från den sista kontrollerade nivån och märks som prognos överallt.
+  const STANDARD_PROGNOS = 3;
+  const prognosCache = new Map();
+  function prognosNiva(d, procent) {
+    const sista = NIVAER[NIVAER.length - 1];
+    const ar0 = Number(sista.till.slice(0, 4)), arD = Number(d.slice(0, 4)) - (d.slice(5) < "04-01" ? 1 : 0);
+    const steg = arD - ar0 + 1;
+    const nyckel = steg + "|" + procent;
+    if (!prognosCache.has(nyckel)) {
+      const f = (1 + procent / 100) ** steg, nv = { fran: `${ar0 + steg - 1}-04-01`, till: `${ar0 + steg}-03-31`, prognos: true,
+        kalla: `Prognos: ${String(procent).replace(".", ",")} % per år från ${sista.till.slice(0, 4)}-04-01 (inte avtal)` };
+      for (const k of ["A", "A_natt", "B", "B_natt", "C", "D"]) nv[k] = Math.round(sista[k] * f * 100) / 100;
+      prognosCache.set(nyckel, nv);
+    }
+    return prognosCache.get(nyckel);
+  }
+
+  // Beloppsnivå för dag n. Utan prognos (0 eller null) finns inga belopp efter sista kontrollerade nivån.
+  function niva(n, prognos = 0) {
     const d = iso(n);
-    return NIVAER.find(x => d >= x.fran && d <= x.till) || null;
+    const v = NIVAER.find(x => d >= x.fran && d <= x.till);
+    if (v) return v;
+    return prognos > 0 && d > NIVAER[NIVAER.length - 1].till ? prognosNiva(d, prognos) : null;
   }
 
   const minut = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
@@ -116,7 +138,7 @@ const OB = (() => {
   }
 
   // OB-minuter för ett pass på dag n. Rasten antas ligga mitt i passet (den är inte arbetstid).
-  function pass(n, p) {
+  function pass(n, p, prognos = 0) {
     const s = n * DYGN + minut(p.start); let e = n * DYGN + minut(p.slut); if (e <= s) e += DYGN;
     const rast = p.rast || 0, r0 = Math.round((s + e) / 2 - rast / 2), r1 = r0 + rast;
     const delar = rast ? [[s, r0], [r1, e]] : [[s, e]];
@@ -128,7 +150,7 @@ const OB = (() => {
         let i = 0; while (GRANSER[i + 1] <= m) i++;
         const slut = Math.min(b, dag * DYGN + GRANSER[i + 1]), k = dagKategorier(dag)[i];
         if (k) {
-          const man = manad(dag), nv = niva(dag), sista = ut[ut.length - 1];
+          const man = manad(dag), nv = niva(dag, prognos), sista = ut[ut.length - 1];
           if (sista && sista.kat === k && sista.manad === man && sista.niva === nv) sista.min += slut - t;
           else ut.push({ manad: man, kat: k, min: slut - t, niva: nv });
         }
@@ -142,9 +164,11 @@ const OB = (() => {
   // avrunda: AB:s regel för utbetalning (uppåt till hel/halv timme per kategori och månad, under en timme ger inget).
   function summera(segment, { avrunda = false } = {}) {
     const perManad = {};
+    let prognosMin = 0;
     for (const x of segment) {
       const bas = x.kat[0], m = (perManad[x.manad] = perManad[x.manad] || {});
-      const k = (m[bas] = m[bas] || { min: 0, kr: 0, natt: 0, utanNiva: 0 });
+      const k = (m[bas] = m[bas] || { min: 0, kr: 0, natt: 0, utanNiva: 0, prognos: 0 });
+      if (x.niva?.prognos) { k.prognos += x.min; prognosMin += x.min; }
       k.min += x.min;
       if (x.kat.endsWith("_natt")) k.natt += x.min;
       if (x.niva) k.kr += x.min / 60 * x.niva[x.kat]; else k.utanNiva += x.min;
@@ -161,12 +185,13 @@ const OB = (() => {
       tot[bas].min += min; tot[bas].kr += kr; saknarNiva += k.utanNiva;
     }
     const kr = KATEGORIER.reduce((s, k) => s + tot[k].kr, 0), min = KATEGORIER.reduce((s, k) => s + tot[k].min, 0);
-    return { kategorier: tot, min, kr, saknarNiva, perManad };
+    return { kategorier: tot, min, kr, saknarNiva, prognosMin, perManad };
   }
 
   // Antaget startdatum när enheten saknar ett: den senaste måndagen där ett helt år (52 veckor) ryms inom
   // kontrollerade avtalsbelopp, så att årskostnaden inte blir för låg av tid utan belopp.
-  function antagetStart() {
+  function antagetStart(prognos = 0) {
+    if (prognos > 0) { let n = Math.round(Date.now() / 864e5); while (veckodag(n) !== 0) n++; return iso(n); }
     let n = frånText(NIVAER[NIVAER.length - 1].till) - 52 * 7 + 1;
     while (veckodag(n) !== 0) n--;
     return iso(n);
@@ -174,14 +199,14 @@ const OB = (() => {
 
   // OB för ett grundschema: en period från startdatum och ett år (52 veckor, cykeln upprepad).
   // schema: {person: [pass eller null per dag i cykeln]}.
-  function forSchema(schema, startdatum, { veckorAr = 52 } = {}) {
+  function forSchema(schema, startdatum, { veckorAr = 52, prognos = 0 } = {}) {
     const start = frånText(startdatum), N = Object.values(schema)[0]?.length || 0;
     const ut = {};
     for (const [pid, rad] of Object.entries(schema)) {
       const period = [], helar = [], perPass = [];
       for (let d = 0; d < veckorAr * 7; d++) {
         const p = rad[d % N]; if (!p) continue;
-        const seg = pass(start + d, p);
+        const seg = pass(start + d, p, prognos);
         helar.push(...seg);
         if (d < N) { period.push(...seg); perPass.push({ dag: d, datum: iso(start + d), seg }); }
       }
@@ -192,6 +217,9 @@ const OB = (() => {
 
   function dagInfo(n) { return { datum: iso(n), veckodag: veckodag(n), helgdag: arsdagar(ar(n)).helg.get(n) || null, afton: afton(n) }; }
 
-  return { NIVAER, KATEGORIER, kategori, pass, summera, forSchema, niva, antagetStart, dagnr, iso, frånText, veckodag, dagInfo };
+  // Prognosprocent för en enhet: fältet ob_prognos_procent, annars standard (3 %). 0 stänger av.
+  const prognosFor = indata => indata.ob_prognos_procent ?? STANDARD_PROGNOS;
+
+  return { NIVAER, STANDARD_PROGNOS, prognosFor, prognosNiva, KATEGORIER, kategori, pass, summera, forSchema, niva, antagetStart, dagnr, iso, frånText, veckodag, dagInfo };
 })();
 if (typeof module !== "undefined") module.exports = OB;

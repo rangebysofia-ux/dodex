@@ -13,9 +13,9 @@ AB 25 § 21 mom. 1, i lydelse 2025-04-01 (Sveriges Kommuner och Regioner). Belop
 
 Kronor per timme. HÖK 25 med Kommunal gäller till och med 2027-03-31.
 
-- **Efter 2027-03-31** finns ingen kontrollerad nivå. Där räknas OB-tid men inga kronor, och gränssnittet säger det.
-- **När ett nytt avtal har kontrollerats** läggs en ny daterad rad till i `NIVAER`. Gamla rader ska ligga kvar.
-- **Belopp räknas aldrig upp med procent.**
+- **Efter 2027-03-31** finns ingen kontrollerad nivå. Där används en **prognos**: nivån från 2026-04-01 räknas upp med 3 % per avtalsår (från varje 1 april). Det är användarens beslut 2026-11-06. Prognosen märks som ”prognos, inte avtal” i gränssnittet, och tiden den gäller redovisas separat. Procentsatsen ändras med `ob_prognos_procent`, och 0 stänger av prognosen. Utan prognos räknas tiden men inga kronor.
+- **När ett nytt avtal har kontrollerats** läggs en ny daterad rad till i `NIVAER`. Gamla rader ska ligga kvar. Prognosen gäller då först efter den nya raden.
+- **De kontrollerade avtalsbeloppen** räknas aldrig upp; prognosen gäller bara tid efter sista kontrollerade nivån.
 
 ## Kategorier
 
@@ -50,7 +50,7 @@ Ett grundschema har schemaveckor, inte datum. Fältet `startdatum` (en måndag) 
 - **Period:** en schemacykel från startdatum. Exakt tid, utan avrundning.
 - **År:** 52 veckor, där cykeln upprepas. Här ingår årets helgdagar och storhelger. Tiden summeras per kalendermånad och kategori och avrundas uppåt till närmaste hel- eller halvtimme. Under en timme ger ingen ersättning (AB 25 § 21).
 
-Om startdatum saknas väljs den senaste måndagen där hela året ryms inom kontrollerade belopp. Det står i gränssnittet att datumet är antaget.
+Om startdatum saknas antas nästa måndag. Är prognosen avstängd väljs i stället den senaste måndagen där hela året ryms inom kontrollerade belopp. Gränssnittet säger att datumet är antaget.
 
 ## Förenklingar
 
