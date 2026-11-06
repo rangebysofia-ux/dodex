@@ -323,7 +323,7 @@ table.analys td.bast { color: var(--bra); font-weight: 800; background: var(--br
 .hstapel { display: grid; grid-template-columns: minmax(110px, 180px) 1fr 60px; gap: 10px; align-items: center; padding: 4px 0; }
 .hstapel > div { background: var(--yta2); border-radius: 6px; height: 14px; overflow: hidden; }
 .hstapel i { display: block; height: 100%; border-radius: 6px; }
-.hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--over); }
+.hstapel i.vila { background: var(--morgon); } .hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--over); }
 .hstapel b { text-align: right; font-variant-numeric: tabular-nums; }
 
 

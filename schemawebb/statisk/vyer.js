@@ -376,6 +376,7 @@ function personkort(pid) {
     <div class="legend">${["morgon", "kvall", "natt"].filter(d => r.c[d]).map(d => `<span><i style="background:${FARG[d]}"></i>${r.c[d]} ${DELAR[d].toLowerCase()}</span>`).join("")}${r.typ === "bada" ? `<span>Jämn andel: ${sv(r.mal, 1)} kvällar</span>` : ""}</div>
     ${onsk.length ? `<h3>Önskemål</h3><ul class="punkter liten">${onsk.map(o => `<li>${o.krav ? "Krav" : "Önskemål"}: ${esc(ONSKTYP[o.typ])}${o.varde ? " " + esc(o.varde) : ""}${o.dagar ? " · " + o.dagar.join(", ") : ""}${o.veckor && o.veckor !== "alla" ? " · " + (Array.isArray(o.veckor) ? "vecka " + o.veckor.join(", ") : o.veckor + " veckor") : ""}</li>`).join("")}</ul>` : ""}
   </section>
+  ${GRAF.vilaKort(pid, res, ind)}
   ${GRAF.obKort(pid, res, ind, { installningar: "Inställningar → Period" })}
   <section class="kort"><h2>${esc(pid)}s schema</h2><div class="rull"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {

@@ -76,3 +76,10 @@ def test_prognos_efter_avtalet(ut):
     assert p["utan"] is None and p["markt"] is True
     assert p["standard"] == 3 and p["av"] == 0
     assert p["ar"] == {"saknar": 0, "prognosMin": True}
+
+
+def test_vila_visas_ratt():
+    r = json.loads(subprocess.run(["node", str(ROT / "tests" / "js" / "vila_test.js")], capture_output=True, text=True, check=True, timeout=60).stdout)
+    assert r["kortast"] == 9 * 60  # kväll slut 22:00, morgon start 07:00
+    # vecka 1: ledigt ons 00:00 (efter tis 15:00) till fre 07:00 = tis 15:00–fre 07:00 = 64 h
+    assert r["veckor"][0] == 64 * 60

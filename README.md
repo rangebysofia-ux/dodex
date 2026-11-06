@@ -53,7 +53,7 @@ Webbgränssnittet har en sidomeny med:
 - **Rapporter** – Excel, PDF, utskrift och jämförelse av körningar.
 - **Inställningar** – regler, period, budget och timkostnad, samt indata som JSON.
 
-Personalkostnaden är en uppskattning: schemalagd tid × `timkostnad_kr` (lön och PO, utan OB) plus OB enligt AB 25 § 21, räknat på verkliga datum från `startdatum`. Tryck på en person för hela schemat med timmar, OB per kategori och kostnad per period och år. Se `docs/ob.md`.
+Personalkostnaden är en uppskattning: schemalagd tid × `timkostnad_kr` (lön och PO, utan OB) plus OB enligt AB 25 § 21, räknat på verkliga datum från `startdatum`. Tryck på en person för hela schemat med timmar, OB per kategori och kostnad per period och år. Personvyn visar också vilan: kortaste vila mellan två pass (dygnsvila, minst 11 h) och längsta lediga tid varje vecka (veckovila, minst 36 h), och Regelkontrollen har samma siffror för alla. Se `docs/ob.md`.
 
 ## Konsekvensanalys
 

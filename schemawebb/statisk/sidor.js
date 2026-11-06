@@ -176,5 +176,6 @@ async function visaRegelkontroll(id, kid) {
     return `<li class="${klass}">${l.length ? IKON.varning : IKON.ok}<span>${namn} <span class="niva">${niva}</span></span><b>${l.length ? `${l.length} ${hard ? "brott" : "att notera"}` : "Uppfylld"}</b>
       ${l.length ? `<details><summary>Visa</summary><ul class="punkter liten">${l.slice(0, 60).map(b => `<li>${b.person ? `<b>${esc(b.person)}</b>: ` : ""}${esc(b.text)}</li>`).join("")}${l.length > 60 ? `<li>… och ${l.length - 60} till</li>` : ""}</ul></details>` : ""}</li>`;
   }).join("")}</ul></section>`;
+  h += GRAF.vilaTabell(k.resultat, k.indata, pid => `<a href="#/e/${id}/personer/${k.id}?p=${encodeURIComponent(pid)}"><b>${esc(pid)}</b></a>`);
   vy().innerHTML = h;
 }

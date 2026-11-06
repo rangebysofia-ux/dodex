@@ -266,6 +266,74 @@ function obPassText(pid, d, res, indata) {
   return `\n${pp.datum}: OB ` + Object.entries(sum).map(([k, m]) => `${k.replace("_natt", " natt")} ${sv(m / 60, 2)} h`).join(", ");
 }
 
-return { obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+// ---------------------------------------------------------------- dygnsvila och veckovila (visning)
+// Visar vilan i ett lagt schema: tid mellan passen och längsta lediga tid per vecka från veckobrytet.
+// Om reglerna följs avgör den fristående granskningen; det här är en överblick för användaren.
+const DYGN_MIN = 1440, DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
+const klockMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+function veckobrytMin(txt) {
+  const m = /^(mån|tis|ons|tor|fre|lör|sön)\s+(\d{1,2}:\d{2})$/.exec(String(txt || "mån 00:00").trim());
+  return m ? DAGNAMN.indexOf(m[1]) * DYGN_MIN + klockMin(m[2]) : 0;
+}
+function vila(rad, W, cykliskt = true, veckobryt = "mån 00:00") {
+  const N = W * 7, L = N * DYGN_MIN, iv = [];
+  rad.forEach((p, d) => { if (!p) return; const s = d * DYGN_MIN + klockMin(p.start); let e = d * DYGN_MIN + klockMin(p.slut); if (e <= s) e += DYGN_MIN; iv.push({ d, s, e, p }); });
+  // tid mellan varje pass och nästa (över schemaskarven om schemat är cykliskt)
+  const mellan = iv.map((x, i) => {
+    const n = iv[i + 1] || (cykliskt && iv.length ? { ...iv[0], s: iv[0].s + L } : null);
+    return n ? { dag: x.d, slut: x.p.slut, nastaDag: n.d, start: n.p.start, min: n.s - x.e } : null;
+  }).filter(Boolean);
+  // längsta lediga tid inom varje sjudagarsperiod från veckobrytet
+  const alla = cykliskt ? [...iv.map(x => [x.s - L, x.e - L]), ...iv.map(x => [x.s, x.e]), ...iv.map(x => [x.s + L, x.e + L])] : iv.map(x => [x.s, x.e]);
+  alla.sort((a, b) => a[0] - b[0]);
+  const vb = veckobrytMin(veckobryt);
+  const veckor = Array.from({ length: W }, (_, w) => {
+    const a = w * 7 * DYGN_MIN + vb, b = a + 7 * DYGN_MIN;
+    let langst = 0, fran = a, pos = a;
+    for (const [s, e] of alla) { if (e <= a || s >= b) continue; const s2 = Math.max(s, a); if (s2 - pos > langst) { langst = s2 - pos; fran = pos; } pos = Math.max(pos, Math.min(e, b)); }
+    if (b - pos > langst) { langst = b - pos; fran = pos; }
+    return { vecka: w + 1, min: langst, fran };
+  });
+  return { mellan, veckor };
+}
+const tidText = t => { const d = ((Math.floor(t / DYGN_MIN) % 7) + 7) % 7, m = ((t % DYGN_MIN) + DYGN_MIN) % DYGN_MIN; return `${DAGNAMN[d]} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const regelVarde = (indata, k, std) => indata.regler?.[k] ?? std;
+
+// Kort för en person: veckovila per vecka och vila mellan passen.
+function vilaKort(pid, res, indata) {
+  const rad = res.schema[pid]; if (!rad) return "";
+  const dv = regelVarde(indata, "dygnsvila_minuter", 660), wv = regelVarde(indata, "veckovila_minuter", 2160);
+  const v = vila(rad, res.veckor, res.cykliskt !== false, regelVarde(indata, "veckobryt", "mån 00:00"));
+  const kortast = v.mellan.length ? Math.min(...v.mellan.map(x => x.min)) : null;
+  const max = Math.max(wv * 1.6, ...v.veckor.map(x => x.min));
+  const vecka = d => `V${Math.floor(d / 7) % res.veckor + 1} ${DAGNAMN[d % 7]}`;
+  const tata = v.mellan.filter(x => x.min < dv + 120).sort((a, b) => a.min - b.min);
+  return `<section class="kort"><h2>Dygnsvila och veckovila</h2>
+    <p class="dampad liten">Avtalet kräver minst ${sv(dv / 60, 1)} h dygnsvila och ${sv(wv / 60, 1)} h sammanhängande veckovila. Veckan räknas från ${esc(regelVarde(indata, "veckobryt", "mån 00:00"))}${res.cykliskt !== false ? ", och vilan räknas även över skarven mellan sista och första veckan" : ""}.</p>
+    <div class="kpi" style="margin-top:10px">
+      <div class="${kortast != null && kortast < dv ? "fel" : ""}"><b>${kortast == null ? "–" : sv(kortast / 60, 1) + " h"}</b><span>kortaste vila mellan två pass</span></div>
+      <div class="${Math.min(...v.veckor.map(x => x.min)) < wv ? "fel" : ""}"><b>${sv(Math.min(...v.veckor.map(x => x.min)) / 60, 1)} h</b><span>kortaste veckovila</span></div></div>
+    <h3>Veckovila, längsta lediga tid per vecka</h3>
+    ${v.veckor.map(x => `<div class="hstapel"><span class="liten">Vecka ${x.vecka}</span><div style="position:relative"><i class="${x.min < wv ? "vak" : "vila"}" style="width:${Math.min(100, x.min / max * 100)}%"></i><s style="position:absolute;left:${wv / max * 100}%;top:-3px;bottom:-3px;width:2px;background:var(--text)"></s></div><b class="liten" data-tips="Från ${tidText(x.fran)}">${sv(x.min / 60, 1)} h</b></div>`).join("")}
+    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Minst ${sv(wv / 60, 0)} h</span><span><i style="background:var(--kritisk)"></i>Kortare</span><span><i style="background:var(--text);width:3px"></i>Gränsen ${sv(wv / 60, 0)} h</span></div>
+    <h3>Vila mellan passen</h3>
+    ${tata.length ? `<p class="liten dampad">Kortaste vilorna (under ${sv((dv + 120) / 60, 0)} h):</p><ul class="punkter liten">${tata.slice(0, 8).map(x => `<li class="${x.min < dv ? "minus" : ""}">${vecka(x.dag)} slut ${x.slut} → ${vecka(x.nastaDag)} start ${x.start}: <b>${sv(x.min / 60, 1)} h</b>${x.min < dv ? " – under " + sv(dv / 60, 0) + " h" : ""}</li>`).join("")}</ul>`
+      : `<p class="liten">All vila mellan passen är minst ${sv((dv + 120) / 60, 0)} h.</p>`}
+  </section>`;
+}
+
+// Tabell för alla: kortaste vila mellan pass och kortaste veckovila per person.
+function vilaTabell(res, indata, lank = null) {
+  const dv = regelVarde(indata, "dygnsvila_minuter", 660), wv = regelVarde(indata, "veckovila_minuter", 2160);
+  const rader = Object.keys(res.schema).map(pid => {
+    const v = vila(res.schema[pid], res.veckor, res.cykliskt !== false, regelVarde(indata, "veckobryt", "mån 00:00"));
+    const k = v.mellan.length ? Math.min(...v.mellan.map(x => x.min)) : null, w = Math.min(...v.veckor.map(x => x.min));
+    return `<tr><td>${lank ? lank(pid) : `<b>${esc(pid)}</b>`}</td><td class="tal nw ${k != null && k < dv ? "minus" : ""}">${k == null ? "–" : sv(k / 60, 1) + " h"}</td><td class="tal nw ${w < wv ? "minus" : ""}">${sv(w / 60, 1)} h</td><td>${(k == null || k >= dv) && w >= wv ? "✓" : "!"}</td></tr>`;
+  }).join("");
+  return `<section class="kort"><h2>Dygnsvila och veckovila per person</h2><p class="dampad liten">Kortaste vila mellan två pass (minst ${sv(dv / 60, 0)} h) och kortaste sammanhängande veckovila (minst ${sv(wv / 60, 0)} h) i perioden.</p>
+    <div class="rull"><table><thead><tr><th>Person</th><th class="tal">Kortaste dygnsvila</th><th class="tal">Kortaste veckovila</th><th></th></tr></thead><tbody>${rader}</tbody></table></div></section>`;
+}
+
+return { vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
