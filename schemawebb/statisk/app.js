@@ -22,6 +22,7 @@ const IKON = {
   schema: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg>',
   person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
   graf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M6 16v-5M11 16V6M16 16v-8M20 16v-3"/></svg>',
+  analys: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/></svg>',
   installning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h12M20 18h0"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
   ut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>',
   las: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
@@ -95,6 +96,7 @@ function ritaMeny() {
     ${lank("schema", "schema", "Schema", `${bas}/schema${k ? "/" + k : ""}`, !e)}
     ${lank("personer", "person", "Personer", `${bas}/personer${k ? "/" + k : ""}`, !e)}
     ${lank("bemanning", "graf", "Bemanning", `${bas}/bemanning${k ? "/" + k : ""}`, !e)}
+    ${lank("analys", "analys", "Analys", `${bas}/analys`, !e)}
     ${lank("installningar", "installning", "Regler", `${bas}/installningar`, !e)}
     <div class="fyll"></div>
     ${kravsInloggning ? `<button class="ut" data-g="logga-ut" aria-label="Logga ut">${IKON.ut}<span>Logga ut</span></button>` : ""}`;
@@ -744,6 +746,7 @@ async function route() {
       const id = +d[1], vyn = d[2] || "indata", kid = d[3] ? +d[3] : null;
       if (vyn === "indata") await visaEnhet(id, q.get("flik"));
       else if (vyn === "installningar") await visaInstallningar(id);
+      else if (vyn === "analys") await visaAnalys(id);
       else await visaKorningsvy(id, vyn, kid, q);
     } else if (d[0] === "jamfor") await visaJamfor(d[1].split(",").map(Number));
     else await visaEnheter();

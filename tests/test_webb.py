@@ -138,3 +138,23 @@ def test_assistent_skickar_ratt_anrop(klient, monkeypatch):
     assert svar.json()["stop_reason"] == "tool_use" and svar.json()["content"][1]["name"] == "las_schema"
     assert anrop["model"] == "claude-opus-5-5" and anrop["fallbacks"] == "default"
     assert anrop["tools"][0]["name"] == "las_schema"
+
+
+def test_analys_hela_vagen(klient):
+    klient.post("/api/logga-in", json={"losenord": "hemligt-test"})
+    eid = klient.post("/api/enheter", json={"namn": "Fredag", "indata": lasa("friday_rule_vacancy.json")}).json()["id"]
+    aid = klient.post(f"/api/enheter/{eid}/analys", json={"budget": 300, "tid_per_steg_s": 2}).json()["id"]
+    slut = time.time() + 400
+    while time.time() < slut:
+        a = klient.get(f"/api/analys/{aid}").json()
+        if a["status"] == "klar":
+            break
+        time.sleep(0.5)
+    assert a["status"] == "klar" and len(a["ordning"]) == len(a["scenarier"]) >= 5
+    assert all(s["status"] == "klar" for s in a["scenarier"])
+    basta = a["scenarier"][a["ordning"][0]]
+    assert basta["konsekvenser"]["vakanta_pass"] == 0
+    ny = klient.post(f"/api/analys/{aid}/anvand", json={"index": a["ordning"][0]}).json()["id"]
+    assert basta["namn"] in klient.get(f"/api/enheter/{ny}").json()["namn"]
+    k = klient.get(f"/api/enheter/{ny}/korningar").json()
+    assert k[0]["status"] == "klar" and k[0]["losning"] == "OK"

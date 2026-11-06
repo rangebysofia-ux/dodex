@@ -30,7 +30,8 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 
 ## Fas 4 – Prioriteringsstöd och lärande
 
-- [ ] **11. Åtgärdsförslag.** När det blir vakanser: kör automatiskt en uppsättning tänkbara ändringar (helgfrekvens, sysselsättningsgrad, behov, passmallar) och rangordna dem efter effekt.
+- [x] **11. Åtgärdsförslag.** *Byggt som konsekvensanalys utifrån budget (docs/analys.md). Ändringar av behov och helgfrekvens per person kan läggas till som fler förslag.*
+  Ursprunglig beskrivning: När det blir vakanser: kör automatiskt en uppsättning tänkbara ändringar (helgfrekvens, sysselsättningsgrad, behov, passmallar) och rangordna dem efter effekt.
 - [ ] **12. Växelkurs.** Visa vad varje mjuk regel kostar i vakanstimmar.
 - [ ] **13. Lärande av val.** Spara vilka utkast användaren väljer och vilka tolkningar som rättas, och använd det för att föreslå vikter och tolkningar.
 

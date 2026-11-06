@@ -40,6 +40,10 @@ python -m schemamotor.export schema.json --excel schema.xlsx --pdf schema.pdf
 
 Efter installationen finns kommandona även som `schema-balans`, `schema-build`, `schema-validate`, `schema-explain`, `schema-compare` och `schema-export`.
 
+## Konsekvensanalys
+
+Sidan Analys tar fram bemanningsförslag utifrån en budget, lägger ett schema för vart och ett och jämför vakanser, överkapacitet, helgbemanning, timmar mot budget och blandning av morgon och kväll. Se `docs/analys.md`.
+
 ## Schemaassistent
 
 En assistent (knappen Fråga) svarar på frågor om schemat och föreslår ändringar som du godkänner. På datorn behövs en API-nyckel från Anthropic, se `docs/assistent.md`. I lättversionen fungerar den direkt via Claude-kontot.

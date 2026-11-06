@@ -470,6 +470,10 @@ function granskningKort() {
 // ---------------------------------------------------------------- klick i vyerna
 async function vyKlick(g, el) {
   switch (g) {
+    case "anvand-forslag": {
+      const { id } = await api("POST", `analys/${st.analys.id}/anvand`, { index: +el.dataset.n });
+      meddela("Förslaget är sparat som en ny enhet."); st.enhet = null; location.hash = `#/e/${id}/schema`; return;
+    }
     case "filter": st.sv.filter = el.dataset.v; if (st.sv.filter === "tider" && st.vecka < 0) st.vecka = 0; st.valdCell = null; return ritaKorningsvy();
     case "bfilter": st.sv.bfilter = el.dataset.v; return ritaKorningsvy();
     case "vecka": st.vecka = +el.dataset.v; st.valdCell = null; return ritaKorningsvy();
@@ -514,4 +518,100 @@ async function visaJamfor(ids) {
     <div class="rull"><table><thead><tr><th></th>${k.map(x => `<th><a href="#/e/${x.enhet_id}/schema/${x.id}">${esc(x.namn)}</a><div class="dampad liten" style="font-weight:400">${datum(x.skapad)}</div></th>`).join("")}</tr></thead><tbody>
     ${nycklar.map(n => { const l = battre.has(n) ? lagst(n) : null; return `<tr><td>${n}</td>${rader.map(r => `<td class="nw"${l !== null && r[n] === l && rader.some(q => q[n] !== l) ? ` style="color:var(--bra);font-weight:800"` : ""}>${esc(r[n])}</td>`).join("")}</tr>`; }).join("")}
     </tbody></table></div></section>`;
+}
+
+// ---------------------------------------------------------------- konsekvensanalys
+async function visaAnalys(id) {
+  st.vy = "analys";
+  await laddaEnhet(id);
+  ritaMeny();
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/indata`], ["Analys"]]);
+  if (st.analys && st.analys.enhet_id !== id) st.analys = null;
+  ritaAnalys();
+  if (st.analys && st.analys.status === "kör") pollaAnalys();
+}
+
+function pollaAnalys() {
+  startaPollning(async () => {
+    st.analys = await api("GET", "analys/" + st.analys.id);
+    if (st.vy === "analys") ritaAnalys();
+    return st.analys.status === "kör";
+  });
+}
+
+function ritaAnalys() {
+  const i = st.indata, a = st.analys;
+  const kt = kontrakteradTid(i);
+  let h = `<section class="kort"><h1>Konsekvensanalys</h1>
+    <p class="dampad" style="margin:6px 0 12px">Ange en budget så tar systemet fram flera bemanningsförslag, lägger ett schema för vart och ett och jämför konsekvenserna: vakanser och var de landar, överkapacitet, helgbemanning, timmar mot budget och hur jämnt morgnar och kvällar blandas. Behov och regler hämtas från enheten.</p>
+    <form id="analysform" class="falt" style="align-items:end">
+      <div><label for="a-budget">Budget, timmar per vecka</label><input id="a-budget" type="number" step="0.5" min="1" value="${a ? a.underlag.budget_timmar_vecka : (i.budget_timmar_vecka ?? Math.round(kt * 10) / 10)}"></div>
+      <div><label for="a-tid">Noggrannhet</label><select id="a-tid"><option value="3">Snabb</option><option value="6" selected>Normal</option><option value="15">Noggrann</option></select></div>
+      <div><button class="primar" type="submit"${a && a.status === "kör" ? " disabled" : ""}>${IKON.spela} Ta fram förslag</button></div>
+    </form></section>`;
+  if (!a) {
+    vy().innerHTML = h + `<section class="kort tom">Inga förslag än. Varje förslag tar några sekunder till en minut att lägga, beroende på noggrannhet.</section>`;
+    kopplaAnalysform(); return;
+  }
+  const u = a.underlag, diff = Math.round((u.budget_timmar_vecka - u.behov_timmar_vecka) * 10) / 10;
+  h += `<section class="kort"><h2>Underlag</h2><div class="kpi">
+      <div><b>${sv(u.budget_timmar_vecka, 1)} h</b><span>budget per vecka = ${sv(u.arsarbetare_budget)} årsarbetare</span></div>
+      <div class="${diff < 0 ? "fel" : ""}"><b>${sv(u.behov_timmar_vecka, 1)} h</b><span>behovet motsvarar ungefär, per vecka</span></div>
+      <div><b>${u.dag_pass_vecka}</b><span>dag- och kvällspass per vecka</span></div>
+      <div><b>${u.personer_per_helg_dag}</b><span>personer med dag/kväll varje helg</span></div>
+      <div><b>${u.minsta_antal_dag}</b><span>minsta antal med dag/kväll (varannan helg)</span></div>
+      ${u.natt_timmar_vecka ? `<div><b>${sv(u.natt_timmar_vecka, 1)} h</b><span>natt per vecka, med marginal</span></div>` : ""}
+    </div>
+    <p style="margin-top:12px">${diff >= 0 ? `Budgeten är <b>${sv(diff, 1)} h större</b> än behovet kräver. Det som blir över syns som överkapacitet.` : `Budgeten är <b>${sv(-diff, 1)} h mindre</b> än behovet kräver. Räkna med vakanser.`}
+    ${u.fredagskvall_styr ? ` <b>Fredagskvällen styr helgbemanningen:</b> den som arbetar fredag kväll arbetar hela helgen, så fler behövs varje helg än lördag och söndag kräver.` : ""}</p></section>`;
+  const S = a.scenarier, klar = a.status === "klar", ordning = klar && a.ordning ? a.ordning : S.map((_, n) => n);
+  const kons = n => S[n].konsekvenser || {};
+  const basta = (f, lagst = true) => { const v = ordning.map(n => f(n)).filter(x => typeof x === "number"); return v.length ? (lagst ? Math.min(...v) : Math.max(...v)) : null; };
+  const rad = (namn, f, fmt = x => x, lagst = true, tips = "") => {
+    const b = lagst === null ? null : basta(f, lagst);
+    return `<tr><td${tips ? ` data-tips="${tips}"` : ""}>${namn}</td>${ordning.map(n => { const v = f(n); const ok = typeof v === "number" && v === b && ordning.filter(m => f(m) === b).length < ordning.length;
+      return `<td class="nw${ok ? " bast" : ""}">${S[n].status === "klar" || typeof v === "number" ? (v == null ? "–" : fmt(v, n)) : `<span class="spinner"></span>`}</td>`; }).join("")}</tr>`;
+  };
+  h += `<section class="kort"><div class="rubrikrad"><h2 style="margin:0">Förslag</h2>${klar ? `<span class="dampad liten">Bäst först. Grönt = bästa värdet på raden.</span>` : `<span class="status kor"><span class="spinner"></span>Lägger scheman (${S.filter(x => x.status === "klar").length} av ${S.length})</span>`}</div>
+    <div class="rull" style="margin-top:12px"><table class="analys"><thead><tr><th></th>${ordning.map((n, plats) => `<th><div class="forslagsrubrik">${klar && plats === 0 ? `<span class="status ok">Rekommenderas</span>` : ""}<b>${esc(S[n].namn)}</b><span class="dampad liten">${esc(S[n].sammanfattning)}</span></div></th>`).join("")}</tr></thead><tbody>
+    <tr><td></td>${ordning.map(n => `<td class="liten dampad" style="min-width:200px;white-space:normal">${esc(S[n].beskrivning)}</td>`).join("")}</tr>
+    ${rad("Vakanta pass", n => kons(n).vakanta_pass, (v, n) => `<b class="${v ? "minus" : ""}">${v}</b>${v ? `<div class="liten dampad">${Object.entries(kons(n).vakanser).filter(([, x]) => x).map(([k, x]) => `${x} ${{ vardag: "vardag", fredagskvall: "fre kväll", helg: "helg", natt: "natt" }[k]}`).join(", ")}</div>` : ""}`)}
+    ${rad("Överkapacitet per vecka", n => kons(n).overkapacitet_timmar_vecka, v => `<span class="${v ? "plus" : ""}">${sv(v, 1)} h</span>`, true, "Timmar i tjänst utöver behovet")}
+    ${rad("Kontrakterad tid per vecka", n => S[n].kontrakt_timmar_vecka, v => `${sv(v, 1)} h`, null)}
+    ${rad("Mot budget", n => kons(n).budget_kvar ?? (u.budget_timmar_vecka - S[n].kontrakt_timmar_vecka), v => `<span class="${v < -0.05 ? "minus" : ""}">${v < -0.05 ? sv(-v, 1) + " h över" : sv(v, 1) + " h kvar"}</span>`, false)}
+    ${rad("Årsarbetare", n => kons(n).arsarbetare, v => sv(v), null)}
+    ${rad("Personer (heltider)", n => kons(n).personer, (v, n) => `${v} (${kons(n).heltider})`, null)}
+    ${rad("Personer per helg", n => kons(n).helg_personer_min, (v, n) => `${v}${kons(n).helg_personer_max !== v ? "–" + kons(n).helg_personer_max : ""}`, null)}
+    ${rad("Veckor utan blandning", n => kons(n).veckor_utan_blandning, (v, n) => `${v} av ${kons(n).personveckor}`, true, "Personveckor med bara morgnar eller bara kvällar")}
+    ${rad("Skillnad i antal kvällar", n => kons(n).kvallar_skillnad, v => `${v}`)}
+    ${rad("Passlängd", n => kons(n).kortaste_pass, (v, n) => `${timmar(v)}–${timmar(kons(n).langsta_pass)}`, null, "Kortaste och längsta dag- eller kvällspass (arbetstid)")}
+    ${rad("Brott mot hårda regler", n => kons(n).brott, v => `<b class="${v ? "minus" : ""}">${v}</b>`)}
+    <tr><td></td>${ordning.map(n => `<td>${S[n].status === "klar" && S[n].resultat?.status === "OK" ? `<button class="liten primar" data-g="anvand-forslag" data-n="${n}">Använd som ny enhet</button>` : S[n].status === "fel" ? `<span class="minus liten">${esc(S[n].fel)}</span>` : S[n].status === "klar" ? `<span class="minus liten">Går inte att lägga</span>` : ""}</td>`).join("")}</tr>
+    </tbody></table></div>
+    ${klar ? analysGrafer(S, ordning) : ""}</section>`;
+  vy().innerHTML = h;
+  kopplaAnalysform();
+}
+
+function analysGrafer(S, ordning) {
+  const stapel = (rubrik, f, enhet, klass) => {
+    const max = Math.max(1, ...ordning.filter(n => S[n].konsekvenser?.status === "OK").map(n => f(n) || 0));
+    return `<div><h3>${rubrik}</h3>${ordning.map(n => { const v = f(n) || 0, ok = S[n].konsekvenser?.status === "OK";
+      return `<div class="hstapel"><span class="liten">${esc(S[n].namn)}</span>${ok ? `<div><i class="${klass}" style="width:${Math.max(v ? 2 : 0, v / max * 100)}%"></i></div><b class="liten">${sv(v, 1)}${enhet}</b>` : `<span class="liten minus" style="grid-column:span 2">Inget schema</span>`}</div>`; }).join("")}</div>`;
+  };
+  const k = n => S[n].konsekvenser || {};
+  return `<div class="tva" style="margin-top:14px">${stapel("Vakanta pass", n => k(n).vakanta_pass, "", "vak")}${stapel("Överkapacitet, timmar per vecka", n => k(n).overkapacitet_timmar_vecka, " h", "over")}</div>`;
+}
+
+function kopplaAnalysform() {
+  const f = $("#analysform");
+  if (f) f.onsubmit = async e => {
+    e.preventDefault();
+    if (!(await spara())) return;
+    try {
+      const { id } = await api("POST", `enheter/${st.enhet.id}/analys`, { budget: parseFloat($("#a-budget").value.replace(",", ".")) || null, tid_per_steg_s: +$("#a-tid").value });
+      st.analys = await api("GET", "analys/" + id);
+      ritaAnalys(); pollaAnalys();
+    } catch (err) { meddela(err.data?.fel ? err.data.fel.join(" ") : err.message); }
+  };
 }

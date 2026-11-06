@@ -280,3 +280,16 @@ tr.bem td .minus, tr.bem td .plus { margin: 0 2px; }
 .veckomix { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
 .veckomix span { font: 11px var(--mono); padding: 1px 6px; border-radius: 6px; background: var(--yta2); color: var(--dampad); }
 .veckomix span.ensidig { background: var(--kritisk-bg); color: var(--kritisk); font-weight: 700; }
+
+/* konsekvensanalys */
+table.analys th, table.analys td { vertical-align: top; }
+table.analys td.bast { color: var(--bra); font-weight: 800; background: var(--bra-bg); border-radius: 8px; }
+.forslagsrubrik { display: grid; gap: 3px; min-width: 200px; font-weight: 400; color: var(--text); }
+.forslagsrubrik b { font-size: 15px; }
+.forslagsrubrik .status { justify-self: start; }
+.hstapel { display: grid; grid-template-columns: minmax(110px, 180px) 1fr 60px; gap: 10px; align-items: center; padding: 4px 0; }
+.hstapel > div { background: var(--yta2); border-radius: 6px; height: 14px; overflow: hidden; }
+.hstapel i { display: block; height: 100%; border-radius: 6px; }
+.hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--accent); }
+.hstapel b { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .meny a span { font-size: 10px; } }

@@ -19,6 +19,7 @@ import hmac
 import json
 import os
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -30,6 +31,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from schemamotor import explain, export, validate
+from schemamotor import analys as analysmotor
 from schemamotor.balans import balans as rakna_balans
 from schemamotor.build import IndataFel, forbered, los
 from schemamotor.modell import kontrollera_indata
@@ -314,6 +316,93 @@ def exempel():
         d.pop("forvantat", None)
         ut.append({"namn": d.get("enhet") or f.stem, "beskrivning": beskr, "indata": d})
     return ut
+
+
+# ---------------------------------------------------------------- konsekvensanalys
+# Analyser finns bara i minnet: de är underlag för ett beslut, inte något som ska sparas.
+ANALYSER = {}
+
+
+class AnalysIn(BaseModel):
+    budget: Optional[float] = None
+    tid_per_steg_s: Optional[float] = None
+
+
+def _kor_scenario(aid: str, i: int, tid_s: float):
+    a = ANALYSER.get(aid)
+    if not a:
+        return
+    s = a["scenarier"][i]
+    s["status"] = "kör"
+    try:
+        res = los(forbered(copy.deepcopy(s["indata"])), tid_s, min(8, os.cpu_count() or 1), tyst=True)
+        g = validate.kontrollera(copy.deepcopy(s["indata"]), res) if res["status"] == "OK" else None
+        s.update(resultat=res, granskning=g, status="klar",
+                 konsekvenser=analysmotor.konsekvenser(s["indata"], res, g, a["underlag"]["budget_timmar_vecka"]))
+    except Exception as e:  # visas för användaren
+        s.update(status="fel", fel=f"{type(e).__name__}: {e}")
+    if all(x["status"] in ("klar", "fel") for x in a["scenarier"]):
+        a["status"] = "klar"
+        a["ordning"] = analysmotor.rangordna(a["scenarier"])
+
+
+@app.post("/api/enheter/{eid}/analys", dependencies=[Depends(inloggad)], status_code=202)
+def ny_analys(eid: int, inn: AnalysIn):
+    e = db.enhet(eid)
+    if not e:
+        raise HTTPException(404, "Enheten finns inte.")
+    indata = e["indata"]
+    fel = kontrollera_indata(indata)
+    if fel:
+        return JSONResponse({"fel": fel}, status_code=422)
+    try:
+        f = analysmotor.forslag(indata, inn.budget)
+    except IndataFel as ex:
+        return JSONResponse({"fel": [str(ex)]}, status_code=422)
+    aid = uuid.uuid4().hex[:10]
+    for s in f["scenarier"]:
+        s["status"] = "i kö"
+        try:
+            s["balans"] = rakna_balans(copy.deepcopy(s["indata"]))["forvantade_vakanser"]
+        except Exception:
+            s["balans"] = None
+    ANALYSER[aid] = {"id": aid, "enhet_id": eid, "status": "kör", "underlag": f["underlag"], "scenarier": f["scenarier"],
+                     "skapad": time.time()}
+    while len(ANALYSER) > 20:  # håll minnet litet
+        ANALYSER.pop(min(ANALYSER, key=lambda k: ANALYSER[k]["skapad"]))
+    tid_s = max(2.0, min(MAX_TID, float(inn.tid_per_steg_s or 5)))
+    for i in range(len(f["scenarier"])):
+        korare.submit(_kor_scenario, aid, i, tid_s)
+    return {"id": aid}
+
+
+@app.get("/api/analys/{aid}", dependencies=[Depends(inloggad)])
+def hamta_analys(aid: str):
+    a = ANALYSER.get(aid)
+    if not a:
+        raise HTTPException(404, "Analysen finns inte längre. Gör en ny.")
+    return a
+
+
+class AnvandIn(BaseModel):
+    index: int
+
+
+@app.post("/api/analys/{aid}/anvand", dependencies=[Depends(inloggad)], status_code=201)
+def anvand_forslag(aid: str, inn: AnvandIn):
+    """Spara ett förslag som en ny enhet, med det lagda schemat som första körning."""
+    a = ANALYSER.get(aid)
+    if not a or not 0 <= inn.index < len(a["scenarier"]):
+        raise HTTPException(404, "Förslaget finns inte längre.")
+    s, e = a["scenarier"][inn.index], db.enhet(a["enhet_id"])
+    namn = f"{e['namn'] if e else 'Enhet'} – {s['namn']}"
+    indata = copy.deepcopy(s["indata"])
+    indata["enhet"] = namn
+    eid = db.skapa_enhet(namn, indata)
+    if s.get("status") == "klar" and s.get("resultat"):
+        kid = db.skapa_korning(eid, "Körning 1 (från analysen)", indata, None)
+        db.uppdatera_korning(kid, status="klar", steg=None, resultat=s["resultat"], granskning=s.get("granskning"))
+    return {"id": eid}
 
 
 # ---------------------------------------------------------------- schemaassistent
