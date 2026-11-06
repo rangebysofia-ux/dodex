@@ -1,0 +1,80 @@
+{
+  "beskrivning": "Budget 357 timmar per vecka: åtta med dag/kväll (4 × 100 %, 3 × 95 %, 1 × 90 %) och två nattpersoner (100 % och 90 %) på fyra veckor. Vardag 3 morgon, 3 kväll, 1 natt; fredag 3 morgon, 2 kväll; helg 2 morgon, 2 kväll, 1 natt. Ska gå att lösa utan vakanser och avtalsbrott.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0
+  },
+  "enhet": "Budget 357 h/vecka",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 3,
+      "kvall": 3,
+      "natt": 1
+    },
+    "fre": {
+      "morgon": 3,
+      "kvall": 2,
+      "natt": 1
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 2,
+      "natt": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "A1",
+      "grad": 1
+    },
+    {
+      "id": "A2",
+      "grad": 1
+    },
+    {
+      "id": "A3",
+      "grad": 1
+    },
+    {
+      "id": "A4",
+      "grad": 1
+    },
+    {
+      "id": "A5",
+      "grad": 0.95
+    },
+    {
+      "id": "A6",
+      "grad": 0.95
+    },
+    {
+      "id": "A7",
+      "grad": 0.95
+    },
+    {
+      "id": "A8",
+      "grad": 0.9
+    },
+    {
+      "id": "N1",
+      "grad": 1,
+      "dygnsdelar": [
+        "natt"
+      ]
+    },
+    {
+      "id": "N2",
+      "grad": 0.9,
+      "dygnsdelar": [
+        "natt"
+      ]
+    }
+  ],
+  "onskemal": [],
+  "losare": {
+    "tid_per_steg_s": 10
+  }
+}
