@@ -64,6 +64,8 @@
 
 **budget_timmar_vecka** – valfri budget för hela enheten. Påverkar inte lösningen; gränssnittet jämför den med summan av kontrakterad tid (sysselsättningsgrad × heltid).
 
+**timkostnad_kr** – valfri genomsnittlig timkostnad i kronor (lön med personalomkostnader och OB i snitt). Påverkar inte lösningen; används för att räkna om timmar till personalkostnad i översikten, nyckeltalen och simuleringen.
+
 **forvantat** och **beskrivning** – används bara i testfallen.
 
 ### Kontroll

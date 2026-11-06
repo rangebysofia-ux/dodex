@@ -5,7 +5,7 @@ Cykliska grundscheman för dygnet runt-verksamhet enligt Kommunals avtalsområde
 Systemet har två delar:
 
 - **schemamotor** – lägger, granskar och förklarar scheman. Kan köras från kommandoraden.
-- **schemawebb** – webbtjänst med inloggning där man lägger in enheter, personal, behov, önskemål och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
+- **schemawebb** – webbtjänsten DODEX Scheduler, med inloggning, där man lägger in enheter, personal, behov, önskemål och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
 
 ## Schema light
 
@@ -40,9 +40,24 @@ python -m schemamotor.export schema.json --excel schema.xlsx --pdf schema.pdf
 
 Efter installationen finns kommandona även som `schema-balans`, `schema-build`, `schema-validate`, `schema-explain`, `schema-compare` och `schema-export`.
 
+## Gränssnittet: DODEX Scheduler
+
+Webbgränssnittet har en sidomeny med:
+
+- **Översikt** – fyra nyckeltal (bemanningsgrad, personalkostnad, obemannade pass, planerad övertid), bemanningsgrad och kostnad per vecka, behov mot planerad bemanning per dag, passfördelning och en värmekarta över under- och överbemanning.
+- **Schemaplanering** – schemat med medarbetare i rader och datum i kolumner, per vecka, hela perioden eller klockslag. Behovet visas i raden längst ned. Med **Redigera schemat** kan pass dras till en annan dag eller person, ändras, läggas till och tas bort. Varje ändring räknas om och granskas direkt, och resultatet sparas som en ny körning; originalet finns kvar (`schemamotor/justera.py`, `POST /api/korningar/{id}/justera`).
+- **Bemanningsbehov**, **Medarbetare** – indata, med kontroll och bemanningsbalans vid sidan.
+- **Analys och nyckeltal** – graferna och fördelningen per medarbetare.
+- **Simulering** – konsekvensanalysen nedan, med kostnad och nuläge mot alternativ.
+- **Regelkontroll** – den fristående granskningen grupperad per regel.
+- **Rapporter** – Excel, PDF, utskrift och jämförelse av körningar.
+- **Inställningar** – regler, period, budget och timkostnad, samt indata som JSON.
+
+Personalkostnaden är en uppskattning: kontrakterad eller schemalagd tid × `timkostnad_kr`, som anges under Inställningar.
+
 ## Konsekvensanalys
 
-Sidan Analys tar fram bemanningsförslag utifrån en budget, lägger ett schema för vart och ett och jämför vakanser, överkapacitet, helgbemanning, timmar mot budget och blandning av morgon och kväll. Se `docs/analys.md`.
+Sidan Simulering tar fram bemanningsförslag utifrån en budget, lägger ett schema för vart och ett och jämför vakanser, överkapacitet, helgbemanning, timmar mot budget och blandning av morgon och kväll. Se `docs/analys.md`.
 
 ## Schemaassistent
 

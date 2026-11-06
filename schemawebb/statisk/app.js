@@ -15,7 +15,20 @@ const HELGER = { "2/4": "Varannan (2/4)", "1/4": "Var fjärde (1/4)", "3/4": "Tr
 const ONSKTYP = { ledig: "Ledig", arbetar: "Arbetar", tidigast_start: "Börjar tidigast", senast_slut: "Slutar senast", endast_dygnsdel: "Bara dygnsdel" };
 const DAGNYCKEL = { vardag: "Vardagar", helg: "Helg (lör–sön)", alla: "Alla dagar", "mån": "Måndag", "tis": "Tisdag", "ons": "Onsdag", "tor": "Torsdag", "fre": "Fredag", "lör": "Lördag", "sön": "Söndag" };
 
+let loggaNr = 0;
+const LOGGA = () => { const id = "guld" + (++loggaNr); return `<svg viewBox="0 0 64 64" role="img" aria-label="Dodex"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc95"/><stop offset=".55" stop-color="#cfa246"/><stop offset="1" stop-color="#94691f"/></linearGradient></defs><circle cx="32" cy="32" r="29" fill="#141310" stroke="url(#${id})" stroke-width="3"/><circle cx="32" cy="32" r="24.5" fill="none" stroke="url(#${id})" stroke-width="0.9" opacity=".8"/><line x1="32.00" y1="13.50" x2="32.00" y2="9.00" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round"/><line x1="42.25" y1="14.25" x2="43.50" y2="12.08" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="49.75" y1="21.75" x2="51.92" y2="20.50" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="50.50" y1="32.00" x2="55.00" y2="32.00" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round"/><line x1="49.75" y1="42.25" x2="51.92" y2="43.50" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="42.25" y1="49.75" x2="43.50" y2="51.92" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="32.00" y1="50.50" x2="32.00" y2="55.00" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round"/><line x1="21.75" y1="49.75" x2="20.50" y2="51.92" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="14.25" y1="42.25" x2="12.08" y2="43.50" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="13.50" y1="32.00" x2="9.00" y2="32.00" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round"/><line x1="14.25" y1="21.75" x2="12.08" y2="20.50" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="21.75" y1="14.25" x2="20.50" y2="12.08" stroke="url(#${id})" stroke-width="1.4" stroke-linecap="round"/><line x1="32" y1="32" x2="22.5" y2="26.5" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round"/><line x1="32" y1="32" x2="44" y2="23" stroke="url(#${id})" stroke-width="1.8" stroke-linecap="round"/><circle cx="32" cy="32" r="2.4" fill="#f0d58e"/></svg>`; };
+const loggaText = () => `${LOGGA()}<span><b>DODEX</b><small>Scheduler</small></span>`;
+
 const IKON = {
+  oversikt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>',
+  behov: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M17 8v6M14 11h6"/></svg>',
+  grupp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.6c2.6 0 4.6 1.7 5.5 4.4"/></svg>',
+  simulering: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11M4 17h7"/><path d="m15 3 4 4-4 4M11 13l4 4-4 4"/></svg>',
+  kontroll: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>',
+  rapport: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
+  kostnad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
+  klocka: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  lucka: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M10 14l4 4M14 14l-4 4"/></svg>',
   logga: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="5"/><path d="M8 2v4M16 2v4M7.5 13.5l3 3 6-6"/></svg>',
   hem: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
   indata: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/></svg>',
@@ -27,6 +40,7 @@ const IKON = {
   ut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>',
   las: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   olast: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>',
+  penna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>',
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
   varning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h0"/></svg>',
   stopp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h0"/></svg>',
@@ -88,26 +102,37 @@ function sokvag(delar) {
 let kravsInloggning = false;
 function ritaMeny() {
   const e = st.enhet, k = st.korning && st.enhet && st.korning.enhet_id === st.enhet.id ? st.korning.id : "";
-  const lank = (vyn, ikon, text, href, av) => `<a href="${href}" aria-label="${text}"${st.vy === vyn ? ' aria-current="page"' : ""}${av ? ' aria-disabled="true" tabindex="-1"' : ""}>${IKON[ikon]}<span>${text}</span></a>`;
-  const bas = e ? `#/e/${e.id}` : "#/";
-  $("#meny").innerHTML = `<a class="logga" href="#/" aria-label="Schemasystem">${IKON.logga}<span>Schema</span></a>
-    ${lank("hem", "hem", "Enheter", "#/")}
-    ${lank("indata", "indata", "Indata", `${bas}/indata`, !e)}
-    ${lank("schema", "schema", "Schema", `${bas}/schema${k ? "/" + k : ""}`, !e)}
-    ${lank("personer", "person", "Personer", `${bas}/personer${k ? "/" + k : ""}`, !e)}
-    ${lank("bemanning", "graf", "Bemanning", `${bas}/bemanning${k ? "/" + k : ""}`, !e)}
-    ${lank("analys", "analys", "Analys", `${bas}/analys`, !e)}
-    ${lank("installningar", "installning", "Regler", `${bas}/installningar`, !e)}
+  const KORT = { Schemaplanering: "Schema", Bemanningsbehov: "Behov", "Analys och nyckeltal": "Nyckeltal", Regelkontroll: "Regler", Inställningar: "Inställn." };
+  const lank = (vyer, ikon, text, href, av) => `<a class="post" href="${href}" aria-label="${text}"${vyer.includes(st.vy) ? ' aria-current="page"' : ""}${av ? ' aria-disabled="true" tabindex="-1"' : ""}>${IKON[ikon]}<span class="lang">${text}</span><span class="kortnamn">${KORT[text] || text}</span></a>`;
+  const bas = e ? `#/e/${e.id}` : "#/", kk = k ? "/" + k : "";
+  const lista = st.enhetLista || [];
+  $("#meny").innerHTML = `<a class="logga" href="#/" aria-label="DODEX Scheduler, till enheterna">${loggaText()}</a>
+    <div class="enhetsval"><label for="enhetsval">Enhet</label><select id="enhetsval"><option value="">Alla enheter …</option>${lista.map(x => `<option value="${x.id}"${e && x.id === e.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div>
+    ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
+    ${lank(["schema"], "schema", "Schemaplanering", `${bas}/schema${kk}`, !e)}
+    ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
+    ${lank(["medarbetare", "personer", "indata"], "grupp", "Medarbetare", `${bas}/medarbetare`, !e)}
+    ${lank(["nyckeltal", "bemanning"], "graf", "Analys och nyckeltal", `${bas}/nyckeltal${kk}`, !e)}
+    ${lank(["analys"], "simulering", "Simulering", `${bas}/analys`, !e)}
+    ${lank(["regelkontroll"], "kontroll", "Regelkontroll", `${bas}/regelkontroll${kk}`, !e)}
+    ${lank(["rapporter"], "rapport", "Rapporter", `${bas}/rapporter`, !e)}
+    ${lank(["installningar"], "installning", "Inställningar", `${bas}/installningar`, !e)}
     <div class="fyll"></div>
-    ${kravsInloggning ? `<button class="ut" data-g="logga-ut" aria-label="Logga ut">${IKON.ut}<span>Logga ut</span></button>` : ""}`;
+    ${kravsInloggning ? `<button class="post ut" data-g="logga-ut" aria-label="Logga ut">${IKON.ut}<span>Logga ut</span></button>` : ""}
+    <div class="fot"><em>Planering som skapar balans – idag och imorgon.</em>© Sofia Rångeby</div>`;
+  $("#mobillogga").innerHTML = loggaText();
+  const v = $("#enhetsval");
+  if (v) v.onchange = () => { location.hash = v.value ? `#/e/${v.value}/oversikt` : "#/"; };
+  $("#toppknappar").innerHTML = e ? `<button class="guld liten" data-g="lagg-schema">${IKON.spela} Lägg schema</button>` : "";
 }
 
 // ---------------------------------------------------------------- inloggning
 function visaInloggning() {
   stoppaPollning(); st.vy = "hem"; st.enhet = null; ritaMeny(); sokvag([]);
   vy().innerHTML = `<form class="kort inloggning" id="inlogg">
-    <div style="color:var(--accent)">${IKON.logga.replace("<svg", '<svg width="40" height="40"')}</div>
-    <h1>Välkommen</h1>
+    <div class="logga ljus" style="margin-bottom:6px">${loggaText()}</div>
+    <h1>Välkommen till DODEX Scheduler</h1>
+    <p class="dampad">Smart schemaplanering för en hållbar verksamhet.</p>
     <div><label for="losen">Lösenord</label><input id="losen" type="password" autocomplete="current-password" required></div>
     <button class="primar" type="submit">Logga in</button>
     <p class="dampad liten" id="inlogg-fel" role="alert"></p></form>`;
@@ -121,21 +146,23 @@ function visaInloggning() {
 
 // ---------------------------------------------------------------- vy: enheter
 async function visaEnheter() {
-  st.vy = "hem"; st.enhet = null; st.korning = null; ritaMeny();
+  st.vy = "hem"; st.enhet = null; st.korning = null;
+  try { st.enhetLista = await api("GET", "enheter"); } catch { /* behåll */ }
+  ritaMeny();
   sokvag([["Enheter"]]);
   const [enheter, exempel] = await Promise.all([api("GET", "enheter"), api("GET", "exempel")]);
   st.exempel = exempel;
   vy().innerHTML = `
     <section class="kort">
-      <div class="rubrikrad"><div style="display:block"><h1>Dina enheter</h1>
-        <p class="dampad" style="margin:6px 0 0">En enhet är en arbetsgrupp med personal, behov, önskemål och regler. Varje schema du lägger sparas som en körning.</p></div>
+      <div class="rubrikrad"><div style="display:block"><h1>Välkommen till DODEX Scheduler</h1>
+        <p class="dampad" style="margin:6px 0 0">Smart schemaplanering för en hållbar verksamhet. En enhet är en arbetsgrupp med personal, behov, önskemål och regler; varje schema du lägger sparas som en körning.</p></div>
         <div><button class="primar" data-g="ny-enhet">+ Ny enhet</button></div></div>
     </section>
     <section class="lista-enheter">${enheter.length ? enheter.map(e => `
       <div class="kort enhet">
-        <a class="namn" href="#/e/${e.id}/indata">${esc(e.namn)}</a>
+        <a class="namn" href="#/e/${e.id}/oversikt">${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
-        <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/schema">${IKON.schema} Schema</a><a class="knapp liten" href="#/e/${e.id}/indata">Öppna</a>
+        <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/oversikt">${IKON.oversikt} Översikt</a><a class="knapp liten" href="#/e/${e.id}/schema">Schema</a>
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
           <button class="liten fara" data-g="ta-bort-enhet" data-id="${e.id}" data-namn="${esc(e.namn)}">Ta bort</button></div>
       </div>`).join("") : `<div class="kort tom">Inga enheter än. Skapa en ny eller börja från ett exempel nedan.</div>`}</section>
@@ -196,7 +223,7 @@ function ritaEnhet() {
       <div class="rubrikrad">
         <div style="flex:1;min-width:200px;display:block"><label for="enhet-namn">Enhet</label><input id="enhet-namn" value="${esc(st.enhet.namn)}" style="font-size:20px;font-weight:800"></div>
         <div><button id="spara" ${st.andrad ? "" : "disabled"}>Sparat</button>
-          <button class="primar" data-g="lagg-schema">${IKON.spela} Lägg schema</button></div>
+          <button class="guld" data-g="lagg-schema">${IKON.spela} Lägg schema</button></div>
       </div>
     </section>
     <div class="redigera">
@@ -264,6 +291,7 @@ function ritaFlik() {
       <div class="falt">
         <div><label for="p-veckor">Veckor i perioden</label><input id="p-veckor" type="number" min="1" max="16" data-s="veckor" data-t="heltal" value="${i.veckor}"></div>
         <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-s="budget_timmar_vecka" data-t="tal" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
+        <div><label for="p-kost">Timkostnad, kr (inkl. PO och OB i snitt)</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-s="timkostnad_kr" data-t="tal" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
         <div><label for="p-iso">Första veckans veckonummer</label><input id="p-iso" type="number" min="1" max="53" data-s="start_iso_vecka" data-t="valfritt-tal" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div>
         <div><label for="p-delp">Delperioder (veckor)</label><input id="p-delp" data-s="delperioder" data-t="lista" value="${esc((i.delperioder || []).join(", "))}" placeholder="hela perioden"></div>
         <div><label for="p-tid">Sekunder per optimeringssteg</label><input id="p-tid" type="number" min="1" max="60" data-s="losare.tid_per_steg_s" data-t="tal" value="${i.losare?.tid_per_steg_s ?? 15}"></div>
@@ -440,7 +468,7 @@ function kontrollera() {
     try { st.kontroll = await api("POST", "kontrollera", { indata: st.indata }); }
     catch (e) { st.kontroll = { natfel: e.message }; }
     const r = $("#kontroll"); if (r) r.innerHTML = ritaKontroll();
-    if (st.vy === "indata" && st.flik === "onskemal" && !st.redigeraOnsk && $("#flik")) $("#flik").innerHTML = ritaFlik();
+    if ((st.vy === "indata" || st.vy === "medarbetare") && st.flik === "onskemal" && !st.redigeraOnsk && $("#flik")) $("#flik").innerHTML = ritaFlik();
   }, 400);
 }
 
@@ -528,6 +556,7 @@ document.addEventListener("input", e => {
   }
 });
 document.addEventListener("change", e => {
+  if (e.target.dataset.g === "byt-korning") { location.hash = `#/e/${st.enhet.id}/${e.target.dataset.vy}/${e.target.value}`; return; }
   if (e.target.tagName === "SELECT" && (e.target.closest("#flik") || e.target.closest("#regler")) && (e.target.dataset.s || e.target.dataset.r || e.target.dataset.tp !== undefined))
     e.target.dispatchEvent(new Event("input", { bubbles: true }));
 });
@@ -577,7 +606,7 @@ async function visaInstallningar(id) {
   st.vy = "installningar";
   await laddaEnhet(id);
   ritaMeny();
-  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/indata`], ["Regler"]]);
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Inställningar"]]);
   ritaInstallningar();
 }
 
@@ -608,9 +637,17 @@ function ritaInstallningar() {
     </div>`;
   };
   const np = (st.indata.nattpass && st.indata.nattpass[0]) || { start: "21:45", slut: "07:15" };
+  const IF = [["regler", "Regler"], ["period", "Period, budget och kostnad"], ["json", "Avancerat"]];
+  const iflik = st.iflik || "regler";
+  const flikrad = `<div class="flikar" role="tablist" style="margin-top:14px">${IF.map(([k, t]) => `<button role="tab" data-g="iflik" data-f="${k}" aria-selected="${iflik === k}">${t}</button>`).join("")}</div>`;
+  if (iflik !== "regler") {
+    st.flik = iflik;
+    vy().innerHTML = `<section class="kort"><h1>Inställningar</h1>${flikrad}</section><section class="kort"><div id="flik">${ritaFlik()}</div></section>`;
+    return;
+  }
   vy().innerHTML = `
-    <section class="kort"><h1>Regler</h1>
-      <p class="dampad" style="margin:6px 0 0">Alla regler går att ändra. Regler från avtal, lag och varannan helg är låsta: lås upp dem bara om ni har ett lokalt avtal eller beslut, och avvikelsen syns då på alla scheman. Behovet är alltid mjukt: hellre en vakans än ett regelbrott.</p></section>
+    <section class="kort"><h1>Inställningar</h1>${flikrad}
+      <p class="dampad" style="margin:12px 0 0">Alla regler går att ändra. Regler från avtal, lag och varannan helg är låsta: lås upp dem bara om ni har ett lokalt avtal eller beslut, och avvikelsen syns då på alla scheman. Behovet är alltid mjukt: hellre en vakans än ett regelbrott.</p></section>
     <div id="regler" class="tva">
       ${grupper.map(g => `<section class="kort"><h2>${g}</h2><div class="regelgrupp">${REGLER.filter(x => x.grupp === g).map(rad).join("")}
         ${g === "Kontrakt" ? `<div class="regel"><div><div class="namn">Heltid per vecka</div><div class="chips" style="margin-top:4px"><span class="niva">kontrakt</span></div></div>
@@ -649,12 +686,12 @@ document.addEventListener("click", async e => {
       case "logga-ut": await api("POST", "logga-ut"); visaInloggning(); break;
       case "ny-enhet": {
         const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: NY_INDATA() });
-        st.enhet = null; location.hash = `#/e/${id}/indata`; break;
+        st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/medarbetare`; break;
       }
       case "fran-exempel": {
         const x = st.exempel[+el.dataset.i];
         const { id } = await api("POST", "enheter", { namn: x.namn, indata: x.indata });
-        st.enhet = null; location.hash = `#/e/${id}/indata`; break;
+        st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/oversikt`; break;
       }
       case "kopiera": {
         const e2 = await api("GET", "enheter/" + el.dataset.id);
@@ -664,6 +701,11 @@ document.addEventListener("click", async e => {
       case "ta-bort-enhet":
         if (el.dataset.bekrafta !== "1") { el.dataset.bekrafta = "1"; el.textContent = "Säker?"; setTimeout(() => { el.dataset.bekrafta = ""; el.textContent = "Ta bort"; }, 4000); return; }
         await api("DELETE", "enheter/" + el.dataset.id); meddela(`${el.dataset.namn} är borttagen.`); visaEnheter(); break;
+      case "iflik": st.iflik = el.dataset.f; ritaInstallningar(); break;
+      case "mflik":
+        st.flik = el.dataset.f; st.redigeraOnsk = null;
+        document.querySelectorAll("[data-g=mflik]").forEach(b => b.setAttribute("aria-selected", b === el));
+        $("#flik").innerHTML = ritaFlik(); history.replaceState(null, "", `#/e/${st.enhet.id}/medarbetare?flik=${st.flik}`); break;
       case "flik":
         st.flik = el.dataset.flik; st.redigeraOnsk = null;
         document.querySelectorAll("[data-g=flik]").forEach(b => b.setAttribute("aria-selected", b === el));
@@ -742,11 +784,18 @@ async function route() {
     if (!s.inloggad) return visaInloggning();
     kravsInloggning = s.kravs;
     if (st.enhet && st.andrad && !(d[0] === "e" && +d[1] === st.enhet.id)) await spara();
+    if (!st.enhetLista) { try { st.enhetLista = await api("GET", "enheter"); } catch { st.enhetLista = []; } }
     if (d[0] === "e") {
-      const id = +d[1], vyn = d[2] || "indata", kid = d[3] ? +d[3] : null;
+      const id = +d[1], vyn = d[2] || "oversikt", kid = d[3] ? +d[3] : null;
       if (vyn === "indata") await visaEnhet(id, q.get("flik"));
       else if (vyn === "installningar") await visaInstallningar(id);
       else if (vyn === "analys") await visaAnalys(id);
+      else if (vyn === "oversikt") await visaOversikt(id);
+      else if (vyn === "behov") await visaBehov(id);
+      else if (vyn === "medarbetare") await visaMedarbetare(id, kid, q);
+      else if (vyn === "nyckeltal") await visaNyckeltal(id, kid);
+      else if (vyn === "regelkontroll") await visaRegelkontroll(id, kid);
+      else if (vyn === "rapporter") await visaRapporter(id);
       else await visaKorningsvy(id, vyn, kid, q);
     } else if (d[0] === "jamfor") await visaJamfor(d[1].split(",").map(Number));
     else await visaEnheter();

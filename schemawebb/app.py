@@ -34,6 +34,7 @@ from schemamotor import explain, export, validate
 from schemamotor import analys as analysmotor
 from schemamotor.balans import balans as rakna_balans
 from schemamotor.build import IndataFel, forbered, los
+from schemamotor.justera import justera
 from schemamotor.modell import kontrollera_indata
 from schemamotor.onskemal import beskriv, kontrollera as kontrollera_onskemal
 from schemawebb import db
@@ -276,6 +277,32 @@ def _klar(kid):
     if not k.get("resultat") or k["resultat"].get("status") != "OK":
         raise HTTPException(409, "Det finns inget färdigt schema att exportera.")
     return k
+
+
+class JusteraIn(BaseModel):
+    schemadata: dict = Field(alias="schema")
+    namn: Optional[str] = None
+    spara: bool = False
+
+
+@app.post("/api/korningar/{kid}/justera", dependencies=[Depends(inloggad)])
+def justera_korning(kid: int, j: JusteraIn):
+    """Räkna om ett handjusterat schema. Med spara=true blir det en ny körning; den gamla finns kvar."""
+    k = db.korning(kid)
+    if not k or k["status"] != "klar" or (k.get("resultat") or {}).get("status") != "OK":
+        raise HTTPException(404, "Körningen finns inte eller har inget schema.")
+    indata = k["indata"]
+    try:
+        res = justera(copy.deepcopy(indata), j.schemadata, k["resultat"])
+    except IndataFel as e:
+        return JSONResponse({"fel": [str(e)]}, status_code=422)
+    g = validate.kontrollera(copy.deepcopy(indata), res)
+    if not j.spara:
+        return {"resultat": res, "granskning": g}
+    namn = (j.namn or "").strip() or f"{k['namn']} (justerad)"
+    ny = db.skapa_korning(k["enhet_id"], namn, indata, k.get("balans"))
+    db.uppdatera_korning(ny, status="klar", steg=None, sekunder=0, resultat=res, granskning=g)
+    return {"id": ny}
 
 
 @app.get("/api/korningar/{kid}/excel", dependencies=[Depends(inloggad)])

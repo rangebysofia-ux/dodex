@@ -3,22 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#5b3df5">
-<title>Schemasystem</title>
+<meta name="theme-color" content="#193f38">
+<link rel="icon" type="image/svg+xml" href="statisk/logga.svg">
+<title>DODEX Scheduler</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Cinzel:wght@700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="statisk/stil.css">
 </head>
 <body>
 <nav class="meny" id="meny" aria-label="Huvudmeny"></nav>
 <div class="innehall">
-  <div class="topp"><nav id="sokvag" aria-label="Var du är"></nav></div>
+  <a class="logga mobillogga" href="#/" id="mobillogga"></a>
+  <div class="topp"><nav id="sokvag" aria-label="Var du är"></nav><div id="toppknappar" class="chips"></div></div>
   <main id="vy" tabindex="-1"><p class="tom">Laddar …</p></main>
 </div>
 <div id="meddelande" role="status" aria-live="polite"></div>
 <div id="tips" role="tooltip"></div>
 <script src="statisk/assistent.js"></script>
 <script src="statisk/vyer.js"></script>
+<script src="statisk/sidor.js"></script>
 <script src="statisk/app.js"></script>
 <script src="statisk/chatt.js"></script>
 </body>

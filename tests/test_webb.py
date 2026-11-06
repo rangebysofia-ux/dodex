@@ -71,6 +71,20 @@ def test_korning_hela_vagen(klient):
     g = klient.post("/api/granska", json={"indata": indata, "schema": schema}).json()
     assert not g["giltigt"] and any(b["regel"] == "DYGNSVILA" for b in g["brott"])
 
+    # justera för hand: flytta ett pass, förhandsgranska, spara som ny körning
+    original = klient.get(f"/api/korningar/{kid}").json()["resultat"]["schema"]
+    utkast = json.loads(json.dumps(original))
+    pid = next(p for p, rad in utkast.items() if rad[0])
+    utkast[pid][0], utkast[pid][1] = None, utkast[pid][0] if not utkast[pid][1] else utkast[pid][1]
+    f = klient.post(f"/api/korningar/{kid}/justera", json={"schema": utkast}).json()
+    assert "granskning" in f and f["resultat"]["justerat"]
+    ny = klient.post(f"/api/korningar/{kid}/justera", json={"schema": utkast, "namn": "Handjusterad", "spara": True}).json()["id"]
+    nk = klient.get(f"/api/korningar/{ny}").json()
+    assert nk["status"] == "klar" and nk["namn"] == "Handjusterad" and nk["granskning"] is not None
+    assert klient.get(f"/api/korningar/{kid}").json()["resultat"]["schema"] == original
+    utkast[pid][0] = {"dygnsdel": "morgon", "start": "fel", "slut": "15:00"}
+    assert klient.post(f"/api/korningar/{kid}/justera", json={"schema": utkast}).status_code == 422
+
     x = klient.get(f"/api/korningar/{kid}/excel")
     assert x.status_code == 200 and x.content[:2] == b"PK"
     p = klient.get(f"/api/korningar/{kid}/pdf")

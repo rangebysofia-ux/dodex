@@ -81,7 +81,7 @@ async function visaKorningsvy(id, vyn, kid, q) {
   if (!k) {
     vy().innerHTML = `<section class="kort" style="text-align:center;padding:40px 18px"><div style="color:var(--accent)">${IKON.schema.replace("<svg", '<svg width="48" height="48"')}</div>
       <h1 style="margin-top:8px">Inget schema än</h1><p class="dampad">Lägg det första schemat för ${esc(st.enhet.namn)}. Det tar från några sekunder upp till ett par minuter.</p>
-      <p><button class="primar" data-g="lagg-schema">${IKON.spela} Lägg schema</button></p></section>`;
+      <p><button class="guld" data-g="lagg-schema">${IKON.spela} Lägg schema</button></p></section>`;
     return;
   }
   ritaKorningsvy();
@@ -100,7 +100,7 @@ function huvud() {
   return `<section class="kort"><div class="rubrikrad">
     <div style="display:block;min-width:220px;flex:1"><label for="korningsval">Körning</label><select id="korningsval" style="max-width:420px">${val}</select></div>
     <div>${res?.status === "OK" ? `<a class="knapp liten" href="api/korningar/${k.id}/excel">${IKON.ladda} Excel</a><a class="knapp liten" href="api/korningar/${k.id}/pdf">${IKON.ladda} PDF</a>` : ""}
-      <button class="primar liten" data-g="lagg-schema">${IKON.spela} Lägg nytt schema</button></div></div></section>`;
+      <button class="guld liten" data-g="lagg-schema">${IKON.spela} Lägg nytt schema</button></div></div></section>`;
 }
 
 function sammanfattning() {
@@ -148,7 +148,8 @@ function ritaKorningsvy() {
     h += `<p style="margin-top:10px" class="chips"><a class="knapp" href="#/e/${k.enhet_id}/indata">Ändra indata</a><a class="knapp" href="#/e/${k.enhet_id}/installningar">Ändra regler</a></p></section>`;
     vy().innerHTML = h; kopplaKorningsval(); return;
   }
-  h += sammanfattning();
+  if (st.red && st.red.kid !== k.id) st.red = null;
+  h += st.red ? redigeringsrad() : sammanfattning();
   if (st.vy === "personer") h += ritaPersoner();
   else if (st.vy === "bemanning") h += ritaBemanning();
   else h += ritaSchemavy();
@@ -163,12 +164,13 @@ function kopplaKorningsval() {
 
 // ---------------------------------------------------------------- schema
 function ritaSchemavy() {
-  const res = st.korning.resultat, filter = st.sv.filter || "alla";
+  const res = st.red?.res || st.korning.resultat, filter = st.sv.filter || "alla";
   const F = [["alla", "Alla pass"], ["morgon", "Morgon"], ["kvall", "Kväll"], ["natt", "Natt"], ["tider", "Klockslag"]];
-  let h = `<section class="kort"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema</h2>
-    <div class="chips" role="group" aria-label="Visa">${F.map(([v, t]) => `<button class="chip" data-g="filter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
+  let h = `<section class="kort${st.red ? " redigerar" : ""}"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema</h2>
+    ${st.red ? "" : `<button class="liten" data-g="redigera">${IKON.penna || "✎"} Redigera schemat</button>`}
+    <div class="chips" role="group" aria-label="Visa" style="margin-left:auto">${F.map(([v, t]) => `<button class="chip" data-g="filter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
     <div class="chips" role="group" aria-label="Vecka" style="margin-bottom:12px">${Array.from({ length: res.veckor }, (_, v) => `<button class="chip" data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">Vecka ${v + 1}</button>`).join("")}
-      ${filter !== "tider" ? `<button class="chip" data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">Hela perioden</button>` : ""}</div>`;
+      ${filter !== "tider" ? `<button class="chip" data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button>` : ""}</div>`;
   if (filter === "tider") h += ritaKlockslag(res);
   else {
     h += st.vecka === -1 ? schemaDagar(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), filter, true) : schemaVecka(res, Math.max(0, st.vecka), filter);
@@ -207,12 +209,13 @@ function schemaDagar(res, dagar, filter, period) {
   if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">Vecka ${Math.floor(dagar[0] / 7) + w + 1}</th>`).join("")}</tr>`;
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>` + dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7].slice(0, 2) : DAGAR[d % 7]}</th>`).join("") + `</tr></thead><tbody>`;
   for (const pid of pers) {
-    h += `<tr><td title="${esc(pid)}"><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a></td>` + dagar.map(d => {
-      const p = res.schema[pid][d];
-      if (!p) return `<td ${kl(d)}></td>`;
-      if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
-      const n = pid + ":" + d;
-      return `<td ${kl(d)}><button class="pass ${p.dygnsdel}${st.valdCell === n ? " vald" : ""}" data-g="cell" data-c="${esc(n)}"${period ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}"` : ""}
+    const red = !!st.red;
+    h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a></td>` + dagar.map(d => {
+      const p = res.schema[pid][d], n = pid + ":" + d;
+      const mal = red ? ` data-mal="${esc(n)}"` : "";
+      if (!p) return `<td ${kl(d)}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : ""}</td>`;
+      if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}${mal}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
+      return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}"` : ""}
         aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}</button></td>`;
     }).join("") + `</tr>`;
   }
@@ -467,8 +470,156 @@ function granskningKort() {
     ${g.varningar.length ? `<details style="margin-top:10px"><summary>${g.varningar.length} saker att notera</summary><ul class="punkter liten" style="margin-top:8px">${g.varningar.map(x => `<li><span class="niva">${esc(x.niva)}</span> ${esc(x.person || "")} ${esc(x.text)}</li>`).join("")}</ul></details>` : ""}</section>`;
 }
 
+// ---------------------------------------------------------------- redigera schemat
+// Ett utkast av schemat som användaren ändrar för hand. Varje ändring räknas om och granskas på servern;
+// inget sparas förrän användaren väljer Spara som ny körning.
+function startaRedigering() {
+  const res = st.korning.resultat;
+  st.red = { kid: st.korning.id, schema: structuredClone(res.schema), res: null, g: st.korning.granskning, andringar: 0, historik: [], panel: null };
+  st.red.res = { ...res, schema: st.red.schema };
+  if (st.vecka === undefined) st.vecka = 0;
+  ritaKorningsvy();
+}
+
+function redigeringsrad() {
+  const r = st.red, g = r.g, res = r.res, brott = g ? g.brott.length : 0;
+  const ursprung = st.korning.granskning?.brott.length || 0, vak0 = st.korning.resultat.kpi.vakanta_pass;
+  const pil = (nu, fore) => nu === fore ? "" : `<small class="${nu < fore ? "upp" : "ned"}">${nu > fore ? "+" : "−"}${Math.abs(nu - fore)}</small>`;
+  return `<section class="kort redrad"><div class="rubrikrad"><div style="display:block"><h2 style="margin:0">Du redigerar schemat</h2>
+      <p class="dampad liten" style="margin:4px 0 0">Dra ett pass till en annan dag eller person, eller tryck på ett pass för att ändra tider. Tryck på + för att lägga till. Varje ändring granskas direkt. Originalet finns kvar.</p></div>
+      <div class="chips"><button class="liten" data-g="angra" ${r.historik.length ? "" : "disabled"}>Ångra</button><button class="liten" data-g="avsluta-red">Avbryt</button>
+        <button class="guld" data-g="spara-red" ${r.andringar ? "" : "disabled"}>Spara som ny körning</button></div></div>
+    <div class="kpi" style="margin-top:12px">
+      <div><b>${r.andringar}</b><span>ändringar</span></div>
+      <div class="${brott ? "fel" : "bra"}"><b>${brott}</b><span>brott mot hårda regler ${pil(brott, ursprung)}</span></div>
+      <div class="${res.kpi.vakanta_pass ? "fel" : "bra"}"><b>${res.kpi.vakanta_pass}</b><span>vakanta pass ${pil(res.kpi.vakanta_pass, vak0)}</span></div>
+      <div><b>${sv(Object.values(res.personer).reduce((a, p) => a + p.minuter, 0) / 60 / res.veckor, 1)} h</b><span>schemalagt per vecka</span></div>
+    </div>
+    ${brott ? `<details style="margin-top:10px"><summary>Visa brotten</summary><ul class="punkter liten" style="margin-top:6px">${g.brott.slice(0, 30).map(x => `<li><span class="niva ${nk(x.niva)}">${esc(x.niva)}</span> <b>${esc(x.person || "")}</b> ${esc(x.text)}</li>`).join("")}</ul></details>` : ""}
+    ${r.panel ? redigeringspanel() : ""}</section>`;
+}
+
+function vanligTid(del_) {
+  const tider = {};
+  for (const rad of Object.values(st.red.schema)) for (const p of rad) if (p && p.dygnsdel === del_) { const t = p.start + "–" + p.slut; tider[t] = (tider[t] || 0) + 1; }
+  const b = Object.entries(tider).sort((a, b) => b[1] - a[1])[0];
+  if (b) return b[0].split("–");
+  const r = st.korning.indata.regler || {}, np = st.korning.indata.nattpass?.[0];
+  return { morgon: [r.morgon_start || "07:00", "15:00"], kvall: ["14:00", r.kvall_slut || "22:00"], natt: [np?.start || "21:45", np?.slut || "07:15"] }[del_];
+}
+
+function redigeringspanel() {
+  const P = st.red.panel, [pid, d] = delaCell(P.c), p = st.red.schema[pid][d], ny = !p;
+  const v = P.utkast || (p ? { dygnsdel: p.dygnsdel, start: p.start, slut: p.slut } : (() => { const [a, b] = vanligTid("morgon"); return { dygnsdel: "morgon", start: a, slut: b }; })());
+  P.utkast = v;
+  const pers = Object.keys(st.red.schema), N = st.red.res.veckor * 7;
+  return `<div class="redpanel" role="dialog" aria-label="${ny ? "Nytt pass" : "Ändra pass"}">
+    <div class="rubrikrad"><h3 style="margin:0">${ny ? "Nytt pass" : "Ändra pass"} – ${esc(pid)}, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}</h3><button class="liten" data-g="stang-panel" aria-label="Stäng">×</button></div>
+    <div class="falt">
+      <div><label for="rp-del">Pass</label><select id="rp-del">${Object.entries(DELAR).map(([k, t]) => `<option value="${k}"${v.dygnsdel === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div><label for="rp-start">Start</label><input id="rp-start" type="time" value="${esc(v.start)}"></div>
+      <div><label for="rp-slut">Slut</label><input id="rp-slut" type="time" value="${esc(v.slut)}"></div>
+      ${ny ? "" : `<div><label for="rp-person">Flytta till person</label><select id="rp-person">${pers.map(x => `<option${x === pid ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></div>
+      <div><label for="rp-dag">Flytta till dag</label><select id="rp-dag">${Array.from({ length: N }, (_, i) => `<option value="${i}"${i === d ? " selected" : ""}>V${Math.floor(i / 7) + 1} ${DAGAR[i % 7]}</option>`).join("")}</select></div>`}
+    </div>
+    <div class="chips" style="margin-top:12px"><button class="primar" data-g="spara-pass">${ny ? "Lägg till" : "Spara"}</button>${ny ? "" : `<button class="fara" data-g="ta-bort-pass">Ta bort passet</button>`}</div>
+    <p class="dampad liten" style="margin:8px 0 0">Rast och arbetstid räknas ut efter passets längd. Finns det redan ett pass där du flyttar till byter passen plats.</p></div>`;
+}
+
+function delaCell(c) { const i = c.lastIndexOf(":"); return [c.slice(0, i), +c.slice(i + 1)]; }
+
+// Gör en ändring i utkastet, räkna om och granska.
+async function andraUtkast(fn) {
+  const r = st.red;
+  r.historik.push(structuredClone(r.schema));
+  if (r.historik.length > 50) r.historik.shift();
+  fn(r.schema);
+  r.andringar++;
+  await raknaOm();
+}
+
+async function raknaOm() {
+  const r = st.red;
+  r.res = { ...r.res, schema: r.schema };
+  ritaKorningsvy();
+  try {
+    const svar = await api("POST", `korningar/${r.kid}/justera`, { schema: r.schema });
+    if (st.red !== r) return;
+    r.res = svar.resultat; r.g = svar.granskning;
+    r.felpersoner = new Set(svar.granskning.brott.map(b => b.person).filter(Boolean));
+  } catch (e) { meddela(e.message); }
+  if (st.red === r) ritaKorningsvy();
+}
+
+function flyttaPass(fran, till) {
+  if (fran === till) return;
+  const [p1, d1] = delaCell(fran), [p2, d2] = delaCell(till);
+  return andraUtkast(s => {
+    const a = s[p1][d1], b = s[p2][d2];
+    s[p2][d2] = a ? { ...a, manuell: true } : null;
+    s[p1][d1] = b ? { ...b, manuell: true } : null;
+  });
+}
+
+// dra och släpp mellan rutor i schemat
+document.addEventListener("dragstart", e => {
+  const b = e.target.closest?.("button.pass[draggable]"); if (!b) return;
+  e.dataTransfer.setData("text/plain", b.dataset.c); e.dataTransfer.effectAllowed = "move"; b.classList.add("drar");
+});
+document.addEventListener("dragend", e => e.target.classList?.remove("drar"));
+document.addEventListener("dragover", e => {
+  const td = e.target.closest?.("td[data-mal]"); if (!td || !st.red) return;
+  e.preventDefault(); document.querySelectorAll("td.slapp").forEach(x => x !== td && x.classList.remove("slapp")); td.classList.add("slapp");
+});
+document.addEventListener("dragleave", e => { const td = e.target.closest?.("td[data-mal]"); if (td && !td.contains(e.relatedTarget)) td.classList.remove("slapp"); });
+document.addEventListener("drop", e => {
+  const td = e.target.closest?.("td[data-mal]"); if (!td || !st.red) return;
+  e.preventDefault(); td.classList.remove("slapp");
+  const fran = e.dataTransfer.getData("text/plain"); if (fran) { st.red.panel = null; flyttaPass(fran, td.dataset.mal); }
+});
+
+async function redigeringsKlick(g, el) {
+  const r = st.red;
+  switch (g) {
+    case "redigera": st.sv.filter = st.sv.filter === "tider" ? "alla" : st.sv.filter; return startaRedigering();
+    case "avsluta-red":
+      if (r.andringar && !confirm("Avbryta utan att spara ändringarna?")) return;
+      st.red = null; return ritaKorningsvy();
+    case "angra": if (r.historik.length) { r.schema = r.historik.pop(); r.andringar = Math.max(0, r.andringar - 1); r.panel = null; await raknaOm(); } return;
+    case "andra-pass": case "ny-pass": r.panel = { c: el.dataset.c }; ritaKorningsvy(); $(".redpanel select, .redpanel input")?.focus(); return;
+    case "stang-panel": r.panel = null; return ritaKorningsvy();
+    case "ta-bort-pass": { const [pid, d] = delaCell(r.panel.c); r.panel = null; return andraUtkast(s => { s[pid][d] = null; }); }
+    case "spara-pass": {
+      const [pid, d] = delaCell(r.panel.c);
+      const v = { dygnsdel: $("#rp-del").value, start: $("#rp-start").value, slut: $("#rp-slut").value };
+      if (!v.start || !v.slut) { meddela("Ange start och slut."); return; }
+      const till = $("#rp-person") ? `${$("#rp-person").value}:${$("#rp-dag").value}` : r.panel.c;
+      r.panel = null;
+      return andraUtkast(s => {
+        const gammal = s[pid][d], nytt = { ...(gammal || {}), ...v, mall: "manuell", manuell: true };
+        if (till === `${pid}:${d}`) { s[pid][d] = nytt; return; }
+        const [p2, d2] = delaCell(till), b = s[p2][d2];
+        s[p2][d2] = nytt; s[pid][d] = b ? { ...b, manuell: true } : null;
+      });
+    }
+    case "spara-red": {
+      const namn = prompt("Namn på den nya körningen", `${st.korning.namn} (justerad)`); if (namn === null) return;
+      const { id } = await api("POST", `korningar/${r.kid}/justera`, { schema: r.schema, namn, spara: true });
+      st.red = null; st.korning = null; meddela("Det justerade schemat är sparat som en ny körning.");
+      location.hash = `#/e/${st.enhet.id}/schema/${id}`; return;
+    }
+  }
+}
+
+document.addEventListener("change", e => {
+  if (e.target.id === "rp-del" && st.red?.panel) {
+    const [a, b] = vanligTid(e.target.value); $("#rp-start").value = a; $("#rp-slut").value = b;
+  }
+});
+
 // ---------------------------------------------------------------- klick i vyerna
 async function vyKlick(g, el) {
+  if (["redigera", "avsluta-red", "angra", "andra-pass", "ny-pass", "stang-panel", "ta-bort-pass", "spara-pass", "spara-red"].includes(g)) return redigeringsKlick(g, el);
   switch (g) {
     case "anvand-forslag": {
       const { id } = await api("POST", `analys/${st.analys.id}/anvand`, { index: +el.dataset.n });
@@ -525,7 +676,7 @@ async function visaAnalys(id) {
   st.vy = "analys";
   await laddaEnhet(id);
   ritaMeny();
-  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/indata`], ["Analys"]]);
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Simulering"]]);
   if (st.analys && st.analys.enhet_id !== id) st.analys = null;
   ritaAnalys();
   if (st.analys && st.analys.status === "kör") pollaAnalys();
@@ -542,15 +693,17 @@ function pollaAnalys() {
 function ritaAnalys() {
   const i = st.indata, a = st.analys;
   const kt = kontrakteradTid(i);
-  let h = `<section class="kort"><h1>Konsekvensanalys</h1>
-    <p class="dampad" style="margin:6px 0 12px">Ange en budget så tar systemet fram flera bemanningsförslag, lägger ett schema för vart och ett och jämför konsekvenserna: vakanser och var de landar, överkapacitet, helgbemanning, timmar mot budget och hur jämnt morgnar och kvällar blandas. Behov och regler hämtas från enheten.</p>
+  const tk = st.timkostnad ?? i.timkostnad_kr ?? null;
+  let h = `<section class="kort"><h1>Simulering</h1>
+    <p class="dampad" style="margin:6px 0 12px">En planeringsstudio för att pröva alternativ innan något ändras: annan bemanningsnivå, fler heltider, jämnare helger eller färre fredagskvällar. Systemet lägger ett schema för varje alternativ och visar konsekvenserna för vakanser, kostnad, arbetstid och kvällsfördelning jämfört med nuläget. Behov och regler hämtas från enheten.</p>
     <form id="analysform" class="falt" style="align-items:end">
       <div><label for="a-budget">Budget, timmar per vecka</label><input id="a-budget" type="number" step="0.5" min="1" value="${a ? a.underlag.budget_timmar_vecka : (i.budget_timmar_vecka ?? Math.round(kt * 10) / 10)}"></div>
+      <div><label for="a-tk">Timkostnad, kr</label><input id="a-tk" type="number" step="1" min="1" placeholder="valfri" value="${tk ?? ""}"></div>
       <div><label for="a-tid">Noggrannhet</label><select id="a-tid"><option value="3">Snabb</option><option value="6" selected>Normal</option><option value="15">Noggrann</option></select></div>
-      <div><button class="primar" type="submit"${a && a.status === "kör" ? " disabled" : ""}>${IKON.spela} Ta fram förslag</button></div>
+      <div><button class="guld" type="submit"${a && a.status === "kör" ? " disabled" : ""}>${IKON.spela} Simulera alternativ</button></div>
     </form></section>`;
   if (!a) {
-    vy().innerHTML = h + `<section class="kort tom">Inga förslag än. Varje förslag tar några sekunder till en minut att lägga, beroende på noggrannhet.</section>`;
+    vy().innerHTML = h + `<section class="kort tom">Inga alternativ än. Varje alternativ tar några sekunder till en minut att lägga, beroende på noggrannhet.</section>`;
     kopplaAnalysform(); return;
   }
   const u = a.underlag, diff = Math.round((u.budget_timmar_vecka - u.behov_timmar_vecka) * 10) / 10;
@@ -578,6 +731,7 @@ function ritaAnalys() {
     ${rad("Vakanta pass", n => kons(n).vakanta_pass, (v, n) => `<b class="${v ? "minus" : ""}">${v}</b>${v ? `<div class="liten dampad">${Object.entries(kons(n).vakanser).filter(([, x]) => x).map(([k, x]) => `${x} ${{ vardag: "vardag", fredagskvall: "fre kväll", helg: "helg", natt: "natt" }[k]}`).join(", ")}</div>` : ""}`)}
     ${rad("Överkapacitet per vecka", n => kons(n).overkapacitet_timmar_vecka, v => `<span class="${v ? "plus" : ""}">${sv(v, 1)} h</span>`, true, "Timmar i tjänst utöver behovet")}
     ${rad("Kontrakterad tid per vecka", n => S[n].kontrakt_timmar_vecka, v => `${sv(v, 1)} h`, null)}
+    ${tk ? rad("Personalkostnad per månad", n => S[n].kontrakt_timmar_vecka * tk * 52 / 12, v => kr(v), true, "Kontrakterad tid × timkostnad × 52 / 12") : ""}
     ${rad("Mot budget", n => kons(n).budget_kvar ?? (u.budget_timmar_vecka - S[n].kontrakt_timmar_vecka), v => `<span class="${v < -0.05 ? "minus" : ""}">${v < -0.05 ? sv(-v, 1) + " h över" : sv(v, 1) + " h kvar"}</span>`, false)}
     ${rad("Årsarbetare", n => kons(n).arsarbetare, v => sv(v), null)}
     ${rad("Personer (heltider)", n => kons(n).personer, (v, n) => `${v} (${kons(n).heltider})`, null)}
@@ -588,19 +742,64 @@ function ritaAnalys() {
     ${rad("Brott mot hårda regler", n => kons(n).brott, v => `<b class="${v ? "minus" : ""}">${v}</b>`)}
     <tr><td></td>${ordning.map(n => `<td>${S[n].status === "klar" && S[n].resultat?.status === "OK" ? `<button class="liten primar" data-g="anvand-forslag" data-n="${n}">Använd som ny enhet</button>` : S[n].status === "fel" ? `<span class="minus liten">${esc(S[n].fel)}</span>` : S[n].status === "klar" ? `<span class="minus liten">Går inte att lägga</span>` : ""}</td>`).join("")}</tr>
     </tbody></table></div>
-    ${klar ? analysGrafer(S, ordning) : ""}</section>`;
+    ${klar ? analysGrafer(S, ordning, tk) : ""}</section>
+    ${klar ? nulageMotAlternativ(S, ordning, tk) : ""}`;
   vy().innerHTML = h;
   kopplaAnalysform();
 }
 
-function analysGrafer(S, ordning) {
+function analysGrafer(S, ordning, tk) {
   const stapel = (rubrik, f, enhet, klass) => {
     const max = Math.max(1, ...ordning.filter(n => S[n].konsekvenser?.status === "OK").map(n => f(n) || 0));
     return `<div><h3>${rubrik}</h3>${ordning.map(n => { const v = f(n) || 0, ok = S[n].konsekvenser?.status === "OK";
       return `<div class="hstapel"><span class="liten">${esc(S[n].namn)}</span>${ok ? `<div><i class="${klass}" style="width:${Math.max(v ? 2 : 0, v / max * 100)}%"></i></div><b class="liten">${sv(v, 1)}${enhet}</b>` : `<span class="liten minus" style="grid-column:span 2">Inget schema</span>`}</div>`; }).join("")}</div>`;
   };
   const k = n => S[n].konsekvenser || {};
-  return `<div class="tva" style="margin-top:14px">${stapel("Vakanta pass", n => k(n).vakanta_pass, "", "vak")}${stapel("Överkapacitet, timmar per vecka", n => k(n).overkapacitet_timmar_vecka, " h", "over")}</div>`;
+  return `<div class="tva" style="margin-top:14px">${stapel("Vakanta pass", n => k(n).vakanta_pass, "", "vak")}${stapel("Överkapacitet, timmar per vecka", n => k(n).overkapacitet_timmar_vecka, " h", "over")}</div>
+    <div style="margin-top:14px">${tk ? stapel("Personalkostnad per månad, tkr", n => S[n].kontrakt_timmar_vecka * tk * 52 / 12 / 1000, " tkr", "kost") : stapel("Kontrakterad tid, timmar per vecka", n => S[n].kontrakt_timmar_vecka, " h", "kost")}</div>`;
+}
+
+// Nuläge mot alternativ: skillnaden mot nuvarande bemanning, och förslag till förbättringar.
+function nulageMotAlternativ(S, ordning, tk) {
+  const nu = S.findIndex(x => x.id === "nuvarande");
+  if (nu < 0) return "";
+  const k = n => S[n].konsekvenser || {}, alt = ordning.filter(n => n !== nu && k(n).status === "OK");
+  if (k(nu).status !== "OK") {
+    const ok = alt.length ? alt.slice().sort((a, b) => S[a].kontrakt_timmar_vecka - S[b].kontrakt_timmar_vecka)[0] : null;
+    return `<section class="kort"><h2>Nuläge mot alternativ</h2><div class="banner varn">${IKON.varning}<div><strong>Nuvarande bemanning går inte att lägga utan regelbrott</strong>
+      ${ok != null ? `Det billigaste alternativet som går att lägga är <b>${esc(S[ok].namn)}</b> med ${sv(S[ok].kontrakt_timmar_vecka, 1)} h per vecka (nu ${sv(S[nu].kontrakt_timmar_vecka, 1)} h${tk ? `, ${S[ok].kontrakt_timmar_vecka >= S[nu].kontrakt_timmar_vecka ? "+" : "−"}${kr(Math.abs(S[ok].kontrakt_timmar_vecka - S[nu].kontrakt_timmar_vecka) * tk * 52 / 12)} per månad` : ""}).` : "Inget av alternativen gick heller att lägga."}</div></div></section>`;
+  }
+  if (!alt.length) return "";
+  const matt = [
+    ["Vakanta pass", n => k(n).vakanta_pass, v => `${v > 0 ? "+" : ""}${v}`, true],
+    [tk ? "Kostnad per månad" : "Kontrakterad tid per vecka", n => tk ? S[n].kontrakt_timmar_vecka * tk * 52 / 12 : S[n].kontrakt_timmar_vecka, v => tk ? `${v > 0 ? "+" : "−"}${kr(Math.abs(v))}` : `${v > 0 ? "+" : ""}${sv(v, 1)} h`, true],
+    ["Överkapacitet per vecka", n => k(n).overkapacitet_timmar_vecka, v => `${v > 0 ? "+" : ""}${sv(v, 1)} h`, true],
+    ["Veckor utan blandning", n => k(n).veckor_utan_blandning, v => `${v > 0 ? "+" : ""}${v}`, true],
+  ];
+  const cell = (f, fmt, n) => {
+    const d = f(n) - f(nu), max = Math.max(1e-9, ...alt.map(m => Math.abs(f(m) - f(nu))));
+    const b = Math.abs(d) / max * 50, klass = Math.abs(d) < 1e-6 ? "" : d < 0 ? "battre" : "samre";
+    return `<td><div class="divbar"><i class="${klass}" style="${d < 0 ? `right:50%;width:${b}%` : `left:50%;width:${b}%`}"></i></div><span class="liten ${klass}">${Math.abs(d) < 1e-6 ? "som nu" : fmt(d)}</span></td>`;
+  };
+  // förbättringsförslag
+  const tips = [];
+  const vakNu = k(nu).vakanta_pass;
+  const farre = alt.filter(n => k(n).vakanta_pass < vakNu).sort((a, b) => k(a).vakanta_pass - k(b).vakanta_pass || S[a].kontrakt_timmar_vecka - S[b].kontrakt_timmar_vecka);
+  if (farre.length) { const n = farre[0], dk = S[n].kontrakt_timmar_vecka - S[nu].kontrakt_timmar_vecka;
+    tips.push(`<b>${esc(S[n].namn)}</b> minskar vakanserna från ${vakNu} till ${k(n).vakanta_pass}${Math.abs(dk) > 0.05 ? ` och ${dk > 0 ? "kostar" : "sparar"} ${tk ? kr(Math.abs(dk) * tk * 52 / 12) + " per månad" : sv(Math.abs(dk), 1) + " h per vecka"}` : " utan mer tid"}.`); }
+  const billigare = alt.filter(n => k(n).vakanta_pass <= vakNu && S[n].kontrakt_timmar_vecka < S[nu].kontrakt_timmar_vecka - 0.05);
+  if (billigare.length) { const n = billigare.sort((a, b) => S[a].kontrakt_timmar_vecka - S[b].kontrakt_timmar_vecka)[0];
+    tips.push(`<b>${esc(S[n].namn)}</b> klarar behovet lika bra med ${sv(S[nu].kontrakt_timmar_vecka - S[n].kontrakt_timmar_vecka, 1)} h mindre per vecka.`); }
+  if (k(nu).overkapacitet_timmar_vecka > 4) tips.push(`I nuläget är det ${sv(k(nu).overkapacitet_timmar_vecka, 1)} h per vecka mer i tjänst än behovet. Tiden kan läggas där behovet är störst, eller behovet höjas där det gör mest nytta.`);
+  const vak = k(nu).vakanser || {};
+  if (vak.fredagskvall) tips.push(`${vak.fredagskvall} vakanser i nuläget ligger på fredagskvällar. Fredagsregeln gör att den som arbetar fredag kväll också arbetar helgen; jämför alternativen som rör fredagen.`);
+  if (vak.helg && !vak.fredagskvall) tips.push(`Vakanserna i nuläget ligger på helger. Fler personer per helg kräver fler som arbetar varannan helg.`);
+  if (k(nu).veckor_utan_blandning > k(nu).personveckor * 0.3) tips.push(`Många veckor har bara morgnar eller bara kvällar. Inställningen ”Fördela morgon och kväll” under Inställningar kan sättas till stark.`);
+  return `<section class="kort"><h2>Nuläge mot alternativ</h2><p class="dampad liten">Skillnad mot nuvarande bemanning. Grönt är bättre än i dag, rött sämre.</p>
+    <div class="rull"><table class="nulage"><thead><tr><th></th>${matt.map(m => `<th>${m[0]}</th>`).join("")}</tr></thead><tbody>
+    <tr class="nu"><td><b>Nuläge</b><div class="liten dampad">${esc(S[nu].sammanfattning)}</div></td>${matt.map(([, f], j) => `<td class="liten"><b>${j === 1 && tk ? kr(f(nu)) : sv(f(nu), 1) + (j === 2 || (j === 1 && !tk) ? " h" : "")}</b></td>`).join("")}</tr>
+    ${alt.map(n => `<tr><td><b>${esc(S[n].namn)}</b></td>${matt.map(([, f, fmt]) => cell(f, fmt, n)).join("")}</tr>`).join("")}</tbody></table></div>
+    ${tips.length ? `<h3>Förslag till förbättringar</h3><ul class="punkter">${tips.map(t => `<li>${t}</li>`).join("")}</ul>` : ""}</section>`;
 }
 
 function kopplaAnalysform() {
@@ -609,6 +808,7 @@ function kopplaAnalysform() {
     e.preventDefault();
     if (!(await spara())) return;
     try {
+      st.timkostnad = parseFloat($("#a-tk").value.replace(",", ".")) || null;
       const { id } = await api("POST", `enheter/${st.enhet.id}/analys`, { budget: parseFloat($("#a-budget").value.replace(",", ".")) || null, tid_per_steg_s: +$("#a-tid").value });
       st.analys = await api("GET", "analys/" + id);
       ritaAnalys(); pollaAnalys();

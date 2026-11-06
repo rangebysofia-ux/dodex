@@ -12,6 +12,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/balans.py` – bemanningsbalans före schemaläggningen. Ska förutsäga lösarens vakanta pass för testfallen.
 - `schemamotor/onskemal.py` – varningar för önskemål som inte påverkar något eller krockar.
 - `schemamotor/export.py` – Excel och PDF.
+- `schemamotor/justera.py` – räknar om ett schema som användaren har justerat för hand (rast, arbetstid, vakanser). Om reglerna följs avgör validate.py.
 - `schemamotor/analys.py` – underlag, bemanningsförslag inom budget och konsekvenser av lagda scheman. Se `docs/analys.md`.
 - `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg).
 - `light/` – lättversion som körs helt i webbläsaren: `motor.js` (heuristisk schemaläggning, samma hårda regler), `granskning.js` (fristående översättning av validate.py, får inte dela kod med motor.js), `sida.html` (gränssnitt). `python light/bygg.py` bygger `light/schema-light.html`. Ändras en regel i Python ska den ändras här också.

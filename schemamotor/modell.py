@@ -147,6 +147,7 @@ class Indata(BaseModel):
     # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
     avvikelser: list[str] = Field(default_factory=list)
     budget_timmar_vecka: Optional[float] = Field(default=None, gt=0)
+    timkostnad_kr: Optional[float] = Field(default=None, gt=0, le=10000)
     # används bara i testfallen
     beskrivning: Optional[str] = None
     forvantat: Optional[dict] = None

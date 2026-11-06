@@ -37,4 +37,4 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 
 ## Senare
 
-Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat, kostnader i kronor.
+Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr`; OB och löneskillnader per person återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*

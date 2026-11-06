@@ -32,3 +32,7 @@ Nattpersonal räknas fram på samma sätt i alla förslag. Önskemål följer ba
 Förslagen rangordnas: inga regelbrott, få vakanser, inom budget, lite överkapacitet (i steg om 10 timmar), blandade veckor. Rangordningen är ett stöd; beslutet är verksamhetens.
 
 **Använd som ny enhet** sparar förslaget som en egen enhet med det lagda schemat som första körning. Analyser sparas bara i minnet.
+
+## I gränssnittet
+
+Sidan heter Simulering. Med en timkostnad visas personalkostnaden per månad (kontrakterad tid × timkostnad × 52 / 12) för varje alternativ. **Nuläge mot alternativ** visar skillnaden mot nuvarande bemanning i vakanser, kostnad, överkapacitet och veckor utan blandning, och ger förslag till förbättringar utifrån resultatet. Går nuvarande bemanning inte att lägga sägs det, tillsammans med det billigaste alternativ som går.
