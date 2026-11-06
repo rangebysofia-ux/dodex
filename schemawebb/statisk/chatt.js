@@ -3,12 +3,11 @@
 // i webbläsaren; servern (/api/assistent) anropar Claude med nyckeln.
 
 const chatt = { oppen: false, enhetId: null, meddelanden: [], visning: [], forslag: null, upptagen: false, tillganglig: null, notis: "" };
-const CHATT_IKON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>';
 const FORSLAG_FRAGOR = ["Hur många kvällar har var och en?", "Hur ser fredagskvällarna ut?", "Var finns vakanserna och var har vi överkapacitet?",
   "Lägg till en person på 75 % som bara jobbar kväll", "Ändra behovet på fredagar till 3 på kvällen"];
 
 document.body.insertAdjacentHTML("beforeend", `
-  <button id="chatt-knapp" class="chatt-knapp" aria-label="Öppna schemaassistenten" hidden>${CHATT_IKON}<span>Fråga</span></button>
+  <button id="chatt-knapp" class="chatt-knapp" aria-label="Öppna schemaassistenten" hidden title="Schemaassistent"><span aria-hidden="true">🤖</span></button>
   <aside id="chatt" class="chatt" aria-label="Schemaassistent" hidden>
     <header><div><b>Schemaassistent</b><div class="dampad liten" id="chatt-enhet"></div></div><button class="lank" id="chatt-stang" aria-label="Stäng">✕</button></header>
     <div id="chatt-logg" class="chatt-logg" aria-live="polite"></div>

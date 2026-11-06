@@ -184,13 +184,15 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--d
 .tomruta { width: 100%; min-height: 34px; border: 1.5px dashed var(--linje); background: none; color: var(--dampad); border-radius: 8px; font-size: 16px; padding: 0; }
 table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 .pass.manuell { box-shadow: inset 0 0 0 2px var(--guld) !important; }
+.chatt-knapp { width: 56px; height: 56px; padding: 0 !important; border-radius: 50% !important; display: grid; place-items: center; font-size: 28px; line-height: 1; }
+.chatt-knapp[hidden] { display: none; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
 <div class="fot" id="fot" hidden></div>
 <div id="meddelande" role="status" aria-live="polite"></div>
 <div id="tips" role="tooltip"></div>
-<button id="chatt-knapp" class="chatt-knapp" aria-label="Öppna schemaassistenten" hidden>Fråga</button>
+<button id="chatt-knapp" class="chatt-knapp" aria-label="Öppna schemaassistenten" title="Schemaassistent" hidden><span aria-hidden="true">🤖</span></button>
 <aside id="chatt" class="chatt" aria-label="Schemaassistent" hidden>
   <header><div><b>Schemaassistent</b><div class="dampad liten" id="chatt-enhet"></div></div><button class="lank" id="chatt-stang" aria-label="Stäng">✕</button></header>
   <div id="chatt-logg" class="chatt-logg" aria-live="polite"></div>

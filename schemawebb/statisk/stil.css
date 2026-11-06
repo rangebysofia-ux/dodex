@@ -385,3 +385,6 @@ table.nulage tr.nu td { background: var(--yta2); }
 .divbar i { position: absolute; top: 0; bottom: 0; border-radius: 6px; }
 .divbar i.battre { background: var(--morgon); } .divbar i.samre { background: var(--kritisk); }
 span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--kritisk); font-weight: 700; }
+
+/* Schemaassistentens knapp: en rund symbol */
+.chatt-knapp { width: 58px; height: 58px; padding: 0 !important; border-radius: 50% !important; display: grid !important; place-items: center; font-size: 28px; line-height: 1; }
