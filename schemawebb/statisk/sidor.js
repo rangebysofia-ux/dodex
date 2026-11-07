@@ -84,6 +84,44 @@ async function visaBehov(id) {
   kontrollera();
 }
 
+// ---------------------------------------------------------------- Bemanningsbalans (som verksamhetens Excel-mall)
+async function visaBemanningsbalans(id) {
+  st.vy = "bemanningsbalans";
+  await laddaEnhet(id);
+  ritaMeny();
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Bemanningsbalans"]]);
+  const opt = {
+    import: true, franBehov: () => BB.behovSomPass(st.indata),
+    personalLank: p => `<a href="#/e/${id}/medarbetare">${esc(p)}</a>`,
+    importera: async (fil, personalOcksa) => {
+      const b64 = await new Promise((ok, fel) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = fel; r.readAsDataURL(fil); });
+      try {
+        const svar = await api("POST", "bemanningsbalans/las", { fil_base64: b64 });
+        const d = svar.delar, ind = st.indata;
+        ind.bemanningsbalans = d.bemanningsbalans;
+        if (d.budget_timmar_vecka) ind.budget_timmar_vecka = d.budget_timmar_vecka;
+        if (d.heltid_minuter_per_vecka) ind.heltid_minuter_per_vecka = d.heltid_minuter_per_vecka;
+        let text = "Bemanningsbalansen är importerad.";
+        if (personalOcksa && svar.personal.length) {
+          ind.personal = svar.personal;
+          if (d.veckor) ind.veckor = d.veckor;
+          const ids = new Set(ind.personal.map(p => p.id));
+          ind.onskemal = (ind.onskemal || []).filter(o => ids.has(o.person));
+          (ind.aktiviteter || []).forEach(a => { if (a.deltagare) { a.deltagare = a.deltagare.filter(q => ids.has(q)); if (!a.deltagare.length) delete a.deltagare; } });
+          text += " " + svar.meddelanden.join(" ");
+        }
+        markeraAndrad(false); meddela(text); rita();
+      } catch (e) { meddela(e.message); }
+    },
+  };
+  const rita = () => {
+    vy().innerHTML = `<section class="kort"><h1>Bemanningsbalans</h1><p class="dampad" style="margin:6px 0 0">Budget, bemanningsbehov, personal och övrig arbetstid, som i verksamhetens Excel-mall. Ändringar sparas automatiskt. Påverkar inte schemaläggningen.</p></section>`
+      + BB.rita(st.indata, opt);
+    BB.koppla(vy(), st.indata, () => { markeraAndrad(false); rita(); }, opt);
+  };
+  rita();
+}
+
 // ---------------------------------------------------------------- Medarbetare
 async function visaMedarbetare(id, kid, q) {
   st.vy = "medarbetare";

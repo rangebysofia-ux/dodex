@@ -201,6 +201,34 @@ def excel(res, granskning=None, indata=None):
         wa.column_dimensions["A"].width = 22
         wa.column_dimensions["E"].width = 40
 
+    if indata and (indata.get("bemanningsbalans") or indata.get("budget_timmar_vecka")):
+        from .bemanningsbalans import berakna
+        bb = berakna(indata)
+        wb_ = wb.create_sheet("Bemanningsbalans")
+        v, p_ = bb["vecka"], bb["period"]
+        rader = [["Bemanningsbalans", "Timmar per vecka", "ÅA"]]
+        if v["budget"]:
+            rader.append(["Budget inklusive buffert", round(v["budget"]["timmar"], 2), round(v["budget"]["timmar"] / bb["heltid_timmar"], 3)])
+        rader += [["Bemanning", round(v["bemanning"]["timmar"], 2), round(v["bemanning"]["aa"], 3)],
+                  ["  varav brukarnära", round(v["bemanning"]["brukarnara"], 2), None],
+                  ["  varav övrig arbetstid", round(v["bemanning"]["ovrig"], 2), None],
+                  ["Personalresurser", round(v["personal"]["timmar"], 2), round(v["personal"]["aa"], 3)]]
+        if v["diff_budget"]:
+            rader.append(["Budget − bemanning", round(v["diff_budget"]["timmar"], 2), round(v["diff_budget"]["aa"], 3)])
+        rader += [["Bemanning − personal (negativt = överkapacitet)", round(v["diff_personal"]["timmar"], 2), round(-v["diff_personal"]["aa"], 3)],
+                  [], [f"Period ({bb['veckor']} veckor)", "Timmar", "Pass", "Snitt timmar/pass", "Helg"],
+                  ["Bemanningskrav", round(p_["bemanning"]["timmar"], 2), p_["bemanning"]["pass"], round(p_["bemanning"]["snitt_pass_timmar"], 2), p_["bemanning"]["helg"]],
+                  ["Personalresurser", round(p_["personal"]["timmar"], 2), p_["personal"]["pass"], round(p_["personal"]["snitt_pass_timmar"], 2), p_["personal"]["helg"]],
+                  ["Personal − krav", round(-p_["diff_personal"]["timmar"], 2), p_["diff_personal"]["pass"], round(p_["diff_personal"]["snitt_pass_timmar"], 2), p_["diff_personal"]["helg"]],
+                  [], ["Övrig arbetstid", "Timmar per år", "Timmar per vecka", "Timmar per period"]]
+        rader += [[o["namn"], round(o["timmar_ar"], 1), round(o["timmar_vecka"], 2), round(o["timmar_period"], 2)] for o in bb["ovrig"]]
+        for r_ in rader:
+            wb_.append(r_)
+        for r_ in (1, 10, 15):
+            for c in wb_[r_]:
+                c.font = fet
+        wb_.column_dimensions["A"].width = 46
+
     if granskning:
         wg = wb.create_sheet("Granskning")
         wg.append(["Regel", "Nivå", "Person", "Beskrivning", "Typ"])

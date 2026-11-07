@@ -223,6 +223,22 @@ def kontrollera(d: IndataIn):
     return _forhandskontroll(d.indata)
 
 
+class ExcelIn(BaseModel):
+    fil_base64: str = Field(max_length=20_000_000)
+
+
+@app.post("/api/bemanningsbalans/las", dependencies=[Depends(inloggad)])
+def las_bemanningsbalans(d: ExcelIn):
+    """Läs en ifylld bemanningsbalans (Excel-mallen). Filen sparas inte; namn ersätts med id-koder."""
+    import io
+    from schemamotor.bemanningsbalans import fran_excel
+    try:
+        delar, personal, meddelanden = fran_excel(io.BytesIO(base64.b64decode(d.fil_base64)))
+    except Exception as e:  # noqa: BLE001 – felaktig fil ska ge ett begripligt svar
+        raise HTTPException(400, f"Kunde inte läsa filen som en bemanningsbalans: {e}")
+    return {"delar": delar, "personal": personal, "meddelanden": meddelanden}
+
+
 class KorningIn(BaseModel):
     namn: Optional[str] = None
     tid_per_steg_s: Optional[float] = None

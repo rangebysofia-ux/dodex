@@ -44,6 +44,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 17. **Sammanställning per rad i schemat.** Varje persons rad i schemat visar antal pass, dag-, kvälls- och nattpass, helgdagar, resurspass, aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (en vecka eller hela perioden). Vila under gränsen visas röd. På webben är sammanställningen kolumner till höger i schemat; i telefonen är den en egen tabell under schemat. Påverkar bara visningen. Beslutat av användaren 2026-11-07.
 
+18. **Bemanningsbalans som i Excel-mallen.** Budget i årsarbetare med buffert, bemanningsbehov per dag (pass och jour), personal och övrig arbetstid ger bemanning mot budget och mot personal, per vecka och per period. Räknas som mallen, med de skillnader som står i `docs/bemanningsbalans.md`. Påverkar inte schemaläggningen. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

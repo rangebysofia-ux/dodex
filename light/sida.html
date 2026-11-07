@@ -156,6 +156,10 @@ details summary { cursor: pointer; color: var(--dampad); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grafyta { --skog: #a8c5b0; --sand: #3a352c; --over: #5f9fd0; } }
 :root[data-theme="dark"] .grafyta { --skog: #a8c5b0; --sand: #3a352c; --over: #5f9fd0; }
 .grafyta .kort { margin-top: 12px; }
+#flik .kort.bb { box-shadow: none; border: 1px solid var(--linje); padding: 12px; margin: 10px 0 0; }
+.bb table.bbtabell input, .bb table.bbtabell select { padding: 6px; width: auto; } .bb table.bbtabell td { padding: 3px; }
+.bb table { width: auto; min-width: 100%; table-layout: auto; } .bb td, .bb th { white-space: nowrap; }
+.bb table.lista tr.summa td { border-top: 2px solid var(--linje); font-weight: 700; } .bb h2 { font-size: 16px; }
 .tva { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; align-items: start; }
 .graf { width: 100%; height: auto; display: block; overflow: visible; }
 .graf text { fill: var(--dampad); font: 11px var(--sans); font-variant-numeric: tabular-nums; }
@@ -243,6 +247,7 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 <script>__ASSISTENT__</script>
 <script>__OB__</script>
 <script>__GRAFER__</script>
+<script>__BEMANNINGSBALANS__</script>
 <script>__GUIDE__</script>
 <script>__ANALYS__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
@@ -371,7 +376,7 @@ async function oppna(e) {
       <label for="namn" style="margin-top:6px">Enhet</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
       <div class="chips" style="margin-top:10px"><button data-g="senaste" id="senaste-knapp" hidden>Översikt senaste schema</button><button data-g="simulering">Simulering</button></div></header>
     <section class="kort" id="kontroll"></section>
-    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
+    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
       `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
     <section class="kort" id="korningar"><h2>Körningar</h2><p class="dampad liten">Laddar …</p></section>`;
   $("#namn").oninput = ev => { st.enhet.namn = ev.target.value; andrad(false); };
@@ -444,6 +449,10 @@ function ritaFlik() {
       (l.length ? l.map((a, n) => `<div class="onsk"><div>${a.krav ? `<span class="niva skarp">måste</span> ` : ""}★ ${esc(aktBeskriv(a))}</div>
         <div class="chips"><button class="liten" data-g="andra-akt" data-n="${n}">Ändra</button><button class="liten fara" data-g="ta-bort-akt" data-n="${n}" aria-label="Ta bort">×</button></div></div>`).join("") : `<p class="tom">Inga aktiviteter.</p>`);
     kopplaAkt();
+  } else if (st.flik === "balans") {
+    const opt = { franBehov: () => BB.behovSomPass(i) };
+    el.innerHTML = `<p class="dampad liten">Budget, bemanningsbehov, personal och övrig arbetstid, som i verksamhetens Excel-mall. Påverkar inte schemaläggningen. Import från Excel finns i det fullständiga systemet.</p>` + BB.rita(i, opt);
+    BB.koppla(el, i, () => andrad(true), opt);
   } else if (st.flik === "regler") {
     const r = i.regler || {};
     const last = (namn, niva, varde) => `<div class="regel"><div>${namn}<br><span class="niva skarp">${niva}</span> <span class="niva">hård</span></div><span class="lat">${varde}</span></div>`;

@@ -10,6 +10,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/compare.py` – kör och jämför scenarier.
 - `schemamotor/modell.py` – kontroll av indata med Pydantic och felmeddelanden på svenska. Avtal och lag kan inte försvagas här.
 - `schemamotor/balans.py` – bemanningsbalans före schemaläggningen. Ska förutsäga lösarens vakanta pass för testfallen.
+- `schemamotor/bemanningsbalans.py` och `schemawebb/statisk/bemanningsbalans.js` – bemanningsbalans som i verksamhetens Excel-mall (budget, behov, personal, övrig arbetstid) och import av mallen. Namn blir id-koder. Se `docs/bemanningsbalans.md`.
 - `schemamotor/onskemal.py` – varningar för önskemål som inte påverkar något eller krockar.
 - `schemamotor/export.py` – Excel och PDF.
 - `schemamotor/justera.py` – räknar om ett schema som användaren har justerat för hand (rast, arbetstid, vakanser). Om reglerna följs avgör validate.py.

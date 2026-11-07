@@ -173,6 +173,32 @@ class Aktivitet(Strikt):
         return self
 
 
+class BehovsPass(Strikt):
+    """Ett pass i bemanningsbalansens behov: dagar, tider, rast och antal per dag. Jour räknas med räknad tid."""
+    dagar: Literal["mån", "tis", "ons", "tor", "fre", "lör", "sön", "vardag", "helg", "lör-sön", "alla", "mån-sön"] = "mån-sön"
+    fran: Klocka
+    till: Klocka
+    rast_minuter: int = Field(default=0, ge=0)
+    antal: float = Field(default=1, ge=0)
+    typ: Optional[Literal["pass", "natt", "jour"]] = None
+    raknad_minuter: Optional[int] = Field(default=None, ge=0)
+
+
+class OvrigTid(Strikt):
+    namn: str = ""
+    tillfallen_ar: float = Field(default=0, ge=0)
+    timmar: float = Field(default=0, ge=0)
+    personer: float = Field(default=0, ge=0)
+
+
+class Bemanningsbalans(Strikt):
+    """Bemanningsbalans som i verksamhetens Excel-mall (schemamotor/bemanningsbalans.py). Påverkar inte lösningen."""
+    buffert_procent: Optional[float] = Field(default=None, ge=0, le=100)
+    pass_: list[BehovsPass] = Field(default_factory=list, alias="pass")
+    ovrig_tid: list[OvrigTid] = Field(default_factory=list)
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
 class Indata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -190,6 +216,7 @@ class Indata(BaseModel):
     personal: list[Person] = Field(min_length=1)
     onskemal: list[Onskemal] = Field(default_factory=list)
     aktiviteter: list[Aktivitet] = Field(default_factory=list)
+    bemanningsbalans: Optional[Bemanningsbalans] = None
     losare: dict = Field(default_factory=dict)
     # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
     avvikelser: list[str] = Field(default_factory=list)

@@ -102,7 +102,7 @@ function sokvag(delar) {
 let kravsInloggning = false;
 function ritaMeny() {
   const e = st.enhet, k = st.korning && st.enhet && st.korning.enhet_id === st.enhet.id ? st.korning.id : "";
-  const KORT = { Schemaplanering: "Schema", Bemanningsbehov: "Behov", "Analys och nyckeltal": "Nyckeltal", Regelkontroll: "Regler", Inställningar: "Inställn." };
+  const KORT = { Schemaplanering: "Schema", Bemanningsbehov: "Behov", Bemanningsbalans: "Balans", "Analys och nyckeltal": "Nyckeltal", Regelkontroll: "Regler", Inställningar: "Inställn." };
   const lank = (vyer, ikon, text, href, av) => `<a class="post" href="${href}" aria-label="${text}"${vyer.includes(st.vy) ? ' aria-current="page"' : ""}${av ? ' aria-disabled="true" tabindex="-1"' : ""}>${IKON[ikon]}<span class="lang">${text}</span><span class="kortnamn">${KORT[text] || text}</span></a>`;
   const bas = e ? `#/e/${e.id}` : "#/", kk = k ? "/" + k : "";
   const lista = st.enhetLista || [];
@@ -111,6 +111,7 @@ function ritaMeny() {
     ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
     ${lank(["schema"], "schema", "Schemaplanering", `${bas}/schema${kk}`, !e)}
     ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
+    ${lank(["bemanningsbalans"], "kostnad", "Bemanningsbalans", `${bas}/bemanningsbalans`, !e)}
     ${lank(["medarbetare", "personer", "indata"], "grupp", "Medarbetare", `${bas}/medarbetare`, !e)}
     ${lank(["nyckeltal", "bemanning"], "graf", "Analys och nyckeltal", `${bas}/nyckeltal${kk}`, !e)}
     ${lank(["analys"], "simulering", "Simulering", `${bas}/analys`, !e)}
@@ -947,6 +948,7 @@ async function route() {
       else if (vyn === "analys") await visaAnalys(id);
       else if (vyn === "oversikt") await visaOversikt(id);
       else if (vyn === "behov") await visaBehov(id);
+      else if (vyn === "bemanningsbalans") await visaBemanningsbalans(id);
       else if (vyn === "medarbetare") await visaMedarbetare(id, kid, q);
       else if (vyn === "nyckeltal") await visaNyckeltal(id, kid);
       else if (vyn === "regelkontroll") await visaRegelkontroll(id, kid);

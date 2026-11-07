@@ -38,6 +38,7 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 ## Fas 5 – Aktiviteter
 
 - [x] **14. Aktiviteter under arbetstid.** APT, utbildning, möte, studier, dokumentation, handledning med dag, tid, antal deltagare och minsta bemanning på golvet (antal, andel eller gånger per person). Deltagarna arbetar hela aktivitetstiden och fördelas rättvist; tiden påverkar passlängd, vila, OB och bemanning. Motor, granskning, förklaring, lättversion, gränssnitt, export och assistent (docs/indata-schema.md, beslut 15 i docs/regelhierarki.md).
+- [x] **15. Bemanningsbalans som i Excel-mallen.** Budget, bemanningsbehov, personal och övrig arbetstid med resultat per vecka och period, import av mallen (namn blir id-koder) och blad i Excel-exporten (docs/bemanningsbalans.md).
 
 ## Senare
 

@@ -426,3 +426,8 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 .valknappar { display: flex; flex-wrap: wrap; gap: 8px; } .valknapp { border-radius: 999px; padding: 9px 16px; border: 1px solid var(--linje); background: var(--yta2); font: inherit; cursor: pointer; }
 .valknapp[aria-pressed="true"] { background: var(--skog); color: #fff; border-color: var(--skog); }
 .guidetabell select { min-width: 140px; }
+
+/* bemanningsbalans */
+.bb table.bbtabell input, .bb table.bbtabell select { padding: 6px 8px; }
+.bb table.bbtabell td { padding: 3px 4px; }
+.bb table.lista tr.summa td { border-top: 2px solid var(--linje); font-weight: 700; }

@@ -77,6 +77,8 @@ Exempel: APT tisdag 14–16 vecka 2 och 4, där var och en går en gång (ungef�
                  "start": "14:00", "slut": "16:00", "varje_person": 1}]
 ```
 
+**bemanningsbalans** – valfri bemanningsbalans som i verksamhetens Excel-mall: `buffert_procent`, `pass` (behov med tider, rast och antal per dag, jour med `raknad_minuter`) och `ovrig_tid` (tillfällen per år, timmar, personer). Påverkar inte lösningen. Se `docs/bemanningsbalans.md`.
+
 **avvikelser** – lista med låsta regler som användaren har bekräftat avvikelser från, till exempel `["dygnsvila_minuter"]`. Gäller `dygnsvila_minuter`, `veckovila_minuter`, `rast_grans_minuter`, `rast_minuter` och `helgfrekvens`. Utan bekräftelse avvisas en försvagning av dem.
 
 **budget_timmar_vecka** – valfri budget för hela enheten. Påverkar inte lösningen; gränssnittet jämför den med summan av kontrakterad tid (sysselsättningsgrad × heltid).
