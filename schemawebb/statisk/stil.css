@@ -439,3 +439,16 @@ td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba
 .vv.fel { color: var(--kritisk); }
 .schema.period .vv { padding: 10px 0; }
 i.vvlegend { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(47,122,74,.35) 4px 6px); border: 1px solid var(--linje); }
+
+/* inställningar i en panel ovanpå schemat */
+.installningsrad { margin-top: 12px; gap: 6px; align-items: center; }
+.lada-bakgrund { position: fixed; inset: 0; background: rgba(15, 30, 26, .35); z-index: 60; }
+.lada { position: fixed; top: 0; right: 0; bottom: 0; width: min(760px, 100vw); background: var(--bg); z-index: 61; overflow-y: auto;
+  padding: 18px 20px 0; box-shadow: -12px 0 40px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 12px; }
+.lada .flikar { flex-wrap: wrap; }
+.lada #flik { background: var(--yta); border-radius: 14px; padding: 14px; }
+.lada .kontroll-lada { background: var(--yta); border-radius: 14px; padding: 14px; }
+.lada-fot { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; border-top: 1px solid var(--linje); margin-top: auto; }
+@media (max-width: 640px) { .lada { padding: 12px 12px 0; } .lada-fot { flex-direction: column; align-items: stretch; } }
+.lada > *, .lada .flikar { flex-shrink: 0; }
+.lada .flikar { overflow: visible; }

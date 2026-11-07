@@ -106,6 +106,8 @@ table.schema.summatabell { table-layout: auto; width: auto; min-width: 100%; }
 table.summatabell td:first-child { font-weight: 700; text-align: left; }
 table.schema td.summa.fel { color: #fff; background: var(--dalig); }
 table.schema td.summa.res { color: var(--text); font-weight: 800; }
+.styrrad { margin-top: 10px; display: grid; gap: 8px; } .styrrad > .primar { width: 100%; padding: 12px; font-size: 16px; }
+.styrrad .andra { gap: 6px; align-items: center; } .styrrad .andra button { padding: 6px 10px; }
 td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(47,122,74,.12) 6px 9px); }
 .vv { display: block; font: 700 10px/1.2 var(--mono); color: var(--bra, #2f7a4a); padding: 3px 0; text-align: center; }
 .vv small { display: block; font-weight: 600; font-size: 9.5px; } .vv.fel { color: var(--dalig); }
@@ -3783,12 +3785,19 @@ async function skapa(namn, indata) {
 }
 
 // ------------------------------------------------------------------ vy: enhet
-async function oppna(e) {
-  st.vy = "enhet"; st.enhet = e; st.onskForm = null; st.korning = null;
+// Öppna en enhet: direkt till senaste schemat om det finns ett; annars (eller med opt.installningar) inställningarna.
+async function oppna(e, opt = {}) {
+  if (!opt.installningar) {
+    let kor = [];
+    try { kor = await lager.korningar(e.id); } catch { kor = []; }
+    if (kor.length) { st.enhet = e; st.korningar = kor; st.rflik = "schema"; return visaKorning(kor[0]); }
+  }
+  if (opt.flik) st.flik = opt.flik;
+  st.vy = "enhet"; st.enhet = e; st.onskForm = null; st.aktForm = null; st.korning = null;
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button><span class="dampad liten">${lager.typ === "konto" ? "Sparas automatiskt" : "Sparas i webbläsaren"}</span></div>
       <label for="namn" style="margin-top:6px">Enhet</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
-      <div class="chips" style="margin-top:10px"><button data-g="senaste" id="senaste-knapp" hidden>Översikt senaste schema</button><button data-g="simulering">Simulering</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
+      <div class="chips" style="margin-top:10px"><button class="primar" data-g="senaste" id="senaste-knapp" hidden>‹ Till schemat</button><button data-g="simulering">Simulering</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
     <section class="kort" id="kontroll"></section>
     <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
       `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
@@ -4094,7 +4103,9 @@ document.addEventListener("click", async ev => {
     case "ta-bort-onsk": i.onskemal.splice(+el.dataset.n, 1); return andrad(true);
     case "lagg": return laggSchema();
     case "lagg-manuellt": { const b = MOTOR_HUVUD.balans(st.enhet.indata); if (b.fel) { meddela("Rätta felen i kontrollen först."); return; } return laggManuellt(); }
-    case "senaste": if (st.korningar.length) { st.rflik = "oversikt"; return visaKorning(st.korningar[0]); } return;
+    case "senaste": if (st.korningar.length) { st.rflik = "schema"; return visaKorning(st.korningar[0]); } return;
+    case "andra-inst": { st.flik = el.dataset.f; await oppna(st.enhet, { installningar: true }); $("#flik")?.closest("section")?.scrollIntoView({ block: "start" }); return; }
+    case "nytt-schema": await oppna(st.enhet, { installningar: true }); return laggSchema();
     case "rflik": st.rflik = el.dataset.f; st.person = null; ritaResultat(); return;
     case "person": st.person = el.dataset.p || null; st.rflik = "personer"; ritaResultat(); window.scrollTo(0, 0); return;
     case "redigera": st.red = { schema: structuredClone(st.korning.resultat.schema), historik: [], andringar: 0, panel: null }; raknaOmUtkast(); return;
@@ -4113,7 +4124,7 @@ document.addEventListener("click", async ev => {
     case "anvand-forslag": return anvandForslag(+el.dataset.n);
     case "visa-korning": return visaKorning(st.korningar.find(k => k.id === el.dataset.id));
     case "ta-bort-korning": { const k = st.korningar.find(x => x.id === el.dataset.id); await lager.taBortKorning(k); st.korningar = st.korningar.filter(x => x !== k); return ritaKorningar(); }
-    case "till-enhet": return oppna(st.enhet);
+    case "till-enhet": return oppna(st.enhet, { installningar: true });
     case "vecka": st.vecka = +el.dataset.v; st.cell = null; return ritaResultat();
     case "cell": {
       st.cell = st.cell === el.dataset.c ? null : el.dataset.c;
@@ -4156,7 +4167,7 @@ async function efterKorning(res, bal) {
     vakanta: res.kpi.vakanta_pass, data: JSON.stringify({ resultat: res, granskning, balans: bal.forvantade_vakanser, indata: st.enhet.indata }) };
   st.korningar.unshift(k);
   try { await lager.sparaKorning(k); } catch (e) { meddela("Körningen kunde inte sparas: " + e.message); }
-  visaKorning(k);
+  st.rflik = "schema"; visaKorning(k);
 }
 
 // ------------------------------------------------------------------ resultat
@@ -4174,6 +4185,8 @@ function ritaResultat() {
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · ${sv(res.sekunder)} s · bemanningsbalansen förutsåg ${vakText(k.balans)}</span></div>
+    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button>
+      <div class="chips andra"><span class="dampad liten">Ändra:</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button class="liten" data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div></div>`}
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
   if (flik === "oversikt") h += ritaOversikt(k, brott);
   else if (flik === "regler") h += ritaRegelkontroll(k, brott);

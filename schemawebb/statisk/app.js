@@ -109,8 +109,8 @@ function ritaMeny() {
   const lista = st.enhetLista || [];
   $("#meny").innerHTML = `<a class="logga" href="#/" aria-label="DODEX Scheduler, till enheterna">${loggaText()}</a>
     <div class="enhetsval"><label for="enhetsval">Enhet</label><select id="enhetsval"><option value="">Alla enheter …</option>${lista.map(x => `<option value="${x.id}"${e && x.id === e.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div>
-    ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
     ${lank(["schema"], "schema", "Schemaplanering", `${bas}/schema${kk}`, !e)}
+    ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
     ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
     ${lank(["bemanningsbalans"], "kostnad", "Bemanningsbalans", `${bas}/bemanningsbalans`, !e)}
     ${lank(["medarbetare", "personer", "indata"], "grupp", "Medarbetare", `${bas}/medarbetare`, !e)}
@@ -125,7 +125,7 @@ function ritaMeny() {
     <div class="fot"><em>Planering som skapar balans – idag och imorgon.</em>© Sofia Rångeby</div>`;
   $("#mobillogga").innerHTML = loggaText();
   const v = $("#enhetsval");
-  if (v) v.onchange = () => { location.hash = v.value ? `#/e/${v.value}/oversikt` : "#/"; };
+  if (v) v.onchange = () => { location.hash = v.value ? `#/e/${v.value}/schema` : "#/"; };
   $("#toppknappar").innerHTML = e ? `<button class="guld liten" data-g="lagg-schema">${IKON.spela} Lägg schema</button>` : "";
 }
 
@@ -163,9 +163,9 @@ async function visaEnheter() {
     <h2 id="mina-enheter" style="margin:6px 4px 0">Mina enheter</h2>
     <section class="lista-enheter">${enheter.length ? enheter.map(e => `
       <div class="kort enhet">
-        <a class="namn" href="#/e/${e.id}/oversikt">${esc(e.namn)}</a>
+        <a class="namn" href="#/e/${e.id}/schema">${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
-        <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/oversikt">${IKON.oversikt} Översikt</a><a class="knapp liten" href="#/e/${e.id}/schema">Schema</a>
+        <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/schema">${IKON.schema} Schema</a><a class="knapp liten" href="#/e/${e.id}/oversikt">Översikt</a>
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
           <button class="liten fara" data-g="ta-bort-enhet" data-id="${e.id}" data-namn="${esc(e.namn)}">Ta bort</button></div>
       </div>`).join("") : `<div class="kort tom">Inga enheter än. Skapa en ny eller börja från ett exempel nedan.</div>`}</section>
@@ -685,11 +685,31 @@ async function laggSchema() {
   } catch (e) {
     if (e.status === 422) {
       meddela("Rätta felen i kontrollen först.");
-      if (st.vy !== "indata") location.hash = `#/e/${st.enhet.id}/indata`;
+      if (st.vy !== "indata" && !$("#lada")) location.hash = `#/e/${st.enhet.id}/indata`;
       st.kontroll = { fel: e.data.fel, onskemal: [] }; const r = $("#kontroll"); if (r) r.innerHTML = ritaKontroll();
     } else meddela(e.message);
   }
 }
+
+// ---------------------------------------------------------------- inställningar i en panel ovanpå schemat
+const LADFLIKAR = [["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["period", "Period"]];
+function oppnaLada(flik) {
+  st.flik = flik; st.redigeraOnsk = null; st.redigeraAkt = null;
+  stangLada();
+  const el = document.createElement("div");
+  el.id = "lada";
+  el.innerHTML = `<div class="lada-bakgrund" data-g="stang-lada"></div><aside class="lada" role="dialog" aria-label="Inställningar">
+    <div class="rubrikrad"><h2 style="margin:0">Inställningar</h2><button class="liten" data-g="stang-lada" aria-label="Stäng">✕ Stäng</button></div>
+    <div class="flikar" role="tablist">${LADFLIKAR.map(([k, t]) => `<button role="tab" data-g="ladflik" data-f="${k}" aria-selected="${k === flik}">${t}</button>`).join("")}
+      <a class="knapp liten" href="#/e/${st.enhet.id}/installningar" style="margin-left:auto">Regler ›</a></div>
+    <div id="flik">${ritaFlik()}</div>
+    <section id="kontroll" class="kontroll-lada">${ritaKontroll()}</section>
+    <div class="lada-fot"><span class="dampad liten">Ändringar sparas automatiskt. Lägg ett nytt schema för att se effekten.</span><button class="guld" data-g="lagg-schema">${IKON.spela} Lägg nytt schema</button></div>
+  </aside>`;
+  document.body.appendChild(el);
+  kopplaOnskForm(); kopplaAktForm(); kontrollera();
+}
+function stangLada() { const l = document.getElementById("lada"); if (l) l.remove(); }
 
 // ---------------------------------------------------------------- vy: inställningar (regler)
 // Alla regler går att ändra. Avtal, lag och varannan helg är låsta tills avvikelsen bekräftas.
@@ -911,6 +931,12 @@ document.addEventListener("click", async e => {
         st.redigeraOnsk = { index: null, data: tomtOnsk() }; $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); $("#o-person").focus(); break;
       case "andra-onsk": st.redigeraOnsk = { index: +el.dataset.n, data: structuredClone(st.indata.onskemal[+el.dataset.n]) }; $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); break;
       case "avbryt-onsk": st.redigeraOnsk = null; $("#flik").innerHTML = ritaFlik(); break;
+      case "lada": oppnaLada(el.dataset.f); break;
+      case "stang-lada": stangLada(); if (st.andrad) await spara(); break;
+      case "ladflik":
+        st.flik = el.dataset.f; st.redigeraOnsk = null; st.redigeraAkt = null;
+        document.querySelectorAll("[data-g=ladflik]").forEach(b => b.setAttribute("aria-selected", b === el));
+        $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); kopplaAktForm(); break;
       case "ny-akt": st.redigeraAkt = { index: null, data: tomAkt() }; $("#flik").innerHTML = ritaFlik(); kopplaAktForm(); $("#a-namn").focus(); break;
       case "andra-akt": st.redigeraAkt = { index: +el.dataset.n, data: structuredClone(st.indata.aktiviteter[+el.dataset.n]) }; $("#flik").innerHTML = ritaFlik(); kopplaAktForm(); break;
       case "avbryt-akt": st.redigeraAkt = null; $("#flik").innerHTML = ritaFlik(); break;
@@ -943,6 +969,7 @@ function stoppaPollning() { clearTimeout(st.pollning); st.pollning = null; }
 
 async function route() {
   stoppaPollning();
+  stangLada();
   $("#tips").classList.remove("syns");
   const [sokv, fraga] = location.hash.replace(/^#/, "").split("?");
   const d = sokv.split("/").filter(Boolean), q = new URLSearchParams(fraga);
@@ -953,7 +980,7 @@ async function route() {
     if (st.enhet && st.andrad && !(d[0] === "e" && +d[1] === st.enhet.id)) await spara();
     if (!st.enhetLista) { try { st.enhetLista = await api("GET", "enheter"); } catch { st.enhetLista = []; } }
     if (d[0] === "e") {
-      const id = +d[1], vyn = d[2] || "oversikt", kid = d[3] ? +d[3] : null;
+      const id = +d[1], vyn = d[2] || "schema", kid = d[3] ? +d[3] : null;
       if (vyn === "indata") await visaEnhet(id, q.get("flik"));
       else if (vyn === "installningar") await visaInstallningar(id);
       else if (vyn === "analys") await visaAnalys(id);

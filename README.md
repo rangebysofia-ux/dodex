@@ -7,6 +7,11 @@ Systemet har två delar:
 - **schemamotor** – lägger, granskar och förklarar scheman. Kan köras från kommandoraden.
 - **schemawebb** – webbtjänsten DODEX Scheduler, med inloggning, där man lägger in enheter, personal, behov, önskemål, aktiviteter som APT och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
 
+
+## Så navigerar du
+
+Schemat är navet. När du öppnar en enhet kommer du direkt till det senaste schemat (eller till inställningarna om inget schema finns än). I schemat finns raden **Ändra: Personal, Behov, Önskemål, Aktiviteter, Period** som öppnar inställningarna i en panel ovanpå schemat (på webben) eller som en sida med knappen *‹ Till schemat* (i telefonen), och knappen **🤖 Lägg nytt schema**. Regler och bemanningsbalans har egna sidor.
+
 ## Schema light
 
 `light/` är en lättversion som körs helt i webbläsaren, utan server: `motor.js` lägger schemat med en heuristik (simulerad glödgning) i stället för OR-Tools, och `granskning.js` är en fristående översättning av `schemamotor/validate.py`. `python light/bygg.py` sätter ihop `light/schema-light.html`. Samma hårda regler gäller, men lättversionen kan inte bevisa att ett schema är olösbart och saknar behov vid klockslag och delperioder. Lättversionen har samma översikt (nyckeltal och grafer), regelkontroll och simulering som webben: graferna kommer från `schemawebb/statisk/grafer.js` och simuleringen från `light/analys.js`, en översättning av `schemamotor/analys.py`.

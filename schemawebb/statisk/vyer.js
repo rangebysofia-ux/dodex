@@ -76,12 +76,12 @@ async function visaKorningsvy(id, vyn, kid, q) {
   const k = await laddaKorning(kid);
   ritaMeny();
   const titel = { schema: "Schema", personer: "Personer", bemanning: "Bemanning" }[vyn] || "Schema";
-  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/indata`], [titel]]);
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/schema`], [titel]]);
   if (vyn === "personer") st.sv.person = q.get("p") || st.sv.person || null;
   if (!k) {
     vy().innerHTML = `<section class="kort" style="text-align:center;padding:40px 18px"><div style="color:var(--accent)">${IKON.schema.replace("<svg", '<svg width="48" height="48"')}</div>
-      <h1 style="margin-top:8px">Inget schema än</h1><p class="dampad">Lägg det första schemat för ${esc(st.enhet.namn)}. Det tar från några sekunder upp till ett par minuter.</p>
-      <p><button class="guld" data-g="lagg-schema">${IKON.spela} Lägg schema</button></p></section>`;
+      <h1 style="margin-top:8px">Inget schema än</h1><p class="dampad">Lägg det första schemat för ${esc(st.enhet.namn)}. Kontrollera personal och behov först. Det tar från några sekunder upp till ett par minuter.</p>
+      <p><button class="guld" data-g="lagg-schema">${IKON.spela} Lägg schema</button></p>${installningsrad()}</section>`;
     return;
   }
   ritaKorningsvy();
@@ -95,6 +95,13 @@ async function visaKorningsvy(id, vyn, kid, q) {
   });
 }
 
+// Raden med inställningar som öppnas i en panel ovanpå schemat.
+function installningsrad() {
+  const F = [["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["period", "Period"]];
+  return `<div class="chips installningsrad"><span class="dampad liten">Ändra:</span>${F.map(([f, t]) => `<button class="liten" data-g="lada" data-f="${f}">${t}</button>`).join("")}
+    <a class="knapp liten" href="#/e/${st.enhet.id}/installningar">Regler</a><a class="knapp liten" href="#/e/${st.enhet.id}/bemanningsbalans">Bemanningsbalans</a></div>`;
+}
+
 function huvud() {
   const k = st.korning, res = k.resultat;
   const val = st.korningar.map(x => `<option value="${x.id}"${x.id === k.id ? " selected" : ""}>${esc(x.namn)} · ${datum(x.skapad)}</option>`).join("");
@@ -102,7 +109,8 @@ function huvud() {
     <div style="display:block;min-width:220px;flex:1"><label for="korningsval">Körning</label><select id="korningsval" style="max-width:420px">${val}</select></div>
     <div>${res?.status === "OK" ? `<a class="knapp liten" href="api/korningar/${k.id}/excel">${IKON.ladda} Excel</a><a class="knapp liten" href="api/korningar/${k.id}/pdf">${IKON.ladda} PDF</a>` : ""}
       <button class="liten" data-g="lagg-manuellt" title="Börja med ett tomt schema och lägg passen själv">✋ Lägg själv</button>
-      <button class="guld liten" data-g="lagg-schema">🤖 Lägg nytt schema</button></div></div></section>`;
+      <button class="guld" data-g="lagg-schema">🤖 Lägg nytt schema</button></div></div>
+    ${installningsrad()}</section>`;
 }
 
 function sammanfattning() {
