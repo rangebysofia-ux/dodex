@@ -20,15 +20,17 @@
   --resurs-bg: #2e2e2c;
   --bg: #121c1a; --yta: #1a2724; --yta2: #20302c; --text: #e8ece8; --dampad: #a9b6b1; --linje: #2c3d38; --helg: #1d2925;
   --accent: #a8c5b0; --accent-text: #13221e; --accent-svag: #24372f; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #c39f50;
-  --morgon: #3a3120; --morgon-text: #f0d99a; --kvall: #1f3029; --kvall-text: #b9d6c8; --natt: #1f2735; --natt-text: #c3cde0;
-  --morgon-kant: #b8954a; --kvall-kant: #5c8a76; --natt-kant: #7085a3;
+  /* mörkt läge: fyllda passfärger med stark kontrast (guld, skogsgrönt, blått) */
+  --morgon: #d9ab3f; --morgon-text: #1d1505; --kvall: #3f7a63; --kvall-text: #f2faf6; --natt: #5671a0; --natt-text: #f3f6fc;
+  --morgon-kant: #f2cf7a; --kvall-kant: #8cc4aa; --natt-kant: #a9bde3;
   --bra: #8fcaa0; --bra-bg: #1c3326; --dalig: #ec8b78; --dalig-bg: #3b221d; --varn: #e8c47a; --varn-bg: #352c19; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --resurs-bg: #2e2e2c;
   --bg: #121c1a; --yta: #1a2724; --yta2: #20302c; --text: #e8ece8; --dampad: #a9b6b1; --linje: #2c3d38; --helg: #1d2925;
   --accent: #a8c5b0; --accent-text: #13221e; --accent-svag: #24372f; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #c39f50;
-  --morgon: #3a3120; --morgon-text: #f0d99a; --kvall: #1f3029; --kvall-text: #b9d6c8; --natt: #1f2735; --natt-text: #c3cde0;
-  --morgon-kant: #b8954a; --kvall-kant: #5c8a76; --natt-kant: #7085a3;
+  /* mörkt läge: fyllda passfärger med stark kontrast (guld, skogsgrönt, blått) */
+  --morgon: #d9ab3f; --morgon-text: #1d1505; --kvall: #3f7a63; --kvall-text: #f2faf6; --natt: #5671a0; --natt-text: #f3f6fc;
+  --morgon-kant: #f2cf7a; --kvall-kant: #8cc4aa; --natt-kant: #a9bde3;
   --bra: #8fcaa0; --bra-bg: #1c3326; --dalig: #ec8b78; --dalig-bg: #3b221d; --varn: #e8c47a; --varn-bg: #352c19; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--sans); }
@@ -115,6 +117,8 @@ td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba
 .pass.resurs { box-shadow: inset 4px 0 0 var(--resurs), inset 0 0 0 1px var(--resurs) !important; }
 .pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border: 1px solid var(--text); border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
 .schema.period .pass.resurs { background: var(--resurs); color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pass.resurs { outline: 1.5px solid #e8e4d8; outline-offset: -1.5px; } }
+:root[data-theme="dark"] .pass.resurs { outline: 1.5px solid #e8e4d8; outline-offset: -1.5px; }
 .pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #5a1f0c; background: #f4c9b6; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr.bem td { font-size: 11px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.25; }
 tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dalig-bg); }
@@ -134,7 +138,7 @@ tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dali
   border-radius: 8px; padding: 9px 14px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); z-index: 20; }
 #meddelande.syns { opacity: 1; }
 .pass.vakant { background: none; border: 2px dashed; padding: 2px 0; cursor: default; }
-.pass.vakant.morgon { border-color: var(--morgon-text); color: var(--morgon-text); } .pass.vakant.kvall { border-color: var(--kvall-text); color: var(--kvall-text); } .pass.vakant.natt { border-color: var(--natt); color: var(--text); }
+.pass.vakant.morgon { border-color: var(--morgon-kant); color: var(--text); } .pass.vakant.kvall { border-color: var(--kvall-kant); color: var(--text); } .pass.vakant.natt { border-color: var(--natt-kant); color: var(--text); }
 tr.vakantrad td:first-child { color: var(--dalig); }
 .minus { color: var(--dalig); font-weight: 800; } .plus { color: var(--resurs); font-weight: 800; } tr.bem td.over { background: var(--resurs-bg); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .plus { color: var(--text); } }
