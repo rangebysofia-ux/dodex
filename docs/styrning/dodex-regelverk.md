@@ -1,0 +1,112 @@
+# DODEX Scheduler – regelverk för schemamotorn
+
+Version 2026-11-07. Genererat från schemamotor/build.py (STANDARDREGLER, MALORDNING), light/motor.js och schemawebb/statisk/ob.js med python -m schemamotor.regelverk.
+
+Cykliska grundscheman i dygnet runt-verksamhet inom äldreomsorg och funktionsstöd, Kommunal (HÖK/AB).
+
+## Principer
+
+- Hårda regler får aldrig brytas. Behovet är högsta mjuka nivå: en vakans är bättre än ett avtalsbrott.
+- Mjuka mål optimeras i strikt ordning (lexikografiskt); ett lägre mål kan aldrig försämra ett högre.
+- Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar ett lokalt avtal eller beslut. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman.
+- Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass per vecka) kallas aldrig avtalsregler.
+- Ett färdigt schema granskas av en fristående kontroll som inte delar kod med motorn.
+- Personal anges med id-koder, aldrig namn.
+
+## Nivåer
+
+| Nivå | Innebörd |
+|---|---|
+| lag | Arbetstidslagen. Får aldrig brytas. |
+| avtal | Centralt kollektivavtal (HÖK/AB, Kommunal). Får aldrig brytas; avvikelse kräver lokalt kollektivavtal. |
+| kontrakt | Löften till medarbetaren: sysselsättningsgrad, arbetstid och antal pass. |
+| verksamhet | Bemanningsbehovet. Högsta mjuka nivå: hellre en synlig vakans än ett regelbrott. |
+| lokal regel | Verksamhetens egna beslut. Kallas aldrig avtal. |
+| princip | Planeringsprinciper för hur schemat ska se ut. |
+| önskemål | Enskilda medarbetares önskemål. Mjuka, eller hårda om de markeras som krav. |
+
+## Hårda regler
+
+Måste alltid uppfyllas.
+
+| Id | Regel | Nyckel | Standard | Enhet | Nivå | Låst | Beskrivning |
+|---|---|---|---|---|---|---|---|
+| DYGNSVILA | Dygnsvila | `dygnsvila_minuter` | 660 | minuter | avtal | ja | Minst så lång sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Kontrolleras även över skarven mellan sista och första veckan. |
+| DYGNSBRYT | Dygnsbryt | `dygnsbryt` | auto | klockslag eller auto | avtal | nej | Var 24-timmarsperioden börjar. 'auto' = där flest pass slutar och börjar; nattpersonal får eget. |
+| VECKOVILA | Veckovila | `veckovila_minuter` | 2160 | minuter | avtal | ja | Minst så lång sammanhängande vila per sjudagarsperiod, räknat från veckobrytet. |
+| VECKOBRYT | Veckobryt | `veckobryt` | mån 00:00 | veckodag och klockslag | avtal | nej | Var sjudagarsperioden för veckovila börjar. |
+| RAST_GRANS | Rast efter högst | `rast_grans_minuter` | 300 | minuter | lag | ja | Längsta arbetstid utan rast. |
+| RAST_LANGD | Rastens längd | `rast_minuter` | 30 | minuter | lag | ja | Rast i pass över gränsen. Nattpass med måltidsuppehåll har ingen rast. |
+| HELGFREKVENS | Helgfrekvens för enheten | `helgfrekvens` | 2/4 | andel helger | lokal regel | ja | Varannan helg i fasta grupper A och B. Låst för enheten; undantag bara per person (1/4, 3/4, alla, ingen). |
+| HEL_HELG | Arbetshelg är både lördag och söndag | `hel_helg` | på | på/av | lokal regel | nej |  |
+| HELG_START | Helgen börjar | `helg_start` | fre 22:00 | veckodag och klockslag | lokal regel | nej |  |
+| HELG_SLUT | Helgen slutar | `helg_slut` | mån 06:00 | veckodag och klockslag | lokal regel | nej |  |
+| FREDAGSKVALL | Ingen fredagskväll före ledig helg | `ingen_fredagskvall_fore_ledig_helg` | på | på/av | lokal regel | nej | Den som är ledig helgen arbetar inte kväll eller natt fredagen innan. |
+| PASS_PER_VECKA | Pass per vecka, dag och kväll | `pass_per_vecka` | 4,75 | pass per vecka | lokal regel | nej | Antal pass = värdet × veckor. Blir det inte ett heltal (28,5 på 6 veckor) får dag- och kvällspersonal utan angivet antal växelvis avrundat nedåt och uppåt i den ordning de står (28, 29, 28 …). Antal pass kan anges per person. |
+| MIN_PASSLANGD | Minsta passlängd | `min_passlangd_minuter` | 300 | minuter | lokal regel | nej | Blir passen kortare än så vid låg sysselsättningsgrad tas pass bort i stället: antal pass = arbetstid ÷ minsta längd, avrundat nedåt. 0 stänger av. |
+| BLOCK_MIN | Minst arbetsdagar i följd | `block_min` | 2 | dagar | lokal regel | nej | Inga enstaka arbetsdagar. |
+| BLOCK_MAX | Högst arbetsdagar i följd | `block_max` | 5 | dagar | lokal regel | nej |  |
+| TOLERANS | Tolerans för arbetstid mot kontrakt | `tolerans_minuter` | 60 | minuter per period | kontrakt | nej | Nattpersonal: minst ett halvt nattpass. |
+| MORGON_START | Dagpass börjar | `morgon_start` | 07:00 | klockslag | princip | nej | Fast start; slutet anpassas. |
+| KVALL_SLUT | Kvällspass slutar | `kvall_slut` | 22:00 | klockslag | princip | nej | Fast slut; starten anpassas. |
+| PASSBYTE_FRAN | Passbyte tidigast | `kant_fran` | 12:00 | klockslag | princip | nej | Dagpassets slut och kvällspassets start ligger i fönstret. |
+| PASSBYTE_TILL | Passbyte senast | `kant_till` | 18:00 | klockslag | princip | nej |  |
+| STEG | Steg för passlängder | `steg_minuter` | 15 | minuter | princip | nej |  |
+| LANGD_BAND | Största avvikelse från personens snittlängd | `langd_band_minuter` | 120 | minuter | princip | nej |  |
+| HELTID | Heltid | `heltid_minuter_per_vecka` | 2220 | minuter per vecka | kontrakt | nej |  |
+| NATTPASS | Nattpass | `nattpass` | 21:45–07:15 | klockslag | princip | nej | Med måltidsuppehåll är hela passet arbetstid (ingen rast). |
+| KRAV | Önskemål markerade som krav | `onskemal[].krav` | av | per önskemål | önskemål | nej | Kan göra schemat olösbart; förklaringen pekar då ut kravet. |
+
+## Mjuka mål
+
+Optimeras i den här ordningen. Ett lägre mål kan aldrig försämra ett högre.
+
+| Ordning | Mål | Nivå | Styrs av | Standard | Hur det räknas |
+|---|---|---|---|---|---|
+| 1 | Vakanser | verksamhet | – | – | Antal pass och klockslag där behovet inte täcks. Högsta mjuka nivå: behovet görs aldrig hårt. |
+| 2 | Dagar i följd över rekommenderat | princip | `block_rekommenderat` | 4 | Antal tillfällen med fler arbetsdagar i följd än rekommenderat. |
+| 3 | Passlängd | princip | – | – | Minuter från personens snittlängd per pass och från kontrakterad tid. |
+| 4 | Rättvisa och jämn bemanning | princip | `jamn_bemanning` | mjuk | 2 × rättvisa (skillnad i antal kvälls- och morgonpass mellan personer som arbetar båda) + jämn bemanning (över- och underbemanning lika mellan dag och kväll per vecka och för perioden, och ett växande straff för överskott på ett enskilt pass, ungefär kvadratiskt). |
+| 5 | Blandning av morgon och kväll varje vecka | princip | `spridning_kvallar` | mjuk | Veckor med bara morgnar eller bara kvällar för den som arbetar båda. 'stark' flyttar målet direkt efter vakanserna; spridning_tolerans 0 = dessutom högst en kvälls skillnad mot morgnarna. |
+| 6 | Önskemål | önskemål | – | – | Viktade brutna önskemål (vikt 1–10). Önskemål markerade som krav är hårda. |
+
+### Inställningar för de mjuka målen
+
+| Nyckel | Namn | Värden | Standard |
+|---|---|---|---|
+| `block_rekommenderat` | Helst högst antal dagar i följd | dagar | 4 |
+| `jamn_bemanning` | Jämn bemanning mellan dag och kväll | 'mjuk' (på) eller 'av' | mjuk |
+| `spridning_kvallar` | Blandning av morgon och kväll | 'av', 'mjuk' eller 'stark' | mjuk |
+| `spridning_tolerans` | Hur jämn blandningen ska vara | 1 = båda sorterna varje vecka, 0 = nästan lika många | 1 |
+
+## Vikter i lättmotorn
+
+Lättmotorn (webbläsare och mobil) söker heuristiskt och väger målen med fasta vikter i stället för strikt ordning.
+
+| Mål | Vikt | Per |
+|---|---:|---|
+| Brott mot hård regel | 100 000 000 | brott |
+| Vakant pass | 100 000 | pass |
+| Blandning morgon och kväll (stark) | 400 | vecka utan blandning |
+| Dagar i följd över rekommenderat | 60 | tillfälle |
+| Jämn bemanning | 40 | kvadraten på överskottet per pass  plus skillnaden dag/kväll |
+| Blandning morgon och kväll (mjuk) | 25 | vecka utan blandning |
+| Rättvisa | 8 | kvadraten på avvikelsen i antal kvällar |
+| Brutet önskemål | 4 | viktsteg |
+
+## Utanför schemaläggningen
+
+Påverkar inte hur schemat läggs, bara beräkningar efteråt.
+
+**OB:** AB 25 § 21, kalenderstyrt (A storhelg, B helg, C vardagsnatt, D vardagskväll, nattförhöjning för A och B). Per kategori och kalendermånad uppåt till hel- eller halvtimme; under en timme ger inget.
+
+| Gäller | A | A natt | B | B natt | C | D | Källa |
+|---|---:|---:|---:|---:|---:|---:|---|
+| 2025-04-01 – 2026-03-31 | 126,9 | 152,3 | 66,1 | 76,0 | 56,7 | 25,6 | AB 25 § 21, fr.o.m. 2025-04-01 |
+| 2026-04-01 – 2027-03-31 | 130,7 | 156,9 | 68,1 | 78,3 | 58,4 | 26,4 | AB 25 § 21, fr.o.m. 2026-04-01 |
+
+Efter sista kontrollerade nivån: prognos 3,0 % per år (inte avtal).
+
+- `timkostnad_kr`: Valfri; lön och PO utan OB.
+- `startdatum`: Valfri måndag; kopplar grundschemat till verkliga datum.
+- `budget_timmar_vecka`: Valfri; jämförs med kontrakterad tid.

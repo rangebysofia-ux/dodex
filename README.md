@@ -78,6 +78,7 @@ Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad
 ## Dokumentation
 
 - `docs/regelhierarki.md` – vilka regler som gäller och i vilken ordning de väger
+- `docs/styrning/dodex-regelverk.md` och `.json` – alla hårda regler och mjuka mål med standardvärden, som styrdokument för andra system (genereras med `python -m schemamotor.regelverk`)
 - `docs/avtal-regler.md` – vila, rast och dygnsbryt
 - `docs/indata-schema.md` – format för indata och schema
 - `docs/optimering.md` – hur modellen fungerar
