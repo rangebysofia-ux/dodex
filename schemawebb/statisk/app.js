@@ -518,7 +518,8 @@ function nyttAktId(namn) {
 // ---------------------------------------------------------------- kontroll och körningslista
 function kontrakteradTid(indata) {
   const ht = (indata.heltid_minuter_per_vecka || 2220) / 60;
-  return indata.personal.reduce((s, p) => s + (p.grad ?? 1) * ((p.heltid_minuter_per_vecka || 0) / 60 || ht), 0);
+  const htn = (indata.heltid_natt_minuter_per_vecka || 2060) / 60, natt = p => p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt";
+  return indata.personal.reduce((s, p) => s + (p.grad ?? 1) * ((p.heltid_minuter_per_vecka || 0) / 60 || (natt(p) ? htn : ht)), 0);
 }
 
 function ritaKontroll() {
@@ -770,7 +771,9 @@ function ritaInstallningar() {
     <div id="regler" class="tva">
       ${grupper.map(g => `<section class="kort"><h2>${g}</h2><div class="regelgrupp">${REGLER.filter(x => x.grupp === g).map(rad).join("")}
         ${g === "Kontrakt" ? `<div class="regel"><div><div class="namn">Heltid per vecka</div><div class="chips" style="margin-top:4px"><span class="niva">kontrakt</span></div></div>
-          <div class="varde"><input type="number" step="0.25" data-heltid value="${(st.indata.heltid_minuter_per_vecka ?? 2220) / 60}" aria-label="Heltid i timmar"> <span class="dampad">h</span></div></div>` : ""}
+          <div class="varde"><input type="number" step="0.25" data-heltid value="${(st.indata.heltid_minuter_per_vecka ?? 2220) / 60}" aria-label="Heltid i timmar"> <span class="dampad">h</span></div></div>
+          <div class="regel"><div><div class="namn">Heltid per vecka, nattpersonal</div><div class="chips" style="margin-top:4px"><span class="niva">kontrakt</span></div><div class="dampad liten">34:20 som standard (AB 25 § 13 mom. 2, kontinuerligt treskift)</div></div>
+          <div class="varde"><input type="text" inputmode="numeric" data-heltidnatt value="${(() => { const m = st.indata.heltid_natt_minuter_per_vecka ?? 2060; return Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0"); })()}" aria-label="Heltid för nattpersonal, timmar:minuter" style="width:90px"> <span class="dampad">h:mm</span></div></div>` : ""}
         ${g === "Principer" ? `<div class="regel"><div><div class="namn">Nattpass</div><div class="chips" style="margin-top:4px"><span class="niva">princip</span></div></div>
           <div class="varde"><input type="time" data-natt="start" value="${esc(np.start)}" aria-label="Nattpass börjar"><input type="time" data-natt="slut" value="${esc(np.slut)}" aria-label="Nattpass slutar"></div></div>` : ""}
         </div></section>`).join("")}
@@ -781,6 +784,10 @@ function regelInput(el) {
   if (el.id === "bekrafta") return;
   if (el.dataset.heltid !== undefined) {
     const h = parseFloat(el.value.replace(",", ".")); if (h > 0) { st.indata.heltid_minuter_per_vecka = Math.round(h * 60); markeraAndrad(false); } return;
+  }
+  if (el.dataset.heltidnatt !== undefined) {
+    const m = /^(\d{1,2})[:.,](\d{1,2})$/.exec(el.value.trim()), h = m ? +m[1] * 60 + +m[2] : Math.round(parseFloat(el.value.replace(",", ".")) * 60);
+    if (h > 0) { if (h === 2060) delete st.indata.heltid_natt_minuter_per_vecka; else st.indata.heltid_natt_minuter_per_vecka = h; markeraAndrad(false); } return;
   }
   if (el.dataset.natt) {
     const np = (st.indata.nattpass && st.indata.nattpass[0]) || { id: "N", start: "21:45", slut: "06:45", maltidsuppehall: true };

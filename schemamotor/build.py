@@ -191,7 +191,8 @@ def forbered(indata):
         sedda.add(pid)
         delar = p.get("dygnsdelar", ["morgon", "kvall"])
         natt = delar == ["natt"]
-        heltid = p.get("heltid_minuter_per_vecka", heltid_std)
+        # nattpersonal: heltid 34 h 20 min (AB 25 § 13 mom. 2, kontinuerligt treskift; verksamhetens beslut 2026-11-07)
+        heltid = p.get("heltid_minuter_per_vecka") or (indata.get("heltid_natt_minuter_per_vecka", 2060) if natt else heltid_std)
         minuter_vecka = heltid * p["grad"]
         tillatna = [i for i, m in enumerate(mallar) if m["dygnsdel"] in delar]
         if natt:

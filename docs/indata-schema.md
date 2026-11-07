@@ -38,6 +38,8 @@
 
 **start_iso_vecka** – ISO-veckonummer för schemats vecka 1. Används för önskemål på jämna och udda veckor. Utan det räknas schemats egna veckonummer (vecka 1 är udda).
 
+**heltid_minuter_per_vecka** (standard 2220, 37 h) och **heltid_natt_minuter_per_vecka** (standard 2060, 34 h 20 min) – heltid för dag- och kvällspersonal respektive nattpersonal (`dygnsdelar: ["natt"]`), när personen inte har egen `heltid_minuter_per_vecka`. 34:20 motsvarar AB 25 § 13 mom. 2 för kontinuerligt treskiftsarbete.
+
 **regler** – skriver över standardvärden. Alla nycklar med standardvärden:
 `dygnsvila_minuter` 660, `veckovila_minuter` 2160, `dygnsbryt` "auto", `veckobryt` "mån 00:00", `rast_grans_minuter` 300, `rast_minuter` 30, `pass_per_vecka` 4.75, `morgon_start` "07:00", `kvall_slut` "22:00", `kant_fran` "12:00", `kant_till` "18:00", `steg_minuter` 15, `block_min` 2, `block_max` 5, `block_rekommenderat` 4, `helg_start` "fre 22:00", `helg_slut` "mån 06:00", `hel_helg` true (arbetshelg = både lördag och söndag), `helgfrekvens` "2/4", `ingen_fredagskvall_fore_ledig_helg` true, `tolerans_minuter` 60, `langd_band_minuter` 120 (hur långt ett pass får avvika från personens mållängd), `spridning_kvallar` "mjuk" ("av", "mjuk" eller "stark": blandning av morgon och kväll varje vecka), `spridning_tolerans` 1 (0 = även nästan lika många av varje), `jamn_bemanning` "mjuk" ("av" eller "mjuk": över- och underbemanning fördelas jämnt mellan dag och kväll), `min_passlangd_minuter` 300 (blir passen kortare än så när antal pass räknas fram, tas pass bort i stället; 0 stänger av).
 

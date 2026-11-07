@@ -208,6 +208,8 @@ class Indata(BaseModel):
     delperioder: Optional[list[int]] = None
     start_iso_vecka: Optional[int] = Field(default=None, ge=1, le=53)
     heltid_minuter_per_vecka: int = Field(default=2220, gt=0)
+    # heltid för nattpersonal (dygnsdelar natt) utan egen heltid: 34 h 20 min (AB 25 § 13 mom. 2, kontinuerligt treskift)
+    heltid_natt_minuter_per_vecka: int = Field(default=2060, gt=0)
     regler: dict = Field(default_factory=dict)
     nattpass: Optional[list[Nattpass]] = None
     extra_passmallar: list[ExtraPassmall] = Field(default_factory=list)

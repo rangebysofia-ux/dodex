@@ -19,7 +19,7 @@ med resultat per vecka och per period. Den påverkar inte schemaläggningen.
    Jour räknas med angiven arbetstid (till exempel 3 h av 6). Brukarnära tid per vecka = summan över veckans dagar.
    Antal pass per vecka räknas utan jour. Helgbehov = (pass på lördag + pass på söndag) ÷ 2.
 3. **Personal.** Från enhetens medarbetare: sysselsättningsgrad × heltid per vecka (personens heltid om den är angiven,
-   till exempel 36,33 h för natt), antal pass per period som motorn räknar dem (eller det som är angivet) och helger
+   annars 34:20 för nattpersonal och enhetens heltid för övriga), antal pass per period som motorn räknar dem (eller det som är angivet) och helger
    (varannan helg räknas som 0,5).
 4. **Övrig arbetstid.** Arbetstid som inte ingår i bemanningskravet: tillfällen per år × timmar per tillfälle × antal
    personer ÷ 52 per vecka. Knappen *Hämta från aktiviteterna i schemat* lägger till APT, utbildning med mera från

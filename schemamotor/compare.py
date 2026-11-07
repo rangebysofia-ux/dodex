@@ -62,9 +62,9 @@ def bygg_scenario(bas, sc):
 def kor(indata, tid_s):
     start = time.time()
     rad = {"personer": len(indata["personal"]),
-           "timmar_per_vecka": round(sum(p["grad"] * p.get("heltid_minuter_per_vecka",
-                                                           indata.get("heltid_minuter_per_vecka", 2220))
-                                         for p in indata["personal"]) / 60, 1)}
+           "timmar_per_vecka": round(sum(p["grad"] * (p.get("heltid_minuter_per_vecka") or (
+               indata.get("heltid_natt_minuter_per_vecka", 2060) if p.get("dygnsdelar") == ["natt"]
+               else indata.get("heltid_minuter_per_vecka", 2220))) for p in indata["personal"]) / 60, 1)}
     try:
         res = los(forbered(indata), tid_s, min(8, os.cpu_count() or 1), tyst=True)
     except IndataFel as e:

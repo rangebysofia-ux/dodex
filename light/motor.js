@@ -66,7 +66,8 @@ const MOTOR = (() => {
       const delar = p.dygnsdelar || ["morgon", "kvall"];
       const natt = delar.length === 1 && delar[0] === "natt";
       if (!(p.grad > 0 && p.grad <= 1)) { fel.push(`${p.id}: sysselsättningsgraden måste vara mellan 1 och 100 %.`); continue; }
-      const malMin = Math.round((p.heltid_minuter_per_vecka || heltid) * p.grad * W);
+      // nattpersonal: heltid 34 h 20 min om inget annat anges (AB 25 § 13 mom. 2; verksamhetens beslut)
+      const malMin = Math.round((p.heltid_minuter_per_vecka || (natt ? ind.heltid_natt_minuter_per_vecka || 2060 : heltid)) * p.grad * W);
       let P = Array.isArray(p.antal_pass) ? p.antal_pass.reduce((a, b) => a + b, 0) : p.antal_pass;
       if (P == null) {
         if (natt) P = Math.round(malMin / nnet);

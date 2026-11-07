@@ -255,8 +255,10 @@ def kontrollera(indata, schema_dok):
                 brott("HELG", pid, f"Helgfrekvens {frek} ger {W * t / n:g} helger, arbetar {antal}.")
         # antal pass och tid
         delp = indata.get("delperioder") or [W]
-        heltid = pers.get("heltid_minuter_per_vecka", indata.get("heltid_minuter_per_vecka", 2220))
         natt = pers.get("dygnsdelar") == ["natt"]
+        # nattpersonal: heltid 34 h 20 min om inget annat anges
+        heltid = pers.get("heltid_minuter_per_vecka") or (indata.get("heltid_natt_minuter_per_vecka", 2060) if natt
+                                                          else indata.get("heltid_minuter_per_vecka", 2220))
         mal_min = round(heltid * pers.get("grad", 1) * W)
         mal = pers.get("antal_pass")
         if mal is None and not natt:

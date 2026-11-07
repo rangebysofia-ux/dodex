@@ -16,6 +16,9 @@ const min = s => { const [h, m] = String(s).split(":").map(Number); return h * 6
 // timmar som t:mm, avkortat till hela minuter som i Excel
 const hm = h => { const m = Math.trunc(Math.round(h * 60 * 1000) / 1000), t = Math.floor(Math.abs(m) / 60); return `${m < 0 ? "−" : ""}${t}:${String(Math.abs(m) % 60).padStart(2, "0")}`; };
 const dagarFor = k => NYCKEL[k] || [DAGAR.indexOf(k)];
+const arNatt = p => !!(p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt");
+// heltid: personens egen, annars 34 h 20 min för nattpersonal och enhetens för övriga
+const heltidFor = (p, ind) => p.heltid_minuter_per_vecka || (arNatt(p) ? ind.heltid_natt_minuter_per_vecka || 2060 : ind.heltid_minuter_per_vecka || 2220);
 
 function passtid(p) {
   if (p.raknad_minuter != null) return p.raknad_minuter;
@@ -26,7 +29,7 @@ function passtid(p) {
 // antal pass under perioden, som motorn räknar det
 function antalPass(p, ind, W, vaxel) {
   if (p.antal_pass != null) return Array.isArray(p.antal_pass) ? p.antal_pass.reduce((a, b) => a + b, 0) : p.antal_pass;
-  const r = ind.regler || {}, heltid = p.heltid_minuter_per_vecka || ind.heltid_minuter_per_vecka || 2220, malMin = heltid * p.grad * W;
+  const r = ind.regler || {}, heltid = heltidFor(p, ind), malMin = heltid * p.grad * W;
   if (p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt") {
     const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "06:45" };
     const s = min(np.start), e = min(np.slut);
@@ -55,7 +58,7 @@ function berakna(ind) {
   let vaxel = 0;
   const personal = (ind.personal || []).map(p => {
     const natt = !!(p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt");
-    const h = (p.heltid_minuter_per_vecka || ind.heltid_minuter_per_vecka || 2220) / 60, n = antalPass(p, ind, W, vaxel);
+    const h = heltidFor(p, ind) / 60, n = antalPass(p, ind, W, vaxel);
     if (!natt && p.antal_pass == null) vaxel++;
     const frek = p.helgfrekvens || (ind.regler || {}).helgfrekvens || "2/4";
     return { id: p.id, grad: p.grad, natt, helg: HELGANDEL[frek] ?? 0.5, helgfrekvens: frek, pass: n, timmar_vecka: p.grad * h, timmar_period: p.grad * h * W };

@@ -43,7 +43,7 @@ function bemanning(res, indata) {
 
 function heltidFor(indata, pid) {
   const p = indata.personal.find(x => x.id === pid) || {};
-  return p.heltid_minuter_per_vecka || indata.heltid_minuter_per_vecka || 2220;
+  return p.heltid_minuter_per_vecka || (p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt" ? indata.heltid_natt_minuter_per_vecka || 2060 : indata.heltid_minuter_per_vecka || 2220);
 }
 
 // Jämn fördelning: personer som kan ta både morgon och kväll ska ha ungefär samma andel kvällar.

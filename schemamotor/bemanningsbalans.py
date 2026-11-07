@@ -50,13 +50,22 @@ def passtid(p):
     return max(0, e - s - (p.get("rast_minuter") or 0))
 
 
+def heltid_for(p, indata):
+    """Heltid i minuter per vecka: personens egen, annars 34 h 20 min för nattpersonal och enhetens för övriga."""
+    if p.get("heltid_minuter_per_vecka"):
+        return p["heltid_minuter_per_vecka"]
+    if p.get("dygnsdelar") == ["natt"]:
+        return indata.get("heltid_natt_minuter_per_vecka", 2060)
+    return indata.get("heltid_minuter_per_vecka", 2220)
+
+
 def antal_pass(person, indata, W, vaxel):
     """Antal pass under perioden som motorn räknar det (4,75 per vecka för dag och kväll, natt efter passlängd)."""
     ap = person.get("antal_pass")
     if ap is not None:
         return sum(ap) if isinstance(ap, list) else ap
     r = indata.get("regler") or {}
-    heltid = person.get("heltid_minuter_per_vecka") or indata.get("heltid_minuter_per_vecka", 2220)
+    heltid = heltid_for(person, indata)
     mal_min = heltid * person["grad"] * W
     if person.get("dygnsdelar") == ["natt"]:
         np_ = (indata.get("nattpass") or [{"start": "21:45", "slut": "06:45", "maltidsuppehall": True}])[0]
@@ -112,7 +121,7 @@ def berakna(indata):
     vaxel = 0
     for p in indata.get("personal") or []:
         natt = p.get("dygnsdelar") == ["natt"]
-        h = (p.get("heltid_minuter_per_vecka") or indata.get("heltid_minuter_per_vecka", 2220)) / 60
+        h = heltid_for(p, indata) / 60
         n = antal_pass(p, indata, W, vaxel)
         if not natt and p.get("antal_pass") is None:
             vaxel += 1
@@ -295,7 +304,7 @@ def fran_excel(fil):
                 continue
             if natt_avsnitt:
                 natnr += 1
-                p = {"id": f"N{natnr}", "grad": round(ssg, 4), "dygnsdelar": ["natt"], "heltid_minuter_per_vecka": 2180}
+                p = {"id": f"N{natnr}", "grad": round(ssg, 4), "dygnsdelar": ["natt"]}
             else:
                 dagnr += 1
                 p = {"id": f"P{dagnr}", "grad": round(ssg, 4)}

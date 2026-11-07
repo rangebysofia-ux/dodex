@@ -151,7 +151,7 @@ const GRANSKNING = (() => {
         const [t, n] = frek.split("/").map(Number);
         if (antal !== Math.round(W * t / n)) brott("HELG", pid, `Helgfrekvens ${frek} ger ${W * t / n} helger, arbetar ${antal}.`);
       }
-      const heltid = pers.heltid_minuter_per_vecka || indata.heltid_minuter_per_vecka || 2220;
+      const heltid = pers.heltid_minuter_per_vecka || (natt ? indata.heltid_natt_minuter_per_vecka || 2060 : indata.heltid_minuter_per_vecka || 2220);
       const malMin = Math.round(heltid * (pers.grad ?? 1) * W);
       let mal = pers.antal_pass;
       if (Array.isArray(mal)) mal = mal.reduce((a, b) => a + b, 0);

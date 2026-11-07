@@ -34,7 +34,7 @@ const ANALYS = (() => {
     const r = regler(indata);
     let W = indata.veckor;
     const ppv = r.pass_per_vecka;
-    const heltid = (indata.heltid_minuter_per_vecka || FORSTA_HELTID) / 60;
+    const heltid = (indata.heltid_minuter_per_vecka || FORSTA_HELTID) / 60, heltidNatt = (indata.heltid_natt_minuter_per_vecka || 2060) / 60;
     const behov = dagvarden(indata.behov), b = (d, k) => behov[d][k] || 0;
     const np = (indata.nattpass || [{ start: "21:45", slut: "06:45" }])[0];
     const s = tid(np.start), e = tid(np.slut), nattlangd = (e + (e <= s ? 1440 : 0) - s) / 60;
@@ -48,11 +48,11 @@ const ANALYS = (() => {
     const perHelg = Math.max(b(5, "morgon"), b(6, "morgon")) + Math.max(kvallHelg, freKvall);
     const andel = { "2/4": 0.5, "1/4": 0.25, "3/4": 0.75, alla: 1.0 }[r.helgfrekvens] ?? 0.5;
     const minDag = dagPass ? Math.max(Math.ceil(dagPass / ppv), Math.ceil(perHelg / andel)) : 0;
-    const minNatt = nattVecka ? Math.max(Math.ceil(nattTimmar / heltid), Math.ceil(nattHelg / andel)) : 0;
-    const kontrakt = summa((indata.personal || []).map(p => (p.grad ?? 1) * (p.heltid_minuter_per_vecka || heltid * 60) / 60));
+    const minNatt = nattVecka ? Math.max(Math.ceil(nattTimmar / heltidNatt), Math.ceil(nattHelg / andel)) : 0;
+    const kontrakt = summa((indata.personal || []).map(p => (p.grad ?? 1) * (p.heltid_minuter_per_vecka || (arNatt(p) ? heltidNatt : heltid) * 60) / 60));
     budget = Number(budget || indata.budget_timmar_vecka || r1(kontrakt) || 0);
     return {
-      veckor: W, heltid_timmar: heltid, budget_timmar_vecka: budget, arsarbetare_budget: r2(budget / heltid),
+      veckor: W, heltid_timmar: heltid, heltid_natt_timmar: heltidNatt, budget_timmar_vecka: budget, arsarbetare_budget: r2(budget / heltid),
       dag_pass_vecka: dagPass, personer_per_helg_dag: perHelg, fredagskvall_styr: freKvall > kvallHelg,
       minsta_antal_dag: minDag, natt_timmar_vecka: r1(nattTimmar), minsta_antal_natt: minNatt,
       dag_timmar_vecka: r1(budget - nattTimmar), pass_per_vecka: ppv, timmar_per_pass_heltid: r2(heltid / ppv),
@@ -65,6 +65,8 @@ const ANALYS = (() => {
     const g = Math.min(1, Math.floor(summa / antal / steg) * steg);
     return g >= golv ? Array(antal).fill(r2(g)) : [];
   }
+
+  const arNatt = p => !!(p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt");
 
   function heltidsnorm(summa, minst, steg = 0.05, golv = 0.5) {
     for (let heltider = Math.min(Math.floor(summa), 60); heltider >= 0; heltider--) {
@@ -89,14 +91,14 @@ const ANALYS = (() => {
     const bas = {};
     for (const [k, v] of Object.entries(indata)) if (!["personal", "onskemal", "beskrivning", "forvantat"].includes(k)) bas[k] = kopia(v);
     bas.veckor = u.veckor; bas.budget_timmar_vecka = u.budget_timmar_vecka; bas.onskemal = [];
-    const nattSumma = u.natt_timmar_vecka / ht;
+    const nattSumma = u.natt_timmar_vecka / u.heltid_natt_timmar;
     let natt = [];
     if (u.minsta_antal_natt) {
       natt = heltidsnorm(nattSumma, u.minsta_antal_natt, 0.05, 0.4);
       if (!natt.length) natt = grader(nattSumma, u.minsta_antal_natt, 0.05, 0.3);
       natt = natt.map(g => Math.min(1, Math.ceil(g * 20) / 20));
     }
-    const nattTimmar = summa(natt) * ht;
+    const nattTimmar = summa(natt) * u.heltid_natt_timmar;
     const dagSumma = Math.max(0, (u.budget_timmar_vecka - nattTimmar) / ht);
     const n = Math.max(u.minsta_antal_dag, 1);
     const kand = [];
@@ -132,7 +134,7 @@ const ANALYS = (() => {
         ind.veckor = indata.veckor; delete ind.budget_timmar_vecka;
         if (indata.budget_timmar_vecka) ind.budget_timmar_vecka = indata.budget_timmar_vecka;
       }
-      const kontrakt = summa(pers.map(p => p.grad ?? 1)) * ht;
+      const kontrakt = summa(pers.map(p => (p.grad ?? 1) * (arNatt(p) ? u.heltid_natt_timmar : ht)));
       const dag = pers.filter(p => !(p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt"));
       const nat = pers.filter(p => p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt");
       const sammanfattning = `${dag.length} dag/kväll (${graderText(dag).join(", ")})` + (nat.length ? ` och ${nat.length} natt (${graderText(nat).join(", ")})` : "");
@@ -144,7 +146,8 @@ const ANALYS = (() => {
   function konsekvenser(indata, res, granskning, budget) {
     const W = res.veckor, N = W * 7, r = regler(indata);
     const ht = (indata.heltid_minuter_per_vecka || FORSTA_HELTID) / 60;
-    const kontrakt = summa(indata.personal.map(p => (p.grad ?? 1) * (p.heltid_minuter_per_vecka || ht * 60) / 60));
+    const htn = (indata.heltid_natt_minuter_per_vecka || 2060) / 60;
+    const kontrakt = summa(indata.personal.map(p => (p.grad ?? 1) * (p.heltid_minuter_per_vecka || (arNatt(p) ? htn : ht) * 60) / 60));
     budget = budget || indata.budget_timmar_vecka;
     const ut = { status: res.status, personer: indata.personal.length, heltider: indata.personal.filter(p => (p.grad ?? 1) >= 0.999).length,
       kontrakt_timmar_vecka: r1(kontrakt), arsarbetare: r2(kontrakt / ht), budget_timmar_vecka: budget, budget_kvar: budget ? r1(budget - kontrakt) : null };

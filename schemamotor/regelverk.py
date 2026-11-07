@@ -88,6 +88,8 @@ KALLOR = {
     "HELTID": ("Kontrakt eller lokalt beslut. Centralt i AB 25 § 13 mom. 2: 40 timmar per helgfri vecka; 38 timmar 15 minuter när arbetstiden "
                "är förlagd både vardag och sön- eller helgdag; 34 timmar 20 minuter vid kontinuerligt treskift; 36 timmar 20 minuter vid intermittent treskift. "
                "Standardvärdet 37 timmar är inte AB:s centrala nivå.", "Anges per enhet eller person."),
+    "HELTID_NATT": ("AB 25 § 13 mom. 2: 34 timmar 20 minuter per vecka vid kontinuerligt treskiftsarbete. Används för nattpersonal "
+                    "(verksamhetens beslut 2026-11-07).", "Annan heltid anges för enheten eller per person."),
     "NATTPASS": ("AB 25 § 13 mom. 7 a (rast får bytas mot måltidsuppehåll vid nattarbete) och mom. 7 j (nattpass = minst 3 timmar ordinarie arbetstid mellan kl. 22 och 06).",
                  "Verksamheten bestämmer tiderna."),
     "BERAKNINGSPERIOD": ("AB 25 § 13 mom. 7 g: en beräkningsperiod kan omfatta högst 16 veckor.", "Lokalt kollektivavtal om längre period, högst ett år (mom. 10)."),
@@ -156,6 +158,9 @@ def regelverk():
               "beskrivning": b, "granskningskod": kod} for i, k, n, niv, enh, last, b, kod in HARDA]
     harda.append({"id": "HELTID", "nyckel": "heltid_minuter_per_vecka", "namn": "Heltid", "niva": "kontrakt", "typ": "hård",
                   "standard": 2220, "enhet": "minuter per vecka", "last": False, "beskrivning": "", "granskningskod": "TID"})
+    harda.append({"id": "HELTID_NATT", "nyckel": "heltid_natt_minuter_per_vecka", "namn": "Heltid för nattpersonal", "niva": "kontrakt",
+                  "typ": "hård", "standard": 2060, "enhet": "minuter per vecka (34:20)", "last": False,
+                  "beskrivning": "Gäller personal som bara arbetar natt och inte har egen heltid angiven.", "granskningskod": "TID"})
     harda.append({"id": "NATTPASS", "nyckel": "nattpass", "namn": "Nattpass", "niva": "princip", "typ": "hård",
                   "standard": {"start": "21:45", "slut": "06:45", "maltidsuppehall": True}, "enhet": "klockslag", "last": False,
                   "beskrivning": "Med måltidsuppehåll är hela passet arbetstid (ingen rast).", "granskningskod": "RAST"})

@@ -32,6 +32,7 @@ def underlag(indata, budget=None):
     W = indata["veckor"]
     ppv = r["pass_per_vecka"]
     heltid = indata.get("heltid_minuter_per_vecka", FORSTA_HELTID) / 60
+    heltid_natt = indata.get("heltid_natt_minuter_per_vecka", 2060) / 60
     behov = expandera_dagvarden(indata.get("behov"), dict)
     b = lambda d, k: behov[d].get(k, 0)  # noqa: E731
     np_ = (indata.get("nattpass") or [{"start": "21:45", "slut": "06:45", "maltidsuppehall": True}])[0]
@@ -47,11 +48,12 @@ def underlag(indata, budget=None):
     per_helg = max(b(5, "morgon"), b(6, "morgon")) + max(kvall_helg, fre_kvall)
     andel_helg = {"2/4": 0.5, "1/4": 0.25, "3/4": 0.75, "alla": 1.0}.get(r["helgfrekvens"], 0.5)
     min_dag = max(math.ceil(dag_pass / ppv), math.ceil(per_helg / andel_helg)) if dag_pass else 0
-    min_natt = max(math.ceil(natt_timmar / heltid), math.ceil(natt_helg / andel_helg)) if natt_vecka else 0
-    kontrakt = sum(p.get("grad", 1) * p.get("heltid_minuter_per_vecka", heltid * 60) / 60 for p in indata.get("personal", []))
+    min_natt = max(math.ceil(natt_timmar / heltid_natt), math.ceil(natt_helg / andel_helg)) if natt_vecka else 0
+    kontrakt = sum(p.get("grad", 1) * (p.get("heltid_minuter_per_vecka") or (heltid_natt if p.get("dygnsdelar") == ["natt"] else heltid) * 60) / 60
+                   for p in indata.get("personal", []))
     budget = float(budget or indata.get("budget_timmar_vecka") or round(kontrakt, 1) or 0)
     return {
-        "veckor": W, "heltid_timmar": heltid, "budget_timmar_vecka": budget, "arsarbetare_budget": round(budget / heltid, 2),
+        "veckor": W, "heltid_timmar": heltid, "heltid_natt_timmar": heltid_natt, "budget_timmar_vecka": budget, "arsarbetare_budget": round(budget / heltid, 2),
         "dag_pass_vecka": dag_pass, "personer_per_helg_dag": per_helg, "fredagskvall_styr": fre_kvall > kvall_helg,
         "minsta_antal_dag": min_dag, "natt_timmar_vecka": round(natt_timmar, 1), "minsta_antal_natt": min_natt,
         "dag_timmar_vecka": round(budget - natt_timmar, 1), "pass_per_vecka": ppv,
@@ -97,12 +99,12 @@ def forslag(indata, budget=None):
     bas["budget_timmar_vecka"] = u["budget_timmar_vecka"]
     bas["onskemal"] = []
 
-    natt_summa = u["natt_timmar_vecka"] / ht
+    natt_summa = u["natt_timmar_vecka"] / u["heltid_natt_timmar"]
     natt = []
     if u["minsta_antal_natt"]:
         natt = _heltidsnorm(natt_summa, u["minsta_antal_natt"], golv=0.4) or _grader(natt_summa, u["minsta_antal_natt"], golv=0.3)
         natt = [min(1.0, math.ceil(g * 20) / 20) for g in natt]  # natt avrundas uppåt: nätterna ska räcka
-    natt_timmar = sum(natt) * ht
+    natt_timmar = sum(natt) * u["heltid_natt_timmar"]
     dag_summa = max(0.0, (u["budget_timmar_vecka"] - natt_timmar) / ht)
     n = max(u["minsta_antal_dag"], 1)
 
@@ -149,7 +151,7 @@ def forslag(indata, budget=None):
             ind.pop("budget_timmar_vecka", None)
             if indata.get("budget_timmar_vecka"):
                 ind["budget_timmar_vecka"] = indata["budget_timmar_vecka"]
-        kontrakt = sum(p.get("grad", 1) for p in personal) * ht
+        kontrakt = sum(p.get("grad", 1) * (u["heltid_natt_timmar"] if p.get("dygnsdelar") == ["natt"] else ht) for p in personal)
         dag = [p for p in personal if p.get("dygnsdelar") != ["natt"]]
         nat = [p for p in personal if p.get("dygnsdelar") == ["natt"]]
         sammanfattning = (f"{len(dag)} dag/kväll ({', '.join(_grader_text(dag))})"
@@ -172,7 +174,9 @@ def konsekvenser(indata, res, granskning=None, budget=None):
     r = _r(indata)
     ht = indata.get("heltid_minuter_per_vecka", FORSTA_HELTID) / 60
     ut = {"status": res["status"]}
-    kontrakt = sum(p.get("grad", 1) * p.get("heltid_minuter_per_vecka", ht * 60) / 60 for p in indata["personal"])
+    htn = indata.get("heltid_natt_minuter_per_vecka", 2060) / 60
+    kontrakt = sum(p.get("grad", 1) * (p.get("heltid_minuter_per_vecka") or (htn if p.get("dygnsdelar") == ["natt"] else ht) * 60) / 60
+                   for p in indata["personal"])
     budget = budget or indata.get("budget_timmar_vecka")
     ut.update({"personer": len(indata["personal"]), "heltider": sum(1 for p in indata["personal"] if p.get("grad", 1) >= 0.999),
                "kontrakt_timmar_vecka": round(kontrakt, 1), "arsarbetare": round(kontrakt / ht, 2),

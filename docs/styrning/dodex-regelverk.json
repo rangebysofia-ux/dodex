@@ -345,6 +345,20 @@
       "avvikelse": "Anges per enhet eller person."
     },
     {
+      "id": "HELTID_NATT",
+      "nyckel": "heltid_natt_minuter_per_vecka",
+      "namn": "Heltid för nattpersonal",
+      "niva": "kontrakt",
+      "typ": "hård",
+      "standard": 2060,
+      "enhet": "minuter per vecka (34:20)",
+      "last": false,
+      "beskrivning": "Gäller personal som bara arbetar natt och inte har egen heltid angiven.",
+      "granskningskod": "TID",
+      "kalla": "AB 25 § 13 mom. 2: 34 timmar 20 minuter per vecka vid kontinuerligt treskiftsarbete. Används för nattpersonal (verksamhetens beslut 2026-11-07).",
+      "avvikelse": "Annan heltid anges för enheten eller per person."
+    },
+    {
       "id": "NATTPASS",
       "nyckel": "nattpass",
       "namn": "Nattpass",

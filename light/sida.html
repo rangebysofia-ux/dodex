@@ -400,7 +400,8 @@ function ritaKontroll() {
   if (b.fel) { el.innerHTML = `<div class="banner dalig"><strong>Rätta först</strong></div><ul class="punkter liten" style="margin-top:8px">${b.fel.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`; return; }
   const und = st.enhet.indata.personal.filter(p => p.helgfrekvens && p.helgfrekvens !== "2/4");
   const ht = (st.enhet.indata.heltid_minuter_per_vecka || 2220) / 60;
-  const kontr = Math.round(st.enhet.indata.personal.reduce((s, p) => s + (p.grad ?? 1) * ((p.heltid_minuter_per_vecka || 0) / 60 || ht), 0) * 100) / 100;
+  const htn = (st.enhet.indata.heltid_natt_minuter_per_vecka || 2060) / 60, arNatt = p => p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt";
+  const kontr = Math.round(st.enhet.indata.personal.reduce((s, p) => s + (p.grad ?? 1) * ((p.heltid_minuter_per_vecka || 0) / 60 || (arNatt(p) ? htn : ht)), 0) * 100) / 100;
   const bud = st.enhet.indata.budget_timmar_vecka;
   const budText = bud ? `<p class="liten" style="margin:8px 0 0;${kontr > bud + 0.05 ? "color:var(--dalig)" : ""}">Kontrakterad tid ${sv(kontr)} h per vecka av budgeten ${sv(bud)} h${Math.abs(kontr - bud) < 0.05 ? "." : kontr > bud ? `: ${sv(Math.round((kontr - bud) * 100) / 100)} h över.` : `: ${sv(Math.round((bud - kontr) * 100) / 100)} h kvar.`}</p>` : `<p class="liten dampad" style="margin:8px 0 0">Kontrakterad tid ${sv(kontr)} h per vecka.</p>`;
   el.innerHTML = `<div class="banner ${b.forvantade_vakanser ? "varn" : "ok"}"><strong>${b.forvantade_vakanser ? `Cirka ${vakText(b.forvantade_vakanser)}` : "Personalen räcker"}</strong>
@@ -475,6 +476,7 @@ function ritaFlik() {
       <div><label for="p-bud">Budget, timmar per vecka</label><input id="p-bud" type="number" inputmode="decimal" min="1" step="0.5" data-i="budget_timmar_vecka" value="${i.budget_timmar_vecka ?? ""}" placeholder="ingen"></div>
       <div><label for="p-kost">Timkostnad, kr (lön och PO, utan OB)</label><input id="p-kost" type="number" inputmode="decimal" min="1" step="1" data-i="timkostnad_kr" value="${i.timkostnad_kr ?? ""}" placeholder="ingen"></div>
       <div><label for="p-obp">OB-prognos efter avtalet, % per år</label><input id="p-obp" type="number" inputmode="decimal" min="0" max="20" step="0.5" data-i="ob_prognos_procent" value="${i.ob_prognos_procent ?? ""}" placeholder="3 (standard)"></div>
+      <div><label for="p-hn">Heltid nattpersonal, minuter per vecka</label><input id="p-hn" type="number" min="1" data-i="heltid_natt_minuter_per_vecka" value="${i.heltid_natt_minuter_per_vecka ?? ""}" placeholder="2060 (34:20)"></div>
       <div><label for="p-start">Startdatum (måndag), för OB</label><input id="p-start" type="date" data-i="startdatum" value="${i.startdatum ?? ""}"></div>
       <div><label for="p-iso">Första veckans nummer</label><input id="p-iso" type="number" min="1" max="53" data-i="start_iso_vecka" value="${i.start_iso_vecka ?? ""}" placeholder="schemats egna"></div></div>
       <p style="margin-top:10px"><label class="check"><input type="checkbox" data-i="cykliskt"${i.cykliskt === false ? "" : " checked"}> Cykliskt: sista veckan följs av vecka 1</label></p>
@@ -800,7 +802,7 @@ async function laggManuellt() {
   const ind = st.enhet.indata, W = ind.veckor || 4, ht = ind.heltid_minuter_per_vecka || 2220;
   const grund = { status: "OK", motor: "manuell", enhet: ind.enhet, veckor: W, cykliskt: ind.cykliskt !== false, sekunder: 0,
     kpi: { vakanta_pass: 0, blocklangd: 0, rattvisa: 0, onskemal: 0 }, vakanser: [], schema: {},
-    personer: Object.fromEntries(ind.personal.map(p => [p.id, { pass: 0, minuter: 0, mal_minuter: Math.round((p.heltid_minuter_per_vecka || ht) * (p.grad ?? 1) * W), kvallspass: 0, helgfrekvens: p.helgfrekvens || null }])) };
+    personer: Object.fromEntries(ind.personal.map(p => [p.id, { pass: 0, minuter: 0, mal_minuter: Math.round((p.heltid_minuter_per_vecka || (p.dygnsdelar && p.dygnsdelar[0] === "natt" && p.dygnsdelar.length === 1 ? ind.heltid_natt_minuter_per_vecka || 2060 : ht)) * (p.grad ?? 1) * W), kvallspass: 0, helgfrekvens: p.helgfrekvens || null }])) };
   const res = raknaOm(ind, GUIDE.tomtSchema(ind), grund), g = GRANSKNING.kontrollera(ind, res);
   const k = { id: nyttId(), enhet: st.enhet.id, namn: `Körning ${st.korningar.length + 1} (manuell)`, skapad: Date.now(), status: "BROTT", vakanta: res.kpi.vakanta_pass,
     data: JSON.stringify({ resultat: res, granskning: g, balans: 0, indata: ind }) };
@@ -961,7 +963,7 @@ function visaSimulering() {
 
 function ritaSimulering() {
   const i = st.enhet.indata, S = st.sim;
-  const kontr = (i.personal || []).reduce((a, p) => a + (p.grad ?? 1) * (i.heltid_minuter_per_vecka || 2220) / 60, 0);
+  const kontr = (i.personal || []).reduce((a, p) => a + (p.grad ?? 1) * (p.heltid_minuter_per_vecka || (p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] === "natt" ? i.heltid_natt_minuter_per_vecka || 2060 : i.heltid_minuter_per_vecka || 2220)) / 60, 0);
   let h = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button></div><h1 style="margin-top:4px">Simulering</h1>
     <p class="dampad" style="margin:6px 0 0">Pröva bemanningsalternativ innan något ändras. Ett schema läggs för varje alternativ och jämförs med nuläget: vakanser, kostnad, överkapacitet, helger och kvällsfördelning.</p>
     <div class="falt" style="margin-top:12px">
