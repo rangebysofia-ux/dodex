@@ -32,7 +32,9 @@ HARDA = [
     ("DYGNSVILA", "dygnsvila_minuter", "Dygnsvila", "avtal", "minuter (minst 660, kan inte låsas upp)", True,
      "Minst så lång sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Kontrolleras även över skarven mellan sista och första veckan.", "DYGNSVILA"),
     ("DYGNSBRYT", "dygnsbryt", "Dygnsbryt", "avtal", "klockslag eller auto", False,
-     "Var 24-timmarsperioden börjar. 'auto' = där flest pass slutar och börjar; nattpersonal får eget.", "DYGNSVILA"),
+     "Var 24-timmarsperioden börjar för dag- och kvällspersonal. 'auto' = där flest pass slutar och börjar; ett klockslag när verksamheten har bestämt sig.", "DYGNSVILA"),
+    ("DYGNSBRYT_NATT", "dygnsbryt_natt", "Dygnsbryt för nattpersonal", "avtal", "klockslag eller auto", False,
+     "'auto' = där nattpassen oftast slutar; ett klockslag när verksamheten har bestämt sig. En person kan också ha eget dygnsbryt.", "DYGNSVILA"),
     ("VECKOVILA", "veckovila_minuter", "Veckovila", "avtal", "minuter", True,
      "Minst så lång sammanhängande vila per sjudagarsperiod, räknat från veckobrytet.", "VECKOVILA"),
     ("VECKOBRYT", "veckobryt", "Veckobryt", "avtal", "veckodag och klockslag", False,
@@ -74,6 +76,7 @@ KALLOR = {
     "DYGNSVILA": ("AB 25 § 13 mom. 8 (minst 11 timmars sammanhängande ledighet per 24 timmar) och mom. 5 (arbete och dygnsvila alternerande); ATL 13 §.",
                   "Ingen. 11 timmar är hård i schemaplaneringen och kan inte låsas upp (verksamhetens beslut 2026-11-07). Lokalt kollektivavtal om kortare "
                   "dygnsvila är inte möjligt (AB 25 § 13 mom. 10). AB:s undantag till lägst 9 timmar vid särskilda skäl (mom. 8 a) används inte i planeringen."),
+    "DYGNSBRYT_NATT": ("AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden inleds ska framgå av schemat; nattpersonal kan ha ett eget.", "–"),
     "DYGNSBRYT": ("AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden för dygnsberäkning inleds ska framgå av schemat.", "–"),
     "VECKOVILA": ("ATL 14 § (36 timmars sammanhängande ledighet per sjudagarsperiod); AB 25 § 13 mom. 7 h.",
                   "Lokalt kollektivavtal om avvikelse (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse minst 24 timmar (mom. 7 h)."),

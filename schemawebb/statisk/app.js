@@ -715,6 +715,9 @@ function stangLada() { const l = document.getElementById("lada"); if (l) l.remov
 // Alla regler går att ändra. Avtal, lag och varannan helg är låsta tills avvikelsen bekräftas.
 const REGLER = [
   { grupp: "Avtal", k: "dygnsvila_minuter", namn: "Dygnsvila", beskr: "Sammanhängande vila per dygn, räknat från dygnsbrytet. 11 timmar är hård i schemaplaneringen och kan inte låsas upp (verksamhetens beslut).", ab: "AB 25 § 13 mom. 8 och mom. 5", niva: "avtal", typ: "hård", falt: "timmar", std: 660, last: true, aldrigUpplas: true },
+  { grupp: "Avtal", k: "dygnsbryt", namn: "Dygnsbryt, dag och kväll", beskr: "När 24-timmarsperioden för dygnsvilan börjar. Automatiskt = där flest pass slutar och börjar. Välj ett klockslag när verksamheten har bestämt sig.", ab: "AB 25 § 13 mom. 5", niva: "avtal", typ: "hård", falt: "bryt", std: "auto", forslag: () => st.korning?.granskning?.dygnsbryt },
+  { grupp: "Avtal", k: "dygnsbryt_natt", namn: "Dygnsbryt, nattpersonal", beskr: "Automatiskt = där nattpassen oftast slutar. En person kan också ha eget dygnsbryt.", ab: "AB 25 § 13 mom. 5", niva: "avtal", typ: "hård", falt: "bryt", std: "auto",
+    forslag: () => { const g = st.korning?.granskning, ind = st.korning?.indata; if (!g || !ind) return null; const n = ind.personal.find(p => p.dygnsdelar?.length === 1 && p.dygnsdelar[0] === "natt"); return n ? g.dygnsbryt_per_person?.[n.id] : null; } },
   { grupp: "Avtal", k: "veckovila_minuter", namn: "Veckovila", beskr: "Sammanhängande vila per vecka, räknat från måndag 00:00.", ab: "ATL 14 §, AB 25 § 13 mom. 7 h och mom. 10 e", niva: "avtal", typ: "hård", falt: "timmar", std: 2160, last: true,
     avvikelse: "Avvikelse från veckovilan kräver lokalt kollektivavtal (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse ska veckovilan vara minst 24 timmar (mom. 7 h).",
     bekrafta: "Vi har ett lokalt kollektivavtal om avvikelse från veckovilan (AB 25 § 13 mom. 10 e)" },
@@ -753,6 +756,7 @@ async function visaInstallningar(id) {
   await laddaEnhet(id);
   ritaMeny();
   sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Inställningar"]]);
+  try { await laddaKorning(null); } catch { /* inget schema: inget förslag på dygnsbryt */ }
   ritaInstallningar();
 }
 
@@ -768,6 +772,11 @@ function ritaInstallningar() {
     else if (R.falt === "check") falt = `<label class="check"><input type="checkbox" data-r="${R.k}" data-t="check"${v ? " checked" : ""}> ${v ? "På" : "Av"}</label>`;
     else if (R.falt === "val") falt = `<select data-r="${R.k}">${Object.entries(R.val).map(([a, t]) => `<option value="${a}"${String(a) === String(v) ? " selected" : ""}>${t}</option>`).join("")}</select>`;
     else if (R.falt === "tid") falt = `<input type="time" data-r="${R.k}" value="${esc(v)}">`;
+    else if (R.falt === "bryt") {
+      const fs = R.forslag && R.forslag(), auto = v === "auto";
+      falt = `<select data-r="${R.k}" data-t="bryt" aria-label="${R.namn}"><option value="auto"${auto ? " selected" : ""}>Automatiskt${fs ? ` (nu ${fs})` : ""}</option><option value="fast"${auto ? "" : " selected"}>Fast klockslag</option></select>
+        ${auto ? (fs ? `<button class="liten" data-g="las-bryt" data-k="${R.k}" data-v="${fs}">Lås ${fs}</button>` : "") : `<input type="time" data-r="${R.k}" data-t="brytid" value="${esc(v)}" aria-label="${R.namn}, klockslag">`}`;
+    }
     else if (R.falt === "tider") falt = `<input data-r="${R.k}" data-t="tider" value="${esc((v || []).join(", "))}" placeholder="till exempel 06:30, 07:30" style="width:190px">`;
     else if (R.falt === "timmar") falt = `<input type="number" inputmode="decimal" step="0.5" min="${(R.min || 0) / 60}" data-r="${R.k}" data-t="timmar" value="${v / 60}" aria-label="${R.namn} i timmar"> <span class="dampad">h</span>`;
     else if (R.falt === "minuter") falt = `<input type="number" inputmode="numeric" step="5" min="0" data-r="${R.k}" data-t="tal" value="${v}" aria-label="${R.namn} i minuter"> <span class="dampad">min</span>`;
@@ -776,7 +785,7 @@ function ritaInstallningar() {
     return `<div class="regel"><div><div class="namn">${R.namn}</div>${R.beskr ? `<div class="beskr">${R.beskr}</div>` : ""}${R.ab ? `<div class="beskr"><b>${R.ab}</b></div>` : ""}
         <div class="chips" style="margin-top:4px"><span class="niva ${nk(R.niva)}">${R.niva}</span><span class="niva">${R.typ}</span>
         ${avv.has(R.k) ? `<span class="niva avviker">${IKON.olast.replace("<svg", '<svg width="11" height="11"')} upplåst</span>` : ""}
-        ${andrad ? `<span class="niva avviker">avviker från ${Array.isArray(R.std) ? "standard" : R.falt === "timmar" ? sv(R.std / 60, 1) + " h" : R.falt === "val" ? R.val[R.std] : R.std === true ? "på" : R.std === false ? "av" : R.std}</span> <button class="lank liten" data-g="aterstall-regel" data-k="${R.k}">Återställ</button>` : ""}
+        ${andrad ? `<span class="niva avviker">avviker från ${Array.isArray(R.std) ? "standard" : R.std === "auto" ? "automatiskt" : R.falt === "timmar" ? sv(R.std / 60, 1) + " h" : R.falt === "val" ? R.val[R.std] : R.std === true ? "på" : R.std === false ? "av" : R.std}</span> <button class="lank liten" data-g="aterstall-regel" data-k="${R.k}">Återställ</button>` : ""}
         ${avv.has(R.k) && !andrad ? `<button class="lank liten" data-g="las-igen" data-k="${R.k}">Lås igen</button>` : ""}</div></div>
       <div class="varde">${falt}</div>
       ${oppen ? `<div class="lasupp"><div><b>Avvikelse från ${R.niva === "lag" ? "lagen" : R.niva === "avtal" ? "avtalet" : "verksamhetens beslut"}.</b> ${R.avvikelse || "Ändringen gäller hela enheten."} Avvikelsen syns på alla scheman från enheten.</div>
@@ -824,6 +833,12 @@ function regelInput(el) {
   if (!el.dataset.r) return;
   const R = REGLER.find(r => r.k === el.dataset.r);
   st.indata.regler = st.indata.regler || {};
+  if (el.dataset.t === "bryt" || el.dataset.t === "brytid") {
+    const v = el.dataset.t === "bryt" ? (el.value === "auto" ? "auto" : (R.forslag && R.forslag()) || "15:00") : el.value;
+    if (v === "auto") delete st.indata.regler[R.k]; else st.indata.regler[R.k] = v;
+    if (!Object.keys(st.indata.regler).length) delete st.indata.regler;
+    markeraAndrad(false); ritaInstallningar(); return;
+  }
   if (el.dataset.t === "tider") {
     const l = el.value.split(/[,; ]+/).map(t => t.trim().replace(".", ":")).filter(Boolean).map(t => /^\d{1,2}:\d{2}$/.test(t) ? t.padStart(5, "0") : null);
     if (l.some(t => !t)) { meddela("Skriv tiderna som 06:30, 07:30."); return; }
@@ -934,6 +949,7 @@ document.addEventListener("click", async e => {
         st.indata.avvikelser = (st.indata.avvikelser || []).filter(a => a !== el.dataset.k);
         if (!st.indata.avvikelser.length) delete st.indata.avvikelser;
         markeraAndrad(true); break;
+      case "las-bryt": st.indata.regler = { ...(st.indata.regler || {}), [el.dataset.k]: el.dataset.v }; markeraAndrad(false); ritaInstallningar(); meddela(`Dygnsbrytet är låst till ${el.dataset.v}.`); break;
       case "aterstall-regel":
         delete st.indata.regler[el.dataset.k]; if (!Object.keys(st.indata.regler).length) delete st.indata.regler;
         markeraAndrad(true); break;

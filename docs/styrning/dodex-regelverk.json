@@ -45,9 +45,23 @@
       "standard": "auto",
       "enhet": "klockslag eller auto",
       "last": false,
-      "beskrivning": "Var 24-timmarsperioden börjar. 'auto' = där flest pass slutar och börjar; nattpersonal får eget.",
+      "beskrivning": "Var 24-timmarsperioden börjar för dag- och kvällspersonal. 'auto' = där flest pass slutar och börjar; ett klockslag när verksamheten har bestämt sig.",
       "granskningskod": "DYGNSVILA",
       "kalla": "AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden för dygnsberäkning inleds ska framgå av schemat.",
+      "avvikelse": "–"
+    },
+    {
+      "id": "DYGNSBRYT_NATT",
+      "nyckel": "dygnsbryt_natt",
+      "namn": "Dygnsbryt för nattpersonal",
+      "niva": "avtal",
+      "typ": "hård",
+      "standard": "auto",
+      "enhet": "klockslag eller auto",
+      "last": false,
+      "beskrivning": "'auto' = där nattpassen oftast slutar; ett klockslag när verksamheten har bestämt sig. En person kan också ha eget dygnsbryt.",
+      "granskningskod": "DYGNSVILA",
+      "kalla": "AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden inleds ska framgå av schemat; nattpersonal kan ha ett eget.",
       "avvikelse": "–"
     },
     {

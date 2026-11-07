@@ -27,6 +27,8 @@ STANDARDREGLER = {
     "dygnsvila_minuter": 660,
     "veckovila_minuter": 2160,
     "dygnsbryt": "auto",
+    # dygnsbryt för nattpersonal: "auto" (där nattpassen oftast slutar) eller ett klockslag
+    "dygnsbryt_natt": "auto",
     "veckobryt": "mån 00:00",
     "rast_grans_minuter": 300,
     "rast_minuter": 30,

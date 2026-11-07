@@ -35,7 +35,7 @@ Klocka = Annotated[str, Field(pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")]
 
 
 STANDARDREGLER = {
-    "dygnsvila_minuter", "veckovila_minuter", "dygnsbryt", "veckobryt", "rast_grans_minuter", "rast_minuter",
+    "dygnsvila_minuter", "veckovila_minuter", "dygnsbryt", "dygnsbryt_natt", "veckobryt", "rast_grans_minuter", "rast_minuter",
     "pass_per_vecka", "morgon_start", "kvall_slut", "kant_fran", "kant_till", "steg_minuter", "block_min",
     "block_max", "block_rekommenderat", "natt_max_i_rad", "natt_vila_mellan_block_minuter", "morgon_starter", "kvall_max_i_rad", "kvall_i_rad_typ", "helg_start", "helg_slut", "hel_helg", "helgfrekvens",
     "ingen_fredagskvall_fore_ledig_helg", "tolerans_minuter", "langd_band_minuter", "min_passlangd_minuter",
@@ -285,6 +285,10 @@ def _helhet(d: dict) -> list[str]:
         v = regler.get(nyckel)
         if isinstance(v, (int, float)) and not isinstance(v, bool) and v < golv:
             fel.append(text)
+    for k in ("dygnsbryt", "dygnsbryt_natt"):
+        v = regler.get(k)
+        if v is not None and v != "auto" and not (isinstance(v, str) and re.match(r"^([01]?\d|2[0-3]):[0-5]\d$", v)):
+            fel.append(f"{'Dygnsbryt för nattpersonal' if k.endswith('natt') else 'Dygnsbryt'} ska vara auto eller ett klockslag, till exempel 15:00.")
     if regler.get("kvall_i_rad_typ") not in (None, "mjuk", "hard"):
         fel.append("Kvällar i rad ska vara mjuk eller hard.")
     ms = regler.get("morgon_starter")

@@ -498,6 +498,10 @@ function ritaFlik() {
       ${tal("natt_vila_mellan_block_minuter", "Nattpersonal: vila mellan nattblock (minuter, 2880 = 48 h)", "lokal regel", 2880, 60)}
       <div class="regel"><div>Jämn bemanning mellan dag och kväll<br><span class="niva">princip</span></div><select data-r="jamn_bemanning">${[["mjuk", "På"], ["av", "Av"]].map(([k, t]) => `<option value="${k}"${(r.jamn_bemanning || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="regel"><div>Blandning av morgon och kväll varje vecka<br><span class="niva">princip</span></div><select data-r="spridning_kvallar">${[["av", "Av"], ["mjuk", "Mjuk"], ["stark", "Stark"]].map(([k, t]) => `<option value="${k}"${(r.spridning_kvallar || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      ${(() => { let g = null; try { g = st.korningar?.[0] ? JSON.parse(st.korningar[0].data).granskning : null; } catch {}
+        const bryt = (k, namn, fs) => `<div class="regel"><div>${namn}<br><span class="niva skarp">avtal</span> <span class="dampad liten">${r[k] ? "fast" : `automatiskt${fs ? ", nu " + fs : ""}`}</span></div><input type="time" data-r="${k}" value="${r[k] ?? ""}" aria-label="${namn}, tomt = automatiskt"></div>`;
+        return bryt("dygnsbryt", "Dygnsbryt, dag och kväll", g?.dygnsbryt) + bryt("dygnsbryt_natt", "Dygnsbryt, nattpersonal", null)
+          + `<p class="dampad liten">Dygnsbrytet är när 24-timmarsperioden för dygnsvilan börjar (AB 25 § 13 mom. 5). Tomt = automatiskt, där flest pass slutar och börjar.</p>`; })()}
       <div class="regel"><div>Dagpass börjar<br><span class="niva">princip</span></div><input type="time" data-r="morgon_start" value="${r.morgon_start ?? "07:00"}"></div>
       <p class="dampad liten">Rörlig starttid efter täckningen (till exempel 06:30 när fler behövs tidigt) finns i det fullständiga systemet, där behov vid klockslag räknas.</p>
       <div class="regel"><div>Kvällspass slutar<br><span class="niva">princip</span></div><input type="time" data-r="kvall_slut" value="${r.kvall_slut ?? "22:00"}"></div>
@@ -659,7 +663,7 @@ document.addEventListener("input", ev => {
     const k = el.dataset.r;
     if (el.dataset.t === "check") { if (el.checked) delete i.regler[k]; else i.regler[k] = false; }
     else if (el.tagName === "SELECT") { if (el.value === "mjuk") delete i.regler[k]; else i.regler[k] = el.value; }
-    else if (el.type === "time") i.regler[k] = el.value;
+    else if (el.type === "time") { if (el.value) i.regler[k] = el.value; else delete i.regler[k]; }
     else { const v = parseFloat(el.value.replace(",", ".")); if (isNaN(v)) delete i.regler[k]; else i.regler[k] = v; }
     andrad(false);
   } else if (el.dataset.i) {

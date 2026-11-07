@@ -20,7 +20,7 @@ from collections import Counter
 DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
 DYGN = 1440
 STANDARD = {
-    "dygnsvila_minuter": 660, "veckovila_minuter": 2160, "dygnsbryt": "auto", "veckobryt": "mån 00:00",
+    "dygnsvila_minuter": 660, "veckovila_minuter": 2160, "dygnsbryt": "auto", "dygnsbryt_natt": "auto", "veckobryt": "mån 00:00",
     "rast_grans_minuter": 300, "rast_minuter": 30, "pass_per_vecka": 4.75, "morgon_start": "07:00",
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
     "block_rekommenderat": 4, "natt_max_i_rad": 3, "natt_vila_mellan_block_minuter": 2880, "morgon_starter": [], "kvall_max_i_rad": 3, "kvall_i_rad_typ": "mjuk", "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
@@ -160,6 +160,8 @@ def kontrollera(indata, schema_dok):
         egen = personer.get(pid, {}).get("dygnsbryt")
         if egen:
             db = tid(egen)
+        elif personer.get(pid, {}).get("dygnsdelar") == ["natt"] and r.get("dygnsbryt_natt", "auto") != "auto":
+            db = tid(r["dygnsbryt_natt"])
         elif personer.get(pid, {}).get("dygnsdelar") == ["natt"] and lista:
             db = nattbryt(lista)
         else:

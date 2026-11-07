@@ -33,7 +33,8 @@ Måste alltid uppfyllas.
 | Id | Regel | Nyckel | Standard | Enhet | Nivå | Låst | Beskrivning |
 |---|---|---|---|---|---|---|---|
 | DYGNSVILA | Dygnsvila | `dygnsvila_minuter` | 660 | minuter (minst 660, kan inte låsas upp) | avtal | ja | Minst så lång sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Kontrolleras även över skarven mellan sista och första veckan. |
-| DYGNSBRYT | Dygnsbryt | `dygnsbryt` | auto | klockslag eller auto | avtal | nej | Var 24-timmarsperioden börjar. 'auto' = där flest pass slutar och börjar; nattpersonal får eget. |
+| DYGNSBRYT | Dygnsbryt | `dygnsbryt` | auto | klockslag eller auto | avtal | nej | Var 24-timmarsperioden börjar för dag- och kvällspersonal. 'auto' = där flest pass slutar och börjar; ett klockslag när verksamheten har bestämt sig. |
+| DYGNSBRYT_NATT | Dygnsbryt för nattpersonal | `dygnsbryt_natt` | auto | klockslag eller auto | avtal | nej | 'auto' = där nattpassen oftast slutar; ett klockslag när verksamheten har bestämt sig. En person kan också ha eget dygnsbryt. |
 | VECKOVILA | Veckovila | `veckovila_minuter` | 2160 | minuter | avtal | ja | Minst så lång sammanhängande vila per sjudagarsperiod, räknat från veckobrytet. |
 | VECKOBRYT | Veckobryt | `veckobryt` | mån 00:00 | veckodag och klockslag | avtal | nej | Var sjudagarsperioden för veckovila börjar. |
 | RAST_GRANS | Rast efter högst | `rast_grans_minuter` | 300 | minuter | lag | ja | Längsta arbetstid utan rast. |
@@ -73,6 +74,7 @@ Källa och tillåten avvikelse för varje hård regel. Kontrollerat mot AB 25 i 
 |---|---|---|
 | DYGNSVILA | AB 25 § 13 mom. 8 (minst 11 timmars sammanhängande ledighet per 24 timmar) och mom. 5 (arbete och dygnsvila alternerande); ATL 13 §. | Ingen. 11 timmar är hård i schemaplaneringen och kan inte låsas upp (verksamhetens beslut 2026-11-07). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). AB:s undantag till lägst 9 timmar vid särskilda skäl (mom. 8 a) används inte i planeringen. |
 | DYGNSBRYT | AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden för dygnsberäkning inleds ska framgå av schemat. | – |
+| DYGNSBRYT_NATT | AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden inleds ska framgå av schemat; nattpersonal kan ha ett eget. | – |
 | VECKOVILA | ATL 14 § (36 timmars sammanhängande ledighet per sjudagarsperiod); AB 25 § 13 mom. 7 h. | Lokalt kollektivavtal om avvikelse (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse minst 24 timmar (mom. 7 h). |
 | VECKOBRYT | ATL 14 § (sjudagarsperiod). | – |
 | RAST_GRANS | ATL 15 § (rast senast efter fem timmars arbete); AB 25 § 13 mom. 7 a. | Kollektivavtal om förläggning av raster (AB 25 § 13 mom. 10 f). Vid nattarbete får rast bytas mot måltidsuppehåll (mom. 7 a). |

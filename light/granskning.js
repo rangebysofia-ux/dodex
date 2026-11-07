@@ -6,7 +6,7 @@ const GRANSKNING = (() => {
   const DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
   const DYGN = 1440;
   const STANDARD = {
-    dygnsvila_minuter: 660, veckovila_minuter: 2160, dygnsbryt: "auto", veckobryt: "mån 00:00",
+    dygnsvila_minuter: 660, veckovila_minuter: 2160, dygnsbryt: "auto", dygnsbryt_natt: "auto", veckobryt: "mån 00:00",
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
@@ -88,6 +88,7 @@ const GRANSKNING = (() => {
       const natt = JSON.stringify(pers.dygnsdelar) === '["natt"]';
       let db = dbDag;
       if (pers.dygnsbryt) db = tid(pers.dygnsbryt);
+      else if (natt && r.dygnsbryt_natt && r.dygnsbryt_natt !== "auto") db = tid(r.dygnsbryt_natt);
       else if (natt && lista.length) {
         const c = new Map(); lista.forEach(([, , e]) => c.set(e % DYGN, (c.get(e % DYGN) || 0) + 1));
         db = [...c.entries()].sort((a, b) => b[1] - a[1])[0][0];

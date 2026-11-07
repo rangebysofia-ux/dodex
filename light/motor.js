@@ -209,7 +209,10 @@ const MOTOR = (() => {
       const v = Object.entries(raknare).reduce((s, [g, n]) => s + (Math.abs(g - t) <= 30 ? n : 0), 0);
       if (v > bast) { bast = v; db = t; }
     }
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb: ne % DYGN, enhet: ind.enhet || "" };
+    // fast dygnsbryt när verksamheten har bestämt sig (annars förslaget ovan)
+    if (r.dygnsbryt && r.dygnsbryt !== "auto") db = tid(r.dygnsbryt);
+    const nattDb = r.dygnsbryt_natt && r.dygnsbryt_natt !== "auto" ? tid(r.dygnsbryt_natt) : ne % DYGN;
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, enhet: ind.enhet || "" };
   }
 
   function tillatna(p, d, r, W) {

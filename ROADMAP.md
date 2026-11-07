@@ -10,7 +10,7 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
   *Klart när:* ett test visar tre typiska fel (okänd dag, saknad grad, periodlängd som inte ger heltal) med tydliga meddelanden.
 - [x] **3. Bemanningsbalans.** Modul som före genereringen räknar pass, timmar, helger, nätter, morgon- och kvällskapacitet och fredagskvällar mot behovet, och föreslår åtgärder.
   *Klart när:* balansen förutsäger de vakanser som genereringen ger för `tests/fall/` och för en grupp där fredagsregeln ger vakans.
-- [ ] **4. Eget dygnsbryt i regelprofilen.** Förslag från passen för dag och kväll, eget för nattpersonal, fast värde när verksamheten har bestämt sig.
+- [x] **4. Eget dygnsbryt i regelprofilen.** Förslag från passen för dag och kväll, eget för nattpersonal, fast värde när verksamheten har bestämt sig.
 
 ## Fas 2 – Tjänst och gränssnitt
 
