@@ -6,7 +6,8 @@
   "principer": [
     "Hårda regler får aldrig brytas. Behovet är högsta mjuka nivå: en vakans är bättre än ett avtalsbrott.",
     "Mjuka mål optimeras i strikt ordning (lexikografiskt); ett lägre mål kan aldrig försämra ett högre.",
-    "Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar ett lokalt avtal eller beslut. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman.",
+    "Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar att villkoren i källan är uppfyllda. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman. Dygnsvilan kan aldrig sättas under 9 timmar (AB 25 § 13 mom. 8 a och mom. 10).",
+    "Varje hård regel anger sin källa (AB 25, ATL, kontrakt eller lokalt beslut) och vilken avvikelse källan tillåter.",
     "Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass per vecka) kallas aldrig avtalsregler.",
     "Ett färdigt schema granskas av en fristående kontroll som inte delar kod med motorn.",
     "Personal anges med id-koder, aldrig namn."
@@ -31,7 +32,9 @@
       "enhet": "minuter",
       "last": true,
       "beskrivning": "Minst så lång sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Kontrolleras även över skarven mellan sista och första veckan.",
-      "granskningskod": "DYGNSVILA"
+      "granskningskod": "DYGNSVILA",
+      "kalla": "AB 25 § 13 mom. 8 (minst 11 timmars sammanhängande ledighet per 24 timmar) och mom. 5 (arbete och dygnsvila alternerande); ATL 13 §.",
+      "avvikelse": "Ingen lokal avvikelse: lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). Undantag till lägst 9 timmar endast vid särskilda skäl i verksamhet med ansvar för liv, hälsa och säkerhet, med motiverad bedömning, kompenserande vila i samband med nästa dygnsvila och MBL-förhandling (mom. 8 a och mom. 5). Systemet tillåter aldrig under 9 timmar och lägger inte in den kompenserande vilan."
     },
     {
       "id": "DYGNSBRYT",
@@ -43,7 +46,9 @@
       "enhet": "klockslag eller auto",
       "last": false,
       "beskrivning": "Var 24-timmarsperioden börjar. 'auto' = där flest pass slutar och börjar; nattpersonal får eget.",
-      "granskningskod": "DYGNSVILA"
+      "granskningskod": "DYGNSVILA",
+      "kalla": "AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden för dygnsberäkning inleds ska framgå av schemat.",
+      "avvikelse": "–"
     },
     {
       "id": "VECKOVILA",
@@ -55,7 +60,9 @@
       "enhet": "minuter",
       "last": true,
       "beskrivning": "Minst så lång sammanhängande vila per sjudagarsperiod, räknat från veckobrytet.",
-      "granskningskod": "VECKOVILA"
+      "granskningskod": "VECKOVILA",
+      "kalla": "ATL 14 § (36 timmars sammanhängande ledighet per sjudagarsperiod); AB 25 § 13 mom. 7 h.",
+      "avvikelse": "Lokalt kollektivavtal om avvikelse (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse minst 24 timmar (mom. 7 h)."
     },
     {
       "id": "VECKOBRYT",
@@ -67,7 +74,9 @@
       "enhet": "veckodag och klockslag",
       "last": false,
       "beskrivning": "Var sjudagarsperioden för veckovila börjar.",
-      "granskningskod": "VECKOVILA"
+      "granskningskod": "VECKOVILA",
+      "kalla": "ATL 14 § (sjudagarsperiod).",
+      "avvikelse": "–"
     },
     {
       "id": "RAST_GRANS",
@@ -79,7 +88,9 @@
       "enhet": "minuter",
       "last": true,
       "beskrivning": "Längsta arbetstid utan rast.",
-      "granskningskod": "RAST"
+      "granskningskod": "RAST",
+      "kalla": "ATL 15 § (rast senast efter fem timmars arbete); AB 25 § 13 mom. 7 a.",
+      "avvikelse": "Kollektivavtal om förläggning av raster (AB 25 § 13 mom. 10 f). Vid nattarbete får rast bytas mot måltidsuppehåll (mom. 7 a)."
     },
     {
       "id": "RAST_LANGD",
@@ -91,7 +102,9 @@
       "enhet": "minuter",
       "last": true,
       "beskrivning": "Rast i pass över gränsen. Nattpass med måltidsuppehåll har ingen rast.",
-      "granskningskod": "RAST"
+      "granskningskod": "RAST",
+      "kalla": "ATL 15 §.",
+      "avvikelse": "Kollektivavtal."
     },
     {
       "id": "HELGFREKVENS",
@@ -103,7 +116,9 @@
       "enhet": "andel helger",
       "last": true,
       "beskrivning": "Varannan helg i fasta grupper A och B. Låst för enheten; undantag bara per person (1/4, 3/4, alla, ingen).",
-      "granskningskod": "HELG"
+      "granskningskod": "HELG",
+      "kalla": "Lokalt beslut i verksamheten, inte AB (beslutat 2026-11-05).",
+      "avvikelse": "Låst för enheten. Undantag bara per person (helgfrekvens 1/4, 3/4, alla eller ingen), synligt som undantag."
     },
     {
       "id": "HEL_HELG",
@@ -115,7 +130,9 @@
       "enhet": "på/av",
       "last": false,
       "beskrivning": "",
-      "granskningskod": "HELG"
+      "granskningskod": "HELG",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "HELG_START",
@@ -127,7 +144,9 @@
       "enhet": "veckodag och klockslag",
       "last": false,
       "beskrivning": "",
-      "granskningskod": "HELG"
+      "granskningskod": "HELG",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "HELG_SLUT",
@@ -139,7 +158,9 @@
       "enhet": "veckodag och klockslag",
       "last": false,
       "beskrivning": "",
-      "granskningskod": "HELG"
+      "granskningskod": "HELG",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "FREDAGSKVALL",
@@ -151,7 +172,9 @@
       "enhet": "på/av",
       "last": false,
       "beskrivning": "Den som är ledig helgen arbetar inte kväll eller natt fredagen innan.",
-      "granskningskod": "HELG"
+      "granskningskod": "HELG",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "PASS_PER_VECKA",
@@ -163,7 +186,9 @@
       "enhet": "pass per vecka",
       "last": false,
       "beskrivning": "Antal pass = värdet × veckor. Blir det inte ett heltal (28,5 på 6 veckor) får dag- och kvällspersonal utan angivet antal växelvis avrundat nedåt och uppåt i den ordning de står (28, 29, 28 …). Antal pass kan anges per person.",
-      "granskningskod": "ANTAL_PASS"
+      "granskningskod": "ANTAL_PASS",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "MIN_PASSLANGD",
@@ -175,7 +200,9 @@
       "enhet": "minuter",
       "last": false,
       "beskrivning": "Blir passen kortare än så vid låg sysselsättningsgrad tas pass bort i stället: antal pass = arbetstid ÷ minsta längd, avrundat nedåt. 0 stänger av.",
-      "granskningskod": "ANTAL_PASS"
+      "granskningskod": "ANTAL_PASS",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "BLOCK_MIN",
@@ -187,7 +214,9 @@
       "enhet": "dagar",
       "last": false,
       "beskrivning": "Inga enstaka arbetsdagar.",
-      "granskningskod": "BLOCK_MIN"
+      "granskningskod": "BLOCK_MIN",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "BLOCK_MAX",
@@ -199,7 +228,9 @@
       "enhet": "dagar",
       "last": false,
       "beskrivning": "",
-      "granskningskod": "BLOCK_MAX"
+      "granskningskod": "BLOCK_MAX",
+      "kalla": "Lokalt beslut i verksamheten, inte AB.",
+      "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
       "id": "TOLERANS",
@@ -211,7 +242,9 @@
       "enhet": "minuter per period",
       "last": false,
       "beskrivning": "Nattpersonal: minst ett halvt nattpass.",
-      "granskningskod": "TID"
+      "granskningskod": "TID",
+      "kalla": "Kontrakt: arbetstiden ska motsvara anställningens omfattning.",
+      "avvikelse": "Per person (tolerans_minuter)."
     },
     {
       "id": "MORGON_START",
@@ -223,7 +256,9 @@
       "enhet": "klockslag",
       "last": false,
       "beskrivning": "Fast start; slutet anpassas.",
-      "granskningskod": "PASSFONSTER"
+      "granskningskod": "PASSFONSTER",
+      "kalla": "Planeringsprincip.",
+      "avvikelse": "Verksamheten kan ändra."
     },
     {
       "id": "KVALL_SLUT",
@@ -235,7 +270,9 @@
       "enhet": "klockslag",
       "last": false,
       "beskrivning": "Fast slut; starten anpassas.",
-      "granskningskod": "PASSFONSTER"
+      "granskningskod": "PASSFONSTER",
+      "kalla": "Planeringsprincip.",
+      "avvikelse": "Verksamheten kan ändra."
     },
     {
       "id": "PASSBYTE_FRAN",
@@ -247,7 +284,9 @@
       "enhet": "klockslag",
       "last": false,
       "beskrivning": "Dagpassets slut och kvällspassets start ligger i fönstret.",
-      "granskningskod": "PASSFONSTER"
+      "granskningskod": "PASSFONSTER",
+      "kalla": "Planeringsprincip.",
+      "avvikelse": "Verksamheten kan ändra."
     },
     {
       "id": "PASSBYTE_TILL",
@@ -259,7 +298,9 @@
       "enhet": "klockslag",
       "last": false,
       "beskrivning": "",
-      "granskningskod": "PASSFONSTER"
+      "granskningskod": "PASSFONSTER",
+      "kalla": "Planeringsprincip.",
+      "avvikelse": "Verksamheten kan ändra."
     },
     {
       "id": "STEG",
@@ -271,7 +312,9 @@
       "enhet": "minuter",
       "last": false,
       "beskrivning": "",
-      "granskningskod": null
+      "granskningskod": null,
+      "kalla": "Planeringsprincip.",
+      "avvikelse": "Verksamheten kan ändra."
     },
     {
       "id": "LANGD_BAND",
@@ -283,7 +326,9 @@
       "enhet": "minuter",
       "last": false,
       "beskrivning": "",
-      "granskningskod": null
+      "granskningskod": null,
+      "kalla": "Planeringsprincip.",
+      "avvikelse": "Verksamheten kan ändra."
     },
     {
       "id": "HELTID",
@@ -295,7 +340,9 @@
       "enhet": "minuter per vecka",
       "last": false,
       "beskrivning": "",
-      "granskningskod": "TID"
+      "granskningskod": "TID",
+      "kalla": "Kontrakt eller lokalt beslut. Centralt i AB 25 § 13 mom. 2: 40 timmar per helgfri vecka; 38 timmar 15 minuter när arbetstiden är förlagd både vardag och sön- eller helgdag; 34 timmar 20 minuter vid kontinuerligt treskift; 36 timmar 20 minuter vid intermittent treskift. Standardvärdet 37 timmar är inte AB:s centrala nivå.",
+      "avvikelse": "Anges per enhet eller person."
     },
     {
       "id": "NATTPASS",
@@ -311,7 +358,51 @@
       "enhet": "klockslag",
       "last": false,
       "beskrivning": "Med måltidsuppehåll är hela passet arbetstid (ingen rast).",
-      "granskningskod": "RAST"
+      "granskningskod": "RAST",
+      "kalla": "AB 25 § 13 mom. 7 a (rast får bytas mot måltidsuppehåll vid nattarbete) och mom. 7 j (nattpass = minst 3 timmar ordinarie arbetstid mellan kl. 22 och 06).",
+      "avvikelse": "Verksamheten bestämmer tiderna."
+    },
+    {
+      "id": "BERAKNINGSPERIOD",
+      "nyckel": "veckor",
+      "namn": "Schemaperiod (beräkningsperiod)",
+      "niva": "avtal",
+      "typ": "hård",
+      "standard": 4,
+      "enhet": "veckor, högst 16",
+      "last": false,
+      "beskrivning": "Kontrolleras i indata: 1–16 veckor.",
+      "granskningskod": null,
+      "kalla": "AB 25 § 13 mom. 7 g: en beräkningsperiod kan omfatta högst 16 veckor.",
+      "avvikelse": "Lokalt kollektivavtal om längre period, högst ett år (mom. 10)."
+    },
+    {
+      "id": "ARBETSTID_48",
+      "nyckel": null,
+      "namn": "Högst 48 timmar per vecka i snitt under 4 veckor",
+      "niva": "avtal",
+      "typ": "hård",
+      "standard": 2880,
+      "enhet": "minuter per vecka i snitt",
+      "last": true,
+      "beskrivning": "Kontrolleras inte separat. Uppfylls när arbetstiden följer kontraktet (högst heltid) och högst 5 arbetsdagar i följd.",
+      "granskningskod": null,
+      "kalla": "Anmärkning till AB 25 § 13 mom. 7 g: ordinarie arbetstid högst 48 timmar per vecka i genomsnitt under 4 veckor.",
+      "avvikelse": "Lokalt kollektivavtal (mom. 10)."
+    },
+    {
+      "id": "SCHEMA_14_DAGAR",
+      "nyckel": null,
+      "namn": "Schemat meddelas 14 dagar innan",
+      "niva": "avtal",
+      "typ": "hård",
+      "standard": 14,
+      "enhet": "dagar",
+      "last": true,
+      "beskrivning": "Utanför schemamotorn: verksamhetens ansvar när schemat publiceras.",
+      "granskningskod": null,
+      "kalla": "AB 25 § 13 mom. 5: schemat ska meddelas arbetstagaren senast 14 dagar innan det börjar gälla.",
+      "avvikelse": "–"
     },
     {
       "id": "KRAV",
@@ -323,7 +414,9 @@
       "enhet": "per önskemål",
       "last": false,
       "beskrivning": "Kan göra schemat olösbart; förklaringen pekar då ut kravet.",
-      "granskningskod": null
+      "granskningskod": null,
+      "kalla": "Medarbetarens önskemål som verksamheten har gjort till krav.",
+      "avvikelse": "–"
     }
   ],
   "mjuka_mal": [

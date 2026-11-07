@@ -581,11 +581,18 @@ async function laggSchema() {
 // ---------------------------------------------------------------- vy: inställningar (regler)
 // Alla regler går att ändra. Avtal, lag och varannan helg är låsta tills avvikelsen bekräftas.
 const REGLER = [
-  { grupp: "Avtal", k: "dygnsvila_minuter", namn: "Dygnsvila", beskr: "Sammanhängande vila per dygn, räknat från dygnsbrytet.", niva: "avtal", typ: "hård", falt: "timmar", std: 660, last: true },
-  { grupp: "Avtal", k: "veckovila_minuter", namn: "Veckovila", beskr: "Sammanhängande vila per vecka, räknat från måndag 00:00.", niva: "avtal", typ: "hård", falt: "timmar", std: 2160, last: true },
-  { grupp: "Lag", k: "rast_grans_minuter", namn: "Rast efter högst", beskr: "Längsta arbetstid utan rast (arbetstidslagen).", niva: "lag", typ: "hård", falt: "timmar", std: 300, last: true },
-  { grupp: "Lag", k: "rast_minuter", namn: "Rastens längd", beskr: "Minuter rast i pass över gränsen.", niva: "lag", typ: "hård", falt: "minuter", std: 30, last: true },
-  { grupp: "Lokala regler", k: "helgfrekvens", namn: "Helgfrekvens för enheten", beskr: "Varannan helg är verksamhetens beslut. Undantag per person görs under Personal.", niva: "lokal regel", typ: "hård", falt: "val", val: HELGER, std: "2/4", last: true },
+  { grupp: "Avtal", k: "dygnsvila_minuter", namn: "Dygnsvila", beskr: "Sammanhängande vila per dygn, räknat från dygnsbrytet.", ab: "AB 25 § 13 mom. 8 och mom. 5", niva: "avtal", typ: "hård", falt: "timmar", std: 660, min: 540, last: true,
+    avvikelse: "Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). Dygnsvilan kan bara förkortas till lägst 9 timmar i undantagsfall: det ska finnas särskilda skäl i en verksamhet med ansvar för liv, hälsa och säkerhet, bedömningen ska vara motiverad, arbetstagaren har rätt till kompenserande vila i samband med nästa dygnsvila, och MBL-förhandling krävs (mom. 8 a och mom. 5). Systemet lägger inte in den kompenserande vilan; den måste planeras.",
+    bekrafta: "Vi har särskilda skäl enligt AB 25 § 13 mom. 8 a, har MBL-förhandlat och planerar kompenserande vila" },
+  { grupp: "Avtal", k: "veckovila_minuter", namn: "Veckovila", beskr: "Sammanhängande vila per vecka, räknat från måndag 00:00.", ab: "ATL 14 §, AB 25 § 13 mom. 7 h och mom. 10 e", niva: "avtal", typ: "hård", falt: "timmar", std: 2160, last: true,
+    avvikelse: "Avvikelse från veckovilan kräver lokalt kollektivavtal (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse ska veckovilan vara minst 24 timmar (mom. 7 h).",
+    bekrafta: "Vi har ett lokalt kollektivavtal om avvikelse från veckovilan (AB 25 § 13 mom. 10 e)" },
+  { grupp: "Lag", k: "rast_grans_minuter", namn: "Rast efter högst", beskr: "Längsta arbetstid utan rast (arbetstidslagen).", ab: "ATL 15 §", niva: "lag", typ: "hård", falt: "timmar", std: 300, last: true,
+    avvikelse: "Arbetstidslagen tillåter avvikelse bara genom kollektivavtal (AB 25 § 13 mom. 10 f gäller förläggning av raster). Vid nattarbete får rast bytas mot måltidsuppehåll (mom. 7 a).",
+    bekrafta: "Vi har ett kollektivavtal som tillåter avvikelsen" },
+  { grupp: "Lag", k: "rast_minuter", namn: "Rastens längd", beskr: "Minuter rast i pass över gränsen.", ab: "ATL 15 §", niva: "lag", typ: "hård", falt: "minuter", std: 30, last: true,
+    avvikelse: "Arbetstidslagen tillåter avvikelse bara genom kollektivavtal.", bekrafta: "Vi har ett kollektivavtal som tillåter avvikelsen" },
+  { grupp: "Lokala regler", k: "helgfrekvens", namn: "Helgfrekvens för enheten", beskr: "Varannan helg är verksamhetens beslut, inte AB. Undantag per person görs under Personal.", niva: "lokal regel", typ: "hård", falt: "val", val: HELGER, std: "2/4", last: true },
   { grupp: "Lokala regler", k: "hel_helg", namn: "Arbetshelg är både lördag och söndag", niva: "lokal regel", typ: "hård", falt: "check", std: true },
   { grupp: "Lokala regler", k: "ingen_fredagskvall_fore_ledig_helg", namn: "Ingen fredagskväll före ledig helg", niva: "lokal regel", typ: "hård", falt: "check", std: true },
   { grupp: "Lokala regler", k: "pass_per_vecka", namn: "Pass per vecka, dag och kväll", niva: "lokal regel", typ: "hård", falt: "tal", steg: 0.25, std: 4.75 },
@@ -624,18 +631,18 @@ function ritaInstallningar() {
     else if (R.falt === "check") falt = `<label class="check"><input type="checkbox" data-r="${R.k}" data-t="check"${v ? " checked" : ""}> ${v ? "På" : "Av"}</label>`;
     else if (R.falt === "val") falt = `<select data-r="${R.k}">${Object.entries(R.val).map(([a, t]) => `<option value="${a}"${String(a) === String(v) ? " selected" : ""}>${t}</option>`).join("")}</select>`;
     else if (R.falt === "tid") falt = `<input type="time" data-r="${R.k}" value="${esc(v)}">`;
-    else if (R.falt === "timmar") falt = `<input type="number" inputmode="decimal" step="0.5" min="0" data-r="${R.k}" data-t="timmar" value="${v / 60}" aria-label="${R.namn} i timmar"> <span class="dampad">h</span>`;
+    else if (R.falt === "timmar") falt = `<input type="number" inputmode="decimal" step="0.5" min="${(R.min || 0) / 60}" data-r="${R.k}" data-t="timmar" value="${v / 60}" aria-label="${R.namn} i timmar"> <span class="dampad">h</span>`;
     else if (R.falt === "minuter") falt = `<input type="number" inputmode="numeric" step="5" min="0" data-r="${R.k}" data-t="tal" value="${v}" aria-label="${R.namn} i minuter"> <span class="dampad">min</span>`;
     else falt = `<input type="number" inputmode="decimal" step="${R.steg}" data-r="${R.k}" data-t="tal" value="${v}">`;
     const oppen = st.oppnaRegel === R.k && last;
-    return `<div class="regel"><div><div class="namn">${R.namn}</div>${R.beskr ? `<div class="beskr">${R.beskr}</div>` : ""}
+    return `<div class="regel"><div><div class="namn">${R.namn}</div>${R.beskr ? `<div class="beskr">${R.beskr}</div>` : ""}${R.ab ? `<div class="beskr"><b>${R.ab}</b></div>` : ""}
         <div class="chips" style="margin-top:4px"><span class="niva ${nk(R.niva)}">${R.niva}</span><span class="niva">${R.typ}</span>
         ${avv.has(R.k) ? `<span class="niva avviker">${IKON.olast.replace("<svg", '<svg width="11" height="11"')} upplåst</span>` : ""}
         ${andrad ? `<span class="niva avviker">avviker från ${R.falt === "timmar" ? sv(R.std / 60, 1) + " h" : R.falt === "val" ? R.val[R.std] : R.std === true ? "på" : R.std === false ? "av" : R.std}</span> <button class="lank liten" data-g="aterstall-regel" data-k="${R.k}">Återställ</button>` : ""}
         ${avv.has(R.k) && !andrad ? `<button class="lank liten" data-g="las-igen" data-k="${R.k}">Lås igen</button>` : ""}</div></div>
       <div class="varde">${falt}</div>
-      ${oppen ? `<div class="lasupp"><div><b>Avvikelse från ${R.niva === "lag" ? "lagen" : R.niva === "avtal" ? "avtalet" : "verksamhetens beslut"}.</b> ${R.niva === "avtal" ? "Kollektivavtalet tillåter avvikelser genom lokalt kollektivavtal." : R.niva === "lag" ? "Arbetstidslagen tillåter avvikelser bara genom kollektivavtal." : "Ändringen gäller hela enheten."} Avvikelsen syns på alla scheman från enheten.</div>
-        <label class="check"><input type="checkbox" id="bekrafta"> Vi har ett lokalt avtal eller beslut som tillåter avvikelsen</label>
+      ${oppen ? `<div class="lasupp"><div><b>Avvikelse från ${R.niva === "lag" ? "lagen" : R.niva === "avtal" ? "avtalet" : "verksamhetens beslut"}.</b> ${R.avvikelse || "Ändringen gäller hela enheten."} Avvikelsen syns på alla scheman från enheten.</div>
+        <label class="check"><input type="checkbox" id="bekrafta"> ${R.bekrafta || "Vi har ett lokalt beslut som tillåter avvikelsen"}</label>
         <div class="chips"><button class="primar liten" data-g="bekrafta-upplasning" data-k="${R.k}">Lås upp</button><button class="liten" data-g="avbryt-upplasning">Avbryt</button></div></div>` : ""}
     </div>`;
   };

@@ -8,7 +8,8 @@ Cykliska grundscheman i dygnet runt-verksamhet inom äldreomsorg och funktionsst
 
 - Hårda regler får aldrig brytas. Behovet är högsta mjuka nivå: en vakans är bättre än ett avtalsbrott.
 - Mjuka mål optimeras i strikt ordning (lexikografiskt); ett lägre mål kan aldrig försämra ett högre.
-- Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar ett lokalt avtal eller beslut. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman.
+- Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar att villkoren i källan är uppfyllda. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman. Dygnsvilan kan aldrig sättas under 9 timmar (AB 25 § 13 mom. 8 a och mom. 10).
+- Varje hård regel anger sin källa (AB 25, ATL, kontrakt eller lokalt beslut) och vilken avvikelse källan tillåter.
 - Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass per vecka) kallas aldrig avtalsregler.
 - Ett färdigt schema granskas av en fristående kontroll som inte delar kod med motorn.
 - Personal anges med id-koder, aldrig namn.
@@ -55,7 +56,45 @@ Måste alltid uppfyllas.
 | LANGD_BAND | Största avvikelse från personens snittlängd | `langd_band_minuter` | 120 | minuter | princip | nej |  |
 | HELTID | Heltid | `heltid_minuter_per_vecka` | 2220 | minuter per vecka | kontrakt | nej |  |
 | NATTPASS | Nattpass | `nattpass` | 21:45–07:15 | klockslag | princip | nej | Med måltidsuppehåll är hela passet arbetstid (ingen rast). |
+| BERAKNINGSPERIOD | Schemaperiod (beräkningsperiod) | `veckor` | 4 | veckor, högst 16 | avtal | nej | Kontrolleras i indata: 1–16 veckor. |
+| ARBETSTID_48 | Högst 48 timmar per vecka i snitt under 4 veckor | – | 2880 | minuter per vecka i snitt | avtal | ja | Kontrolleras inte separat. Uppfylls när arbetstiden följer kontraktet (högst heltid) och högst 5 arbetsdagar i följd. |
+| SCHEMA_14_DAGAR | Schemat meddelas 14 dagar innan | – | 14 | dagar | avtal | ja | Utanför schemamotorn: verksamhetens ansvar när schemat publiceras. |
 | KRAV | Önskemål markerade som krav | `onskemal[].krav` | av | per önskemål | önskemål | nej | Kan göra schemat olösbart; förklaringen pekar då ut kravet. |
+
+### Koppling till AB 25 och ATL
+
+Källa och tillåten avvikelse för varje hård regel. Kontrollerat mot AB 25 i lydelse 2025-04-01 (SKR).
+
+| Id | Källa | Avvikelse |
+|---|---|---|
+| DYGNSVILA | AB 25 § 13 mom. 8 (minst 11 timmars sammanhängande ledighet per 24 timmar) och mom. 5 (arbete och dygnsvila alternerande); ATL 13 §. | Ingen lokal avvikelse: lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). Undantag till lägst 9 timmar endast vid särskilda skäl i verksamhet med ansvar för liv, hälsa och säkerhet, med motiverad bedömning, kompenserande vila i samband med nästa dygnsvila och MBL-förhandling (mom. 8 a och mom. 5). Systemet tillåter aldrig under 9 timmar och lägger inte in den kompenserande vilan. |
+| DYGNSBRYT | AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden för dygnsberäkning inleds ska framgå av schemat. | – |
+| VECKOVILA | ATL 14 § (36 timmars sammanhängande ledighet per sjudagarsperiod); AB 25 § 13 mom. 7 h. | Lokalt kollektivavtal om avvikelse (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse minst 24 timmar (mom. 7 h). |
+| VECKOBRYT | ATL 14 § (sjudagarsperiod). | – |
+| RAST_GRANS | ATL 15 § (rast senast efter fem timmars arbete); AB 25 § 13 mom. 7 a. | Kollektivavtal om förläggning av raster (AB 25 § 13 mom. 10 f). Vid nattarbete får rast bytas mot måltidsuppehåll (mom. 7 a). |
+| RAST_LANGD | ATL 15 §. | Kollektivavtal. |
+| HELGFREKVENS | Lokalt beslut i verksamheten, inte AB (beslutat 2026-11-05). | Låst för enheten. Undantag bara per person (helgfrekvens 1/4, 3/4, alla eller ingen), synligt som undantag. |
+| HEL_HELG | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| HELG_START | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| HELG_SLUT | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| FREDAGSKVALL | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| PASS_PER_VECKA | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| MIN_PASSLANGD | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| BLOCK_MIN | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| BLOCK_MAX | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| TOLERANS | Kontrakt: arbetstiden ska motsvara anställningens omfattning. | Per person (tolerans_minuter). |
+| MORGON_START | Planeringsprincip. | Verksamheten kan ändra. |
+| KVALL_SLUT | Planeringsprincip. | Verksamheten kan ändra. |
+| PASSBYTE_FRAN | Planeringsprincip. | Verksamheten kan ändra. |
+| PASSBYTE_TILL | Planeringsprincip. | Verksamheten kan ändra. |
+| STEG | Planeringsprincip. | Verksamheten kan ändra. |
+| LANGD_BAND | Planeringsprincip. | Verksamheten kan ändra. |
+| HELTID | Kontrakt eller lokalt beslut. Centralt i AB 25 § 13 mom. 2: 40 timmar per helgfri vecka; 38 timmar 15 minuter när arbetstiden är förlagd både vardag och sön- eller helgdag; 34 timmar 20 minuter vid kontinuerligt treskift; 36 timmar 20 minuter vid intermittent treskift. Standardvärdet 37 timmar är inte AB:s centrala nivå. | Anges per enhet eller person. |
+| NATTPASS | AB 25 § 13 mom. 7 a (rast får bytas mot måltidsuppehåll vid nattarbete) och mom. 7 j (nattpass = minst 3 timmar ordinarie arbetstid mellan kl. 22 och 06). | Verksamheten bestämmer tiderna. |
+| BERAKNINGSPERIOD | AB 25 § 13 mom. 7 g: en beräkningsperiod kan omfatta högst 16 veckor. | Lokalt kollektivavtal om längre period, högst ett år (mom. 10). |
+| ARBETSTID_48 | Anmärkning till AB 25 § 13 mom. 7 g: ordinarie arbetstid högst 48 timmar per vecka i genomsnitt under 4 veckor. | Lokalt kollektivavtal (mom. 10). |
+| SCHEMA_14_DAGAR | AB 25 § 13 mom. 5: schemat ska meddelas arbetstagaren senast 14 dagar innan det börjar gälla. | – |
+| KRAV | Medarbetarens önskemål som verksamheten har gjort till krav. | – |
 
 ## Mjuka mål
 

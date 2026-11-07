@@ -275,6 +275,9 @@ const MOTOR = (() => {
       for (const i of idx) behov[i] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
     }
 
+    // AB 25 § 13 mom. 8 a och mom. 10: dygnsvilan kan aldrig vara kortare än 9 timmar, och under 11 timmar krävs bekräftelse
+    if (r.dygnsvila_minuter < 540) fel.push("Dygnsvilan kan aldrig vara kortare än 9 timmar (AB 25 § 13 mom. 8 a). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).");
+    else if (r.dygnsvila_minuter < 660 && !(ind.avvikelser || []).includes("dygnsvila_minuter")) fel.push("Dygnsvilan kan inte vara kortare än 11 timmar (AB 25 § 13 mom. 8) utan bekräftade särskilda skäl enligt mom. 8 a.");
     const pers = [], ids = new Set();
     let vaxel = 0;  // för perioder där antal pass inte går jämnt ut
     for (const p of ind.personal || []) {
@@ -459,7 +462,7 @@ const MOTOR = (() => {
       const db = p.natt ? pr.nattDb : pr.db;
       for (let d = 0; d < (cyk ? N : N - 1); d++) {
         const a = d * DYGN + db;
-        if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än 11 timmars dygnsvila från ${dt(d)}.`); }
+        if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än ${r.dygnsvila_minuter / 60} timmars dygnsvila från ${dt(d)}.`); }
       }
       // önskemål
       for (const o of per[pi].onsk) {
@@ -984,6 +987,9 @@ const MOTOR = (() => {
       for (const i of idx) behov[i] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
     }
 
+    // AB 25 § 13 mom. 8 a och mom. 10: dygnsvilan kan aldrig vara kortare än 9 timmar, och under 11 timmar krävs bekräftelse
+    if (r.dygnsvila_minuter < 540) fel.push("Dygnsvilan kan aldrig vara kortare än 9 timmar (AB 25 § 13 mom. 8 a). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).");
+    else if (r.dygnsvila_minuter < 660 && !(ind.avvikelser || []).includes("dygnsvila_minuter")) fel.push("Dygnsvilan kan inte vara kortare än 11 timmar (AB 25 § 13 mom. 8) utan bekräftade särskilda skäl enligt mom. 8 a.");
     const pers = [], ids = new Set();
     let vaxel = 0;  // för perioder där antal pass inte går jämnt ut
     for (const p of ind.personal || []) {
@@ -1168,7 +1174,7 @@ const MOTOR = (() => {
       const db = p.natt ? pr.nattDb : pr.db;
       for (let d = 0; d < (cyk ? N : N - 1); d++) {
         const a = d * DYGN + db;
-        if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än 11 timmars dygnsvila från ${dt(d)}.`); }
+        if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än ${r.dygnsvila_minuter / 60} timmars dygnsvila från ${dt(d)}.`); }
       }
       // önskemål
       for (const o of per[pi].onsk) {

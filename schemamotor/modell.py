@@ -41,11 +41,17 @@ STANDARDREGLER = {
 }
 # Avtal och lag får aldrig försvagas (AGENTS.md). Skärpningar är tillåtna.
 SKYDDADE = {
-    "dygnsvila_minuter": (660, lambda v, g: v < g, "Dygnsvilan kan inte vara kortare än 11 timmar (avtal)."),
-    "veckovila_minuter": (2160, lambda v, g: v < g, "Veckovilan kan inte vara kortare än 36 timmar (avtal)."),
-    "rast_grans_minuter": (300, lambda v, g: v > g, "Rast krävs efter högst 5 timmars arbete (lag)."),
+    "dygnsvila_minuter": (660, lambda v, g: v < g, "Dygnsvilan kan inte vara kortare än 11 timmar (AB 25 § 13 mom. 8). "
+                          "Kortare, lägst 9 timmar, kräver särskilda skäl, kompenserande vila och MBL-förhandling (mom. 8 a och mom. 5)."),
+    "veckovila_minuter": (2160, lambda v, g: v < g, "Veckovilan kan inte vara kortare än 36 timmar (ATL 14 §). "
+                          "Avvikelse kräver lokalt kollektivavtal (AB 25 § 13 mom. 10 e)."),
+    "rast_grans_minuter": (300, lambda v, g: v > g, "Rast krävs efter högst 5 timmars arbete (ATL 15 §)."),
     "rast_minuter": (30, lambda v, g: v < g, "Rasten kan inte vara kortare än 30 minuter."),
 }
+# Golv som aldrig kan låsas upp: AB 25 § 13 mom. 10 tillåter inte lokalt kollektivavtal om kortare dygnsvila,
+# och mom. 8 a medger som lägst 9 timmar.
+GOLV = {"dygnsvila_minuter": (540, "Dygnsvilan kan aldrig vara kortare än 9 timmar (AB 25 § 13 mom. 8 a). "
+                              "Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).")}
 
 
 class IndataKontrollFel(ValueError):
@@ -205,7 +211,11 @@ def _helhet(d: dict) -> list[str]:
         v = regler.get(nyckel)
         if (isinstance(v, (int, float)) and not isinstance(v, bool) and jamfor(v, grans)
                 and nyckel not in avvikelser):
-            fel.append(text + " Bekräfta avvikelsen under Inställningar om ni har ett lokalt avtal eller beslut.")
+            fel.append(text + " Bekräfta avvikelsen under Inställningar.")
+    for nyckel, (golv, text) in GOLV.items():
+        v = regler.get(nyckel)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v < golv:
+            fel.append(text)
     if "helgfrekvens" in regler and regler["helgfrekvens"] != "2/4" and "helgfrekvens" not in avvikelser:
         fel.append("Varannan helg är en hård lokal regel för enheten och kan inte ändras. Undantag görs per person "
                    "med helgfrekvens på personen.")
