@@ -10,7 +10,7 @@ const MOTOR = (() => {
   const STD = {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
-    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, helgfrekvens: "2/4", hel_helg: true,
+    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, helgfrekvens: "2/4", hel_helg: true,
     ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
@@ -21,6 +21,7 @@ const MOTOR = (() => {
   const WF = 8;        // rättvisa (kvadratisk avvikelse i antal kvällar)
   const WO = 4;        // brutet önskemål per vikt
   const WJ = 40;       // jämn bemanning: över- och underbemanning lika mellan dag och kväll
+  const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
 
   const tid = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
@@ -254,6 +255,18 @@ const MOTOR = (() => {
           }
         }
       }
+      // nattpersonal: minst natt_vila_mellan_block_minuter mellan två nattblock (lokal regel, mjuk)
+      let nv = 0;
+      if (p.natt && r.natt_vila_mellan_block_minuter) {
+        const gap = k => k * DYGN + t[NT][0] - t[NT][1];
+        for (let d = 0; d < N; d++) {
+          if (!x[d] || (!cyk && d + 1 >= N) || x[(d + 1) % N]) continue;
+          for (let k = 2; k < 8 && gap(k) < r.natt_vila_mellan_block_minuter; k++) {
+            if (!cyk && d + k >= N) break;
+            if (x[(d + k) % N]) { nv++; break; }
+          }
+        }
+      }
       // veckovila och dygnsvila
       const iv = d => {
         const dd = ((d % N) + N) % N;
@@ -307,7 +320,7 @@ const MOTOR = (() => {
         }
       }
       const ws = r.spridning_kvallar === "stark" ? 400 : 25;
-      return { hard, block, onsk: onskStraff, f, spr, summa: hard * HW + block * WB + onskStraff * WO + f * WF + spr * ws };
+      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO + f * WF + spr * ws + nv * WNV };
     }
 
     function bygg() {
@@ -470,12 +483,12 @@ const MOTOR = (() => {
   function resultat(pr, X, tider, personKost, sekunder) {
     const { r, W, N, cyk, behov, pers } = pr;
     const schema = {}, personer = {};
-    let hardTotalt = 0, block = 0, onskStraff = 0, passlangd = 0, spridning = 0;
+    let hardTotalt = 0, block = 0, onskStraff = 0, passlangd = 0, spridning = 0, nattVila = 0;
     const brott = [];
     const kvallar = [];
     pers.forEach((p, pi) => {
       const x = X[pi], k = personKost(pi, x, brott);
-      hardTotalt += k.hard; block += k.block; onskStraff += k.onsk; spridning += k.spr;
+      hardTotalt += k.hard; block += k.block; onskStraff += k.onsk; spridning += k.spr; nattVila += k.nv;
       const rad = x.map((t, d) => {
         if (!t) return null;
         if (t === NT) return { mall: "N", dygnsdel: "natt", start: klocka(pr.ns), slut: klocka(pr.ne), rast: pr.nRast, netto: pr.nnet, ...(pr.nRast ? {} : { maltidsuppehall: true }) };
@@ -524,7 +537,7 @@ const MOTOR = (() => {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
-        aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0) },
+        aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila },
       personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott,
     };
   }

@@ -41,6 +41,9 @@ STANDARDREGLER = {
     "block_rekommenderat": 4,
     # nattpersonal: högst så många nätter i rad (lokal regel, hård; verksamhetens beslut 2026-11-07)
     "natt_max_i_rad": 3,
+    # nattpersonal: minst så lång vila mellan två nattblock (lokal regel, mjuk: bryts bara när schemat annars inte går ihop;
+    # verksamhetens beslut 2026-11-07; 0 stänger av)
+    "natt_vila_mellan_block_minuter": 2880,
     "helg_start": "fre 22:00",
     "helg_slut": "mån 06:00",
     "hel_helg": True,
@@ -57,8 +60,8 @@ STANDARDREGLER = {
 }
 # Rättvisa mellan personer och jämn bemanning mellan dag och kväll vägs ihop i ett mål (rättvisan dubbelt),
 # så att lösaren kan väga dem mot varandra. Nyckeltalen redovisas var för sig (KPI_MAL).
-MALORDNING = ["vakanser", "aktiviteter", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
-KPI_MAL = ["vakanser", "aktiviteter", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
+MALORDNING = ["vakanser", "aktiviteter", "natt_vila", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
+KPI_MAL = ["vakanser", "aktiviteter", "natt_vila", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
 
 
 def malordning(r, mal):
@@ -320,6 +323,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
         return (d + k) % N if cyk else (d + k if d + k < N else None)
 
     x, work = {}, {}
+    natt_vila = []  # brott mot vilan mellan nattblock (mjukt)
     for pi, p in enumerate(prob["personer"]):
         for d in range(N):
             vs = []
@@ -378,6 +382,20 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             nm = r["natt_max_i_rad"]
             for d in range(N if cyk else N - nm):
                 m.add(sum(work[pi, (d + k) % N] for k in range(nm + 1)) <= nm).only_enforce_if(L)
+        if p["natt"] and r.get("natt_vila_mellan_block_minuter"):
+            # mellan två block (arbete dag d, ledigt dag d+1) ska nästa pass börja tidigast efter vilan (mjukt mål)
+            krav = r["natt_vila_mellan_block_minuter"]
+            sist = max(M[s]["slut"] for s in T)
+            for d in range(N):
+                for k in range(2, 8):
+                    d2 = (d + k) % N if cyk else d + k
+                    if not cyk and d + k >= N:
+                        break
+                    for t in T:
+                        if k * DYGN + M[t]["start"] - sist < krav:
+                            b = m.new_bool_var("")
+                            m.add(work[pi, d] + (1 - work[pi, (d + 1) % N]) + x[pi, d2, t] <= 2 + b)
+                            natt_vila.append(b)
         L = lit(f"BLOCK_MAX|{pid}")
         bm = r["block_max"]
         for d in range(N if cyk else N - bm):
@@ -669,6 +687,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                     spridning.append(avv)
     mal["spridning"] = sum(spridning) if spridning else 0
     mal["onskemal"] = sum(onsk_straff) if onsk_straff else 0
+    mal["natt_vila"] = sum(natt_vila) if natt_vila else 0
 
     var = {"x": x, "work": work, "vak": vak, "y": y, "akt_brist": akt_brist}
     return m, var, mal, grupper
@@ -730,7 +749,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
     # Fas 1: arbetsmönster (vilka dagar och vilken dygnsdel) med alla hårda regler utom exakt arbetstid.
     enkel = monsterproblem(prob)
     m1, var1, mal1, _ = bygg_modell(enkel, utan_tid=True)
-    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "aktiviteter", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"]),
+    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "aktiviteter", "natt_vila", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"]),
                                  tid_per_steg, arbetare, tyst, "mönster – ")
     if r1 is None and status1 == cp_model.INFEASIBLE:
         # Mönstermodellen har färre passlängder. Kontrollera med alla längder (utan exakt arbetstid)

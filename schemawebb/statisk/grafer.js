@@ -167,7 +167,7 @@ const REGELGRUPPER = [
   ["DYGNSVILA", "Dygnsvila", "Avtal"], ["VECKOVILA", "Veckovila", "Avtal"], ["RAST", "Rast efter högst 5 h arbete", "Lag"],
   ["ANTAL_PASS", "Antal pass enligt kontrakt", "Lokal regel"], ["TID", "Arbetstid enligt kontrakt", "Kontrakt"],
   ["HELG", "Helger och fredagskvällar", "Lokal regel"], ["BLOCK_MIN", "Inga enstaka arbetsdagar", "Lokal regel"],
-  ["BLOCK_MAX", "Högst antal arbetsdagar i följd", "Lokal regel"], ["NATT_I_RAD", "Nattpersonal: högst nätter i rad", "Lokal regel"], ["PASSFONSTER", "Passbyte i fönstret 12–18", "Lokal regel"],
+  ["BLOCK_MAX", "Högst antal arbetsdagar i följd", "Lokal regel"], ["NATT_I_RAD", "Nattpersonal: högst nätter i rad", "Lokal regel"], ["NATT_VILA", "Nattpersonal: vila mellan nattblock", "Mjuk"], ["PASSFONSTER", "Passbyte i fönstret 12–18", "Lokal regel"],
   ["BLOCK_REKOMMENDERAT", "Rekommenderad blocklängd", "Mjuk"], ["SPRIDNING", "Dag och kväll varje vecka", "Mjuk"], ["JAMN_BEMANNING", "Jämn bemanning mellan dag och kväll", "Mjuk"], ["BEHOV", "Bemanningsbehov", "Mjuk"],
 ];
 

@@ -31,6 +31,8 @@ Varje regel kan få en egen literal per person (används av schemamotor/explain.
 
 I cykliska scheman räknas alla fönster runt periodgränsen.
 
+Mjukt mål efter vakanser och aktiviteter: **natt_vila**, antal gånger vilan mellan två nattblock är kortare än `natt_vila_mellan_block_minuter` (48 h). Villkoret är `arbete(d) + ledigt(d+1) + pass(d+k) ≤ 2 + brott` för de k där nästa pass börjar för tidigt.
+
 ## Två faser
 
 En modell med alla passlängder och exakt arbetstid är svår att hitta en första lösning i. Därför löses problemet i två faser:

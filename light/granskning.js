@@ -9,11 +9,11 @@ const GRANSKNING = (() => {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, dygnsbryt: "auto", veckobryt: "mån 00:00",
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
-    block_rekommenderat: 4, natt_max_i_rad: 3, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
+    block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
-    HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", PASSFONSTER: "princip",
+    HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
@@ -99,6 +99,11 @@ const GRANSKNING = (() => {
         if (s2 < e1) brott("DYGNSVILA", pid, `Pass överlappar (${dagText(d1)} och ${dagText(d2 % N)}).`);
         else if (s2 - e1 < r.dygnsvila_minuter) brott("DYGNSVILA", pid, `Bara ${h(s2 - e1)} h vila mellan passet ${dagText(d1)} och passet ${dagText(d2 % N)}.`);
       }
+      // nattpersonal: vila mellan två nattblock (lokal regel)
+      if (natt && r.natt_vila_mellan_block_minuter)
+        for (const [[d1, , e1], [d2, s2]] of par)
+          if (d2 - d1 >= 2 && s2 - e1 < r.natt_vila_mellan_block_minuter)
+            brott("NATT_VILA", pid, `Bara ${h(s2 - e1)} h vila mellan nattblocken (${dagText(d1)} och ${dagText(d2 % N)}); minst ${r.natt_vila_mellan_block_minuter / 60} h eftersträvas.`, false);
       for (let d = 0; d < (cyk ? N : N - 1); d++) {
         const a = d * DYGN + db;
         if (langstaLucka(iv, a, a + DYGN) < r.dygnsvila_minuter) brott("DYGNSVILA", pid, `Ingen sammanhängande dygnsvila på 11 h i perioden från ${dagText(d)} kl ${klocka(db)}.`);

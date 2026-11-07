@@ -106,6 +106,9 @@ MJUKA = {
     "aktiviteter": ("Aktiviteter under arbetstid", "verksamhet", None,
                     "Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela "
                     "aktivitetstiden. Aktiviteter markerade som krav är hårda.", "AKTIVITET"),
+    "natt_vila": ("Nattpersonal: vila mellan nattblock", "lokal regel", "natt_vila_mellan_block_minuter",
+                  "Antal gånger vilan mellan två nattblock är kortare än gränsen (2880 = 48 h, minst två lediga nätter). Mjuk: "
+                  "bryts bara när schemat annars inte går ihop. Verksamhetens beslut 2026-11-07.", "NATT_VILA"),
     "blocklangd": ("Dagar i följd över rekommenderat", "princip", "block_rekommenderat", "Antal tillfällen med fler arbetsdagar i följd än rekommenderat.", "BLOCK_REKOMMENDERAT"),
     "passlangd": ("Passlängd", "princip", None, "Minuter från personens snittlängd per pass och från kontrakterad tid.", "TID"),
     "rattvisa_jamn": ("Rättvisa och jämn bemanning", "princip", "jamn_bemanning",
@@ -119,6 +122,7 @@ MJUKA = {
 }
 
 INSTALLNINGAR_MJUKA = {
+    "natt_vila_mellan_block_minuter": ("Nattpersonal: vila mellan nattblock", "minuter (2880 = 48 h); 0 stänger av"),
     "block_rekommenderat": ("Helst högst antal dagar i följd", "dagar"),
     "jamn_bemanning": ("Jämn bemanning mellan dag och kväll", "'mjuk' (på) eller 'av'"),
     "spridning_kvallar": ("Blandning av morgon och kväll", "'av', 'mjuk' eller 'stark'"),
@@ -134,6 +138,7 @@ def _lattvikter():
     return [
         {"mal": "Brott mot hård regel", "vikt": vikt("HW"), "per": "brott"},
         {"mal": "Vakant pass", "vikt": vikt("WV"), "per": "pass"},
+        {"mal": "Kort vila mellan nattblock", "vikt": vikt("WNV"), "per": "tillfälle"},
         {"mal": "Saknad deltagare i aktivitet", "vikt": vikt("WA"), "per": "deltagare"},
         {"mal": "Blandning morgon och kväll (stark)", "vikt": stark, "per": "vecka utan blandning"},
         {"mal": "Dagar i följd över rekommenderat", "vikt": vikt("WB"), "per": "tillfälle"},

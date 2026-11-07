@@ -486,6 +486,17 @@
     },
     {
       "ordning": 3,
+      "id": "natt_vila",
+      "namn": "Nattpersonal: vila mellan nattblock",
+      "niva": "lokal regel",
+      "typ": "mjuk",
+      "styrs_av": "natt_vila_mellan_block_minuter",
+      "standard": 2880,
+      "beskrivning": "Antal gånger vilan mellan två nattblock är kortare än gränsen (2880 = 48 h, minst två lediga nätter). Mjuk: bryts bara när schemat annars inte går ihop. Verksamhetens beslut 2026-11-07.",
+      "granskningskod": "NATT_VILA"
+    },
+    {
+      "ordning": 4,
       "id": "blocklangd",
       "namn": "Dagar i följd över rekommenderat",
       "niva": "princip",
@@ -496,7 +507,7 @@
       "granskningskod": "BLOCK_REKOMMENDERAT"
     },
     {
-      "ordning": 4,
+      "ordning": 5,
       "id": "passlangd",
       "namn": "Passlängd",
       "niva": "princip",
@@ -507,7 +518,7 @@
       "granskningskod": "TID"
     },
     {
-      "ordning": 5,
+      "ordning": 6,
       "id": "rattvisa_jamn",
       "namn": "Rättvisa och jämn bemanning",
       "niva": "princip",
@@ -518,7 +529,7 @@
       "granskningskod": "JAMN_BEMANNING"
     },
     {
-      "ordning": 6,
+      "ordning": 7,
       "id": "spridning",
       "namn": "Blandning av morgon och kväll varje vecka",
       "niva": "princip",
@@ -529,7 +540,7 @@
       "granskningskod": "SPRIDNING"
     },
     {
-      "ordning": 7,
+      "ordning": 8,
       "id": "onskemal",
       "namn": "Önskemål",
       "niva": "önskemål",
@@ -541,6 +552,12 @@
     }
   ],
   "installningar_for_mjuka_mal": [
+    {
+      "nyckel": "natt_vila_mellan_block_minuter",
+      "namn": "Nattpersonal: vila mellan nattblock",
+      "varden": "minuter (2880 = 48 h); 0 stänger av",
+      "standard": 2880
+    },
     {
       "nyckel": "block_rekommenderat",
       "namn": "Helst högst antal dagar i följd",
@@ -576,6 +593,11 @@
       "mal": "Vakant pass",
       "vikt": 100000.0,
       "per": "pass"
+    },
+    {
+      "mal": "Kort vila mellan nattblock",
+      "vikt": 2000.0,
+      "per": "tillfälle"
     },
     {
       "mal": "Saknad deltagare i aktivitet",

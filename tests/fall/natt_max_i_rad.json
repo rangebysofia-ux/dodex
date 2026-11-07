@@ -1,9 +1,10 @@
 {
-  "beskrivning": "Nattpersonal med högst tre nätter i rad (lokal regel). Fyra veckor, en natt varje natt, tre nattpersoner. Ska gå att lösa utan regelbrott, och ingen ska ha fler än tre nätter i följd.",
+  "beskrivning": "Nattpersonal med högst tre nätter i rad (hård lokal regel) och 48 timmars vila mellan nattblocken (mjuk lokal regel). Fyra veckor, en natt varje natt, tre nattpersoner. Heltiden (15 nätter) går inte att lägga med 48 timmars vila överallt, så vilan får brytas högst en gång. Ska gå att lösa utan brott mot hårda regler.",
   "forvantat": {
     "status": "OK",
     "validering_utan_fel": true,
-    "vakanta_pass": 0
+    "vakanta_pass": 0,
+    "natt_vila_max": 1
   },
   "enhet": "Test – nätter i rad",
   "veckor": 4,

@@ -52,6 +52,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 21. **Nattpersonal arbetar högst tre nätter i rad (lokal regel, hård).** Gäller personal som bara arbetar natt. `natt_max_i_rad` (standard 3, 0 stänger av). Det är verksamhetens beslut, inte en avtalsregel. Kontrolleras i motorn, granskningen (NATT_I_RAD) och lättversionen, och visas i förklaringen när den krockar. Beslutat av användaren 2026-11-07.
 
+22. **Nattpersonal: 48 timmars vila mellan nattblocken (lokal regel, mjuk).** `natt_vila_mellan_block_minuter` (standard 2880, 0 stänger av). Med tre nätter i rad, varannan helg och ingen fredagsnatt före ledig helg ryms högst 14 nätter på fyra veckor, men heltid 34:20 med 9-timmarsnätter kräver 15. Därför är vilan mjuk: den eftersträvas direkt efter vakanser och aktiviteter, och bryts bara när schemat annars inte går ihop. Granskningen visar varje brott som något att notera. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

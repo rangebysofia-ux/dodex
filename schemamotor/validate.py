@@ -23,14 +23,14 @@ STANDARD = {
     "dygnsvila_minuter": 660, "veckovila_minuter": 2160, "dygnsbryt": "auto", "veckobryt": "mån 00:00",
     "rast_grans_minuter": 300, "rast_minuter": 30, "pass_per_vecka": 4.75, "morgon_start": "07:00",
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
-    "block_rekommenderat": 4, "natt_max_i_rad": 3, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
+    "block_rekommenderat": 4, "natt_max_i_rad": 3, "natt_vila_mellan_block_minuter": 2880, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
     "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1, "jamn_bemanning": "mjuk",
 }
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
-        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel"}
+        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel"}
 
 
 def tid(s):
@@ -176,6 +176,13 @@ def kontrollera(indata, schema_dok):
             elif s2 - e1 < r["dygnsvila_minuter"]:
                 brott("DYGNSVILA", pid, f"Bara {(s2 - e1) / 60:.1f} h vila mellan passet {dag_text(d1)} "
                                         f"och passet {dag_text(d2 % N)} (minst {r['dygnsvila_minuter'] / 60:g} h).")
+        # nattpersonal: vila mellan två nattblock (lokal regel, mjuk). Ett nytt block = nästa pass inte nästa dag.
+        nvila = r.get("natt_vila_mellan_block_minuter") or 0
+        if nvila and personer.get(pid, {}).get("dygnsdelar") == ["natt"]:
+            for (d1, s1, e1, _), (d2, s2, e2, _) in par:
+                if d2 - d1 >= 2 and s2 - e1 < nvila:
+                    brott("NATT_VILA", pid, f"Bara {(s2 - e1) / 60:.1f} h vila mellan nattblocken ({dag_text(d1)} och "
+                                            f"{dag_text(d2 % N)}); minst {nvila / 60:g} h eftersträvas.", hard=False)
         # dygnsvila per 24-timmarsperiod från dygnsbrytet
         for d in range(N if cyk else N - 1):
             a = d * DYGN + db

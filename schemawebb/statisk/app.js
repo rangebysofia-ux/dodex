@@ -708,6 +708,7 @@ const REGLER = [
   { grupp: "Lokala regler", k: "min_passlangd_minuter", namn: "Minsta passlängd", beskr: "Blir passen kortare än så (vid låg sysselsättningsgrad) tas pass bort i stället. 0 stänger av.", niva: "lokal regel", typ: "hård", falt: "timmar", std: 300 },
   { grupp: "Lokala regler", k: "block_min", namn: "Minst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 2 },
   { grupp: "Lokala regler", k: "block_max", namn: "Högst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 5 },
+  { grupp: "Lokala regler", k: "natt_vila_mellan_block_minuter", namn: "Nattpersonal: vila mellan nattblock", beskr: "Eftersträvas; bryts bara när schemat annars inte går ihop (till exempel heltid natt med 9-timmarsnätter).", niva: "lokal regel", typ: "mjuk", falt: "timmar", steg: 1, std: 2880 },
   { grupp: "Lokala regler", k: "natt_max_i_rad", namn: "Nattpersonal: högst antal nätter i rad", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 3 },
   { grupp: "Principer", k: "block_rekommenderat", namn: "Helst högst antal dagar i följd", niva: "princip", typ: "mjuk", falt: "tal", steg: 1, std: 4 },
   { grupp: "Principer", k: "spridning_kvallar", namn: "Blandning av morgon och kväll varje vecka", beskr: "För den som arbetar både morgon och kväll. Mjuk väger in efter rättvisan, Stark väger tyngst efter vakanserna.", niva: "princip", typ: "mjuk", falt: "val", val: { av: "Av", mjuk: "Mjuk", stark: "Stark" }, std: "mjuk" },
