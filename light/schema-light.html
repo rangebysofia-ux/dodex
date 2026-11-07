@@ -262,7 +262,7 @@ const MOTOR = (() => {
     if (!(W >= 1 && W <= 16)) fel.push("Perioden måste vara 1–16 veckor.");
     const cyk = ind.cykliskt !== false;
     const heltid = ind.heltid_minuter_per_vecka || 2220;
-    const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "07:15", maltidsuppehall: true };
+    const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "06:45", maltidsuppehall: true };
     const ns = tid(np.start); let ne = tid(np.slut); if (ne <= ns) ne += DYGN;
     const nRast = np.maltidsuppehall === false && ne - ns > r.rast_grans_minuter ? r.rast_minuter : 0;
     const nnet = ne - ns - nRast;
@@ -974,7 +974,7 @@ const MOTOR = (() => {
     if (!(W >= 1 && W <= 16)) fel.push("Perioden måste vara 1–16 veckor.");
     const cyk = ind.cykliskt !== false;
     const heltid = ind.heltid_minuter_per_vecka || 2220;
-    const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "07:15", maltidsuppehall: true };
+    const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "06:45", maltidsuppehall: true };
     const ns = tid(np.start); let ne = tid(np.slut); if (ne <= ns) ne += DYGN;
     const nRast = np.maltidsuppehall === false && ne - ns > r.rast_grans_minuter ? r.rast_minuter : 0;
     const nnet = ne - ns - nRast;
@@ -1644,7 +1644,7 @@ const ASSISTENT = (() => {
       const c = {};
       for (const rad of Object.values(ny)) for (const p of rad) if (p && p.dygnsdel === del) { const k = p.start + "–" + p.slut; c[k] = (c[k] || 0) + 1; }
       const b = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
-      return b ? b[0].split("–") : { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "07:15"] }[del];
+      return b ? b[0].split("–") : { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "06:45"] }[del];
     };
     const dag = (person, v, d) => {
       const pid = Object.keys(ny).find(x => x.toLowerCase() === String(person || "").toLowerCase());
@@ -2346,7 +2346,7 @@ const GUIDE = (() => {
   function ny() {
     return { steg: 1, namn: "", antalDag: 8, antalNatt: 2, gradSatt: "samma", grad: 100, budget: "", personer: [], harUndantag: false,
       behov: { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 2, natt: 1 } },
-      tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "07:15" }, veckor: 4, startdatum: "", timkostnad: "" };
+      tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "06:45" }, veckor: 4, startdatum: "", timkostnad: "" };
   }
 
   // Personlistan följer antalet: A1, A2 … för dag och kväll, N1, N2 … för natt. Ändrade värden ligger kvar.
@@ -2398,7 +2398,7 @@ const GUIDE = (() => {
     if (g.tider.morgon !== "07:00") regler.morgon_start = g.tider.morgon;
     if (g.tider.kvall !== "22:00") regler.kvall_slut = g.tider.kvall;
     if (Object.keys(regler).length) ut.regler = regler;
-    if (g.tider.nattStart !== "21:45" || g.tider.nattSlut !== "07:15") ut.nattpass = [{ id: "N", start: g.tider.nattStart, slut: g.tider.nattSlut, maltidsuppehall: true }];
+    if (g.tider.nattStart !== "21:45" || g.tider.nattSlut !== "06:45") ut.nattpass = [{ id: "N", start: g.tider.nattStart, slut: g.tider.nattSlut, maltidsuppehall: true }];
     if (g.startdatum) ut.startdatum = g.startdatum;
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);
@@ -2560,7 +2560,7 @@ const ANALYS = (() => {
     const ppv = r.pass_per_vecka;
     const heltid = (indata.heltid_minuter_per_vecka || FORSTA_HELTID) / 60;
     const behov = dagvarden(indata.behov), b = (d, k) => behov[d][k] || 0;
-    const np = (indata.nattpass || [{ start: "21:45", slut: "07:15" }])[0];
+    const np = (indata.nattpass || [{ start: "21:45", slut: "06:45" }])[0];
     const s = tid(np.start), e = tid(np.slut), nattlangd = (e + (e <= s ? 1440 : 0) - s) / 60;
     const nattVecka = [0, 1, 2, 3, 4, 5, 6].reduce((a, d) => a + b(d, "natt"), 0);
     const fredagsregel = r.ingen_fredagskvall_fore_ledig_helg;
@@ -3252,7 +3252,7 @@ function redigeringsrad() {
 
 function redigeringspanel(res) {
   const [pid, ds] = st.red.panel.c.split("|"), d = +ds, p = st.red.schema[pid][d], N = res.veckor * 7;
-  const tider = { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "07:15"] };
+  const tider = { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "06:45"] };
   for (const rad of Object.values(st.red.schema)) for (const q of rad) if (q) tider[q.dygnsdel] = [q.start, q.slut];
   const v = p || { dygnsdel: "morgon", start: tider.morgon[0], slut: tider.morgon[1] };
   return `<div class="bladpanel" role="dialog" aria-label="${p ? "Ändra pass" : "Nytt pass"}"><div class="rad"><b>${p ? "Ändra pass" : "Nytt pass"} – ${esc(pid)}, V${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}</b><button class="lank" data-g="red-stang" aria-label="Stäng">✕</button></div>
@@ -3444,7 +3444,7 @@ document.addEventListener("scroll", () => $("#tips")?.classList.remove("syns"), 
 function vakansPass(res) {
   const tider = {};
   for (const rad of Object.values(res.schema)) for (const x of rad) if (x) { const k = x.start + "–" + x.slut; (tider[x.dygnsdel] = tider[x.dygnsdel] || {})[k] = (tider[x.dygnsdel][k] || 0) + 1; }
-  const reserv = { morgon: "07:00–15:00", kvall: "14:00–22:00", natt: "21:45–07:15" };
+  const reserv = { morgon: "07:00–15:00", kvall: "14:00–22:00", natt: "21:45–06:45" };
   const perDag = Array.from({ length: res.veckor * 7 }, () => []);
   for (const v of res.vakanser) for (let i = 0; i < v.antal; i++) {
     const [start, slut] = (tider[v.dygnsdel] ? Object.entries(tider[v.dygnsdel]).sort((a, b) => b[1] - a[1])[0][0] : reserv[v.dygnsdel]).split("–");

@@ -55,7 +55,7 @@ Måste alltid uppfyllas.
 | STEG | Steg för passlängder | `steg_minuter` | 15 | minuter | princip | nej |  |
 | LANGD_BAND | Största avvikelse från personens snittlängd | `langd_band_minuter` | 120 | minuter | princip | nej |  |
 | HELTID | Heltid | `heltid_minuter_per_vecka` | 2220 | minuter per vecka | kontrakt | nej |  |
-| NATTPASS | Nattpass | `nattpass` | 21:45–07:15 | klockslag | princip | nej | Med måltidsuppehåll är hela passet arbetstid (ingen rast). |
+| NATTPASS | Nattpass | `nattpass` | 21:45–06:45 | klockslag | princip | nej | Med måltidsuppehåll är hela passet arbetstid (ingen rast). |
 | BERAKNINGSPERIOD | Schemaperiod (beräkningsperiod) | `veckor` | 4 | veckor, högst 16 | avtal | nej | Kontrolleras i indata: 1–16 veckor. |
 | ARBETSTID_48 | Högst 48 timmar per vecka i snitt under 4 veckor | – | 2880 | minuter per vecka i snitt | avtal | ja | Kontrolleras inte separat. Uppfylls när arbetstiden följer kontraktet (högst heltid) och högst 5 arbetsdagar i följd. |
 | SCHEMA_14_DAGAR | Schemat meddelas 14 dagar innan | – | 14 | dagar | avtal | ja | Utanför schemamotorn: verksamhetens ansvar när schemat publiceras. |

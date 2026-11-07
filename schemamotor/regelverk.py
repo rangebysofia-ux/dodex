@@ -152,7 +152,7 @@ def regelverk():
     harda.append({"id": "HELTID", "nyckel": "heltid_minuter_per_vecka", "namn": "Heltid", "niva": "kontrakt", "typ": "hård",
                   "standard": 2220, "enhet": "minuter per vecka", "last": False, "beskrivning": "", "granskningskod": "TID"})
     harda.append({"id": "NATTPASS", "nyckel": "nattpass", "namn": "Nattpass", "niva": "princip", "typ": "hård",
-                  "standard": {"start": "21:45", "slut": "07:15", "maltidsuppehall": True}, "enhet": "klockslag", "last": False,
+                  "standard": {"start": "21:45", "slut": "06:45", "maltidsuppehall": True}, "enhet": "klockslag", "last": False,
                   "beskrivning": "Med måltidsuppehåll är hela passet arbetstid (ingen rast).", "granskningskod": "RAST"})
     harda.append({"id": "BERAKNINGSPERIOD", "nyckel": "veckor", "namn": "Schemaperiod (beräkningsperiod)", "niva": "avtal", "typ": "hård",
                   "standard": 4, "enhet": "veckor, högst 16", "last": False,

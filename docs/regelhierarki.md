@@ -36,6 +36,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 13. **Jämn bemanning mellan dag och kväll (princip, mjuk).** Det som blir över eller saknas fördelas efter behovet, jämnt mellan dag- och kvällspass, per vecka och för hela perioden, och jämnt över dagarna: straffet växer med överskottet på ett pass (ungefär kvadratiskt), så +6 på en dag och +2 på en annan väger tyngre än +4 och +4. Vägs ihop med rättvisan mellan personer (rättvisan väger dubbelt). `jamn_bemanning`: "mjuk" (standard) eller "av". Beslutat av användaren 2026-11-06.
 
+14. **Nattpasset är i grunden 9 timmar (princip).** Standardnattpasset är 21:45–06:45 med måltidsuppehåll, så hela passet är arbetstid. Det ger 15 minuters överlämning från kvällspasset (slutar 22:00). Mellan 06:45 och dagpassets start 07:00 finns ingen överlappning. 9 timmar är ett standardvärde, inget tak: en enhet kan ange andra tider i `nattpass`. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

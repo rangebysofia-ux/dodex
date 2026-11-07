@@ -191,7 +191,7 @@ const ASSISTENT = (() => {
       const c = {};
       for (const rad of Object.values(ny)) for (const p of rad) if (p && p.dygnsdel === del) { const k = p.start + "–" + p.slut; c[k] = (c[k] || 0) + 1; }
       const b = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
-      return b ? b[0].split("–") : { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "07:15"] }[del];
+      return b ? b[0].split("–") : { morgon: ["07:00", "15:00"], kvall: ["14:00", "22:00"], natt: ["21:45", "06:45"] }[del];
     };
     const dag = (person, v, d) => {
       const pid = Object.keys(ny).find(x => x.toLowerCase() === String(person || "").toLowerCase());

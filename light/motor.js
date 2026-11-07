@@ -39,7 +39,7 @@ const MOTOR = (() => {
     if (!(W >= 1 && W <= 16)) fel.push("Perioden måste vara 1–16 veckor.");
     const cyk = ind.cykliskt !== false;
     const heltid = ind.heltid_minuter_per_vecka || 2220;
-    const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "07:15", maltidsuppehall: true };
+    const np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "06:45", maltidsuppehall: true };
     const ns = tid(np.start); let ne = tid(np.slut); if (ne <= ns) ne += DYGN;
     const nRast = np.maltidsuppehall === false && ne - ns > r.rast_grans_minuter ? r.rast_minuter : 0;
     const nnet = ne - ns - nRast;

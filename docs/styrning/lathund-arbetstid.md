@@ -44,7 +44,7 @@ Märkning i lathunden:
 | **Rast** | Ingen får arbeta mer än **5 timmar** i följd utan rast. **Lag (ATL 15 §)** |
 | **Måltidsuppehåll** | Vid nattarbete får rast bytas mot måltidsuppehåll, där man är kvar på arbetsplatsen och tiden räknas som arbetstid. Det får även ske fredag, lördag, söndag och helgdag, men då ska arbetsgivaren göra en konsekvensanalys av arbetsmiljön. **AB 25 § 13 mom. 7 a** |
 | **Nattpass** | Ett pass är ett nattpass om minst 3 timmar av den ordinarie arbetstiden ligger mellan kl. 22 och 06. **AB 25 § 13 mom. 7 j** |
-| **I DODEX** | Rast på 30 minuter i pass över 5 timmar. Nattpass 21:45–07:15 med måltidsuppehåll, så hela passet är arbetstid. |
+| **I DODEX** | Rast på 30 minuter i pass över 5 timmar. Nattpass 21:45–06:45 (9 timmar) med måltidsuppehåll, så hela passet är arbetstid. |
 
 ## 4. Arbetstid och schema
 

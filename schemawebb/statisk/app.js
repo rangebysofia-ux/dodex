@@ -645,7 +645,7 @@ function ritaInstallningar() {
         <div class="chips"><button class="primar liten" data-g="bekrafta-upplasning" data-k="${R.k}">Lås upp</button><button class="liten" data-g="avbryt-upplasning">Avbryt</button></div></div>` : ""}
     </div>`;
   };
-  const np = (st.indata.nattpass && st.indata.nattpass[0]) || { start: "21:45", slut: "07:15" };
+  const np = (st.indata.nattpass && st.indata.nattpass[0]) || { start: "21:45", slut: "06:45" };
   const IF = [["regler", "Regler"], ["period", "Period, budget och kostnad"], ["json", "Avancerat"]];
   const iflik = st.iflik || "regler";
   const flikrad = `<div class="flikar" role="tablist" style="margin-top:14px">${IF.map(([k, t]) => `<button role="tab" data-g="iflik" data-f="${k}" aria-selected="${iflik === k}">${t}</button>`).join("")}</div>`;
@@ -673,7 +673,7 @@ function regelInput(el) {
     const h = parseFloat(el.value.replace(",", ".")); if (h > 0) { st.indata.heltid_minuter_per_vecka = Math.round(h * 60); markeraAndrad(false); } return;
   }
   if (el.dataset.natt) {
-    const np = (st.indata.nattpass && st.indata.nattpass[0]) || { id: "N", start: "21:45", slut: "07:15", maltidsuppehall: true };
+    const np = (st.indata.nattpass && st.indata.nattpass[0]) || { id: "N", start: "21:45", slut: "06:45", maltidsuppehall: true };
     np[el.dataset.natt] = el.value; st.indata.nattpass = [np]; markeraAndrad(false); return;
   }
   if (!el.dataset.r) return;

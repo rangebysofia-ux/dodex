@@ -23,7 +23,7 @@ Följden av rastregeln är att pass med 5:00–5:30 på plats inte kan förekomm
 ## Dygnsbryt i praktiken
 
 - **Dag och kväll.** Föreslå dygnsbrytet där flest pass börjar och slutar inom fönstret 12–18, i regel vid skiftbytet mitt på dagen, oftast kring 15 för en heltid. Med `"dygnsbryt": "auto"` gör granskningen detta automatiskt.
-- **Natt.** Nattpersonal behöver ett eget dygnsbryt, i regel när nattpasset slutar. Med dag/kvällens dygnsbryt (till exempel 14:00) hamnar nattpasset mitt i 24-timmarsperioden och delar vilan i två delar som var för sig är kortare än 11 timmar. Granskningen ger därför nattpersonal ett eget dygnsbryt automatiskt, eller det som anges på personen (`"dygnsbryt": "07:15"`).
+- **Natt.** Nattpersonal behöver ett eget dygnsbryt, i regel när nattpasset slutar. Med dag/kvällens dygnsbryt (till exempel 14:00) hamnar nattpasset mitt i 24-timmarsperioden och delar vilan i två delar som var för sig är kortare än 11 timmar. Granskningen ger därför nattpersonal ett eget dygnsbryt automatiskt, eller det som anges på personen (`"dygnsbryt": "06:45"`).
 
 ## Hur skripten hanterar reglerna
 

@@ -156,7 +156,7 @@ def forbered(indata):
         if n:
             mallar.append({"id": f"K{klocka(start)}-{klocka(ks)}", "dygnsdel": "kvall", "start": start, "slut": ks,
                            "netto": n, "rast": (ks - start) - n})
-    for np_ in indata.get("nattpass", [{"id": "N", "start": "21:45", "slut": "07:15", "maltidsuppehall": True}]):
+    for np_ in indata.get("nattpass", [{"id": "N", "start": "21:45", "slut": "06:45", "maltidsuppehall": True}]):
         s, e = tid(np_["start"]), tid(np_["slut"])
         if e <= s:
             e += DYGN

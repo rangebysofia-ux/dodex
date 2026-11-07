@@ -189,7 +189,7 @@ function vakansPass(res, indata) {
   for (const rad of Object.values(res.schema)) for (const p of rad) if (p) {
     const t = p.start + "–" + p.slut; (tider[p.dygnsdel] = tider[p.dygnsdel] || {})[t] = (tider[p.dygnsdel][t] || 0) + 1;
   }
-  const r = indata.regler || {}, np = (indata.nattpass && indata.nattpass[0]) || { start: "21:45", slut: "07:15" };
+  const r = indata.regler || {}, np = (indata.nattpass && indata.nattpass[0]) || { start: "21:45", slut: "06:45" };
   const reserv = { morgon: [r.morgon_start || "07:00", "15:00"], kvall: ["14:00", r.kvall_slut || "22:00"], natt: [np.start, np.slut] };
   const vanligast = d => tider[d] ? Object.entries(tider[d]).sort((a, b) => b[1] - a[1])[0][0].split("–") : reserv[d];
   const perDag = Array.from({ length: res.veckor * 7 }, () => []);
@@ -510,7 +510,7 @@ function vanligTid(del_) {
   const b = Object.entries(tider).sort((a, b) => b[1] - a[1])[0];
   if (b) return b[0].split("–");
   const r = st.korning.indata.regler || {}, np = st.korning.indata.nattpass?.[0];
-  return { morgon: [r.morgon_start || "07:00", "15:00"], kvall: ["14:00", r.kvall_slut || "22:00"], natt: [np?.start || "21:45", np?.slut || "07:15"] }[del_];
+  return { morgon: [r.morgon_start || "07:00", "15:00"], kvall: ["14:00", r.kvall_slut || "22:00"], natt: [np?.start || "21:45", np?.slut || "06:45"] }[del_];
 }
 
 function redigeringspanel() {

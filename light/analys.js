@@ -36,7 +36,7 @@ const ANALYS = (() => {
     const ppv = r.pass_per_vecka;
     const heltid = (indata.heltid_minuter_per_vecka || FORSTA_HELTID) / 60;
     const behov = dagvarden(indata.behov), b = (d, k) => behov[d][k] || 0;
-    const np = (indata.nattpass || [{ start: "21:45", slut: "07:15" }])[0];
+    const np = (indata.nattpass || [{ start: "21:45", slut: "06:45" }])[0];
     const s = tid(np.start), e = tid(np.slut), nattlangd = (e + (e <= s ? 1440 : 0) - s) / 60;
     const nattVecka = [0, 1, 2, 3, 4, 5, 6].reduce((a, d) => a + b(d, "natt"), 0);
     const fredagsregel = r.ingen_fredagskvall_fore_ledig_helg;

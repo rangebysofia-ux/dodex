@@ -34,7 +34,7 @@ def underlag(indata, budget=None):
     heltid = indata.get("heltid_minuter_per_vecka", FORSTA_HELTID) / 60
     behov = expandera_dagvarden(indata.get("behov"), dict)
     b = lambda d, k: behov[d].get(k, 0)  # noqa: E731
-    np_ = (indata.get("nattpass") or [{"start": "21:45", "slut": "07:15", "maltidsuppehall": True}])[0]
+    np_ = (indata.get("nattpass") or [{"start": "21:45", "slut": "06:45", "maltidsuppehall": True}])[0]
     s, e = tid(np_["start"]), tid(np_["slut"])
     nattlangd = (e + (1440 if e <= s else 0) - s) / 60
     natt_vecka = sum(b(d, "natt") for d in range(7))

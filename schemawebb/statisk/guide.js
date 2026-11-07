@@ -16,7 +16,7 @@ const GUIDE = (() => {
   function ny() {
     return { steg: 1, namn: "", antalDag: 8, antalNatt: 2, gradSatt: "samma", grad: 100, budget: "", personer: [], harUndantag: false,
       behov: { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 2, natt: 1 } },
-      tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "07:15" }, veckor: 4, startdatum: "", timkostnad: "" };
+      tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "06:45" }, veckor: 4, startdatum: "", timkostnad: "" };
   }
 
   // Personlistan följer antalet: A1, A2 … för dag och kväll, N1, N2 … för natt. Ändrade värden ligger kvar.
@@ -68,7 +68,7 @@ const GUIDE = (() => {
     if (g.tider.morgon !== "07:00") regler.morgon_start = g.tider.morgon;
     if (g.tider.kvall !== "22:00") regler.kvall_slut = g.tider.kvall;
     if (Object.keys(regler).length) ut.regler = regler;
-    if (g.tider.nattStart !== "21:45" || g.tider.nattSlut !== "07:15") ut.nattpass = [{ id: "N", start: g.tider.nattStart, slut: g.tider.nattSlut, maltidsuppehall: true }];
+    if (g.tider.nattStart !== "21:45" || g.tider.nattSlut !== "06:45") ut.nattpass = [{ id: "N", start: g.tider.nattStart, slut: g.tider.nattSlut, maltidsuppehall: true }];
     if (g.startdatum) ut.startdatum = g.startdatum;
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);

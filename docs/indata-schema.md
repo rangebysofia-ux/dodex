@@ -11,7 +11,7 @@
   "start_iso_vecka": 45,
   "heltid_minuter_per_vecka": 2220,
   "regler": {"dygnsbryt": "auto", "veckobryt": "mån 00:00"},
-  "nattpass": [{"id": "N", "start": "21:45", "slut": "07:15", "maltidsuppehall": true}],
+  "nattpass": [{"id": "N", "start": "21:45", "slut": "06:45", "maltidsuppehall": true}],
   "extra_passmallar": [],
   "behov": {
     "vardag": {"morgon": 3, "kvall": 3, "natt": 1},
@@ -21,7 +21,7 @@
   "personal": [
     {"id": "A1", "grad": 1.0, "antal_pass": 28},
     {"id": "K1", "grad": 0.6, "dygnsdelar": ["kvall"]},
-    {"id": "N1", "grad": 1.0, "dygnsdelar": ["natt"], "dygnsbryt": "07:15"}
+    {"id": "N1", "grad": 1.0, "dygnsdelar": ["natt"], "dygnsbryt": "06:45"}
   ],
   "onskemal": [
     {"id": "O1", "person": "A1", "typ": "ledig", "dagar": ["fre"], "veckor": "jämna", "krav": false, "vikt": 1}

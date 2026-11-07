@@ -38,7 +38,7 @@ def _vakanspass(res):
         for p in rad:
             if p:
                 tider.setdefault(p["dygnsdel"], Counter())[(p["start"], p["slut"])] += 1
-    reserv = {"morgon": ("07:00", "15:00"), "kvall": ("14:00", "22:00"), "natt": ("21:45", "07:15")}
+    reserv = {"morgon": ("07:00", "15:00"), "kvall": ("14:00", "22:00"), "natt": ("21:45", "06:45")}
     ut = {}
     for v in res.get("vakanser", []):
         if v.get("dygnsdel"):
