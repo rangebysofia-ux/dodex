@@ -143,6 +143,21 @@ async function visaMedarbetare(id, kid, q) {
   kontrollera();
 }
 
+// ---------------------------------------------------------------- Aktiviteter (APT, utbildning, möte, studier …)
+async function visaAktiviteter(id) {
+  st.vy = "aktiviteter";
+  await laddaEnhet(id);
+  ritaMeny();
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Aktiviteter"]]);
+  st.flik = "aktiviteter"; st.redigeraOnsk = null;
+  vy().innerHTML = `<section class="kort"><h1>★ Aktiviteter</h1>
+      <p class="dampad" style="margin:6px 0 0">APT, utbildning, möte, studier, dokumentation, handledning och annan fast tid. Ange dag, tid och vilka som deltar. Gäller det en enskild person (till exempel studier), välj personen under ”Bara vissa personer”. Kryssa i ”Måste genomföras” när tiden ligger fast.</p></section>
+    <div class="redigera"><section class="kort"><div id="flik">${ritaFlik()}</div></section>
+      <aside><section class="kort" id="kontroll">${ritaKontroll()}</section></aside></div>`;
+  kopplaAktForm();
+  kontrollera();
+}
+
 // ---------------------------------------------------------------- Rapporter
 async function visaRapporter(id) {
   st.vy = "rapporter";

@@ -377,7 +377,7 @@ async function oppna(e) {
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button><span class="dampad liten">${lager.typ === "konto" ? "Sparas automatiskt" : "Sparas i webbläsaren"}</span></div>
       <label for="namn" style="margin-top:6px">Enhet</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
-      <div class="chips" style="margin-top:10px"><button data-g="senaste" id="senaste-knapp" hidden>Översikt senaste schema</button><button data-g="simulering">Simulering</button></div></header>
+      <div class="chips" style="margin-top:10px"><button data-g="senaste" id="senaste-knapp" hidden>Översikt senaste schema</button><button data-g="simulering">Simulering</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
     <section class="kort" id="kontroll"></section>
     <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
       `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
@@ -695,6 +695,9 @@ document.addEventListener("click", async ev => {
     case "red-spara-pass": return sparaPass();
     case "red-spara": return sparaJustering();
     case "simulering": return visaSimulering();
+    case "till-aktiviteter": st.flik = "aktiviteter"; st.aktForm = null; ritaFlik();
+      document.querySelectorAll("[data-g=flik]").forEach(b => b.setAttribute("aria-selected", b.dataset.f === "aktiviteter"));
+      $("#flik").closest("section").scrollIntoView({ behavior: "smooth" }); return;
     case "simulera": return simulera();
     case "anvand-forslag": return anvandForslag(+el.dataset.n);
     case "visa-korning": return visaKorning(st.korningar.find(k => k.id === el.dataset.id));

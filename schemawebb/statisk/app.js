@@ -22,6 +22,7 @@ const loggaText = () => `${LOGGA()}<span><b>DODEX</b><small>Scheduler</small></s
 const IKON = {
   oversikt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>',
   behov: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M17 8v6M14 11h6"/></svg>',
+  stjarna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>',
   grupp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.6c2.6 0 4.6 1.7 5.5 4.4"/></svg>',
   simulering: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11M4 17h7"/><path d="m15 3 4 4-4 4M11 13l4 4-4 4"/></svg>',
   kontroll: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>',
@@ -113,6 +114,7 @@ function ritaMeny() {
     ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
     ${lank(["bemanningsbalans"], "kostnad", "Bemanningsbalans", `${bas}/bemanningsbalans`, !e)}
     ${lank(["medarbetare", "personer", "indata"], "grupp", "Medarbetare", `${bas}/medarbetare`, !e)}
+    ${lank(["aktiviteter"], "stjarna", "Aktiviteter", `${bas}/aktiviteter`, !e)}
     ${lank(["nyckeltal", "bemanning"], "graf", "Analys och nyckeltal", `${bas}/nyckeltal${kk}`, !e)}
     ${lank(["analys"], "simulering", "Simulering", `${bas}/analys`, !e)}
     ${lank(["regelkontroll"], "kontroll", "Regelkontroll", `${bas}/regelkontroll${kk}`, !e)}
@@ -959,6 +961,7 @@ async function route() {
       else if (vyn === "behov") await visaBehov(id);
       else if (vyn === "bemanningsbalans") await visaBemanningsbalans(id);
       else if (vyn === "medarbetare") await visaMedarbetare(id, kid, q);
+      else if (vyn === "aktiviteter") await visaAktiviteter(id);
       else if (vyn === "nyckeltal") await visaNyckeltal(id, kid);
       else if (vyn === "regelkontroll") await visaRegelkontroll(id, kid);
       else if (vyn === "rapporter") await visaRapporter(id);
