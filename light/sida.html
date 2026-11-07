@@ -348,13 +348,23 @@ function andrad(rita) {
 }
 
 // ------------------------------------------------------------------ vy: lista
+// ljust eller mörkt: automatiskt (följer telefonen), ljust eller mörkt; sparas i webbläsaren
+const TEMAN = { auto: "◐ Automatiskt", light: "☀ Ljust", dark: "☾ Mörkt" };
+function lasTema() { try { return localStorage.getItem("dodex-tema") || "auto"; } catch { return "auto"; } }
+function sattTema(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("dodex-tema", t); } catch {}
+}
+sattTema(lasTema());
+const temaKnapp = () => `<button class="liten" data-g="tema" aria-label="Färgläge: ${TEMAN[lasTema()]}. Tryck för att byta">${TEMAN[lasTema()]}</button>`;
+
 async function visaLista() {
   st.vy = "lista"; st.enhet = null; $("#fot").hidden = true;
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
   if (st.guide) { $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
-    <header class="kort"><div class="logga" style="margin-bottom:10px">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
+    <header class="kort"><div class="rad" style="margin-bottom:10px"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>${temaKnapp()}</div>
       <p class="dampad" style="margin:6px 0 0">Lägg cykliska grundscheman direkt i mobilen. Samma hårda regler som det fullständiga systemet: dygnsvila och veckovila (avtal), rast (lag), antal pass, varannan helg och block på 2–5 dagar.</p>
       <p class="liten dampad" style="margin:6px 0 0">${lager.typ === "konto" ? "Sparas privat i ditt Claude-konto och syns i mobil och dator." : "Sparas bara i den här webbläsaren."}</p></header>
     ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
@@ -703,6 +713,9 @@ document.addEventListener("click", async ev => {
     case "andra-inst": { st.flik = el.dataset.f; await oppna(st.enhet, { installningar: true }); $("#flik")?.closest("section")?.scrollIntoView({ block: "start" }); return; }
     case "nytt-schema": await oppna(st.enhet, { installningar: true }); return laggSchema();
     case "tre-alternativ": return treAlternativ();
+    case "tema": { const ordning = ["auto", "light", "dark"], t = ordning[(ordning.indexOf(lasTema()) + 1) % 3]; sattTema(t);
+      document.querySelectorAll("[data-g=tema]").forEach(b => { b.textContent = TEMAN[t]; b.setAttribute("aria-label", `Färgläge: ${TEMAN[t]}. Tryck för att byta`); });
+      meddela(t === "auto" ? "Följer telefonens inställning." : t === "light" ? "Ljust läge." : "Mörkt läge."); return; }
     case "rflik": st.rflik = el.dataset.f; st.person = null; ritaResultat(); return;
     case "person": st.person = el.dataset.p || null; st.rflik = "personer"; ritaResultat(); window.scrollTo(0, 0); return;
     case "redigera": st.red = { schema: structuredClone(st.korning.resultat.schema), historik: [], andringar: 0, panel: null }; raknaOmUtkast(); return;
@@ -838,7 +851,7 @@ function ritaResultat() {
   const brott = (res.brott || []).concat(g.brott);
   const ok = !brott.length, flik = st.red ? "schema" : st.rflik || "oversikt";
   const F = [["oversikt", "Översikt"], ["schema", "Schema"], ["personer", "Personer"], ["regler", "Regelkontroll"]];
-  let h = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button><span class="dampad liten">${datum(k.skapad)}</span></div>
+  let h = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button><span class="chips" style="align-items:center"><span class="dampad liten">${datum(k.skapad)}</span>${temaKnapp()}</span></div>
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · ${sv(res.sekunder)} s · bemanningsbalansen förutsåg ${vakText(k.balans)}</span></div>
