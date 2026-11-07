@@ -47,6 +47,7 @@ Måste alltid uppfyllas.
 | MIN_PASSLANGD | Minsta passlängd | `min_passlangd_minuter` | 300 | minuter | lokal regel | nej | Blir passen kortare än så vid låg sysselsättningsgrad tas pass bort i stället: antal pass = arbetstid ÷ minsta längd, avrundat nedåt. 0 stänger av. |
 | BLOCK_MIN | Minst arbetsdagar i följd | `block_min` | 2 | dagar | lokal regel | nej | Inga enstaka arbetsdagar. |
 | BLOCK_MAX | Högst arbetsdagar i följd | `block_max` | 5 | dagar | lokal regel | nej |  |
+| NATT_I_RAD | Nattpersonal: högst nätter i rad | `natt_max_i_rad` | 3 | nätter | lokal regel | nej | Gäller personal som bara arbetar natt. 0 stänger av. |
 | TOLERANS | Tolerans för arbetstid mot kontrakt | `tolerans_minuter` | 60 | minuter per period | kontrakt | nej | Nattpersonal: minst ett halvt nattpass. |
 | MORGON_START | Dagpass börjar | `morgon_start` | 07:00 | klockslag | princip | nej | Fast start; slutet anpassas. |
 | KVALL_SLUT | Kvällspass slutar | `kvall_slut` | 22:00 | klockslag | princip | nej | Fast slut; starten anpassas. |
@@ -84,6 +85,7 @@ Källa och tillåten avvikelse för varje hård regel. Kontrollerat mot AB 25 i 
 | MIN_PASSLANGD | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
 | BLOCK_MIN | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
 | BLOCK_MAX | Lokalt beslut i verksamheten, inte AB. | Verksamheten kan ändra regeln för enheten. |
+| NATT_I_RAD | Verksamhetens beslut 2026-11-07 (lokal regel, inte avtal). | Verksamheten kan ändra. |
 | TOLERANS | Kontrakt: arbetstiden ska motsvara anställningens omfattning. | Per person (tolerans_minuter). |
 | MORGON_START | Planeringsprincip. | Verksamheten kan ändra. |
 | KVALL_SLUT | Planeringsprincip. | Verksamheten kan ändra. |

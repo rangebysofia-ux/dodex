@@ -468,6 +468,7 @@ function ritaFlik() {
       ${tal("pass_per_vecka", "Pass per vecka, dag och kväll", "lokal regel", 4.75, 0.25)}
       ${tal("block_min", "Minst antal arbetsdagar i följd", "lokal regel", 2, 1)}
       ${tal("block_max", "Högst antal arbetsdagar i följd", "lokal regel", 5, 1)}
+      ${tal("natt_max_i_rad", "Nattpersonal: högst nätter i rad", "lokal regel", 3, 1)}
       <div class="regel"><div>Jämn bemanning mellan dag och kväll<br><span class="niva">princip</span></div><select data-r="jamn_bemanning">${[["mjuk", "På"], ["av", "Av"]].map(([k, t]) => `<option value="${k}"${(r.jamn_bemanning || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="regel"><div>Blandning av morgon och kväll varje vecka<br><span class="niva">princip</span></div><select data-r="spridning_kvallar">${[["av", "Av"], ["mjuk", "Mjuk"], ["stark", "Stark"]].map(([k, t]) => `<option value="${k}"${(r.spridning_kvallar || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="regel"><div>Morgonpass börjar<br><span class="niva">princip</span></div><input type="time" data-r="morgon_start" value="${r.morgon_start ?? "07:00"}"></div>

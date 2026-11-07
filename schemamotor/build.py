@@ -39,6 +39,8 @@ STANDARDREGLER = {
     "block_min": 2,
     "block_max": 5,
     "block_rekommenderat": 4,
+    # nattpersonal: högst så många nätter i rad (lokal regel, hård; verksamhetens beslut 2026-11-07)
+    "natt_max_i_rad": 3,
     "helg_start": "fre 22:00",
     "helg_slut": "mån 06:00",
     "hel_helg": True,
@@ -371,6 +373,11 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             if not cyk and d in (0, N - 1):
                 continue
             m.add(work[pi, d] <= work[pi, (d - 1) % N] + work[pi, (d + 1) % N]).only_enforce_if(L)
+        if p["natt"] and r.get("natt_max_i_rad"):
+            L = lit(f"NATT_I_RAD|{pid}")
+            nm = r["natt_max_i_rad"]
+            for d in range(N if cyk else N - nm):
+                m.add(sum(work[pi, (d + k) % N] for k in range(nm + 1)) <= nm).only_enforce_if(L)
         L = lit(f"BLOCK_MAX|{pid}")
         bm = r["block_max"]
         for d in range(N if cyk else N - bm):

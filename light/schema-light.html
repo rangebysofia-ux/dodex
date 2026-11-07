@@ -256,7 +256,7 @@ const MOTOR = (() => {
   const STD = {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
-    block_min: 2, block_max: 5, block_rekommenderat: 4, helgfrekvens: "2/4", hel_helg: true,
+    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, helgfrekvens: "2/4", hel_helg: true,
     ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
@@ -493,6 +493,8 @@ const MOTOR = (() => {
             const kant = !cyk && (d - len <= 0 || d === N);
             if (len < r.block_min && !kant) { hard++; not("BLOCK_MIN", "lokal regel", `Enstaka arbetsdag ${dt((d - 1 + N) % N)}.`); }
             if (len > r.block_max) { hard += len - r.block_max; not("BLOCK_MAX", "lokal regel", `${len} arbetsdagar i följd fram till ${dt((d - 1 + N) % N)}.`); }
+            // nattpersonal: högst natt_max_i_rad nätter i rad (lokal regel)
+            if (p.natt && r.natt_max_i_rad && len > r.natt_max_i_rad) { hard += len - r.natt_max_i_rad; not("NATT_I_RAD", "lokal regel", `${len} nätter i rad fram till ${dt((d - 1 + N) % N)}.`); }
             if (len > r.block_rekommenderat) block++;
             len = 0;
           }
@@ -967,11 +969,11 @@ const GRANSKNING = (() => {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, dygnsbryt: "auto", veckobryt: "mån 00:00",
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
-    block_rekommenderat: 4, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
+    block_rekommenderat: 4, natt_max_i_rad: 3, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
-    HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", PASSFONSTER: "princip",
+    HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
@@ -1082,12 +1084,14 @@ const GRANSKNING = (() => {
       const work = Array(N).fill(0); lista.forEach(([d]) => (work[d] = 1));
       for (let d = cyk ? 0 : 1; d < (cyk ? N : N - 1); d++)
         if (work[d] && !work[(d - 1 + N) % N] && !work[(d + 1) % N]) brott("BLOCK_MIN", pid, `Enstaka arbetsdag ${dagText(d)}.`);
-      for (const [regel, grans, hard] of [["BLOCK_MAX", r.block_max, true], ["BLOCK_REKOMMENDERAT", r.block_rekommenderat, false]]) {
+      const grupper = [["BLOCK_MAX", r.block_max, true]];
+      if (natt && r.natt_max_i_rad) grupper.push(["NATT_I_RAD", r.natt_max_i_rad, true]);
+      for (const [regel, grans, hard] of [...grupper, ["BLOCK_REKOMMENDERAT", r.block_rekommenderat, false]]) {
         for (let d = 0; d < (cyk ? N : N - grans); d++) {
           let alla_ = true; for (let k = 0; k <= grans; k++) if (!work[(d + k) % N]) { alla_ = false; break; }
           if (alla_ && (!work[(d - 1 + N) % N] || (!cyk && d === 0))) {
             let langd = grans + 1; while (langd < N && work[(d + langd) % N]) langd++;
-            brott(regel, pid, `${langd} arbetsdagar i följd från ${dagText(d)} (gräns ${grans}).`, hard);
+            brott(regel, pid, `${langd} ${regel === "NATT_I_RAD" ? "nätter i rad" : "arbetsdagar i följd"} från ${dagText(d)} (gräns ${grans}).`, hard);
           }
         }
       }
@@ -1232,7 +1236,7 @@ const MOTOR = (() => {
   const STD = {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
-    block_min: 2, block_max: 5, block_rekommenderat: 4, helgfrekvens: "2/4", hel_helg: true,
+    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, helgfrekvens: "2/4", hel_helg: true,
     ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
@@ -1469,6 +1473,8 @@ const MOTOR = (() => {
             const kant = !cyk && (d - len <= 0 || d === N);
             if (len < r.block_min && !kant) { hard++; not("BLOCK_MIN", "lokal regel", `Enstaka arbetsdag ${dt((d - 1 + N) % N)}.`); }
             if (len > r.block_max) { hard += len - r.block_max; not("BLOCK_MAX", "lokal regel", `${len} arbetsdagar i följd fram till ${dt((d - 1 + N) % N)}.`); }
+            // nattpersonal: högst natt_max_i_rad nätter i rad (lokal regel)
+            if (p.natt && r.natt_max_i_rad && len > r.natt_max_i_rad) { hard += len - r.natt_max_i_rad; not("NATT_I_RAD", "lokal regel", `${len} nätter i rad fram till ${dt((d - 1 + N) % N)}.`); }
             if (len > r.block_rekommenderat) block++;
             len = 0;
           }
@@ -2685,7 +2691,7 @@ const REGELGRUPPER = [
   ["DYGNSVILA", "Dygnsvila", "Avtal"], ["VECKOVILA", "Veckovila", "Avtal"], ["RAST", "Rast efter högst 5 h arbete", "Lag"],
   ["ANTAL_PASS", "Antal pass enligt kontrakt", "Lokal regel"], ["TID", "Arbetstid enligt kontrakt", "Kontrakt"],
   ["HELG", "Helger och fredagskvällar", "Lokal regel"], ["BLOCK_MIN", "Inga enstaka arbetsdagar", "Lokal regel"],
-  ["BLOCK_MAX", "Högst antal arbetsdagar i följd", "Lokal regel"], ["PASSFONSTER", "Passbyte i fönstret 12–18", "Lokal regel"],
+  ["BLOCK_MAX", "Högst antal arbetsdagar i följd", "Lokal regel"], ["NATT_I_RAD", "Nattpersonal: högst nätter i rad", "Lokal regel"], ["PASSFONSTER", "Passbyte i fönstret 12–18", "Lokal regel"],
   ["BLOCK_REKOMMENDERAT", "Rekommenderad blocklängd", "Mjuk"], ["SPRIDNING", "Dag och kväll varje vecka", "Mjuk"], ["JAMN_BEMANNING", "Jämn bemanning mellan dag och kväll", "Mjuk"], ["BEHOV", "Bemanningsbehov", "Mjuk"],
 ];
 
@@ -3842,6 +3848,7 @@ function ritaFlik() {
       ${tal("pass_per_vecka", "Pass per vecka, dag och kväll", "lokal regel", 4.75, 0.25)}
       ${tal("block_min", "Minst antal arbetsdagar i följd", "lokal regel", 2, 1)}
       ${tal("block_max", "Högst antal arbetsdagar i följd", "lokal regel", 5, 1)}
+      ${tal("natt_max_i_rad", "Nattpersonal: högst nätter i rad", "lokal regel", 3, 1)}
       <div class="regel"><div>Jämn bemanning mellan dag och kväll<br><span class="niva">princip</span></div><select data-r="jamn_bemanning">${[["mjuk", "På"], ["av", "Av"]].map(([k, t]) => `<option value="${k}"${(r.jamn_bemanning || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="regel"><div>Blandning av morgon och kväll varje vecka<br><span class="niva">princip</span></div><select data-r="spridning_kvallar">${[["av", "Av"], ["mjuk", "Mjuk"], ["stark", "Stark"]].map(([k, t]) => `<option value="${k}"${(r.spridning_kvallar || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="regel"><div>Morgonpass börjar<br><span class="niva">princip</span></div><input type="time" data-r="morgon_start" value="${r.morgon_start ?? "07:00"}"></div>

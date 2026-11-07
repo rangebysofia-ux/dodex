@@ -22,6 +22,7 @@ Varje regel kan få en egen literal per person (används av schemamotor/explain.
 | VECKOVILA | Varje kalendervecka har två lediga dagar i följd, eller en ledig dag där föregående pass slutar och nästa börjar så att vilan blir minst 36 h. |
 | BLOCK_MIN | Ingen arbetsdag utan arbetsdag före eller efter. |
 | BLOCK_MAX | Högst 5 arbetsdagar i varje fönster om 6 dagar. |
+| NATT_I_RAD | Nattpersonal: högst 3 nätter i varje fönster om 4 dagar (`natt_max_i_rad`, lokal regel). |
 | HELG | Ledig helg: inga pass som går in i helgfönstret och inget kvälls- eller nattpass fredagen före. Arbetshelg: både lördag och söndag. Varannan helg växlar strikt. |
 | ANTAL_PASS | Exakt antal pass per delperiod. |
 | TID | Summan av arbetstid inom kontrakterad tid ± tolerans. |

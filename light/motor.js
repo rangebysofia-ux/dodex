@@ -10,7 +10,7 @@ const MOTOR = (() => {
   const STD = {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
-    block_min: 2, block_max: 5, block_rekommenderat: 4, helgfrekvens: "2/4", hel_helg: true,
+    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, helgfrekvens: "2/4", hel_helg: true,
     ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
@@ -247,6 +247,8 @@ const MOTOR = (() => {
             const kant = !cyk && (d - len <= 0 || d === N);
             if (len < r.block_min && !kant) { hard++; not("BLOCK_MIN", "lokal regel", `Enstaka arbetsdag ${dt((d - 1 + N) % N)}.`); }
             if (len > r.block_max) { hard += len - r.block_max; not("BLOCK_MAX", "lokal regel", `${len} arbetsdagar i följd fram till ${dt((d - 1 + N) % N)}.`); }
+            // nattpersonal: högst natt_max_i_rad nätter i rad (lokal regel)
+            if (p.natt && r.natt_max_i_rad && len > r.natt_max_i_rad) { hard += len - r.natt_max_i_rad; not("NATT_I_RAD", "lokal regel", `${len} nätter i rad fram till ${dt((d - 1 + N) % N)}.`); }
             if (len > r.block_rekommenderat) block++;
             len = 0;
           }

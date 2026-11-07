@@ -233,6 +233,20 @@
       "avvikelse": "Verksamheten kan ändra regeln för enheten."
     },
     {
+      "id": "NATT_I_RAD",
+      "nyckel": "natt_max_i_rad",
+      "namn": "Nattpersonal: högst nätter i rad",
+      "niva": "lokal regel",
+      "typ": "hård",
+      "standard": 3,
+      "enhet": "nätter",
+      "last": false,
+      "beskrivning": "Gäller personal som bara arbetar natt. 0 stänger av.",
+      "granskningskod": "NATT_I_RAD",
+      "kalla": "Verksamhetens beslut 2026-11-07 (lokal regel, inte avtal).",
+      "avvikelse": "Verksamheten kan ändra."
+    },
+    {
       "id": "TOLERANS",
       "nyckel": "tolerans_minuter",
       "namn": "Tolerans för arbetstid mot kontrakt",

@@ -50,6 +50,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 20. **Veckovilan syns i schemat.** De lediga dagar som ingår i veckans längsta sammanhängande vila märks VV (randigt) med antal timmar på första dagen; verktygstipset visar från och till. Rött om vilan är under 36 h. I schemat, personvyn och telefonen. Påverkar bara visningen. Beslutat av användaren 2026-11-07.
 
+21. **Nattpersonal arbetar högst tre nätter i rad (lokal regel, hård).** Gäller personal som bara arbetar natt. `natt_max_i_rad` (standard 3, 0 stänger av). Det är verksamhetens beslut, inte en avtalsregel. Kontrolleras i motorn, granskningen (NATT_I_RAD) och lättversionen, och visas i förklaringen när den krockar. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

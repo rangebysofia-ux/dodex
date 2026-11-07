@@ -1,0 +1,34 @@
+{
+  "beskrivning": "Högst en natt i rad går inte ihop med nattpersonalens antal pass: varannan natt ger högst 14 nätter på fyra veckor, men heltiden kräver 15. Krocken ska visas.",
+  "forvantat": {
+    "status": "INFEASIBLE",
+    "konflikt_innehaller": [
+      "NATT_I_RAD|N1"
+    ]
+  },
+  "enhet": "Test – nätter i rad",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "alla": {
+      "morgon": 0,
+      "kvall": 0,
+      "natt": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "N1",
+      "grad": 1,
+      "dygnsdelar": [
+        "natt"
+      ]
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 8
+  },
+  "regler": {
+    "natt_max_i_rad": 1
+  }
+}

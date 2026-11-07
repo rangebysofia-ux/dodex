@@ -1,0 +1,44 @@
+{
+  "beskrivning": "Nattpersonal med högst tre nätter i rad (lokal regel). Fyra veckor, en natt varje natt, tre nattpersoner. Ska gå att lösa utan regelbrott, och ingen ska ha fler än tre nätter i följd.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0
+  },
+  "enhet": "Test – nätter i rad",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "alla": {
+      "morgon": 0,
+      "kvall": 0,
+      "natt": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "N1",
+      "grad": 1,
+      "dygnsdelar": [
+        "natt"
+      ]
+    },
+    {
+      "id": "N2",
+      "grad": 0.8,
+      "dygnsdelar": [
+        "natt"
+      ]
+    },
+    {
+      "id": "N3",
+      "grad": 0.6,
+      "dygnsdelar": [
+        "natt"
+      ]
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 8
+  }
+}
