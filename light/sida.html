@@ -106,6 +106,9 @@ table.schema.summatabell { table-layout: auto; width: auto; min-width: 100%; }
 table.summatabell td:first-child { font-weight: 700; text-align: left; }
 table.schema td.summa.fel { color: #fff; background: var(--dalig); }
 table.schema td.summa.res { color: var(--text); font-weight: 800; }
+td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(47,122,74,.12) 6px 9px); }
+.vv { display: block; font: 700 10px/1.2 var(--mono); color: var(--bra, #2f7a4a); padding: 3px 0; text-align: center; }
+.vv small { display: block; font-weight: 600; font-size: 9.5px; } .vv.fel { color: var(--dalig); }
 .pass.resurs { box-shadow: inset 4px 0 0 var(--resurs), inset 0 0 0 1px var(--resurs) !important; }
 .pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border: 1px solid var(--text); border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
 .schema.period .pass.resurs { background: var(--resurs); color: #fff; }
@@ -771,7 +774,7 @@ function ritaResultat() {
       Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
       `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button></div>` +
       (st.vecka === -1 ? dagTabell(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), true) : vecka(res, st.vecka)) +
-      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">D dag, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet.</p></section>`;
+      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">D dag, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet. <span class="vv" style="display:inline">VV</span> veckovila (veckans längsta vila, minst 36 h); tryck för tider.</p></section>`;
     { const dagar = st.vecka === -1 ? Array.from({ length: res.veckor * 7 }, (_, d) => d) : Array.from({ length: 7 }, (_, i) => st.vecka * 7 + i);
       const ind = st.korning.indata || st.enhet.indata;
       h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`; }
@@ -785,13 +788,13 @@ function ritaResultat() {
 // ------------------------------------------------------------------ person
 function ritaPerson(pid, res, ind) {
   const x = res.personer[pid], rad = res.schema[pid], W = res.veckor, p = ind.personal.find(q => q.id === pid) || {};
-  const kod = { morgon: "D", kvall: "K", natt: "N" }, rs = GRAF.resurs(res, ind);
+  const kod = { morgon: "D", kvall: "K", natt: "N" }, rs = GRAF.resurs(res, ind), vvP = GRAF.veckovilaDagar(res, ind, pid);
   let h = `<section class="kort"><button class="lank" data-g="person" data-p="">‹ Alla personer</button><h2 style="margin:6px 0 0">${esc(pid)}</h2>
     <p class="dampad" style="margin:2px 0 0">${Math.round((p.grad ?? 1) * 100)} % · ${(p.dygnsdelar || ["morgon", "kvall"]).map(d => DELAR[d].toLowerCase()).join(" och ")} · ${x.pass} pass · ${x.kvallspass} kvällar</p>
     <div class="rull" style="margin-top:10px"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veck = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i], r = rs.has(pid + ":" + (v * 7 + i)); return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${r ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${r ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i], r = rs.has(pid + ":" + (v * 7 + i)); return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${r ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${r ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : vvP.has(v * 7 + i) ? GRAF.vvMarke(vvP.get(v * 7 + i), false) : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
   }
   h += `</tbody></table></div><p class="dampad liten" style="margin-top:6px">Tryck på ett pass för datum och OB.</p></section>`;
   return h + `<div class="grafyta">${GRAF.vilaKort(pid, res, ind)}${GRAF.obKort(pid, res, ind, { installningar: "Period" })}</div>`;
@@ -1087,6 +1090,7 @@ function vecka(res, v) { return dagTabell(res, Array.from({ length: 7 }, (_, i) 
 
 function dagTabell(res, dagar, period) {
   const ind = st.korning.indata || st.enhet.indata, pers = Object.keys(res.schema), vak = {}, vp = vakansPass(res), rs = GRAF.resurs(res, ind);
+  const vvAlla = Object.fromEntries(pers.map(p => [p, GRAF.veckovilaDagar(res, ind, p)]));
   const kod = { morgon: "D", kvall: "K", natt: "N" };
   res.vakanser.forEach(x => (vak[x.dag] = (vak[x.dag] || 0) + x.antal));
   const kl = d => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}"`;
@@ -1097,7 +1101,8 @@ function dagTabell(res, dagar, period) {
     const x = res.schema[p][d], n = p + "|" + d;
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
-    return `<td ${kl(d)}>${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}</button>` : ""}</td>`;
+    const vv = !x && vvAlla[p].get(d);
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {

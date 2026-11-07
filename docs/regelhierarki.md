@@ -48,6 +48,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 19. **Nattpersonal arbetar 34:20 per vecka på heltid.** Standard för personal som bara arbetar natt, om personen inte har egen heltid (`heltid_natt_minuter_per_vecka` 2060). Motsvarar AB 25 § 13 mom. 2 för kontinuerligt treskiftsarbete. Påverkar kontrakterad tid, antal nattpass, bemanningsbalansen och analysen. Beslutat av användaren 2026-11-07.
 
+20. **Veckovilan syns i schemat.** De lediga dagar som ingår i veckans längsta sammanhängande vila märks VV (randigt) med antal timmar på första dagen; verktygstipset visar från och till. Rött om vilan är under 36 h. I schemat, personvyn och telefonen. Påverkar bara visningen. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

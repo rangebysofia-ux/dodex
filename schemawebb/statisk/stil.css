@@ -431,3 +431,11 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 .bb table.bbtabell input, .bb table.bbtabell select { padding: 6px 8px; }
 .bb table.bbtabell td { padding: 3px 4px; }
 .bb table.lista tr.summa td { border-top: 2px solid var(--linje); font-weight: 700; }
+
+/* veckovila i schemat */
+td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(47,122,74,.10) 6px 9px); }
+.vv { display: block; font: 700 10.5px/1.2 var(--mono); color: var(--bra); padding: 4px 0; cursor: help; text-align: center; }
+.vv small { display: block; font-weight: 600; font-size: 10px; }
+.vv.fel { color: var(--kritisk); }
+.schema.period .vv { padding: 10px 0; }
+i.vvlegend { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(47,122,74,.35) 4px 6px); border: 1px solid var(--linje); }

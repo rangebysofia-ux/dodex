@@ -373,6 +373,28 @@ function resursKort(k, lank) {
   </section>`;
 }
 
+// Var veckovilan ligger i schemat: lediga dagar som ingår i veckans längsta sammanhängande vila.
+// Returnerar Map dag -> { vecka, timmar, forsta, text }.
+function veckovilaDagar(res, indata, pid) {
+  const rad = res.schema[pid], ut = new Map(); if (!rad) return ut;
+  const N = res.veckor * 7, L = N * DYGN_MIN, wv = regelVarde(indata, "veckovila_minuter", 2160);
+  const v = vila(rad, res.veckor, res.cykliskt !== false, regelVarde(indata, "veckobryt", "mån 00:00"));
+  for (const x of v.veckor) {
+    const a = x.fran, b = x.fran + x.min;
+    let forsta = true;
+    for (let dd = Math.floor(a / DYGN_MIN); dd * DYGN_MIN < b; dd++) {
+      const d = ((dd % N) + N) % N;
+      if (rad[d] || ut.has(d)) continue;
+      const slut = tidText(b);
+      ut.set(d, { vecka: x.vecka, timmar: x.min / 60, under: x.min < wv, forsta,
+        text: `Veckovila vecka ${x.vecka}: ${sv(x.min / 60, 1)} h, från ${tidText(((a % L) + L) % L)} till ${slut}${x.min < wv ? ` (under ${sv(wv / 60, 0)} h)` : ""}` });
+      forsta = false;
+    }
+  }
+  return ut;
+}
+const vvMarke = (x, kort) => `<span class="vv${x.under ? " fel" : ""}" data-tips="${esc(x.text)}" aria-label="${esc(x.text)}">${kort ? "" : x.forsta ? `VV<small>${sv(x.timmar, 0)} h</small>` : "VV"}</span>`;
+
 // Kort för en person: veckovila per vecka och vila mellan passen.
 function vilaKort(pid, res, indata) {
   const rad = res.schema[pid]; if (!rad) return "";
@@ -449,6 +471,6 @@ function aktivitetKort(res) {
     </tbody></table></div></section>`;
 }
 
-return { resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

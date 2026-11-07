@@ -188,3 +188,19 @@ def test_sammanstallning_per_rad(losning, tmp_path):
         assert s["alla"]["morgon"] + s["alla"]["kvall"] + s["alla"]["natt"] == s["alla"]["pass"]
         # inga brott i granskningen betyder att vilan i sammanställningen håller gränserna
         assert s["alla"]["dygnsvila"] >= 660 and s["alla"]["veckovila"] >= 2160
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="kräver Node")
+def test_veckovila_markeras_pa_lediga_dagar(losning, tmp_path):
+    """Veckovilan (VV) markeras bara på lediga dagar, minst en dag per vecka, och timmarna stämmer med granskningen."""
+    indata, res = losning
+    fil = tmp_path / "r.json"
+    fil.write_text(json.dumps({"res": res, "ind": indata}), encoding="utf-8")
+    kod = (f"const G=require('./schemawebb/statisk/grafer.js');const d=require({json.dumps(str(fil))});const ut={{}};"
+           "for(const p of Object.keys(d.res.schema))ut[p]=[...G.veckovilaDagar(d.res,d.ind,p)];console.log(JSON.stringify(ut))")
+    ut = json.loads(subprocess.run(["node", "-e", kod], cwd=ROT, capture_output=True, text=True, check=True).stdout)
+    for pid, lista in ut.items():
+        assert lista
+        assert all(res["schema"][pid][d] is None for d, _ in lista)
+        assert {x["vecka"] for _, x in lista} == {1, 2, 3, 4}
+        assert all(x["timmar"] >= 36 and not x["under"] for _, x in lista)

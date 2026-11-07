@@ -178,7 +178,7 @@ function ritaSchemavy() {
     h += st.vecka === -1 ? schemaDagar(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), filter, true) : schemaVecka(res, Math.max(0, st.vecka), filter);
     h += `<p class="info" id="info">${cellInfo(res)}</p>
       <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span>
-      <span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span><span><i style="background:var(--resurs)"></i>◼ R resurspass, utöver behovet</span><span class="minus">−1 vakans</span><span class="plus">+1 resurstid</span><span>Kolumnerna till höger: pass, D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (rött = under gränsen)</span><span>Raden längst ned: i tjänst${filter !== "alla" ? (st.vecka === -1 ? "" : " / behov") : ""}${st.vecka === -1 ? ". Håll muspekaren över en ruta för detaljer" : ""}</span></div>`;
+      <span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span><span><i style="background:var(--resurs)"></i>◼ R resurspass, utöver behovet</span><span class="minus">−1 vakans</span><span class="plus">+1 resurstid</span><span><i class="vvlegend"></i>VV veckovila: veckans längsta sammanhängande vila (minst 36 h). Håll muspekaren över för tider</span><span>Kolumnerna till höger: pass, D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (rött = under gränsen)</span><span>Raden längst ned: i tjänst${filter !== "alla" ? (st.vecka === -1 ? "" : " / behov") : ""}${st.vecka === -1 ? ". Håll muspekaren över en ruta för detaljer" : ""}</span></div>`;
   }
   return h + `</section>`;
 }
@@ -212,11 +212,11 @@ function schemaDagar(res, dagar, filter, period) {
   if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">Vecka ${Math.floor(dagar[0] / 7) + w + 1}</th>`).join("")}<th colspan="${kol.length}" class="summa forsta" style="text-align:left">Hela perioden</th></tr>`;
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>` + dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7].slice(0, 2) : DAGAR[d % 7]}</th>`).join("") + GRAF.summaHuvud(kol) + `</tr></thead><tbody>`;
   for (const pid of pers) {
-    const red = !!st.red;
+    const red = !!st.red, vv = GRAF.veckovilaDagar(res, ind, pid);
     h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a></td>` + dagar.map(d => {
       const p = res.schema[pid][d], n = pid + ":" + d;
       const mal = red ? ` data-mal="${esc(n)}"` : "";
-      if (!p) return `<td ${kl(d)}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : ""}</td>`;
+      if (!p) return `<td ${kl(d, vv.has(d) ? " vvdag" : "")}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : vv.has(d) ? GRAF.vvMarke(vv.get(d), period) : ""}</td>`;
       if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}${mal}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
       const resurs = rs.has(n);
       return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${resurs ? " resurs" : ""}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter || resurs ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${resurs ? "\n◼ Resurspass, utöver behovet" : ""}${esc(GRAF.aktText(p))}"` : ""}
@@ -375,7 +375,7 @@ function fordelningKort(f) {
 
 function personkort(pid) {
   const k = st.korning, res = k.resultat, ind = k.indata, x = res.personer[pid], rad = res.schema[pid];
-  const rs = GRAF.resurs(res, ind);
+  const rs = GRAF.resurs(res, ind), vvP = GRAF.veckovilaDagar(res, ind, pid);
   const p = ind.personal.find(q => q.id === pid) || {}, ht = heltidFor(ind, pid), W = res.veckor;
   const f = fordelning(res, ind), r = f.rader.find(q => q.pid === pid);
   const onsk = (ind.onskemal || []).filter(o => o.person === pid);
@@ -400,7 +400,7 @@ function personkort(pid) {
   <section class="kort"><h2>${esc(pid)}s schema</h2><div class="rull"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veckMin = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${rs.has(pid + ":" + (v * 7 + i)) ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}${rs.has(pid + ":" + (v * 7 + i)) ? " – resurspass" : ""}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${rs.has(pid + ":" + (v * 7 + i)) ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : ""}</td>`; }).join("")}
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${rs.has(pid + ":" + (v * 7 + i)) ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}${rs.has(pid + ":" + (v * 7 + i)) ? " – resurspass" : ""}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${rs.has(pid + ":" + (v * 7 + i)) ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : vvP.has(v * 7 + i) ? GRAF.vvMarke(vvP.get(v * 7 + i), false) : ""}</td>`; }).join("")}
       <td class="tal nw liten">${sv(veckMin / 60, 1)} h</td></tr>`;
   }
   return h + `</tbody></table></div></section>`;
