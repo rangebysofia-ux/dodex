@@ -1,0 +1,79 @@
+{
+  "beskrivning": "Aktivitet som krav som inte går: utbildning lördag 10–12 vecka 1 för D8, som inte arbetar helg. Krocken mellan aktiviteten och helgregeln ska visas.",
+  "forvantat": {
+    "status": "INFEASIBLE",
+    "konflikt_innehaller": [
+      "AKTIVITET|UTB",
+      "HELG|D8"
+    ]
+  },
+  "enhet": "Test – aktivitet",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "D1",
+      "grad": 1
+    },
+    {
+      "id": "D2",
+      "grad": 1
+    },
+    {
+      "id": "D3",
+      "grad": 1
+    },
+    {
+      "id": "D4",
+      "grad": 0.9
+    },
+    {
+      "id": "D5",
+      "grad": 0.9
+    },
+    {
+      "id": "D6",
+      "grad": 0.8
+    },
+    {
+      "id": "D7",
+      "grad": 0.8
+    },
+    {
+      "id": "D8",
+      "grad": 0.75,
+      "helgfrekvens": "ingen"
+    }
+  ],
+  "aktiviteter": [
+    {
+      "id": "UTB",
+      "namn": "Utbildning",
+      "dagar": [
+        "lör"
+      ],
+      "veckor": [
+        1
+      ],
+      "start": "10:00",
+      "slut": "12:00",
+      "deltagare": [
+        "D8"
+      ],
+      "krav": true
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  }
+}

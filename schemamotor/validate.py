@@ -30,7 +30,7 @@ STANDARD = {
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
-        "JAMN_BEMANNING": "princip"}
+        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet"}
 
 
 def tid(s):
@@ -107,6 +107,21 @@ def langsta_lucka(intervall, a, b):
         langst = max(langst, s - pos)
         pos = max(pos, e)
     return max(langst, b - pos)
+
+
+def aktivitetsdagar(a, W, start_iso):
+    """Dagindex för en aktivitet: 'dagindex', eller 'dagar' och 'veckor' (alla, jämna, udda eller en lista)."""
+    if "dagindex" in a:
+        return sorted({d % (W * 7) for d in a["dagindex"]})
+    dagar = a.get("dagar") or DAGNAMN
+    vv = a.get("veckor") or "alla"
+    ut = set()
+    for w in range(W):
+        nr = start_iso + w if start_iso else w + 1
+        if vv == "alla" or (vv == "jämna" and nr % 2 == 0) or (vv == "udda" and nr % 2 == 1) \
+                or (isinstance(vv, list) and w + 1 in vv):
+            ut |= {w * 7 + DAGNAMN.index(d) for d in dagar}
+    return sorted(ut)
 
 
 def kontrollera(indata, schema_dok):
@@ -279,6 +294,75 @@ def kontrollera(indata, schema_dok):
         if abs(arb - mal_min) > tol:
             brott("TID", pid, f"Arbetstid {arb / 60:.2f} h, kontrakterat {mal_min / 60:.2f} h (tolerans {tol} min).")
 
+    # aktiviteter (verksamhet): den som deltar ska arbeta hela aktivitetstiden
+    akt = {a["id"]: a for a in indata.get("aktiviteter") or []}
+    deltar = {}  # (id, dag) -> [person]
+    borta = []   # (start_abs, slut_abs) för deltagare som är borta från golvet
+    for pid, lista in alla.items():
+        for d, s, e, p in lista:
+            for x in p.get("aktiviteter") or []:
+                a = akt.get(x.get("id"))
+                if not a:
+                    brott("AKTIVITET", pid, f"{dag_text(d)}: aktiviteten {x.get('id')} finns inte i indata.")
+                    continue
+                a0 = d * DYGN + tid(a["start"])
+                if a0 < s:
+                    a0 += DYGN  # nattpass: aktiviteten ligger efter midnatt
+                a1 = a0 - tid(a["start"]) + tid(a["slut"])
+                dag = (a0 // DYGN) % N
+                if not (s <= a0 and a1 <= e):
+                    brott("AKTIVITET", pid, f"{dag_text(dag)}: deltar i {a.get('namn') or a['id']} {a['start']}–{a['slut']} "
+                                            f"men passet är {p['start']}–{p['slut']}. Den som deltar ska arbeta hela tiden.")
+                    continue
+                if dag not in aktivitetsdagar(a, W, indata.get("start_iso_vecka")):
+                    brott("AKTIVITET", pid, f"{dag_text(dag)}: {a.get('namn') or a['id']} ligger inte på den dagen.")
+                    continue
+                if pid in deltar.setdefault((a["id"], dag), []):
+                    brott("AKTIVITET", pid, f"{dag_text(dag)}: deltar två gånger i {a.get('namn') or a['id']}.")
+                    continue
+                deltar[a["id"], dag].append(pid)
+                if a.get("fran_golvet", True):
+                    borta.append((a0, a1))
+    for a in akt.values():
+        namn = a.get("namn") or a["id"]
+        dagar = aktivitetsdagar(a, W, indata.get("start_iso_vecka"))
+        if a.get("deltagare"):
+            grupp = list(a["deltagare"])
+        else:
+            # alla vars dygnsdelar kan rymma aktiviteten
+            fonster = {"morgon": (tid(r["morgon_start"]), tid(r["kant_till"])),
+                       "kvall": (tid(r["kant_fran"]), tid(r["kvall_slut"]))}
+            for np_ in indata.get("nattpass") or [{"start": "21:45", "slut": "06:45"}]:
+                ns, ne = tid(np_["start"]), tid(np_["slut"])
+                fonster["natt"] = (ns, ne + DYGN if ne <= ns else ne)
+            a0, a1 = tid(a["start"]), tid(a["slut"])
+            def ryms(del_):
+                f0, f1 = fonster[del_]
+                return (f0 <= a0 and a1 <= f1) or (f0 <= a0 + DYGN and a1 + DYGN <= f1)
+            grupp = [q["id"] for q in indata["personal"] if any(ryms(x) for x in q.get("dygnsdelar", ["morgon", "kvall"]))]
+        G = len(grupp)
+        if a.get("antal"):
+            behovet = a["antal"]
+        elif a.get("andel"):
+            behovet = math.ceil(a["andel"] * G - 1e-9)
+        elif a.get("varje_person") and dagar:
+            behovet = math.ceil(G * a["varje_person"] / len(dagar))
+        else:
+            behovet = G
+        for d in dagar:
+            n = len(deltar.get((a["id"], d), []))
+            if n < behovet:
+                brott("AKTIVITET", None, f"{dag_text(d)} {a['start']}–{a['slut']}: {n} deltar i {namn}, behov {behovet}.",
+                      hard=bool(a.get("krav")))
+        utanfor = sorted({q for (i, _), lista in deltar.items() if i == a["id"] for q in lista} - set(grupp))
+        if a.get("deltagare") and utanfor:
+            brott("AKTIVITET", None, f"{namn}: {', '.join(utanfor)} deltar men är inte med i deltagarlistan.")
+        if a.get("varje_person"):
+            for q in grupp:
+                n = sum(q in lista for (i, _), lista in deltar.items() if i == a["id"])
+                if n != a["varje_person"]:
+                    brott("AKTIVITET", q, f"Deltar {n} gånger i {namn}, ska vara {a['varje_person']}.", hard=False)
+
     # behov
     behov = [{} for _ in range(7)]
     tidp = [[] for _ in range(7)]
@@ -313,8 +397,10 @@ def kontrollera(indata, schema_dok):
                 brott("BEHOV", None, f"{dag_text(d)}: {antal - n} vakant {del_}pass.", hard=False)
         for tp in tidp[d % 7]:
             t = d * DYGN + tid(tp["tid"])
-            n = sum(1 for lista in alla.values() for _, s, e, _ in lista
-                    if s <= t < e or (cyk and s <= t + L < e) or (cyk and s <= t - L < e))
+            def inne(s, e):
+                return s <= t < e or (cyk and s <= t + L < e) or (cyk and s <= t - L < e)
+            n = sum(1 for lista in alla.values() for _, s, e, _ in lista if inne(s, e))
+            n -= sum(1 for s, e in borta if inne(s, e))  # på aktivitet, inte på golvet
             if n < tp["antal"]:
                 vakanser += tp["antal"] - n
                 brott("BEHOV", None, f"{dag_text(d)} kl {tp['tid']}: {n} i tjänst, behov {tp['antal']}.", hard=False)

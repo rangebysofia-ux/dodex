@@ -55,8 +55,8 @@ STANDARDREGLER = {
 }
 # Rättvisa mellan personer och jämn bemanning mellan dag och kväll vägs ihop i ett mål (rättvisan dubbelt),
 # så att lösaren kan väga dem mot varandra. Nyckeltalen redovisas var för sig (KPI_MAL).
-MALORDNING = ["vakanser", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
-KPI_MAL = ["vakanser", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
+MALORDNING = ["vakanser", "aktiviteter", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
+KPI_MAL = ["vakanser", "aktiviteter", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
 
 
 def malordning(r, mal):
@@ -244,9 +244,56 @@ def forbered(indata):
         o["_dagar"] = dagar_for_val(o, W, indata.get("start_iso_vecka"))
         onskemal.append(o)
 
+    # aktiviteter (verksamhetens beslut): den som deltar arbetar hela aktivitetstiden
+    aktiviteter = []
+    for i, a in enumerate(indata.get("aktiviteter", [])):
+        a = dict(a)
+        a.setdefault("id", f"A{i + 1}")
+        a["_start"], a["_slut"] = tid(a["start"]), tid(a["slut"])
+        if a["_slut"] <= a["_start"]:
+            raise IndataFel(f"Aktiviteten {a['id']} måste sluta efter att den börjar.")
+        a["_dagar"] = sorted(set(dagar_for_val(a, W, indata.get("start_iso_vecka"))))
+        okanda = [q for q in a.get("deltagare") or [] if q not in sedda]
+        if okanda:
+            raise IndataFel(f"Aktiviteten {a['id']} har okända deltagare: {', '.join(okanda)}.")
+        # deltagargruppen: angivna personer, annars alla som har ett pass som kan täcka aktivitetstiden
+        def kan(p):
+            return any(tacker(mallar[s], a["_start"], a["_slut"]) is not None for s in p["tillatna"])
+        valda = a.get("deltagare")
+        a["_grupp"] = [pi for pi, p in enumerate(personer) if (p["id"] in valda if valda else kan(p))]
+        G, T = len(a["_grupp"]), len(a["_dagar"])
+        if a.get("antal"):
+            antal = a["antal"]
+        elif a.get("andel"):
+            antal = math.ceil(a["andel"] * G - 1e-9)
+        elif a.get("varje_person") and T:
+            antal = math.ceil(G * a["varje_person"] / T)
+        else:
+            antal = G
+        a["_antal"] = min(antal, G)
+        a["_onskat"] = antal
+        if a.get("varje_person"):
+            a["_per_person"] = (a["varje_person"], a["varje_person"])
+        else:
+            snitt = a["_antal"] * T / G if G else 0
+            a["_per_person"] = (math.floor(snitt + 1e-9), math.ceil(snitt - 1e-9))
+        a["krav"] = bool(a.get("krav", False))
+        a["fran_golvet"] = a.get("fran_golvet", True)
+        aktiviteter.append(a)
+
     return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov,
             "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
-            "enhet": indata.get("enhet", "")}
+            "aktiviteter": aktiviteter, "enhet": indata.get("enhet", "")}
+
+
+def tacker(mall, start, slut):
+    """Täcker passmallen aktiviteten start–slut (minuter efter midnatt)? 0 = samma dag,
+    1 = passet började dagen före (nattpass), None = nej."""
+    if mall["start"] <= start and slut <= mall["slut"]:
+        return 0
+    if mall["start"] <= start + DYGN and slut + DYGN <= mall["slut"]:
+        return 1
+    return None
 
 
 # ---------------------------------------------------------------- modell
@@ -436,6 +483,41 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 else:
                     onsk_straff.append(vikt * b)
 
+    # --- aktiviteter (verksamhet): den som deltar har ett pass som täcker hela aktivitetstiden
+    y = {}  # (aktivitet, dag, person) -> deltar
+    akt_brist, akt_jamn = [], []
+    for ai, a in enumerate(prob.get("aktiviteter", [])):
+        L = lit(f"AKTIVITET|{a['id']}") if a["krav"] else []
+        G = len(a["_grupp"])
+        for d in a["_dagar"]:
+            delt = []
+            for pi in a["_grupp"]:
+                tack = []
+                for s in prob["personer"][pi]["tillatna"]:
+                    k = tacker(M[s], a["_start"], a["_slut"])
+                    dd = d if k == 0 else (((d - 1) % N if cyk else d - 1) if k == 1 else None)
+                    if dd is not None and dd >= 0:
+                        tack.append(x[pi, dd, s])
+                if not tack:
+                    continue
+                v = m.new_bool_var(f"akt_{a['id']}_{d}_{pi}")
+                m.add(v <= sum(tack))
+                y[ai, d, pi] = v
+                delt.append(v)
+            brist = m.new_int_var(0, a["_antal"], "")
+            m.add(sum(delt) + brist == a["_antal"])
+            if a["krav"]:
+                m.add(brist == 0).only_enforce_if(L)
+            akt_brist.append(brist)
+        # rättvis fördelning: alla i gruppen deltar ungefär lika många gånger
+        lo, hi = a["_per_person"]
+        for pi in a["_grupp"]:
+            antal = sum(y[ai, d, pi] for d in a["_dagar"] if (ai, d, pi) in y)
+            over, under = m.new_int_var(0, N, ""), m.new_int_var(0, N, "")
+            m.add(over >= antal - hi)
+            m.add(under >= lo - antal)
+            akt_jamn += [over, under]
+
     # --- mål
     mal = {}
     vak = []
@@ -459,10 +541,16 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                     dp = (d - 1) % N if cyk else d - 1
                     if dp >= 0 and M[s]["start"] <= t + DYGN < M[s]["slut"]:
                         tack.append(x[pi, dp, s])
+            # den som är på en aktivitet med fran_golvet räknas inte som i tjänst på golvet
+            borta = [v for (ai, dd, pi), v in y.items() if dd == d and prob["aktiviteter"][ai]["fran_golvet"]
+                     and prob["aktiviteter"][ai]["_start"] <= t < prob["aktiviteter"][ai]["_slut"]]
             v = m.new_int_var(0, tp["antal"], f"vakt_{d}_{tp['tid']}")
-            m.add(sum(tack) + v >= tp["antal"])
+            m.add(sum(tack) - sum(borta) + v >= tp["antal"])
             vak.append((v, d, None, tp["tid"]))
     mal["vakanser"] = sum(v for v, *_ in vak)
+    # aktiviteter: saknade deltagare väger alltid tyngre än ojämn fördelning mellan personerna
+    vikt = 1 + len(akt_jamn) * N
+    mal["aktiviteter"] = (vikt * sum(akt_brist) + sum(akt_jamn)) if akt_brist else 0
 
     # jämn bemanning (princip, mjuk): det som blir över eller saknas på dag- och kvällspassen sprids jämnt.
     # Ingen enskild dag och dygnsdel ska få mycket mer än andra, och dag och kväll ska få lika mycket varje vecka.
@@ -553,7 +641,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
     mal["spridning"] = sum(spridning) if spridning else 0
     mal["onskemal"] = sum(onsk_straff) if onsk_straff else 0
 
-    var = {"x": x, "work": work, "vak": vak}
+    var = {"x": x, "work": work, "vak": vak, "y": y, "akt_brist": akt_brist}
     return m, var, mal, grupper
 
 
@@ -613,7 +701,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
     # Fas 1: arbetsmönster (vilka dagar och vilken dygnsdel) med alla hårda regler utom exakt arbetstid.
     enkel = monsterproblem(prob)
     m1, var1, mal1, _ = bygg_modell(enkel, utan_tid=True)
-    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"]),
+    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "aktiviteter", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"]),
                                  tid_per_steg, arbetare, tyst, "mönster – ")
     if r1 is None and status1 == cp_model.INFEASIBLE:
         # Mönstermodellen har färre passlängder. Kontrollera med alla längder (utan exakt arbetstid)
@@ -636,7 +724,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
                 m2.add(var2["work"][pi, d] == (1 if del_ else 0))
                 if del_:
                     m2.add(sum(var2["x"][pi, d, s] for s in p["tillatna"] if M[s]["dygnsdel"] == del_) == 1)
-        r2, status2 = lexikografiskt(m2, var2, mal2, ["vakanser", "passlangd", "onskemal"],
+        r2, status2 = lexikografiskt(m2, var2, mal2, ["vakanser", "aktiviteter", "passlangd", "onskemal"],
                                      tid_per_steg, arbetare, tyst, "längder – ")
         if r2:
             return slutresultat(prob, var2, mal2, r2[1], r1[0] + r2[0])
@@ -690,19 +778,43 @@ def tolka(prob, solver, var, steg, kpi_mal):
                         pass_["maltidsuppehall"] = True
             rad.append(pass_)
         schema[p["id"]] = rad
+    # aktiviteter: läggs på passet som täcker dem och redovisas per tillfälle
+    tillfallen = []
+    for ai, a in enumerate(prob.get("aktiviteter", [])):
+        for d in a["_dagar"]:
+            delt = []
+            for pi in a["_grupp"]:
+                v = var["y"].get((ai, d, pi))
+                if v is None or not solver.value(v):
+                    continue
+                p = prob["personer"][pi]
+                rad = schema[p["id"]]
+                dd = d
+                if not (rad[d] and tacker(M[next(s for s in p["tillatna"] if M[s]["id"] == rad[d]["mall"])],
+                                          a["_start"], a["_slut"]) == 0):
+                    dd = (d - 1) % N
+                rad[dd].setdefault("aktiviteter", []).append(
+                    {"id": a["id"], "namn": a.get("namn") or a["id"], "start": a["start"], "slut": a["slut"]})
+                delt.append(p["id"])
+            tillfallen.append({"aktivitet": a["id"], "namn": a.get("namn") or a["id"], "dag": d, "vecka": d // 7 + 1,
+                               "veckodag": DAGNAMN[d % 7], "start": a["start"], "slut": a["slut"],
+                               "deltagare": delt, "behov": a["_onskat"], "saknas": a["_onskat"] - len(delt)})
     vakanser = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "tid": t,
                  "antal": solver.value(v)} for v, d, del_, t in var["vak"] if solver.value(v)]
     kpi = dict(kpi_mal)
     kpi["vakanta_pass"] = sum(v["antal"] for v in vakanser if v["dygnsdel"])
     kpi["vakanta_tidpunkter"] = sum(v["antal"] for v in vakanser if v["tid"])
+    kpi["aktivitet_saknas"] = sum(t["saknas"] for t in tillfallen)
     personer = {}
     for p in prob["personer"]:
         rad = [x for x in schema[p["id"]] if x]
         personer[p["id"]] = {"pass": len(rad), "minuter": sum(x["netto"] for x in rad),
                              "mal_minuter": p["mal_minuter"], "kvallspass": sum(x["dygnsdel"] == "kvall" for x in rad),
-                             "helggrupp": ("A" if solver.value(p["_grupp"]) else "B") if "_grupp" in p else None}
+                             "helggrupp": ("A" if solver.value(p["_grupp"]) else "B") if "_grupp" in p else None,
+                             "aktiviteter": sum(len(x.get("aktiviteter", [])) for x in rad)}
     return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"],
-            "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "schema": schema}
+            "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "aktiviteter": tillfallen,
+            "schema": schema}
 
 
 def markdown(res):
@@ -714,11 +826,16 @@ def markdown(res):
         for pid, dagar in res["schema"].items():
             celler = []
             for p in dagar[w * 7:w * 7 + 7]:
-                celler.append("" if not p else ("N" if p["dygnsdel"] == "natt" else f"{p['start']}–{p['slut']}"))
+                celler.append("" if not p else ("N" if p["dygnsdel"] == "natt" else f"{p['start']}–{p['slut']}")
+                              + "".join(f" ({a['id']})" for a in p.get("aktiviteter") or []))
             rad.append(f"| {pid} | " + " | ".join(celler) + " |")
     if res["vakanser"]:
         rad += ["", "## Vakanser"] + [f"- Vecka {v['vecka']} {v['veckodag']}: {v['antal']} "
                                      + (v["dygnsdel"] or f"kl {v['tid']}") for v in res["vakanser"]]
+    if res.get("aktiviteter"):
+        rad += ["", "## Aktiviteter"] + [f"- Vecka {t['vecka']} {t['veckodag']} {t['start']}–{t['slut']} {t['namn']}: "
+                                         + (", ".join(t["deltagare"]) or "inga")
+                                         + (f" (saknas {t['saknas']})" if t["saknas"] else "") for t in res["aktiviteter"]]
     rad += ["", "## Per person", "", "| Person | Pass | Arbetstid | Mål | Kvällspass | Helggrupp |",
             "|---|---|---|---|---|---|"]
     for pid, k in res["personer"].items():

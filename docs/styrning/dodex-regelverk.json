@@ -417,6 +417,20 @@
       "granskningskod": null,
       "kalla": "Medarbetarens önskemål som verksamheten har gjort till krav.",
       "avvikelse": "–"
+    },
+    {
+      "id": "AKTIVITET",
+      "nyckel": "aktiviteter[].krav",
+      "namn": "Aktiviteter markerade som krav",
+      "niva": "verksamhet",
+      "typ": "hård",
+      "standard": false,
+      "enhet": "per aktivitet",
+      "last": false,
+      "beskrivning": "Den som deltar arbetar hela aktivitetstiden. Kan göra schemat olösbart; förklaringen pekar då ut aktiviteten.",
+      "granskningskod": "AKTIVITET",
+      "kalla": "Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid.",
+      "avvikelse": "–"
     }
   ],
   "mjuka_mal": [
@@ -433,6 +447,17 @@
     },
     {
       "ordning": 2,
+      "id": "aktiviteter",
+      "namn": "Aktiviteter under arbetstid",
+      "niva": "verksamhet",
+      "typ": "mjuk",
+      "styrs_av": null,
+      "standard": null,
+      "beskrivning": "Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela aktivitetstiden. Aktiviteter markerade som krav är hårda.",
+      "granskningskod": "AKTIVITET"
+    },
+    {
+      "ordning": 3,
       "id": "blocklangd",
       "namn": "Dagar i följd över rekommenderat",
       "niva": "princip",
@@ -443,7 +468,7 @@
       "granskningskod": "BLOCK_REKOMMENDERAT"
     },
     {
-      "ordning": 3,
+      "ordning": 4,
       "id": "passlangd",
       "namn": "Passlängd",
       "niva": "princip",
@@ -454,7 +479,7 @@
       "granskningskod": "TID"
     },
     {
-      "ordning": 4,
+      "ordning": 5,
       "id": "rattvisa_jamn",
       "namn": "Rättvisa och jämn bemanning",
       "niva": "princip",
@@ -465,7 +490,7 @@
       "granskningskod": "JAMN_BEMANNING"
     },
     {
-      "ordning": 5,
+      "ordning": 6,
       "id": "spridning",
       "namn": "Blandning av morgon och kväll varje vecka",
       "niva": "princip",
@@ -476,7 +501,7 @@
       "granskningskod": "SPRIDNING"
     },
     {
-      "ordning": 6,
+      "ordning": 7,
       "id": "onskemal",
       "namn": "Önskemål",
       "niva": "önskemål",
@@ -523,6 +548,11 @@
       "mal": "Vakant pass",
       "vikt": 100000.0,
       "per": "pass"
+    },
+    {
+      "mal": "Saknad deltagare i aktivitet",
+      "vikt": 50000.0,
+      "per": "deltagare"
     },
     {
       "mal": "Blandning morgon och kväll (stark)",

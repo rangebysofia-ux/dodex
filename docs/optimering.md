@@ -10,6 +10,7 @@ Google OR-Tools CP-SAT (constraint programming med SAT-teknik). Installeras med 
 - `work[person, dag]` – personen arbetar den dagen (summan av x, högst ett pass per dag).
 - Helggrupp per person med varannan helg, och en variabel per person och helg för om helgen är arbetshelg.
 - Vakansvariabler per dag och dygnsdel och per tidpunkt.
+- `y[aktivitet, dag, person]` – personen deltar i aktiviteten den dagen. `y ≤ summan av x` för passmallar som täcker hela aktivitetstiden (för nattpass även passet som började dagen före). Per tillfälle: `summan av y + brist = antal`. Deltagare med `fran_golvet` dras från täckningen vid klockslag under aktiviteten.
 
 ## Hårda regler
 
@@ -25,6 +26,7 @@ Varje regel kan få en egen literal per person (används av schemamotor/explain.
 | ANTAL_PASS | Exakt antal pass per delperiod. |
 | TID | Summan av arbetstid inom kontrakterad tid ± tolerans. |
 | KRAV | Önskemål markerade som krav. |
+| AKTIVITET | Aktiviteter markerade som krav: inget tillfälle får sakna deltagare (en literal per aktivitet). |
 
 I cykliska scheman räknas alla fönster runt periodgränsen.
 
@@ -33,7 +35,7 @@ I cykliska scheman räknas alla fönster runt periodgränsen.
 En modell med alla passlängder och exakt arbetstid är svår att hitta en första lösning i. Därför löses problemet i två faser:
 
 1. **Mönster.** Varje person får bara tre passmallar per dygnsdel (kortast, längst och närmast mållängden), och den exakta arbetstiden släpps. Fasen bestämmer vilka dagar och vilken dygnsdel varje person arbetar och optimerar vakanser, blocklängd, rättvisa och önskemål. Det tar sekunder.
-2. **Längder.** Mönstret låses och passlängderna väljs fritt så att arbetstiden blir rätt, vakanserna vid tidpunkter blir så få som möjligt och passen så nära mållängden som möjligt.
+2. **Längder.** Mönstret låses och passlängderna väljs fritt så att arbetstiden blir rätt, aktiviteterna får sina deltagare (ett morgonpass förlängs till exempel till 16:00 för APT 14–16 och andra pass kortas), vakanserna vid tidpunkter blir så få som möjligt och passen så nära mållängden som möjligt.
 
 Uppdelningen fungerar eftersom morgonpass har fast start och kvällspass fast slut: vilken vila som är tillåten beror då nästan bara på dygnsdelen, inte på längden. Om fas 2 ändå inte går att lösa körs hela modellen på en gång som reserv. Om fas 1 är olösbar kontrolleras det med alla passlängder innan schemat förklaras olösbart.
 

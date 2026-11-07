@@ -48,7 +48,7 @@ const ASSISTENT = (() => {
           personal: i.personal.map(p => ({ id: p.id, grad_procent: Math.round((p.grad ?? 1) * 100), dygnsdelar: p.dygnsdelar || ["morgon", "kvall"],
             helgfrekvens: p.helgfrekvens || "2/4 (varannan)", helggrupp: p.helggrupp || "auto", antal_pass: p.antal_pass ?? "räknas ut" })),
           kontrakterade_timmar_vecka: Math.round(i.personal.reduce((s, p) => s + (p.grad ?? 1) * ht, 0) * 10) / 10,
-          behov: i.behov || {}, tidpunkter: i.tidpunkter || {}, onskemal: i.onskemal || [], regler_andrade: i.regler || {}, upplasta_regler: i.avvikelser || [],
+          behov: i.behov || {}, tidpunkter: i.tidpunkter || {}, onskemal: i.onskemal || [], aktiviteter: i.aktiviteter || [], regler_andrade: i.regler || {}, upplasta_regler: i.avvikelser || [],
         };
       },
     },
@@ -113,11 +113,11 @@ const ASSISTENT = (() => {
     },
     {
       name: "foresla_andringar",
-      description: "Föreslår ändringar. Inget ändras förrän användaren trycker Godkänn. Två sorter, blanda dem inte i samma förslag: (1) Passändringar i det lagda schemat, exakt som användaren säger: satt_pass (lägg eller ändra ett pass), ta_bort_pass, flytta_pass. Schemat blir exakt så när det godkänns; resten av schemat ändras inte. (2) Ändringar i indata: lagg_till_person, andra_person, ta_bort_person, satt_behov, lagg_till_onskemal, ta_bort_onskemal, satt_period. Schemat läggs då om automatiskt när det godkänns. Regler (vila, helger, block) ändras inte här utan under Regler.",
+      description: "Föreslår ändringar. Inget ändras förrän användaren trycker Godkänn. Två sorter, blanda dem inte i samma förslag: (1) Passändringar i det lagda schemat, exakt som användaren säger: satt_pass (lägg eller ändra ett pass), ta_bort_pass, flytta_pass. Schemat blir exakt så när det godkänns; resten av schemat ändras inte. (2) Ändringar i indata: lagg_till_person, andra_person, ta_bort_person, satt_behov, lagg_till_onskemal, ta_bort_onskemal, lagg_till_aktivitet (till exempel APT tisdag 14–16 för halva gruppen; deltagarna arbetar hela tiden), ta_bort_aktivitet, satt_period. Schemat läggs då om automatiskt när det godkänns. Regler (vila, helger, block) ändras inte här utan under Regler.",
       schema: { type: "object", required: ["sammanfattning", "andringar"], properties: {
         sammanfattning: { type: "string", description: "En mening på svenska om vad förslaget gör." },
         andringar: { type: "array", minItems: 1, items: { type: "object", required: ["typ"], properties: {
-          typ: { type: "string", enum: ["satt_pass", "ta_bort_pass", "flytta_pass", "lagg_till_person", "andra_person", "ta_bort_person", "satt_behov", "lagg_till_onskemal", "ta_bort_onskemal", "satt_period"] },
+          typ: { type: "string", enum: ["satt_pass", "ta_bort_pass", "flytta_pass", "lagg_till_person", "andra_person", "ta_bort_person", "satt_behov", "lagg_till_onskemal", "ta_bort_onskemal", "lagg_till_aktivitet", "ta_bort_aktivitet", "satt_period"] },
           vecka: { type: "integer", minimum: 1, description: "Passändringar: schemavecka (1 = första veckan i perioden)." },
           veckodag: { type: "string", enum: DAGAR, description: "Passändringar: veckodag." },
           dygnsdel: { type: "string", enum: ["morgon", "kvall", "natt"], description: "satt_pass: morgon (dagpass), kväll eller natt." },
@@ -141,6 +141,13 @@ const ASSISTENT = (() => {
           veckor: { type: "string", description: "alla, jämna, udda eller veckonummer som '1,3'." },
           krav: { type: "boolean", description: "true = måste uppfyllas, false = önskemål." },
           vikt: { type: "integer", minimum: 1, maximum: 10 },
+          namn: { type: "string", description: "lagg_till_aktivitet: aktivitetens namn, till exempel APT eller Handledning." },
+          aktivitet_id: { type: "string", description: "ta_bort_aktivitet: aktivitetens id." },
+          andel_procent: { type: "number", description: "lagg_till_aktivitet: andel av gruppen per tillfälle, till exempel 50 för hälften." },
+          antal: { type: "integer", minimum: 1, description: "lagg_till_aktivitet: antal deltagare per tillfälle." },
+          varje_person: { type: "integer", minimum: 1, description: "lagg_till_aktivitet: hur många gånger var och en ska delta under perioden." },
+          deltagare: { type: "array", items: { type: "string" }, description: "lagg_till_aktivitet: bara dessa personer (id-koder). Tom = alla som kan arbeta då." },
+          fran_golvet: { type: "boolean", description: "lagg_till_aktivitet: false om deltagarna ändå räknas som i tjänst på golvet. Standard true." },
           antal_veckor: { type: "integer", minimum: 1, maximum: 16 },
           budget_timmar_vecka: { type: "number" },
         } } },
@@ -173,6 +180,8 @@ const ASSISTENT = (() => {
       case "satt_behov": return `Behov ${a.dagar}: ` + ["morgon", "kvall", "natt"].filter(d => a[d] != null).map(d => `${DEL[d]} ${a[d]}`).join(", ");
       case "lagg_till_onskemal": return `${a.person} ${a.krav ? "måste" : "vill"} ${a.onskemalstyp === "ledig" ? "vara ledig" : a.onskemalstyp === "arbetar" ? "arbeta" : a.onskemalstyp === "tidigast_start" ? "börja tidigast " + a.varde : a.onskemalstyp === "senast_slut" ? "sluta senast " + a.varde : "bara arbeta " + (DEL[a.varde] || a.varde)}${a.veckodagar && a.veckodagar.length ? " – " + a.veckodagar.join(", ") : ""}${a.veckor && a.veckor !== "alla" ? ", " + a.veckor + (/^\d/.test(a.veckor) ? "" : " veckor") : ""}`;
       case "ta_bort_onskemal": return `Ta bort önskemål ${a.id}`;
+      case "lagg_till_aktivitet": return `★ ${a.namn || "Aktivitet"} ${a.start}–${a.slut}${a.veckodagar && a.veckodagar.length ? ", " + a.veckodagar.join(", ") : ""}${a.veckor && a.veckor !== "alla" ? ", " + (/^\d/.test(a.veckor) ? "vecka " + a.veckor : a.veckor + " veckor") : ""}: ${a.antal ? a.antal + " personer" : a.andel_procent ? a.andel_procent + " % av gruppen" : a.varje_person ? `alla, ${a.varje_person} ${a.varje_person === 1 ? "gång" : "gånger"} var` : "alla"}${a.krav ? " (måste genomföras)" : ""}`;
+      case "ta_bort_aktivitet": return `Ta bort aktiviteten ${a.aktivitet_id || a.id}`;
       case "satt_pass": return `${a.person} vecka ${a.vecka} ${a.veckodag}: ${DEL[a.dygnsdel] || a.dygnsdel}pass${a.start && a.slut ? ` ${a.start}–${a.slut}` : ""}`;
       case "ta_bort_pass": return `${a.person} vecka ${a.vecka} ${a.veckodag}: ledig (passet tas bort)`;
       case "flytta_pass": return `Flytta ${a.person}s pass vecka ${a.vecka} ${a.veckodag} till ${a.till_person || a.person} vecka ${a.till_vecka || a.vecka} ${a.till_veckodag || a.veckodag}`;
@@ -250,7 +259,9 @@ const ASSISTENT = (() => {
         case "ta_bort_person": {
           const n = indata.personal.findIndex(p => p.id === String(a.id)); if (n < 0) throw new Error(`Ingen person med id ${a.id}.`);
           indata.personal.splice(n, 1);
-          indata.onskemal = (indata.onskemal || []).filter(o => o.person !== String(a.id)); break;
+          indata.onskemal = (indata.onskemal || []).filter(o => o.person !== String(a.id));
+          (indata.aktiviteter || []).forEach(x => { if (x.deltagare) { x.deltagare = x.deltagare.filter(q => q !== String(a.id)); if (!x.deltagare.length) delete x.deltagare; } });
+          break;
         }
         case "satt_behov": {
           if (!DAGNYCKLAR.includes(String(a.dagar))) throw new Error(`Okända dagar: ${a.dagar}. Använd vardag, helg, alla eller mån–sön.`);
@@ -279,6 +290,36 @@ const ASSISTENT = (() => {
           const n = (indata.onskemal || []).findIndex(o => o.id === String(a.id)); if (n < 0) throw new Error(`Inget önskemål med id ${a.id}.`);
           indata.onskemal.splice(n, 1); break;
         }
+        case "lagg_till_aktivitet": {
+          const tid = t => /^\d{1,2}:\d{2}$/.test(String(t || "")) ? String(t).padStart(5, "0") : null;
+          const start = tid(a.start), slut = tid(a.slut);
+          if (!start || !slut) throw new Error("Ange start och slut för aktiviteten som 14:00 och 16:00.");
+          if (!(slut > start)) throw new Error("Aktiviteten måste sluta efter att den börjar, samma dag.");
+          if (!a.veckodagar || !a.veckodagar.length) throw new Error("Ange vilken eller vilka veckodagar aktiviteten ligger.");
+          const namn = String(a.namn || "Aktivitet");
+          const ids = new Set((indata.aktiviteter || []).map(x => x.id));
+          const bas = (namn.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "AKT").slice(0, 8);
+          let id = bas, k = 2; while (ids.has(id)) id = bas + k++;
+          const x = { id, namn, start, slut, dagar: a.veckodagar.map(String) };
+          const v = String(a.veckor || "alla");
+          if (v === "jämna" || v === "udda") x.veckor = v;
+          else if (/^\d/.test(v)) x.veckor = v.split(/[,; ]+/).map(Number).filter(n => n > 0);
+          if (a.antal) x.antal = Math.max(1, Number(a.antal));
+          else if (a.andel_procent) x.andel = Math.max(0.05, Math.min(1, Number(a.andel_procent) / 100));
+          else if (a.varje_person) x.varje_person = Math.max(1, Number(a.varje_person));
+          if (a.deltagare && a.deltagare.length) {
+            const okanda = a.deltagare.filter(q => !hitta(q)); if (okanda.length) throw new Error(`Okända personer: ${okanda.join(", ")}.`);
+            x.deltagare = a.deltagare.map(String);
+          }
+          if (a.fran_golvet === false) x.fran_golvet = false;
+          if (a.krav) x.krav = true;
+          (indata.aktiviteter = indata.aktiviteter || []).push(x); break;
+        }
+        case "ta_bort_aktivitet": {
+          const id = String(a.aktivitet_id || a.id || "");
+          const n = (indata.aktiviteter || []).findIndex(x => x.id === id || x.namn === id); if (n < 0) throw new Error(`Ingen aktivitet med id ${id}.`);
+          indata.aktiviteter.splice(n, 1); if (!indata.aktiviteter.length) delete indata.aktiviteter; break;
+        }
         case "satt_period":
           if (a.antal_veckor) indata.veckor = Number(a.antal_veckor);
           if (a.budget_timmar_vecka) indata.budget_timmar_vecka = Number(a.budget_timmar_vecka);
@@ -298,6 +339,7 @@ Så arbetar du:
 - Schemat ska bli så som användaren säger. Två fall:
   1. Användaren säger hur ett visst pass ska vara (vem, vilken vecka och dag, vilket pass eller vilka tider), till exempel "A1 ska jobba kväll tisdag vecka 2" eller "ta bort A3:s pass på fredag vecka 1". Använd satt_pass, ta_bort_pass eller flytta_pass. Läs först personens schema med las_person. Passet blir exakt så när det godkänns, och resten av schemat ändras inte. Bryter ändringen mot en regel (till exempel dygnsvila) säger du det tydligt i förslaget; granskningen visar det också.
   2. Användaren säger något som ska gälla generellt, till exempel "A2 ska vara ledig på fredagar", "A3 jobbar bara kväll" eller "vi behöver 3 på kvällen på fredagar". Ändra indata. Det användaren säger "ska", "måste" eller "kan inte" blir krav (krav: true), inte önskemål. Schemat läggs om automatiskt när förslaget godkänns.
+  3. Användaren vill lägga in en aktivitet under arbetstid, till exempel "APT tisdag 14–16 för halva gruppen vecka 2 och 4" eller "handledning varannan torsdag 13–14". Använd lagg_till_aktivitet. Den som deltar arbetar hela aktivitetstiden, så passen läggs om för att täcka tiden; säg det i förslaget.
 - Fråga bara när något verkligen är oklart, till exempel vilken vecka som avses eller sysselsättningsgrad för en ny person. Säg "vill" eller "helst" blir ett önskemål.
 - Personal anges med id-koder (A1, N2, P9), aldrig namn. Om användaren skriver ett namn, föreslå en id-kod i stället.
 - Dygnsvila, veckovila, rast och varannan helg är låsta regler. Du kan inte ändra regler; hänvisa till sidan Regler. Kalla aldrig lokala regler (varannan helg, block 2–5 dagar, 4,75 pass per vecka) för avtalsregler.

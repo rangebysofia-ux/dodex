@@ -1,0 +1,82 @@
+{
+  "beskrivning": "Aktivitet: APT tisdag 14–16 vecka 2 och 4. Alla i dag- och kvällsgruppen deltar en gång, alltså ungefär hälften per tillfälle. Deltagarna arbetar hela aktivitetstiden, så passen måste täcka 14–16. De som är på APT räknas inte på golvet kl 15. Ska gå att lösa utan avtalsbrott och utan saknade deltagare.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "aktivitet_saknas": 0
+  },
+  "enhet": "Test – aktivitet",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 1
+    }
+  },
+  "tidpunkter": {
+    "tis": [
+      {
+        "tid": "15:00",
+        "antal": 1
+      }
+    ]
+  },
+  "personal": [
+    {
+      "id": "D1",
+      "grad": 1
+    },
+    {
+      "id": "D2",
+      "grad": 1
+    },
+    {
+      "id": "D3",
+      "grad": 1
+    },
+    {
+      "id": "D4",
+      "grad": 0.9
+    },
+    {
+      "id": "D5",
+      "grad": 0.9
+    },
+    {
+      "id": "D6",
+      "grad": 0.8
+    },
+    {
+      "id": "D7",
+      "grad": 0.8
+    },
+    {
+      "id": "D8",
+      "grad": 0.75
+    }
+  ],
+  "aktiviteter": [
+    {
+      "id": "APT",
+      "namn": "Arbetsplatsträff",
+      "dagar": [
+        "tis"
+      ],
+      "veckor": [
+        2,
+        4
+      ],
+      "start": "14:00",
+      "slut": "16:00",
+      "varje_person": 1
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  }
+}

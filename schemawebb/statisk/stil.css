@@ -187,6 +187,7 @@ table.schema thead th { padding-bottom: 6px; }
 .pass.jour { background: var(--jour-bg); color: var(--jour-text); box-shadow: inset 3px 0 0 var(--guld); }
 .pass.dold { background: none; box-shadow: none; color: var(--svag); cursor: default; }
 .pass.vald { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #4a3608; background: var(--guld-ljus); border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr.bem td { font-size: 11.5px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.3; font-variant-numeric: tabular-nums; }
 tr.bem td.vakans { color: var(--kritisk); font-weight: 800; background: var(--kritisk-bg); border-radius: 8px; }
 .info { margin: 10px 0 0; font-size: 14px; min-height: 1.5em; }

@@ -89,17 +89,18 @@ async function visaMedarbetare(id, kid, q) {
   await laddaEnhet(id);
   ritaMeny();
   sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Medarbetare"]]);
-  const flik = q.get("flik") === "onskemal" ? "onskemal" : "personal";
+  const flik = ["onskemal", "aktiviteter"].includes(q.get("flik")) ? q.get("flik") : "personal";
   st.flik = flik; st.redigeraOnsk = null;
   vy().innerHTML = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>Medarbetare</h1>
-      <p class="dampad" style="margin:6px 0 0">Sysselsättningsgrad, vilka pass var och en arbetar, helgundantag och önskemål. Använd id-koder i stället för namn.</p></div>
+      <p class="dampad" style="margin:6px 0 0">Sysselsättningsgrad, vilka pass var och en arbetar, helgundantag, önskemål och aktiviteter som APT. Använd id-koder i stället för namn.</p></div>
       <div><a class="knapp" href="#/e/${id}/personer">${IKON.person} Schema per person</a></div></div></section>
     <div class="redigera"><section class="kort">
       <div class="flikar" role="tablist"><button role="tab" data-g="mflik" data-f="personal" aria-selected="${flik === "personal"}">Medarbetare (${st.indata.personal.length})</button>
-        <button role="tab" data-g="mflik" data-f="onskemal" aria-selected="${flik === "onskemal"}">Önskemål (${(st.indata.onskemal || []).length})</button></div>
+        <button role="tab" data-g="mflik" data-f="onskemal" aria-selected="${flik === "onskemal"}">Önskemål (${(st.indata.onskemal || []).length})</button>
+        <button role="tab" data-g="mflik" data-f="aktiviteter" aria-selected="${flik === "aktiviteter"}">Aktiviteter (${(st.indata.aktiviteter || []).length})</button></div>
       <div id="flik">${ritaFlik()}</div></section>
       <aside><section class="kort" id="kontroll">${ritaKontroll()}</section></aside></div>`;
-  kopplaOnskForm();
+  kopplaOnskForm(); kopplaAktForm();
   kontrollera();
 }
 

@@ -36,6 +36,8 @@ def test_fall(fall, tmp_path):
         kpi = json.loads(ut.read_text(encoding="utf-8"))["kpi"]
         if "vakanta_pass" in forv:
             assert kpi["vakanta_pass"] == forv["vakanta_pass"], kpi
+        if "aktivitet_saknas" in forv:
+            assert kpi["aktivitet_saknas"] == forv["aktivitet_saknas"], kpi
         if "jamn_dag_kvall_max_skillnad" in forv:
             # det som blir över ska fördelas jämnt mellan dag och kväll (jämn bemanning)
             from schemamotor.build import expandera_dagvarden

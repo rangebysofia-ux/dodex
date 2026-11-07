@@ -21,6 +21,11 @@ def _tim(m):
     return f"{m // 60}:{m % 60:02d}"
 
 
+def _akt(p):
+    """Aktiviteter i passet som kort text: ' · APT 14:00–16:00'."""
+    return "".join(f" · {a.get('id')} {a['start']}–{a['slut']}" for a in (p or {}).get("aktiviteter") or [])
+
+
 def _bemanning(res, d):
     n = {"morgon": 0, "kvall": 0, "natt": 0}
     for rad in res["schema"].values():
@@ -100,7 +105,7 @@ def excel(res, granskning=None):
             c = ws.cell(row=r, column=d + 2)
             c.border, c.alignment = ram, mitt
             if p:
-                c.value = f"{KOD.get(p['dygnsdel'], p.get('mall', '?'))} {p['start']}–{p['slut']}"
+                c.value = f"{KOD.get(p['dygnsdel'], p.get('mall', '?'))} {p['start']}–{p['slut']}{_akt(p)}"
                 if p["dygnsdel"] in FARG:
                     c.fill = PatternFill("solid", fgColor=FARG[p["dygnsdel"]])
                     c.font = Font(color=TEXTFARG[p["dygnsdel"]], size=9)
@@ -153,6 +158,17 @@ def excel(res, granskning=None):
         wv.append([x["vecka"], x["veckodag"], DEL.get(x["dygnsdel"], f"kl {x['tid']}"), x["antal"]])
     if not res.get("vakanser"):
         wv.append(["Inga vakanser"])
+
+    if res.get("aktiviteter"):
+        wa = wb.create_sheet("Aktiviteter")
+        wa.append(["Aktivitet", "Vecka", "Dag", "Tid", "Deltagare", "Antal", "Behov", "Saknas"])
+        for c in wa[1]:
+            c.font = fet
+        for t in res["aktiviteter"]:
+            wa.append([t["namn"], t["vecka"], t["veckodag"], f"{t['start']}–{t['slut']}", ", ".join(t["deltagare"]),
+                       len(t["deltagare"]), t["behov"], t["saknas"]])
+        wa.column_dimensions["A"].width = 22
+        wa.column_dimensions["E"].width = 40
 
     if granskning:
         wg = wb.create_sheet("Granskning")
@@ -209,7 +225,7 @@ def pdf(res, granskning=None):
             rad = [pid]
             for j in range(7):
                 p = res["schema"][pid][v * 7 + j]
-                rad.append(f"{KOD.get(p['dygnsdel'], '?')} {p['start']}–{p['slut']}" if p else "")
+                rad.append(f"{KOD.get(p['dygnsdel'], '?')} {p['start']}–{p['slut']}" + _akt(p).replace(" · ", "\n") if p else "")
                 if p and p["dygnsdel"] in FARG:
                     stil += [("BACKGROUND", (j + 1, i + 1), (j + 1, i + 1), hex_(FARG[p["dygnsdel"]])),
                              ("TEXTCOLOR", (j + 1, i + 1), (j + 1, i + 1), hex_(TEXTFARG[p["dygnsdel"]]))]
@@ -253,6 +269,12 @@ def pdf(res, granskning=None):
         for x in res["vakanser"]:
             delar.append(Paragraph(f"Vecka {x['vecka']} {x['veckodag']}: {x['antal']} "
                                    f"{DEL[x['dygnsdel']].lower() + 'pass' if x['dygnsdel'] else 'för få kl ' + x['tid']}",
+                                   liten))
+    if res.get("aktiviteter"):
+        delar.append(Paragraph("Aktiviteter", st["Heading2"]))
+        for t in res["aktiviteter"]:
+            delar.append(Paragraph(f"Vecka {t['vecka']} {t['veckodag']} {t['start']}–{t['slut']} {t['namn']}: "
+                                   f"{', '.join(t['deltagare']) or 'inga'}" + (f" (saknas {t['saknas']})" if t["saknas"] else ""),
                                    liten))
     if granskning:
         delar.append(Paragraph("Granskning", st["Heading2"]))

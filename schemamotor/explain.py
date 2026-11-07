@@ -29,6 +29,7 @@ BESKRIVNING = {
     "ANTAL_PASS": ("kontrakt", "{antal} pass under perioden"),
     "TID": ("kontrakt", "arbetstid {tid} timmar (± {tol} min)"),
     "KRAV": ("önskemål som krav", "{krav}"),
+    "AKTIVITET": ("verksamhet", "{akt}"),
 }
 
 
@@ -60,6 +61,12 @@ def text_for(namn, prob):
     if regel == "KRAV":
         o = next(o for o in prob["onskemal"] if o["id"] == ref)
         return regel, o["person"], "önskemål som krav", beskriv_krav(o)
+    if regel == "AKTIVITET":
+        a = next(a for a in prob["aktiviteter"] if a["id"] == ref)
+        dagar = ", ".join(dagtext(d) for d in a["_dagar"][:6]) + (" …" if len(a["_dagar"]) > 6 else "")
+        return regel, a.get("namn") or ref, "verksamhet", (
+            f"aktiviteten {a.get('namn') or ref} {a['start']}–{a['slut']} med {a['_antal']} deltagare ({dagar}) "
+            "måste genomföras, och deltagarna ska arbeta hela tiden")
     p = next(p for p in prob["personer"] if p["id"] == ref)
     niva, mall = BESKRIVNING[regel]
     text = mall.format(v=f"{r['dygnsvila_minuter'] / 60:g}", vv=f"{r['veckovila_minuter'] / 60:g}", bmin=r["block_min"],
@@ -111,7 +118,7 @@ def forklara(prob, tid_s=30):
     per_steg = max(3.0, tid_s / 6)
     status = los_med(enkel, set(alla), tid_s)
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        res["slutsats"] = ("De hårda reglerna om vila, block, helger, antal pass och krav är förenliga."
+        res["slutsats"] = ("De hårda reglerna om vila, block, helger, antal pass, krav och aktiviteter är förenliga."
                            + (" Konflikten ligger i arbetstiden – se förkontrollerna." if res["forkontroller"]
                               else " Gick genereringen inte att lösa, pröva schemamotor.build med längre --tid."))
         return res, 0
@@ -122,6 +129,8 @@ def forklara(prob, tid_s=30):
     # 1. släpp hela personer i taget (personer utan krav först)
     def person(n):
         regel, ref = n.split("|", 1)
+        if regel == "AKTIVITET":
+            return "aktivitet " + ref
         return next(o["person"] for o in prob["onskemal"] if o["id"] == ref) if regel == "KRAV" else ref
     personer = sorted({person(n) for n in kvar}, key=lambda q: any(o["person"] == q for o in prob["onskemal"]))
     for q in personer:

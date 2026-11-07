@@ -60,6 +60,7 @@ Måste alltid uppfyllas.
 | ARBETSTID_48 | Högst 48 timmar per vecka i snitt under 4 veckor | – | 2880 | minuter per vecka i snitt | avtal | ja | Kontrolleras inte separat. Uppfylls när arbetstiden följer kontraktet (högst heltid) och högst 5 arbetsdagar i följd. |
 | SCHEMA_14_DAGAR | Schemat meddelas 14 dagar innan | – | 14 | dagar | avtal | ja | Utanför schemamotorn: verksamhetens ansvar när schemat publiceras. |
 | KRAV | Önskemål markerade som krav | `onskemal[].krav` | av | per önskemål | önskemål | nej | Kan göra schemat olösbart; förklaringen pekar då ut kravet. |
+| AKTIVITET | Aktiviteter markerade som krav | `aktiviteter[].krav` | av | per aktivitet | verksamhet | nej | Den som deltar arbetar hela aktivitetstiden. Kan göra schemat olösbart; förklaringen pekar då ut aktiviteten. |
 
 ### Koppling till AB 25 och ATL
 
@@ -95,6 +96,7 @@ Källa och tillåten avvikelse för varje hård regel. Kontrollerat mot AB 25 i 
 | ARBETSTID_48 | Anmärkning till AB 25 § 13 mom. 7 g: ordinarie arbetstid högst 48 timmar per vecka i genomsnitt under 4 veckor. | Lokalt kollektivavtal (mom. 10). |
 | SCHEMA_14_DAGAR | AB 25 § 13 mom. 5: schemat ska meddelas arbetstagaren senast 14 dagar innan det börjar gälla. | – |
 | KRAV | Medarbetarens önskemål som verksamheten har gjort till krav. | – |
+| AKTIVITET | Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid. | – |
 
 ## Mjuka mål
 
@@ -103,11 +105,12 @@ Optimeras i den här ordningen. Ett lägre mål kan aldrig försämra ett högre
 | Ordning | Mål | Nivå | Styrs av | Standard | Hur det räknas |
 |---|---|---|---|---|---|
 | 1 | Vakanser | verksamhet | – | – | Antal pass och klockslag där behovet inte täcks. Högsta mjuka nivå: behovet görs aldrig hårt. |
-| 2 | Dagar i följd över rekommenderat | princip | `block_rekommenderat` | 4 | Antal tillfällen med fler arbetsdagar i följd än rekommenderat. |
-| 3 | Passlängd | princip | – | – | Minuter från personens snittlängd per pass och från kontrakterad tid. |
-| 4 | Rättvisa och jämn bemanning | princip | `jamn_bemanning` | mjuk | 2 × rättvisa (skillnad i antal kvälls- och morgonpass mellan personer som arbetar båda) + jämn bemanning (över- och underbemanning lika mellan dag och kväll per vecka och för perioden, och ett växande straff för överskott på ett enskilt pass, ungefär kvadratiskt). |
-| 5 | Blandning av morgon och kväll varje vecka | princip | `spridning_kvallar` | mjuk | Veckor med bara morgnar eller bara kvällar för den som arbetar båda. 'stark' flyttar målet direkt efter vakanserna; spridning_tolerans 0 = dessutom högst en kvälls skillnad mot morgnarna. |
-| 6 | Önskemål | önskemål | – | – | Viktade brutna önskemål (vikt 1–10). Önskemål markerade som krav är hårda. |
+| 2 | Aktiviteter under arbetstid | verksamhet | – | – | Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela aktivitetstiden. Aktiviteter markerade som krav är hårda. |
+| 3 | Dagar i följd över rekommenderat | princip | `block_rekommenderat` | 4 | Antal tillfällen med fler arbetsdagar i följd än rekommenderat. |
+| 4 | Passlängd | princip | – | – | Minuter från personens snittlängd per pass och från kontrakterad tid. |
+| 5 | Rättvisa och jämn bemanning | princip | `jamn_bemanning` | mjuk | 2 × rättvisa (skillnad i antal kvälls- och morgonpass mellan personer som arbetar båda) + jämn bemanning (över- och underbemanning lika mellan dag och kväll per vecka och för perioden, och ett växande straff för överskott på ett enskilt pass, ungefär kvadratiskt). |
+| 6 | Blandning av morgon och kväll varje vecka | princip | `spridning_kvallar` | mjuk | Veckor med bara morgnar eller bara kvällar för den som arbetar båda. 'stark' flyttar målet direkt efter vakanserna; spridning_tolerans 0 = dessutom högst en kvälls skillnad mot morgnarna. |
+| 7 | Önskemål | önskemål | – | – | Viktade brutna önskemål (vikt 1–10). Önskemål markerade som krav är hårda. |
 
 ### Inställningar för de mjuka målen
 
@@ -126,6 +129,7 @@ Lättmotorn (webbläsare och mobil) söker heuristiskt och väger målen med fas
 |---|---:|---|
 | Brott mot hård regel | 100 000 000 | brott |
 | Vakant pass | 100 000 | pass |
+| Saknad deltagare i aktivitet | 50 000 | deltagare |
 | Blandning morgon och kväll (stark) | 400 | vecka utan blandning |
 | Dagar i följd över rekommenderat | 60 | tillfälle |
 | Jämn bemanning | 40 | kvadraten på överskottet per pass  plus skillnaden dag/kväll |

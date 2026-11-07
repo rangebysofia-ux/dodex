@@ -27,6 +27,8 @@ FALTNAMN = {
     "person": "person", "typ": "typ", "onskemal": "önskemål", "regler": "regler",
     "nattpass": "nattpass", "tidpunkter": "tidpunkter", "delperioder": "delperioder", "varde": "värde", "start": "start", "slut": "slut",
     "tid": "tid", "antal": "antal", "helgfrekvens": "helgfrekvens", "helggrupp": "helggrupp",
+    "aktiviteter": "aktivitet", "andel": "andel", "deltagare": "deltagare", "varje_person": "gånger per person",
+    "namn": "namn", "fran_golvet": "från golvet",
 }
 
 Klocka = Annotated[str, Field(pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")]
@@ -134,6 +136,40 @@ class Onskemal(Strikt):
         return self
 
 
+class Aktivitet(Strikt):
+    """Aktivitet under arbetstid, till exempel APT eller handledning. Den som deltar arbetar hela aktivitetstiden.
+
+    Antal per tillfälle: `antal`, eller `andel` av deltagargruppen (avrundat uppåt), eller – om bara
+    `varje_person` anges – så många att alla hinner delta så många gånger. Utan något av dem deltar alla."""
+    id: str = Field(min_length=1, max_length=20)
+    namn: Optional[str] = None
+    start: Klocka
+    slut: Klocka
+    dagar: Optional[list[str]] = None
+    veckor: Optional[Union[Literal["alla", "jämna", "udda"], list[int]]] = None
+    dagindex: Optional[list[int]] = None
+    antal: Optional[int] = Field(default=None, ge=1)
+    andel: Optional[float] = Field(default=None, gt=0, le=1)
+    deltagare: Optional[list[str]] = None
+    varje_person: Optional[int] = Field(default=None, ge=1)
+    fran_golvet: bool = True
+    krav: bool = False
+    kommentar: Optional[str] = None
+
+    @model_validator(mode="after")
+    def kontroll(self):
+        if self.dagar is not None:
+            okanda = [d for d in self.dagar if d not in DAGNAMN]
+            if okanda:
+                raise ValueError(f"okänd dag {', '.join(okanda)} (använd {', '.join(DAGNAMN)})")
+        if self.antal is not None and self.andel is not None:
+            raise ValueError("ange antal eller andel, inte båda")
+        a, b = (int(t.split(":")[0]) * 60 + int(t.split(":")[1]) for t in (self.start, self.slut))
+        if b <= a:
+            raise ValueError("aktiviteten måste sluta efter att den börjar samma dag")
+        return self
+
+
 class Indata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -150,6 +186,7 @@ class Indata(BaseModel):
     tidpunkter: dict[str, list[Tidpunkt]] = Field(default_factory=dict)
     personal: list[Person] = Field(min_length=1)
     onskemal: list[Onskemal] = Field(default_factory=list)
+    aktiviteter: list[Aktivitet] = Field(default_factory=list)
     losare: dict = Field(default_factory=dict)
     # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
     avvikelser: list[str] = Field(default_factory=list)
@@ -231,6 +268,17 @@ def _helhet(d: dict) -> list[str]:
         if isinstance(o, dict) and isinstance(o.get("dagindex"), list) and any(
                 isinstance(v, int) and v < 0 for v in o["dagindex"]):
             fel.append(f"Önskemål {o.get('id') or i + 1}: dagindex kan inte vara negativt.")
+    akt_ids = [str(a.get("id")) for a in d.get("aktiviteter") or [] if isinstance(a, dict)]
+    for i in sorted({i for i in akt_ids if akt_ids.count(i) > 1}):
+        fel.append(f"Aktiviteten {i} finns flera gånger.")
+    for a in d.get("aktiviteter") or []:
+        if not isinstance(a, dict):
+            continue
+        okanda = [p for p in a.get("deltagare") or [] if p not in ids]
+        if okanda:
+            fel.append(f"Aktiviteten {a.get('id')} har deltagare som inte finns i personalen: {', '.join(map(str, okanda))}.")
+        if isinstance(a.get("veckor"), list) and any(isinstance(v, int) and not 1 <= v <= W for v in a["veckor"]):
+            fel.append(f"Aktiviteten {a.get('id')}: veckorna måste ligga mellan 1 och {W}.")
     return fel
 
 

@@ -74,3 +74,14 @@ def test_flytta_pass_till_annan_person(ut):
 def test_blanda_inte_och_fel_vecka(ut):
     assert "Blanda inte" in ut["blandat"]
     assert "Vecka 99 finns inte" in ut["felvecka"]
+
+
+def test_aktivitet_via_assistenten(ut):
+    """'Lägg APT tisdag 14–16 för halva gruppen' blir en aktivitet i indata som går igenom kontrollen."""
+    from schemamotor.modell import kontrollera_indata
+    a = ut["akt"]
+    assert a == [{"id": "APT", "namn": "APT", "start": "14:00", "slut": "16:00", "dagar": ["tis"], "veckor": [2, 4], "andel": 0.5}]
+    assert "sluta efter" in ut["aktfel"]
+    ind = json.loads((ROT / "tests" / "fall" / "friday_rule_vacancy.json").read_text(encoding="utf-8"))
+    ind["aktiviteter"] = a
+    assert kontrollera_indata(ind) == []

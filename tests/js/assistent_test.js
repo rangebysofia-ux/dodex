@@ -39,4 +39,8 @@ try { kor("foresla_andringar", { sammanfattning: "x", andringar: [{ typ: "satt_p
 catch (e) { ut.blandat = e.message; }
 try { kor("foresla_andringar", { sammanfattning: "x", andringar: [{ typ: "satt_pass", person: "F1", vecka: 99, veckodag: "tis", dygnsdel: "kvall" }] }); ut.felvecka = "inget fel"; }
 catch (e) { ut.felvecka = e.message; }
+// aktivitet: APT tisdag 14–16 för halva gruppen, vecka 2 och 4
+ut.akt = A.tillampa(structuredClone(indata), [{ typ: "lagg_till_aktivitet", namn: "APT", start: "14:00", slut: "16:00", veckodagar: ["tis"], veckor: "2,4", andel_procent: 50 }]).aktiviteter;
+try { A.tillampa(structuredClone(indata), [{ typ: "lagg_till_aktivitet", namn: "APT", start: "16:00", slut: "14:00", veckodagar: ["tis"] }]); ut.aktfel = "inget fel"; }
+catch (e) { ut.aktfel = e.message; }
 console.log(JSON.stringify(ut));

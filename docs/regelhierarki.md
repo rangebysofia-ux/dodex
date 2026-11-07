@@ -38,6 +38,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 14. **Nattpasset är i grunden 9 timmar (princip).** Standardnattpasset är 21:45–06:45 med måltidsuppehåll, så hela passet är arbetstid. Det ger 15 minuters överlämning från kvällspasset (slutar 22:00). Mellan 06:45 och dagpassets start 07:00 finns ingen överlappning. 9 timmar är ett standardvärde, inget tak: en enhet kan ange andra tider i `nattpass`. Beslutat av användaren 2026-11-07.
 
+15. **Aktiviteter under arbetstid (verksamhet).** APT, handledning, utbildning och liknande läggs in på grundschemat med dag, tid och hur många som deltar (antal, andel eller antal gånger per person). Den som deltar arbetar hela aktivitetstiden, så passet läggs om för att täcka tiden; tiden är arbetstid och påverkar passlängd, vila, OB och bemanning. Aktiviteten är ett mjukt mål direkt efter vakanserna: behovet går före, och en aktivitet kan aldrig köpas med ett avtalsbrott. Med `krav` blir den hård och visas i förklaringen när den krockar med andra regler. Deltagarna fördelas rättvist. Deltagare räknas inte på golvet vid klockslag under aktiviteten (`fran_golvet`). Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.
@@ -47,11 +49,12 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 De mjuka målen löses i ordning, och varje nivå låses innan nästa optimeras:
 
 1. Vakanser (pass per dygnsdel och tidpunkter)
-2. Blocklängd (antal tillfällen med fler än 4 dagar i följd)
-3. Passlängd (avvikelse från mållängd per pass och från kontrakterad tid, i minuter)
-4. Rättvisa och jämn bemanning (spridning i antal kvälls- och morgonpass mellan personer, vägd dubbelt, plus skillnaden mellan dag och kväll i över- och underbemanning)
-5. Spridning (veckor med bara morgnar eller bara kvällar; med inställningen "stark" direkt efter vakanser)
-6. Önskemål (viktade brutna önskemål)
+2. Aktiviteter (saknade deltagare, därefter ojämn fördelning mellan personerna)
+3. Blocklängd (antal tillfällen med fler än 4 dagar i följd)
+4. Passlängd (avvikelse från mållängd per pass och från kontrakterad tid, i minuter)
+5. Rättvisa och jämn bemanning (spridning i antal kvälls- och morgonpass mellan personer, vägd dubbelt, plus skillnaden mellan dag och kväll i över- och underbemanning)
+6. Spridning (veckor med bara morgnar eller bara kvällar; med inställningen "stark" direkt efter vakanser)
+7. Önskemål (viktade brutna önskemål)
 
 Det betyder att en lägre nivå aldrig kan köpas på bekostnad av en högre. Ett femte arbetspass i följd accepteras bara om det är nödvändigt för att undvika en vakans, aldrig för att få jämnare passlängder.
 

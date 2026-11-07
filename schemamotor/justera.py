@@ -39,6 +39,12 @@ def _pass(p, prob, natt):
         ut.update(rast=langd - n, netto=n)
     if p.get("manuell") or ut["mall"] == "manuell":
         ut["manuell"] = True
+    # aktiviteter följer med passet; täcker passet inte längre tiden visar granskningen det
+    kanda = {a["id"]: a for a in prob.get("aktiviteter", [])}
+    akt = [{"id": a["id"], "namn": kanda[a["id"]].get("namn") or a["id"], "start": kanda[a["id"]]["start"],
+            "slut": kanda[a["id"]]["slut"]} for a in p.get("aktiviteter") or [] if isinstance(a, dict) and a.get("id") in kanda]
+    if akt:
+        ut["aktiviteter"] = akt
     return ut
 
 
@@ -69,6 +75,29 @@ def justera(indata, schema, grund=None):
             if n < antal:
                 vakanser.append({"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_,
                                  "tid": None, "antal": antal - n})
+    # aktivitetstillfällen: vem som deltar (på passet som täcker tiden) och hur många som saknas
+    tillfallen, borta = [], []
+    for a in prob.get("aktiviteter", []):
+        for d in a["_dagar"]:
+            delt = []
+            for pid, rad in nytt.items():
+                for dd in (d, (d - 1) % N):
+                    q = rad[dd]
+                    if not q or not any(x["id"] == a["id"] for x in q.get("aktiviteter", [])):
+                        continue
+                    s0 = dd * DYGN + tid(q["start"])
+                    a0 = d * DYGN + a["_start"]
+                    if dd != d and a0 < s0:
+                        continue
+                    if dd == d and a0 < s0 and q["dygnsdel"] == "natt":
+                        continue
+                    delt.append(pid)
+                    if a.get("fran_golvet", True):
+                        borta.append((a0, d * DYGN + a["_slut"]))
+                    break
+            tillfallen.append({"aktivitet": a["id"], "namn": a.get("namn") or a["id"], "dag": d, "vecka": d // 7 + 1,
+                               "veckodag": DAGNAMN[d % 7], "start": a["start"], "slut": a["slut"], "deltagare": delt,
+                               "behov": a["_onskat"], "saknas": max(0, a["_onskat"] - len(delt))})
     L = N * DYGN
     intervall = []
     for rad in nytt.values():
@@ -80,8 +109,9 @@ def justera(indata, schema, grund=None):
     for d in range(N):
         for tp in prob["tidpunkter"][d % 7] or []:
             t = d * DYGN + tid(tp["tid"])
-            n = sum(1 for s, e in intervall
-                    if s <= t < e or (prob["cykliskt"] and (s <= t + L < e or s <= t - L < e)))
+            def inne(s, e):
+                return s <= t < e or (prob["cykliskt"] and (s <= t + L < e or s <= t - L < e))
+            n = sum(1 for s, e in intervall if inne(s, e)) - sum(1 for s, e in borta if inne(s, e))
             if n < tp["antal"]:
                 vakanser.append({"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": None,
                                  "tid": tp["tid"], "antal": tp["antal"] - n})
@@ -92,11 +122,13 @@ def justera(indata, schema, grund=None):
         rad = [x for x in nytt[pid] if x]
         personer[pid] = {"pass": len(rad), "minuter": sum(x["netto"] for x in rad), "mal_minuter": p["mal_minuter"],
                          "kvallspass": sum(x["dygnsdel"] == "kvall" for x in rad),
-                         "helggrupp": gamla.get(pid, {}).get("helggrupp")}
+                         "helggrupp": gamla.get(pid, {}).get("helggrupp"),
+                         "aktiviteter": sum(len(x.get("aktiviteter", [])) for x in rad)}
     kpi = {"vakanta_pass": sum(v["antal"] for v in vakanser if v["dygnsdel"]),
            "vakanta_tidpunkter": sum(v["antal"] for v in vakanser if v["tid"]),
            "manuella_pass": sum(1 for rad in nytt.values() for p in rad if p and p.get("manuell"))}
     kpi["vakanser"] = kpi["vakanta_pass"] + kpi["vakanta_tidpunkter"]
+    kpi["aktivitet_saknas"] = sum(t["saknas"] for t in tillfallen)
     return {"status": "OK", "enhet": prob["enhet"], "veckor": W, "cykliskt": prob["cykliskt"],
             "steg": (grund or {}).get("steg", []), "kpi": kpi, "personer": personer, "vakanser": vakanser,
-            "schema": nytt, "justerat": True}
+            "aktiviteter": tillfallen, "schema": nytt, "justerat": True}

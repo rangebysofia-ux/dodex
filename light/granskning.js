@@ -14,7 +14,7 @@ const GRANSKNING = (() => {
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", PASSFONSTER: "princip",
-    BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip" };
+    BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
@@ -45,6 +45,18 @@ const GRANSKNING = (() => {
       if (k[0] > nyckel[0] || (k[0] === nyckel[0] && k[1] > nyckel[1])) { nyckel = k; bast = t; }
     }
     return bast;
+  }
+
+  // dagindex för en aktivitet: dagindex, eller dagar och veckor (alla, jämna, udda eller en lista)
+  function aktivitetsdagar(a, W, startIso) {
+    if (Array.isArray(a.dagindex)) return [...new Set(a.dagindex.map(d => ((d % (W * 7)) + W * 7) % (W * 7)))].sort((x, y) => x - y);
+    const dagar = a.dagar && a.dagar.length ? a.dagar : DAGNAMN, vv = a.veckor || "alla", ut = new Set();
+    for (let w = 0; w < W; w++) {
+      const nr = startIso ? startIso + w : w + 1;
+      if (vv === "alla" || (vv === "jämna" && nr % 2 === 0) || (vv === "udda" && nr % 2 === 1) || (Array.isArray(vv) && vv.includes(w + 1)))
+        dagar.forEach(x => ut.add(w * 7 + DAGNAMN.indexOf(x)));
+    }
+    return [...ut].sort((x, y) => x - y);
   }
 
   function kontrollera(indata, dok) {
@@ -163,6 +175,51 @@ const GRANSKNING = (() => {
       if (tol == null) { tol = r.tolerans_minuter; if (natt && arbetstider.length) tol = Math.max(tol, Math.ceil(Math.min(...arbetstider) / 2)); }
       const arb = arbetstider.reduce((a, b) => a + b, 0);
       if (Math.abs(arb - malMin) > tol) brott("TID", pid, `Arbetstid ${h(arb)} h, kontrakterat ${h(malMin)} h (tolerans ${tol} min).`);
+    }
+
+    // aktiviteter (verksamhet): den som deltar ska arbeta hela aktivitetstiden
+    const akt = Object.fromEntries((indata.aktiviteter || []).map(a => [a.id, a]));
+    const deltar = new Map();  // "id|dag" -> [person]
+    for (const [pid, lista] of Object.entries(alla)) for (const [d, s, e, p] of lista) for (const x of p.aktiviteter || []) {
+      const a = akt[x.id];
+      if (!a) { brott("AKTIVITET", pid, `${dagText(d)}: aktiviteten ${x.id} finns inte i indata.`); continue; }
+      const namn = a.namn || a.id;
+      let a0 = d * DYGN + tid(a.start); if (a0 < s) a0 += DYGN;
+      const a1 = a0 - tid(a.start) + tid(a.slut), dag = Math.floor(a0 / DYGN) % N;
+      if (!(s <= a0 && a1 <= e)) { brott("AKTIVITET", pid, `${dagText(dag)}: deltar i ${namn} ${a.start}–${a.slut} men passet är ${p.start}–${p.slut}. Den som deltar ska arbeta hela tiden.`); continue; }
+      if (!aktivitetsdagar(a, W, indata.start_iso_vecka).includes(dag)) { brott("AKTIVITET", pid, `${dagText(dag)}: ${namn} ligger inte på den dagen.`); continue; }
+      const k = a.id + "|" + dag;
+      if (!deltar.has(k)) deltar.set(k, []);
+      if (deltar.get(k).includes(pid)) { brott("AKTIVITET", pid, `${dagText(dag)}: deltar två gånger i ${namn}.`); continue; }
+      deltar.get(k).push(pid);
+    }
+    for (const a of Object.values(akt)) {
+      const namn = a.namn || a.id, dagar = aktivitetsdagar(a, W, indata.start_iso_vecka);
+      let grupp;
+      if (a.deltagare && a.deltagare.length) grupp = a.deltagare.slice();
+      else {
+        const f = { morgon: [tid(r.morgon_start), tid(r.kant_till)], kvall: [tid(r.kant_fran), tid(r.kvall_slut)] };
+        const np = (indata.nattpass && indata.nattpass[0]) || { start: "21:45", slut: "06:45" };
+        const ns = tid(np.start), ne = tid(np.slut); f.natt = [ns, ne <= ns ? ne + DYGN : ne];
+        const a0 = tid(a.start), a1 = tid(a.slut);
+        const ryms = del => { const [f0, f1] = f[del]; return (f0 <= a0 && a1 <= f1) || (f0 <= a0 + DYGN && a1 + DYGN <= f1); };
+        grupp = (indata.personal || []).filter(q => (q.dygnsdelar || ["morgon", "kvall"]).some(ryms)).map(q => q.id);
+      }
+      const G = grupp.length;
+      const beh = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && dagar.length ? Math.ceil(G * a.varje_person / dagar.length) : G;
+      for (const d of dagar) {
+        const n = (deltar.get(a.id + "|" + d) || []).length;
+        if (n < beh) brott("AKTIVITET", null, `${dagText(d)} ${a.start}–${a.slut}: ${n} deltar i ${namn}, behov ${beh}.`, !!a.krav);
+      }
+      if (a.deltagare && a.deltagare.length) {
+        const utanfor = new Set();
+        deltar.forEach((l, k) => { if (k.startsWith(a.id + "|")) l.forEach(q => { if (!grupp.includes(q)) utanfor.add(q); }); });
+        if (utanfor.size) brott("AKTIVITET", null, `${namn}: ${[...utanfor].sort().join(", ")} deltar men är inte med i deltagarlistan.`);
+      }
+      if (a.varje_person) for (const q of grupp) {
+        let n = 0; deltar.forEach((l, k) => { if (k.startsWith(a.id + "|") && l.includes(q)) n++; });
+        if (n !== a.varje_person) brott("AKTIVITET", q, `Deltar ${n} gånger i ${namn}, ska vara ${a.varje_person}.`, false);
+      }
     }
 
     const behov = Array.from({ length: 7 }, () => ({}));

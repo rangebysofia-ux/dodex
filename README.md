@@ -5,7 +5,7 @@ Cykliska grundscheman för dygnet runt-verksamhet enligt Kommunals avtalsområde
 Systemet har två delar:
 
 - **schemamotor** – lägger, granskar och förklarar scheman. Kan köras från kommandoraden.
-- **schemawebb** – webbtjänsten DODEX Scheduler, med inloggning, där man lägger in enheter, personal, behov, önskemål och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
+- **schemawebb** – webbtjänsten DODEX Scheduler, med inloggning, där man lägger in enheter, personal, behov, önskemål, aktiviteter som APT och regler, lägger schemat, ser resultatet, jämför körningar och exporterar till Excel och PDF. Fungerar i mobilen.
 
 ## Schema light
 

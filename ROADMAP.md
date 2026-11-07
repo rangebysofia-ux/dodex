@@ -35,6 +35,10 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 - [ ] **12. Växelkurs.** Visa vad varje mjuk regel kostar i vakanstimmar.
 - [ ] **13. Lärande av val.** Spara vilka utkast användaren väljer och vilka tolkningar som rättas, och använd det för att föreslå vikter och tolkningar.
 
+## Fas 5 – Aktiviteter
+
+- [x] **14. Aktiviteter under arbetstid.** APT, handledning, utbildning och liknande med dag, tid och antal deltagare (antal, andel eller gånger per person). Deltagarna arbetar hela aktivitetstiden och fördelas rättvist; tiden påverkar passlängd, vila, OB och bemanning. Motor, granskning, förklaring, lättversion, gränssnitt, export och assistent (docs/indata-schema.md, beslut 15 i docs/regelhierarki.md).
+
 ## Senare
 
 Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr` och OB enligt AB 25 § 21 (docs/ob.md); löneskillnader per person och lokala OB-nivåer återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*

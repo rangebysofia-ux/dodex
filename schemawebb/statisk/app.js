@@ -217,7 +217,7 @@ async function visaEnhet(id, flik) {
 }
 
 function ritaEnhet() {
-  const F = [["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["period", "Period"], ["json", "Avancerat"]];
+  const F = [["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["period", "Period"], ["json", "Avancerat"]];
   vy().innerHTML = `
     <section class="kort">
       <div class="rubrikrad">
@@ -228,7 +228,7 @@ function ritaEnhet() {
     </section>
     <div class="redigera">
       <section class="kort">
-        <div class="flikar" role="tablist">${F.map(([k, t]) => `<button role="tab" data-g="flik" data-flik="${k}" aria-selected="${st.flik === k}">${t}${k === "personal" ? ` (${st.indata.personal.length})` : k === "onskemal" ? ` (${(st.indata.onskemal || []).length})` : ""}</button>`).join("")}</div>
+        <div class="flikar" role="tablist">${F.map(([k, t]) => `<button role="tab" data-g="flik" data-flik="${k}" aria-selected="${st.flik === k}">${t}${k === "personal" ? ` (${st.indata.personal.length})` : k === "onskemal" ? ` (${(st.indata.onskemal || []).length})` : k === "aktiviteter" ? ` (${(st.indata.aktiviteter || []).length})` : ""}</button>`).join("")}</div>
         <div id="flik">${ritaFlik()}</div>
       </section>
       <aside>
@@ -238,7 +238,7 @@ function ritaEnhet() {
     </div>`;
   $("#enhet-namn").oninput = e => { st.enhet.namn = e.target.value; markeraAndrad(false); };
   $("#spara").onclick = spara;
-  kopplaOnskForm();
+  kopplaOnskForm(); kopplaAktForm();
   uppdateraSparaknapp();
 }
 
@@ -286,6 +286,7 @@ function ritaFlik() {
     }
 
     case "onskemal": return ritaOnskemal();
+    case "aktiviteter": return ritaAktiviteter();
 
     case "period": return `
       <div class="falt">
@@ -406,6 +407,105 @@ function nyttOnskId() {
   return "O" + n;
 }
 
+// ---------------------------------------------------------------- aktiviteter (APT, handledning, utbildning …)
+const VEMDELTAR = { alla: "Alla som kan arbeta då", andel: "En andel av gruppen", antal: "Ett visst antal", varje: "Alla, fördelat på tillfällena" };
+function tomAkt() { return { namn: "APT", dagar: ["tis"], veckor: "alla", start: "14:00", slut: "16:00", andel: 0.5, fran_golvet: true, krav: false }; }
+
+function aktText(a) {
+  const vv = Array.isArray(a.veckor) ? `vecka ${a.veckor.join(", ")}` : a.veckor === "jämna" ? "jämna veckor" : a.veckor === "udda" ? "udda veckor" : "varje vecka";
+  const dagar = a.dagar && a.dagar.length ? a.dagar.join(", ") : "alla dagar";
+  const vem = a.antal ? `${a.antal} personer` : a.andel ? `${Math.round(a.andel * 100)} % av gruppen` : a.varje_person ? `alla, ${a.varje_person} ${a.varje_person === 1 ? "gång" : "gånger"} var` : "alla";
+  return `${a.namn || a.id} ${a.start}–${a.slut}, ${dagar}, ${vv}: ${vem}${a.deltagare?.length ? ` bland ${a.deltagare.join(", ")}` : ""}`;
+}
+
+function ritaAktiviteter() {
+  const lista = st.indata.aktiviteter || [];
+  const a = st.redigeraAkt;
+  let h = `<p class="dampad liten">Aktiviteter under arbetstid, till exempel APT, handledning eller utbildning. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Därför påverkar aktiviteten passlängd, vila, OB och bemanningen på golvet. Deltagarna fördelas rättvist.</p>`;
+  h += a ? ritaAktForm(a.data, a.index) : `<p><button class="primar" data-g="ny-akt">+ Ny aktivitet</button></p>`;
+  h += lista.length ? lista.map((x, n) => `<div class="onsk"><div><div>${x.krav ? `<span class="niva niva-avtal">måste</span> ` : ""}★ ${esc(aktText(x))}</div>
+      <div class="dampad liten">${x.fran_golvet === false ? "Räknas som i tjänst på golvet." : "Deltagarna räknas inte på golvet under aktiviteten."}${x.kommentar ? " " + esc(x.kommentar) : ""}</div></div>
+      <div class="chips"><button class="liten" data-g="andra-akt" data-n="${n}">Ändra</button><button class="liten fara" data-g="ta-bort-akt" data-n="${n}" aria-label="Ta bort">×</button></div></div>`).join("")
+    : `<p class="tom">Inga aktiviteter.</p>`;
+  return h;
+}
+
+function ritaAktForm(a, index) {
+  const vv = Array.isArray(a.veckor) ? "vissa" : (a.veckor || "alla");
+  const vem = a.antal ? "antal" : a.andel ? "andel" : a.varje_person ? "varje" : "alla";
+  const valda = new Set(a.deltagare || []);
+  return `<form class="formular" id="akt-form">
+    <div class="falt">
+      <div><label for="a-namn">Namn</label><input id="a-namn" value="${esc(a.namn || "")}" placeholder="APT" required></div>
+      <div><label for="a-start">Från</label><input id="a-start" type="time" value="${esc(a.start)}" required></div>
+      <div><label for="a-slut">Till</label><input id="a-slut" type="time" value="${esc(a.slut)}" required></div>
+    </div>
+    <div><label>Dagar</label><div class="chips">${DAGAR.map(d => `<label><input type="checkbox" name="a-dag" value="${d}"${(a.dagar || []).includes(d) ? " checked" : ""}> ${d}</label>`).join("")}</div></div>
+    <div class="falt">
+      <div><label for="a-veckor">Veckor</label><select id="a-veckor">
+        <option value="alla"${vv === "alla" ? " selected" : ""}>Varje vecka</option><option value="jämna"${vv === "jämna" ? " selected" : ""}>Jämna veckor</option>
+        <option value="udda"${vv === "udda" ? " selected" : ""}>Udda veckor</option><option value="vissa"${vv === "vissa" ? " selected" : ""}>Vissa veckor</option></select></div>
+      <div id="a-vissa"${vv === "vissa" ? "" : " hidden"}><label for="a-veckolista">Veckor i schemat (2, 4)</label><input id="a-veckolista" value="${Array.isArray(a.veckor) ? a.veckor.join(", ") : ""}"></div>
+    </div>
+    <div class="falt">
+      <div><label for="a-vem">Vilka deltar</label><select id="a-vem">${Object.entries(VEMDELTAR).map(([k, t]) => `<option value="${k}"${k === vem ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div id="a-andel-ruta"${vem === "andel" ? "" : " hidden"}><label for="a-andel">Andel, %</label><input id="a-andel" type="number" min="5" max="100" step="5" value="${Math.round((a.andel || 0.5) * 100)}"></div>
+      <div id="a-antal-ruta"${vem === "antal" ? "" : " hidden"}><label for="a-antal">Antal per tillfälle</label><input id="a-antal" type="number" min="1" value="${a.antal || 2}"></div>
+      <div id="a-varje-ruta"${vem === "varje" ? "" : " hidden"}><label for="a-varje">Gånger per person</label><input id="a-varje" type="number" min="1" value="${a.varje_person || 1}"></div>
+    </div>
+    <details${valda.size ? " open" : ""}><summary>Bara vissa personer (valfritt)</summary>
+      <div class="chips" style="margin-top:6px">${st.indata.personal.map(p => `<label><input type="checkbox" name="a-pers" value="${esc(p.id)}"${valda.has(p.id) ? " checked" : ""}> ${esc(p.id)}</label>`).join("")}</div>
+      <p class="dampad liten" style="margin:4px 0 0">Inga valda betyder alla som har pass som kan täcka tiden.</p></details>
+    <p><label class="check"><input type="checkbox" id="a-golv"${a.fran_golvet !== false ? " checked" : ""}> Deltagarna räknas inte på golvet under aktiviteten</label><br>
+      <label class="check"><input type="checkbox" id="a-krav"${a.krav ? " checked" : ""}> Måste genomföras (annars läggs den så långt det går, efter behovet)</label></p>
+    <div><label for="a-kommentar">Kommentar (valfri, utan personuppgifter)</label><input id="a-kommentar" value="${esc(a.kommentar || "")}"></div>
+    <div class="chips"><button class="primar" type="submit">${index == null ? "Lägg till" : "Spara ändring"}</button><button type="button" data-g="avbryt-akt">Avbryt</button></div>
+  </form>`;
+}
+
+function kopplaAktForm() {
+  const f = $("#akt-form");
+  if (!f) return;
+  const a = st.redigeraAkt.data;
+  $("#a-veckor").onchange = () => ($("#a-vissa").hidden = $("#a-veckor").value !== "vissa");
+  $("#a-vem").onchange = () => { const v = $("#a-vem").value; $("#a-andel-ruta").hidden = v !== "andel"; $("#a-antal-ruta").hidden = v !== "antal"; $("#a-varje-ruta").hidden = v !== "varje"; };
+  f.onsubmit = e => {
+    e.preventDefault();
+    const namn = $("#a-namn").value.trim() || "Aktivitet";
+    const ny = { id: a.id || nyttAktId(namn), namn, start: $("#a-start").value, slut: $("#a-slut").value };
+    if (!(ny.slut > ny.start)) { meddela("Aktiviteten måste sluta efter att den börjar, samma dag."); return; }
+    const dagar = [...f.querySelectorAll("[name=a-dag]:checked")].map(x => x.value);
+    if (!dagar.length) { meddela("Välj minst en dag."); return; }
+    ny.dagar = dagar;
+    const vv = $("#a-veckor").value;
+    if (vv === "vissa") {
+      const l = $("#a-veckolista").value.split(/[,; ]+/).map(Number).filter(n => n > 0);
+      if (!l.length) { meddela("Ange vilka veckor, till exempel 2, 4."); return; }
+      ny.veckor = l;
+    } else if (vv !== "alla") ny.veckor = vv;
+    const vem = $("#a-vem").value;
+    if (vem === "andel") ny.andel = Math.max(5, Math.min(100, +$("#a-andel").value || 50)) / 100;
+    if (vem === "antal") ny.antal = Math.max(1, parseInt($("#a-antal").value) || 1);
+    if (vem === "varje") ny.varje_person = Math.max(1, parseInt($("#a-varje").value) || 1);
+    const pers = [...f.querySelectorAll("[name=a-pers]:checked")].map(x => x.value);
+    if (pers.length) ny.deltagare = pers;
+    if (!$("#a-golv").checked) ny.fran_golvet = false;
+    if ($("#a-krav").checked) ny.krav = true;
+    const k = $("#a-kommentar").value.trim(); if (k) ny.kommentar = k;
+    st.indata.aktiviteter = st.indata.aktiviteter || [];
+    if (st.redigeraAkt.index == null) st.indata.aktiviteter.push(ny); else st.indata.aktiviteter[st.redigeraAkt.index] = ny;
+    st.redigeraAkt = null;
+    markeraAndrad(true);
+  };
+}
+
+function nyttAktId(namn) {
+  const ids = new Set((st.indata.aktiviteter || []).map(a => a.id));
+  const bas = (namn.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "AKT").slice(0, 8);
+  let id = bas, n = 2; while (ids.has(id)) id = bas + n++;
+  return id;
+}
+
 // ---------------------------------------------------------------- kontroll och körningslista
 function kontrakteradTid(indata) {
   const ht = (indata.heltid_minuter_per_vecka || 2220) / 60;
@@ -477,7 +577,7 @@ function kontrollera() {
 function markeraAndrad(rita) {
   st.andrad = true;
   uppdateraSparaknapp();
-  if (rita && $("#flik")) { $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); uppdateraFlikrubriker(); }
+  if (rita && $("#flik")) { $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); kopplaAktForm(); uppdateraFlikrubriker(); }
   if (rita && st.vy === "installningar") ritaInstallningar();
   kontrollera();
   clearTimeout(markeraAndrad.t);
@@ -487,6 +587,7 @@ function markeraAndrad(rita) {
 function uppdateraFlikrubriker() {
   document.querySelectorAll("[data-flik=personal]").forEach(b => (b.textContent = `Personal (${st.indata.personal.length})`));
   document.querySelectorAll("[data-flik=onskemal]").forEach(b => (b.textContent = `Önskemål (${(st.indata.onskemal || []).length})`));
+  document.querySelectorAll("[data-flik=aktiviteter],[data-g=mflik][data-f=aktiviteter]").forEach(b => (b.textContent = `Aktiviteter (${(st.indata.aktiviteter || []).length})`));
 }
 
 function uppdateraSparaknapp() {
@@ -745,11 +846,11 @@ document.addEventListener("click", async e => {
         await api("DELETE", "enheter/" + el.dataset.id); meddela(`${el.dataset.namn} är borttagen.`); visaEnheter(); break;
       case "iflik": st.iflik = el.dataset.f; ritaInstallningar(); break;
       case "mflik":
-        st.flik = el.dataset.f; st.redigeraOnsk = null;
+        st.flik = el.dataset.f; st.redigeraOnsk = null; st.redigeraAkt = null;
         document.querySelectorAll("[data-g=mflik]").forEach(b => b.setAttribute("aria-selected", b === el));
         $("#flik").innerHTML = ritaFlik(); history.replaceState(null, "", `#/e/${st.enhet.id}/medarbetare?flik=${st.flik}`); break;
       case "flik":
-        st.flik = el.dataset.flik; st.redigeraOnsk = null;
+        st.flik = el.dataset.flik; st.redigeraOnsk = null; st.redigeraAkt = null;
         document.querySelectorAll("[data-g=flik]").forEach(b => b.setAttribute("aria-selected", b === el));
         $("#flik").innerHTML = ritaFlik(); history.replaceState(null, "", `#/e/${st.enhet.id}/indata?flik=${st.flik}`); break;
       case "lagg-schema": await laggSchema(); break;
@@ -790,6 +891,10 @@ document.addEventListener("click", async e => {
         st.redigeraOnsk = { index: null, data: tomtOnsk() }; $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); $("#o-person").focus(); break;
       case "andra-onsk": st.redigeraOnsk = { index: +el.dataset.n, data: structuredClone(st.indata.onskemal[+el.dataset.n]) }; $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); break;
       case "avbryt-onsk": st.redigeraOnsk = null; $("#flik").innerHTML = ritaFlik(); break;
+      case "ny-akt": st.redigeraAkt = { index: null, data: tomAkt() }; $("#flik").innerHTML = ritaFlik(); kopplaAktForm(); $("#a-namn").focus(); break;
+      case "andra-akt": st.redigeraAkt = { index: +el.dataset.n, data: structuredClone(st.indata.aktiviteter[+el.dataset.n]) }; $("#flik").innerHTML = ritaFlik(); kopplaAktForm(); break;
+      case "avbryt-akt": st.redigeraAkt = null; $("#flik").innerHTML = ritaFlik(); break;
+      case "ta-bort-akt": st.indata.aktiviteter.splice(+el.dataset.n, 1); if (!st.indata.aktiviteter.length) delete st.indata.aktiviteter; markeraAndrad(true); break;
       case "ta-bort-onsk": st.indata.onskemal.splice(+el.dataset.n, 1); markeraAndrad(true); break;
       case "anvand-json":
         try { st.indata = JSON.parse($("#json").value); $("#json-fel").textContent = ""; markeraAndrad(true); meddela("JSON används."); }

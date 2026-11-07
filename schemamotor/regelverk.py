@@ -94,10 +94,14 @@ KALLOR = {
     "ARBETSTID_48": ("Anmärkning till AB 25 § 13 mom. 7 g: ordinarie arbetstid högst 48 timmar per vecka i genomsnitt under 4 veckor.", "Lokalt kollektivavtal (mom. 10)."),
     "SCHEMA_14_DAGAR": ("AB 25 § 13 mom. 5: schemat ska meddelas arbetstagaren senast 14 dagar innan det börjar gälla.", "–"),
     "KRAV": ("Medarbetarens önskemål som verksamheten har gjort till krav.", "–"),
+    "AKTIVITET": ("Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid.", "–"),
 }
 
 MJUKA = {
     "vakanser": ("Vakanser", "verksamhet", None, "Antal pass och klockslag där behovet inte täcks. Högsta mjuka nivå: behovet görs aldrig hårt.", "BEHOV"),
+    "aktiviteter": ("Aktiviteter under arbetstid", "verksamhet", None,
+                    "Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela "
+                    "aktivitetstiden. Aktiviteter markerade som krav är hårda.", "AKTIVITET"),
     "blocklangd": ("Dagar i följd över rekommenderat", "princip", "block_rekommenderat", "Antal tillfällen med fler arbetsdagar i följd än rekommenderat.", "BLOCK_REKOMMENDERAT"),
     "passlangd": ("Passlängd", "princip", None, "Minuter från personens snittlängd per pass och från kontrakterad tid.", "TID"),
     "rattvisa_jamn": ("Rättvisa och jämn bemanning", "princip", "jamn_bemanning",
@@ -126,6 +130,7 @@ def _lattvikter():
     return [
         {"mal": "Brott mot hård regel", "vikt": vikt("HW"), "per": "brott"},
         {"mal": "Vakant pass", "vikt": vikt("WV"), "per": "pass"},
+        {"mal": "Saknad deltagare i aktivitet", "vikt": vikt("WA"), "per": "deltagare"},
         {"mal": "Blandning morgon och kväll (stark)", "vikt": stark, "per": "vecka utan blandning"},
         {"mal": "Dagar i följd över rekommenderat", "vikt": vikt("WB"), "per": "tillfälle"},
         {"mal": "Jämn bemanning", "vikt": vikt("WJ"), "per": "kvadraten på överskottet per pass, plus skillnaden dag/kväll"},
@@ -165,6 +170,10 @@ def regelverk():
                   "beskrivning": "Utanför schemamotorn: verksamhetens ansvar när schemat publiceras.", "granskningskod": None})
     harda.append({"id": "KRAV", "nyckel": "onskemal[].krav", "namn": "Önskemål markerade som krav", "niva": "önskemål", "typ": "hård",
                   "standard": False, "enhet": "per önskemål", "last": False, "beskrivning": "Kan göra schemat olösbart; förklaringen pekar då ut kravet.", "granskningskod": None})
+    harda.append({"id": "AKTIVITET", "nyckel": "aktiviteter[].krav", "namn": "Aktiviteter markerade som krav", "niva": "verksamhet", "typ": "hård",
+                  "standard": False, "enhet": "per aktivitet", "last": False,
+                  "beskrivning": "Den som deltar arbetar hela aktivitetstiden. Kan göra schemat olösbart; förklaringen pekar då ut aktiviteten.",
+                  "granskningskod": "AKTIVITET"})
     for h in harda:
         h["kalla"], h["avvikelse"] = KALLOR[h["id"]]
     ordning = malordning(r, MALORDNING)

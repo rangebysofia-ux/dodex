@@ -154,7 +154,7 @@ function ritaKorningsvy() {
   h += st.red ? redigeringsrad() : sammanfattning();
   if (st.vy === "personer") h += ritaPersoner();
   else if (st.vy === "bemanning") h += ritaBemanning();
-  else h += ritaSchemavy();
+  else h += ritaSchemavy() + (st.red ? "" : GRAF.aktivitetKort(res));
   vy().innerHTML = h;
   kopplaKorningsval();
 }
@@ -217,8 +217,8 @@ function schemaDagar(res, dagar, filter, period) {
       const mal = red ? ` data-mal="${esc(n)}"` : "";
       if (!p) return `<td ${kl(d)}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : ""}</td>`;
       if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}${mal}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
-      return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}"` : ""}
-        aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}</button></td>`;
+      return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${esc(GRAF.aktText(p))}"` : ""}
+        aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${GRAF.aktMarke(p)}</button></td>`;
     }).join("") + `</tr>`;
   }
   // vakanta pass som egna rader med streckad kant
@@ -248,7 +248,7 @@ function cellInfo(res) {
   if (!st.valdCell) return `<span class="dampad">Tryck på ett pass för tider, rast och arbetstid. Tryck på ett namn för personens schema.</span>`;
   const i = st.valdCell.lastIndexOf(":"), pid = st.valdCell.slice(0, i), d = +st.valdCell.slice(i + 1), p = res.schema[pid]?.[d];
   if (!p) return "";
-  return `<b>${esc(pid)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]?.toLowerCase() || ""}pass <span class="mono">${p.start}–${p.slut}</span>, rast ${p.rast} min, arbetstid ${timmar(p.netto)}.${GRAF.obPassText(pid, d, res, st.korning.indata).replace("\n", " ")}`;
+  return `<b>${esc(pid)}</b>, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]?.toLowerCase() || ""}pass <span class="mono">${p.start}–${p.slut}</span>, rast ${p.rast} min, arbetstid ${timmar(p.netto)}.${(p.aktiviteter || []).map(a => ` ★ ${esc(a.namn || a.id)} ${a.start}–${a.slut}.`).join("")}${GRAF.obPassText(pid, d, res, st.korning.indata).replace("\n", " ")}`;
 }
 
 // Klockslag: hur många som är i tjänst under dygnet, och vem som arbetar när.
@@ -383,7 +383,7 @@ function personkort(pid) {
   <section class="kort"><h2>${esc(pid)}s schema</h2><div class="rull"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veckMin = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small></span>` : ""}</td>`; }).join("")}
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${GRAF.aktMarke(q)}</span>` : ""}</td>`; }).join("")}
       <td class="tal nw liten">${sv(veckMin / 60, 1)} h</td></tr>`;
   }
   return h + `</tbody></table></div></section>`;
