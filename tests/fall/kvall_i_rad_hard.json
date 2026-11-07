@@ -1,0 +1,62 @@
+{
+  "beskrivning": "Högst tre kvällar i rad som hård lokal regel. Åtta med dag och kväll, fyra veckor. Ska gå att lösa utan regelbrott, och ingen ska ha fler än tre kvällar i följd.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0
+  },
+  "enhet": "Test – aktivitet",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "D1",
+      "grad": 1
+    },
+    {
+      "id": "D2",
+      "grad": 1
+    },
+    {
+      "id": "D3",
+      "grad": 1
+    },
+    {
+      "id": "D4",
+      "grad": 0.9
+    },
+    {
+      "id": "D5",
+      "grad": 0.9
+    },
+    {
+      "id": "D6",
+      "grad": 0.8
+    },
+    {
+      "id": "D7",
+      "grad": 0.8
+    },
+    {
+      "id": "D8",
+      "grad": 0.75
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  },
+  "regler": {
+    "kvall_max_i_rad": 3,
+    "kvall_i_rad_typ": "hard"
+  }
+}

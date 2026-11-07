@@ -23,7 +23,7 @@ STANDARD = {
     "dygnsvila_minuter": 660, "veckovila_minuter": 2160, "dygnsbryt": "auto", "veckobryt": "mån 00:00",
     "rast_grans_minuter": 300, "rast_minuter": 30, "pass_per_vecka": 4.75, "morgon_start": "07:00",
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
-    "block_rekommenderat": 4, "natt_max_i_rad": 3, "natt_vila_mellan_block_minuter": 2880, "morgon_starter": [], "kvall_max_i_rad": 3, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
+    "block_rekommenderat": 4, "natt_max_i_rad": 3, "natt_vila_mellan_block_minuter": 2880, "morgon_starter": [], "kvall_max_i_rad": 3, "kvall_i_rad_typ": "mjuk", "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
     "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1, "jamn_bemanning": "mjuk",
 }
@@ -237,7 +237,7 @@ def kontrollera(indata, schema_dok):
                             langd += 1
                         sort_ = "nätter i rad" if regel == "NATT_I_RAD" else "arbetsdagar i följd"
                         brott(regel, pid, f"{langd} {sort_} från {dag_text(d)} (gräns {grans}).", hard)
-        # högst kvall_max_i_rad kvällar i rad (lokal regel, mjuk)
+        # högst kvall_max_i_rad kvällar i rad (lokal regel, mjuk eller hård)
         km = r.get("kvall_max_i_rad") or 0
         if km:
             kvall = [0] * N
@@ -249,7 +249,9 @@ def kontrollera(indata, schema_dok):
                     langd = km + 1
                     while langd < N and kvall[(d + langd) % N]:
                         langd += 1
-                    brott("KVALL_I_RAD", pid, f"{langd} kvällar i rad från {dag_text(d)} (helst högst {km}).", hard=False)
+                    hard_kv = r.get("kvall_i_rad_typ") == "hard"
+                    brott("KVALL_I_RAD", pid, f"{langd} kvällar i rad från {dag_text(d)} ({'högst' if hard_kv else 'helst högst'} {km}).",
+                          hard=hard_kv)
         # helger
         hs, he = veckotid(r["helg_start"]), veckotid(r["helg_slut"])
         helger = []

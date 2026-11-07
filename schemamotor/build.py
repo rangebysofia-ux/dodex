@@ -37,6 +37,8 @@ STANDARDREGLER = {
     "morgon_starter": [],
     # högst så många kvällar i rad (mjuk regel för alla som arbetar kväll; 0 stänger av). Användarens beslut 2026-11-07.
     "kvall_max_i_rad": 3,
+    # "mjuk" (eftersträvas) eller "hard" (aldrig fler kvällar i rad). Användarens beslut 2026-11-07.
+    "kvall_i_rad_typ": "mjuk",
     "kvall_slut": "22:00",
     "kant_fran": "12:00",
     "kant_till": "18:00",
@@ -707,17 +709,23 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             b = m.new_bool_var("")
             m.add(sum(fonster) <= rek).only_enforce_if(b.Not())
             over.append(b)
-    # högst kvall_max_i_rad kvällar i rad (mjukt, räknas med blocklängden)
+    # högst kvall_max_i_rad kvällar i rad: mjukt (räknas med blocklängden) eller hårt (lokal regel)
     km = r.get("kvall_max_i_rad") or 0
+    hard_kv = r.get("kvall_i_rad_typ") == "hard"
     if km:
         for pi, p in enumerate(prob["personer"]):
             kv = [s for s in p["tillatna"] if M[s]["dygnsdel"] == "kvall"]
             if not kv:
                 continue
+            L = lit(f"KVALL_I_RAD|{p['id']}") if hard_kv else None
             for d in range(N if cyk else N - km):
-                b = m.new_bool_var("")
-                m.add(sum(x[pi, (d + k) % N, s] for k in range(km + 1) for s in kv) <= km + b)
-                over.append(b)
+                summa = sum(x[pi, (d + k) % N, s] for k in range(km + 1) for s in kv)
+                if hard_kv:
+                    m.add(summa <= km).only_enforce_if(L)
+                else:
+                    b = m.new_bool_var("")
+                    m.add(summa <= km + b)
+                    over.append(b)
     mal["blocklangd"] = sum(over)
 
     # passlängd: avvikelse från mållängd per pass plus avvikelse från kontrakterad tid, i minuter

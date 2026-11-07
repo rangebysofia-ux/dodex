@@ -1,0 +1,33 @@
+{
+  "beskrivning": "Högst en kväll i rad som hård regel går inte ihop med inga enstaka arbetsdagar för den som bara arbetar kväll: varje arbetsblock blir minst två kvällar. Krocken ska visas.",
+  "forvantat": {
+    "status": "INFEASIBLE",
+    "konflikt_innehaller": [
+      "KVALL_I_RAD|K1"
+    ]
+  },
+  "enhet": "Test – aktivitet",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "alla": {
+      "kvall": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "K1",
+      "grad": 1,
+      "dygnsdelar": [
+        "kvall"
+      ]
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  },
+  "regler": {
+    "kvall_max_i_rad": 1,
+    "kvall_i_rad_typ": "hard"
+  }
+}

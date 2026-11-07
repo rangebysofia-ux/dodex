@@ -492,7 +492,8 @@ function ritaFlik() {
       ${tal("pass_per_vecka", "Pass per vecka, dag och kväll", "lokal regel", 4.75, 0.25)}
       ${tal("block_min", "Minst antal arbetsdagar i följd", "lokal regel", 2, 1)}
       ${tal("block_max", "Högst antal arbetsdagar i följd", "lokal regel", 5, 1)}
-      ${tal("kvall_max_i_rad", "Helst högst kvällar i rad (mjuk, 0 = av)", "lokal regel", 3, 1)}
+      ${tal("kvall_max_i_rad", "Högst kvällar i rad (0 = av)", "lokal regel", 3, 1)}
+      <div class="regel"><div>Kvällar i rad: hur strikt<br><span class="niva">lokal regel</span></div><select data-r="kvall_i_rad_typ">${[["mjuk", "Mjuk (eftersträvas)"], ["hard", "Hård (aldrig fler)"]].map(([k, t]) => `<option value="${k}"${(r.kvall_i_rad_typ || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       ${tal("natt_max_i_rad", "Nattpersonal: högst nätter i rad", "lokal regel", 3, 1)}
       ${tal("natt_vila_mellan_block_minuter", "Nattpersonal: vila mellan nattblock (minuter, 2880 = 48 h)", "lokal regel", 2880, 60)}
       <div class="regel"><div>Jämn bemanning mellan dag och kväll<br><span class="niva">princip</span></div><select data-r="jamn_bemanning">${[["mjuk", "På"], ["av", "Av"]].map(([k, t]) => `<option value="${k}"${(r.jamn_bemanning || "mjuk") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>

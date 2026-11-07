@@ -10,7 +10,7 @@ const MOTOR = (() => {
   const STD = {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, rast_grans_minuter: 300, rast_minuter: 30,
     pass_per_vecka: 4.75, morgon_start: "07:00", kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00",
-    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, kvall_max_i_rad: 3, helgfrekvens: "2/4", hel_helg: true,
+    block_min: 2, block_max: 5, block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helgfrekvens: "2/4", hel_helg: true,
     ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const OFF = 0, M = 1, K = 2, NT = 3;
@@ -281,7 +281,10 @@ const MOTOR = (() => {
         for (let d = 0; d < N; d++) {
           if (x[d] !== K || (cyk ? x[(d - 1 + N) % N] === K : d > 0 && x[d - 1] === K)) continue;
           let l = 0; while (l < N && x[(d + l) % N] === K && (cyk || d + l < N)) l++;
-          if (l > km) block += l - km;
+          if (l > km) {
+            if (r.kvall_i_rad_typ === "hard") { hard += l - km; not("KVALL_I_RAD", "lokal regel", `${l} kvällar i rad från ${dt(d)} (högst ${km}).`); }
+            else block += l - km;
+          }
         }
       }
       // nattpersonal: minst natt_vila_mellan_block_minuter mellan två nattblock (lokal regel, mjuk)

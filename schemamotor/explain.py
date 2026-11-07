@@ -26,6 +26,7 @@ BESKRIVNING = {
     "BLOCK_MIN": ("lokal regel", "inga enstaka arbetsdagar (minst {bmin} i följd)"),
     "BLOCK_MAX": ("lokal regel", "högst {bmax} arbetsdagar i följd"),
     "NATT_I_RAD": ("lokal regel", "högst {nmax} i rad"),
+    "KVALL_I_RAD": ("lokal regel", "högst {kmax} i rad"),
     "HELG": ("lokal regel", "helgregler: helgfrekvens {helg}, hel arbetshelg, ingen fredagskväll före ledig helg"),
     "ANTAL_PASS": ("kontrakt", "{antal} pass under perioden"),
     "TID": ("kontrakt", "arbetstid {tid} timmar (± {tol} min)"),
@@ -71,7 +72,7 @@ def text_for(namn, prob):
     p = next(p for p in prob["personer"] if p["id"] == ref)
     niva, mall = BESKRIVNING[regel]
     text = mall.format(v=f"{r['dygnsvila_minuter'] / 60:g}", vv=f"{r['veckovila_minuter'] / 60:g}", bmin=r["block_min"],
-                       bmax=r["block_max"], nvila=f"{(r.get('natt_vila_mellan_block_minuter') or 0) / 60:g}", nmax=f"{r.get('natt_max_i_rad')} {'natt' if r.get('natt_max_i_rad') == 1 else 'nätter'}", helg=p["helgfrekvens"],
+                       bmax=r["block_max"], kmax=f"{r.get('kvall_max_i_rad')} {'kväll' if r.get('kvall_max_i_rad') == 1 else 'kvällar'}", nvila=f"{(r.get('natt_vila_mellan_block_minuter') or 0) / 60:g}", nmax=f"{r.get('natt_max_i_rad')} {'natt' if r.get('natt_max_i_rad') == 1 else 'nätter'}", helg=p["helgfrekvens"],
                        antal="/".join(map(str, p["pass_delperioder"])),
                        tid=f"{p['mal_minuter'] / 60:.2f}", tol=p["tolerans"], krav="")
     return regel, ref, niva, text
