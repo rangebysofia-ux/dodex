@@ -95,8 +95,12 @@ def test_olosbart_far_forklaring(klient):
     klient.post("/api/logga-in", json={"losenord": "hemligt-test"})
     eid = klient.post("/api/enheter", json={"namn": "Dygnsvila", "indata": lasa("daily_rest_failure.json")}).json()["id"]
     k = vanta(klient, klient.post(f"/api/enheter/{eid}/korningar", json={}).json()["id"])
-    assert k["resultat"]["status"] == "INFEASIBLE"
+    # förklaringen pekar på dygnsvilan och kraven; schemat läggs ändå med kraven som önskemål,
+    # och dygnsvilan (avtal) hålls
     assert any(r["grupp"].startswith("DYGNSVILA") for r in k["forklaring"]["konflikt"])
+    assert k["resultat"]["status"] == "OK" and k["resultat"]["avslappnade_krav"]
+    assert k["granskning"]["giltigt"]
+    assert not any(b["regel"] == "DYGNSVILA" for b in k["granskning"]["brott"])
 
 
 def test_felaktig_indata_stoppas(klient):
