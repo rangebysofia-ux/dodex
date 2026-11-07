@@ -568,9 +568,15 @@
   "installningar_for_mjuka_mal": [
     {
       "nyckel": "kvall_max_i_rad",
-      "namn": "Helst högst antal kvällar i rad (räknas med blocklängden)",
+      "namn": "Högst antal kvällar i rad (mjukt räknas med blocklängden)",
       "varden": "kvällar; 0 stänger av",
       "standard": 3
+    },
+    {
+      "nyckel": "kvall_i_rad_typ",
+      "namn": "Kvällar i rad: mjuk eller hård",
+      "varden": "'mjuk' (eftersträvas) eller 'hard' (lokal regel, regelgrupp KVALL_I_RAD)",
+      "standard": "mjuk"
     },
     {
       "nyckel": "natt_vila_mellan_block_minuter",

@@ -123,7 +123,8 @@ Optimeras i den här ordningen. Ett lägre mål kan aldrig försämra ett högre
 
 | Nyckel | Namn | Värden | Standard |
 |---|---|---|---|
-| `kvall_max_i_rad` | Helst högst antal kvällar i rad (räknas med blocklängden) | kvällar; 0 stänger av | 3 |
+| `kvall_max_i_rad` | Högst antal kvällar i rad (mjukt räknas med blocklängden) | kvällar; 0 stänger av | 3 |
+| `kvall_i_rad_typ` | Kvällar i rad: mjuk eller hård | 'mjuk' (eftersträvas) eller 'hard' (lokal regel, regelgrupp KVALL_I_RAD) | mjuk |
 | `natt_vila_mellan_block_minuter` | Nattpersonal: vila mellan nattblock | minuter (2880 = 48 h); 0 stänger av | 2880 |
 | `block_rekommenderat` | Helst högst antal dagar i följd | dagar | 4 |
 | `jamn_bemanning` | Jämn bemanning mellan dag och kväll | 'mjuk' (på) eller 'av' | mjuk |
