@@ -81,3 +81,4 @@ När användaren vill väga två mål mot varandra i stället för i strikt ordn
 - "Vill", "föredrar", "helst" → önskemål (mjukt).
 - "Måste", "kan inte", "får inte" → krav (hårt).
 - Fråga när det är oklart. Ett krav som inte går att uppfylla gör hela schemat olösbart, och då pekar schemamotor/explain.py ut det.
+- I webbtjänsten läggs schemat ändå när förklaringen pekar ut krav (önskemål eller aktiviteter som måste genomföras): alla krav blir då starka önskemål (vikt 10) och schemat läggs så nära kraven som möjligt. Körningen markeras med vilka krav som krockade, och förklaringen sparas. Avtal, lag och lokala regler släpps aldrig på det sättet. Enhetens egna indata ändras inte. Beslutat 2026-11-07, efter att användaren inte kunde öppna schemat när undantag krockade.

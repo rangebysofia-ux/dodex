@@ -172,3 +172,22 @@ def test_analys_hela_vagen(klient):
     assert basta["namn"] in klient.get(f"/api/enheter/{ny}").json()["namn"]
     k = klient.get(f"/api/enheter/{ny}/korningar").json()
     assert k[0]["status"] == "klar" and k[0]["losning"] == "OK"
+
+
+def test_krav_som_krockar_ger_schema_anda(klient):
+    """Ett krav som inte går att uppfylla ger ändå ett schema, med kravet som starkt önskemål och tydlig markering."""
+    klient.post("/api/logga-in", json={"losenord": "hemligt-test"})
+    ind = lasa("six_week_basic.json")
+    ind["losare"] = {"tid_per_steg_s": 4}
+    ind["onskemal"] = [{"id": "O1", "person": "A2", "typ": "ledig", "dagar": ["fre"], "krav": True}]
+    eid = klient.post("/api/enheter", json={"namn": "Krav", "indata": ind}).json()["id"]
+    kid = klient.post(f"/api/enheter/{eid}/korningar", json={"namn": "K"}).json()["id"]
+    k = vanta(klient, kid)
+    res = k["resultat"]
+    assert res["status"] == "OK", res.get("orsak")
+    assert any(x["grupp"] == "KRAV|O1" for x in res["avslappnade_krav"])
+    assert k["indata"]["onskemal"][0]["krav"] is False
+    assert k["granskning"]["giltigt"]
+    assert k["forklaring"]["konflikt"]
+    # enhetens egna indata ändras inte
+    assert klient.get(f"/api/enheter/{eid}").json()["indata"]["onskemal"][0]["krav"] is True

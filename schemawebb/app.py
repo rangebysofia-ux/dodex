@@ -103,11 +103,36 @@ def _kor(kid: int, tid_s: float):
         else:
             db.uppdatera_korning(kid, steg="Letar efter regler som krockar")
             falt["forklaring"], _ = explain.forklara(forbered(copy.deepcopy(indata)), tid_s)
+            # Krockar ett krav (önskemål eller aktivitet som måste genomföras) läggs schemat ändå, med kraven som
+            # starka önskemål, så att det finns ett schema att öppna. Avtal och lag ändras aldrig.
+            krockar = [k for k in falt["forklaring"].get("konflikt", []) if k["regel"] in ("KRAV", "AKTIVITET")]
+            if krockar:
+                db.uppdatera_korning(kid, steg="Lägger schemat med kraven som önskemål")
+                mjuk = avslappna_krav(indata)
+                res2 = los(forbered(copy.deepcopy(mjuk)), tid_s, min(8, os.cpu_count() or 1), tyst=True)
+                if res2["status"] == "OK":
+                    res2["avslappnade_krav"] = [{"grupp": k["grupp"], "regel": k["regel"], "person": k["person"], "text": k["text"]}
+                                                for k in krockar]
+                    falt.update(resultat=res2, granskning=validate.kontrollera(copy.deepcopy(mjuk), res2), indata=mjuk)
         db.uppdatera_korning(kid, status="klar", steg=None, sekunder=round(time.time() - start, 1), **falt)
     except IndataFel as e:
         db.uppdatera_korning(kid, status="fel", steg=None, fel=f"Fel i indata: {e}")
     except Exception as e:  # visas för användaren i stället för att körningen hänger
         db.uppdatera_korning(kid, status="fel", steg=None, fel=f"Oväntat fel: {type(e).__name__}: {e}")
+
+
+def avslappna_krav(indata):
+    """Kopia av indata där alla krav (önskemål och aktiviteter) blir starka önskemål. Avtal och lag rörs inte."""
+    mjuk = copy.deepcopy(indata)
+    for o in mjuk.get("onskemal") or []:
+        if o.get("krav"):
+            o["krav"] = False
+            o["vikt"] = 10
+            o["kommentar"] = ((o.get("kommentar") or "") + " (krav som krockade, lagt som starkt önskemål)").strip()
+    for a in mjuk.get("aktiviteter") or []:
+        if a.get("krav"):
+            a["krav"] = False
+    return mjuk
 
 
 def _forhandskontroll(indata):
