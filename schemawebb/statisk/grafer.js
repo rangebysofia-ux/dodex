@@ -53,7 +53,13 @@ function nyckeltalFor(k) {
   for (const rad of Object.values(res.schema)) rad.forEach(p => { if (p && pass[p.dygnsdel] !== undefined) pass[p.dygnsdel]++; });
   const timkostnad = Number(ind.timkostnad_kr) || null;
   const ob = obFor(res, ind), obVecka = ob ? Object.values(ob.per).reduce((s, x) => s + x.ar.kr, 0) / 52 : null;
+  // resurspass: pass utöver behovet (se resurs nedan), antal och timmar per person och totalt
+  const rs = resurs(res, ind), resursPer = {};
+  let resursMin = 0;
+  for (const nyckel of rs) { const i = nyckel.lastIndexOf(":"), pid = nyckel.slice(0, i), p = res.schema[pid][+nyckel.slice(i + 1)];
+    resursPer[pid] = resursPer[pid] || { pass: 0, minuter: 0 }; resursPer[pid].pass++; resursPer[pid].minuter += p.netto || 0; resursMin += p.netto || 0; }
   return { bem, behov, tackt, vak, over, grad: behov ? tackt / behov * 100 : 100, perVecka, timmarVecka: minuter / 60 / W,
+    resursPass: rs.size, resursTimmarVecka: resursMin / 60 / W, resursAndel: minuter ? resursMin / minuter * 100 : 0, resursPer,
     overtid, pass, timkostnad, obVecka, kostnadVecka: timkostnad ? minuter / 60 / W * timkostnad + (obVecka || 0) : null };
 }
 
@@ -356,6 +362,17 @@ function summaTabell(res, indata, dagar, rs, rubrik) {
     <p class="dampad liten" style="margin-top:4px">D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter. Vila = kortaste vila mellan två pass, V-vila = kortaste veckovila. Rött = under gränsen.</p>`;
 }
 
+// Kort i översikten: resurspass (utöver behovet) per person.
+function resursKort(k, lank) {
+  const n = nyckeltalFor(k), W = k.resultat.veckor, pers = Object.keys(k.resultat.schema);
+  const max = Math.max(1, ...pers.map(p => (n.resursPer[p] || {}).pass || 0));
+  return `<section class="kort"><h2>◼ Resurspass</h2>
+    <p class="dampad liten">Pass utöver behovet, fördelade rättvist. ${n.resursPass} pass under perioden, ${sv(n.resursTimmarVecka, 1)} h per vecka (${sv(n.resursAndel, 1)} % av den schemalagda tiden). Kan användas för vikariat, aktiviteter eller utveckling.</p>
+    ${n.resursPass ? `<div class="staplar">${pers.map(p => { const x = n.resursPer[p] || { pass: 0, minuter: 0 };
+      return `<div class="hstapel"><span class="liten">${lank ? lank(p) : esc(p)}</span><div><i class="res" style="width:${x.pass / max * 100}%;background:var(--resurs)"></i></div><b class="liten" data-tips="${sv(x.minuter / 60, 1)} h under perioden">${x.pass} pass</b></div>`; }).join("")}</div>` : `<p class="tom">Inga pass utöver behovet.</p>`}
+  </section>`;
+}
+
 // Kort för en person: veckovila per vecka och vila mellan passen.
 function vilaKort(pid, res, indata) {
   const rad = res.schema[pid]; if (!rad) return "";
@@ -432,6 +449,6 @@ function aktivitetKort(res) {
     </tbody></table></div></section>`;
 }
 
-return { summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

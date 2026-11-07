@@ -904,9 +904,10 @@ function ritaOversikt(k, brott) {
   let h = `<div class="nyckeltal">
     <div class="nyckel"><span>Bemanningsgrad</span><b>${sv(Math.round(n.grad * 10) / 10)} %</b><small>${n.tackt} av ${n.behov} pass täckta</small></div>
     <div class="nyckel"><span>Personalkostnad</span>${n.kostnadVecka != null ? `<b>${krs(n.kostnadVecka * 52 / 12)}</b><small>per månad (uppskattat)</small>` : `<b>${sv(Math.round(n.timmarVecka * 10) / 10)} h</b><small>per vecka · ange timkostnad under Period för kronor</small>`}</div>
-    <div class="nyckel"><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small>${n.over} pass över behovet</small></div>
-    <div class="nyckel"><span>Planerad övertid</span><b>${sv(Math.round(n.overtid * 10) / 10)} h</b><small>per vecka, utöver kontrakt</small></div></div>`;
-  h += `<div class="grafyta">${GRAF.grafkort(k)}</div>`;
+    <div class="nyckel"><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small>vakanta pass</small></div>
+    <div class="nyckel"><span>Planerad övertid</span><b>${sv(Math.round(n.overtid * 10) / 10)} h</b><small>per vecka, utöver kontrakt</small></div>
+    <div class="nyckel"><span>◼ Resurspass</span><b>${n.resursPass}</b><small>${sv(Math.round(n.resursTimmarVecka * 10) / 10)} h per vecka utöver behovet</small></div></div>`;
+  h += `<div class="grafyta">${GRAF.grafkort(k)}${GRAF.resursKort(k, p => `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`)}</div>`;
   h += `<section class="kort"><div class="rad"><h2 style="margin:0">Regelkontroll</h2><button class="lank" data-g="rflik" data-f="regler">Visa detaljer</button></div><div style="margin-top:8px">${regelLista(k, brott, false)}</div></section>`;
   return h;
 }

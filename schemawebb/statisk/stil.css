@@ -97,7 +97,7 @@ main:focus, main:focus-visible { outline: none; }
 .nyckel { background: var(--yta); border: 1px solid var(--linje); border-radius: 20px; padding: 18px; display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; box-shadow: var(--skugga); }
 .nyckel .ikon { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--accent-svag); color: var(--skog); }
 .nyckel .ikon svg { width: 24px; height: 24px; }
-.nyckel .ikon.bla { background: #e6f1f8; color: #1d5480; } .nyckel .ikon.sand { background: #f4ede2; color: #7a5a2a; } .nyckel .ikon.guld { background: #f7efd9; color: #8a6a1e; }
+.nyckel .ikon.bla { background: #e6f1f8; color: #1d5480; } .nyckel .ikon.sand { background: #f4ede2; color: #7a5a2a; } .nyckel .ikon.guld { background: #f7efd9; color: #8a6a1e; } .nyckel .ikon.svart { background: var(--resurs); color: #fff; font-size: 18px; }
 .nyckel span { display: block; color: var(--dampad); font-size: 13px; font-weight: 500; }
 .nyckel b { display: block; font: 700 26px/1.15 var(--rubrik); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .nyckel small { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--yta2); color: var(--dampad); margin-top: 2px; }

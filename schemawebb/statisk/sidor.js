@@ -7,7 +7,7 @@ const { PASSNAMN, REGELGRUPPER, nyckeltalFor, kr, linjegraf, ringdiagram, varmek
 function nyckeltalskort(k, foregaende) {
   if (!k || k.status !== "klar" || k.resultat?.status !== "OK") {
     const kort = (ikon, klass, namn) => `<div class="nyckel"><div class="ikon ${klass}">${IKON[ikon]}</div><div><span>${namn}</span><b>–</b><small>Lägg ett schema</small></div></div>`;
-    return `<div class="nyckeltal">${kort("behov", "", "Bemanningsgrad")}${kort("kostnad", "sand", "Personalkostnad")}${kort("lucka", "bla", "Obemannade pass")}${kort("klocka", "guld", "Planerad övertid")}</div>`;
+    return `<div class="nyckeltal">${kort("behov", "", "Bemanningsgrad")}${kort("kostnad", "sand", "Personalkostnad")}${kort("lucka", "bla", "Obemannade pass")}${kort("klocka", "guld", "Planerad övertid")}<div class="nyckel"><div class="ikon svart">◼</div><div><span>Resurspass</span><b>–</b><small>Lägg ett schema</small></div></div></div>`;
   }
   const n = nyckeltalFor(k), fv = foregaende?.kpi?.vakanta_pass;
   const diff = fv != null ? n.vak - fv : null;
@@ -16,8 +16,9 @@ function nyckeltalskort(k, foregaende) {
     <div class="nyckel"><div class="ikon sand">${IKON.kostnad}</div><div><span>Personalkostnad (uppskattad)</span>${n.kostnadVecka != null
       ? `<b>${kr(n.kostnadVecka * 52 / 12)}</b><small>per månad${n.obVecka ? `, varav OB ${kr(n.obVecka * 52 / 12)}` : ""}</small>`
       : `<b>${sv(n.timmarVecka, 1)} h</b>${n.obVecka ? `<small>OB ${kr(n.obVecka * 52 / 12)} per månad</small>` : ""}<a href="#/e/${st.enhet.id}/installningar">Ange timkostnad för kronor</a>`}</div></div>
-    <div class="nyckel"><div class="ikon bla">${IKON.lucka}</div><div><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small class="${diff == null ? "" : diff <= 0 ? "upp" : "ned"}">${diff == null ? `${n.over} pass över behovet` : diff === 0 ? "samma som förra körningen" : `${diff > 0 ? "+" : ""}${diff} mot förra körningen`}</small></div></div>
+    <div class="nyckel"><div class="ikon bla">${IKON.lucka}</div><div><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small class="${diff == null ? "" : diff <= 0 ? "upp" : "ned"}">${diff == null ? "vakanta pass" : diff === 0 ? "samma som förra körningen" : `${diff > 0 ? "+" : ""}${diff} mot förra körningen`}</small></div></div>
     <div class="nyckel"><div class="ikon guld">${IKON.klocka}</div><div><span>Planerad övertid</span><b>${sv(n.overtid, 1)} h</b><small>per vecka, utöver kontrakterad tid</small></div></div>
+    <div class="nyckel"><div class="ikon svart">◼</div><div><span>Resurspass</span><b>${n.resursPass}</b><small>${sv(n.resursTimmarVecka, 1)} h per vecka utöver behovet</small></div></div>
   </div>`;
 }
 
@@ -36,7 +37,7 @@ async function visaOversikt(id) {
       <div>${k ? `<a class="knapp liten" href="#/e/${id}/schema/${k.id}">${IKON.schema} Öppna schemat</a>` : ""}</div></div></section>
     ${nyckeltalskort(k, foregaende)}`;
   if (k && k.status === "klar" && k.resultat?.status === "OK") {
-    h += grafkort(k);
+    h += grafkort(k) + GRAF.resursKort(k, p => `<a href="#/e/${id}/personer/${k.id}?p=${encodeURIComponent(p)}">${esc(p)}</a>`);
     const g = k.granskning;
     h += `<div class="tva"><section class="kort"><h2>Regelkontroll</h2>${regellista(k)}<p style="margin-top:10px"><a href="#/e/${id}/regelkontroll/${k.id}">Visa detaljer</a></p></section>
       <section class="kort"><h2>Förslag</h2><p class="dampad">Jämför bemanningsalternativ inom budget och se konsekvenser för vakanser, kostnad, helger och kvällsfördelning.</p>
