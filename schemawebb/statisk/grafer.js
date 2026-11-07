@@ -130,7 +130,7 @@ function behovsstaplar(bem) {
     if (x.d % 7 > 4) h += `<rect x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" style="fill:var(--helg)"/>`;
     // upp till behovet i grönt (rött vid vakans), resurstid utöver behovet i svart ovanpå
     const inom = Math.min(t, b);
-    h += `<rect x="${x0}" y="${y(inom)}" width="${bred}" height="${Math.max(0, bas - y(inom))}" rx="3" style="fill:${vak ? "var(--kritisk)" : "var(--morgon)"};opacity:${vak ? .85 : .9}"/>`;
+    h += `<rect x="${x0}" y="${y(inom)}" width="${bred}" height="${Math.max(0, bas - y(inom))}" rx="3" style="fill:${vak ? "var(--kritisk)" : "var(--tackt)"};opacity:${vak ? .85 : .9}"/>`;
     if (t > b) h += `<rect x="${x0}" y="${y(t)}" width="${bred}" height="${Math.max(0, y(b) - y(t))}" rx="3" style="fill:var(--resurs);stroke:var(--text);stroke-width:.8"/>`;
     h += `<line x1="${x0 - 2}" x2="${x0 + bred + 2}" y1="${y(b)}" y2="${y(b)}" style="stroke:var(--text);stroke-width:2"/>`;
     h += `<rect class="traff" x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]}\nPlanerat ${t}, behov ${b}${vak ? ` – ${vak} saknas` : t > b ? ` – ${t - b} resurspass utöver behovet` : ""}"/>`;
@@ -139,7 +139,7 @@ function behovsstaplar(bem) {
     if (N <= 42 && kol >= 14) h += `<text x="${vX + i * kol + kol / 2}" y="${y(Math.max(t, b)) - 4}" text-anchor="middle" style="font-size:10px;font-weight:700;fill:var(--text)">${t}</text>`;
   });
   return `<div class="rull">${h}<line class="axel" x1="${vX}" x2="${W - hX}" y1="${bas}" y2="${bas}"/></svg></div>
-    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
+    <div class="legend" style="margin-top:6px"><span><i style="background:var(--tackt)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
 }
 
 function passring(n) {
@@ -412,7 +412,7 @@ function vilaKort(pid, res, indata) {
       <div class="${Math.min(...v.veckor.map(x => x.min)) < wv ? "fel" : ""}"><b>${sv(Math.min(...v.veckor.map(x => x.min)) / 60, 1)} h</b><span>kortaste veckovila</span></div></div>
     <h3>Veckovila, längsta lediga tid per vecka</h3>
     ${v.veckor.map(x => `<div class="hstapel"><span class="liten">Vecka ${x.vecka}</span><div style="position:relative"><i class="${x.min < wv ? "vak" : "vila"}" style="width:${Math.min(100, x.min / max * 100)}%"></i><s style="position:absolute;left:${wv / max * 100}%;top:-3px;bottom:-3px;width:2px;background:var(--text)"></s></div><b class="liten" data-tips="Från ${tidText(x.fran)}">${sv(x.min / 60, 1)} h</b></div>`).join("")}
-    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Minst ${sv(wv / 60, 0)} h</span><span><i style="background:var(--kritisk)"></i>Kortare</span><span><i style="background:var(--text);width:3px"></i>Gränsen ${sv(wv / 60, 0)} h</span></div>
+    <div class="legend" style="margin-top:6px"><span><i style="background:var(--tackt)"></i>Minst ${sv(wv / 60, 0)} h</span><span><i style="background:var(--kritisk)"></i>Kortare</span><span><i style="background:var(--text);width:3px"></i>Gränsen ${sv(wv / 60, 0)} h</span></div>
     <h3>Vila mellan passen</h3>
     ${tata.length ? `<p class="liten dampad">Kortaste vilorna (under ${sv((dv + 120) / 60, 0)} h):</p><ul class="punkter liten">${tata.slice(0, 8).map(x => `<li class="${x.min < dv ? "minus" : ""}">${vecka(x.dag)} slut ${x.slut} → ${vecka(x.nastaDag)} start ${x.start}: <b>${sv(x.min / 60, 1)} h</b>${x.min < dv ? " – under " + sv(dv / 60, 0) + " h" : ""}</li>`).join("")}</ul>`
       : `<p class="liten">All vila mellan passen är minst ${sv((dv + 120) / 60, 0)} h.</p>`}

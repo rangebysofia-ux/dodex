@@ -8,8 +8,9 @@
   --resurs: #141414; --resurs-bg: #e6e6e4;
   --bg: #f8f9f7; --yta: #ffffff; --yta2: #f3f5f2; --text: #25332f; --dampad: #5d6b67; --linje: #e4e8e3; --helg: #f4f1ea;
   --accent: #193f38; --accent-text: #ffffff; --accent-svag: #e6efe8; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #a9863a;
-  --morgon: #e4efe7; --morgon-text: #2f6b43; --kvall: #e2eef6; --kvall-text: #245f8a; --natt: #f1e8da; --natt-text: #7a4f1f;
-  --morgon-kant: #a8c5b0; --kvall-kant: #b8d7e8; --natt-kant: #d9c4a2;
+  /* passfärger: guld för dag, skogsgrönt för kväll, mörkblått för natt (användarens val 2026-11-07) */
+  --morgon: #f6eac8; --morgon-text: #5e4710; --kvall: #d9e6df; --kvall-text: #173f30; --natt: #dde3ec; --natt-text: #22344f;
+  --morgon-kant: #d5b46a; --kvall-kant: #5c8a76; --natt-kant: #7085a3; --tackt: #56a06a;
   --bra: #2f7a4a; --bra-bg: #e3f0e7; --dalig: #b8432f; --dalig-bg: #f9e7e2; --varn: #8a6212; --varn-bg: #faf1dc;
   --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --rubrik: "DM Sans", system-ui, sans-serif; --marke: "Cinzel", Georgia, serif;
@@ -19,15 +20,15 @@
   --resurs-bg: #2e2e2c;
   --bg: #121c1a; --yta: #1a2724; --yta2: #20302c; --text: #e8ece8; --dampad: #a9b6b1; --linje: #2c3d38; --helg: #1d2925;
   --accent: #a8c5b0; --accent-text: #13221e; --accent-svag: #24372f; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #c39f50;
-  --morgon: #1f3328; --morgon-text: #b9dcc3; --kvall: #1b2f3c; --kvall-text: #b8d7e8; --natt: #362e22; --natt-text: #e9d3ae;
-  --morgon-kant: #5f8f6d; --kvall-kant: #5f8fae; --natt-kant: #9c8058;
+  --morgon: #3a3120; --morgon-text: #f0d99a; --kvall: #1f3029; --kvall-text: #b9d6c8; --natt: #1f2735; --natt-text: #c3cde0;
+  --morgon-kant: #b8954a; --kvall-kant: #5c8a76; --natt-kant: #7085a3;
   --bra: #8fcaa0; --bra-bg: #1c3326; --dalig: #ec8b78; --dalig-bg: #3b221d; --varn: #e8c47a; --varn-bg: #352c19; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --resurs-bg: #2e2e2c;
   --bg: #121c1a; --yta: #1a2724; --yta2: #20302c; --text: #e8ece8; --dampad: #a9b6b1; --linje: #2c3d38; --helg: #1d2925;
   --accent: #a8c5b0; --accent-text: #13221e; --accent-svag: #24372f; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #c39f50;
-  --morgon: #1f3328; --morgon-text: #b9dcc3; --kvall: #1b2f3c; --kvall-text: #b8d7e8; --natt: #362e22; --natt-text: #e9d3ae;
-  --morgon-kant: #5f8f6d; --kvall-kant: #5f8fae; --natt-kant: #9c8058;
+  --morgon: #3a3120; --morgon-text: #f0d99a; --kvall: #1f3029; --kvall-text: #b9d6c8; --natt: #1f2735; --natt-text: #c3cde0;
+  --morgon-kant: #b8954a; --kvall-kant: #5c8a76; --natt-kant: #7085a3;
   --bra: #8fcaa0; --bra-bg: #1c3326; --dalig: #ec8b78; --dalig-bg: #3b221d; --varn: #e8c47a; --varn-bg: #352c19; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--sans); }
@@ -114,7 +115,7 @@ td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba
 .pass.resurs { box-shadow: inset 4px 0 0 var(--resurs), inset 0 0 0 1px var(--resurs) !important; }
 .pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border: 1px solid var(--text); border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
 .schema.period .pass.resurs { background: var(--resurs); color: #fff; }
-.pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #4a3608; background: #ead29a; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #5a1f0c; background: #f4c9b6; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr.bem td { font-size: 11px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.25; }
 tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dalig-bg); }
 .mono { font-family: var(--mono); font-size: 13px; }
@@ -157,7 +158,7 @@ details summary { cursor: pointer; color: var(--dampad); }
 .chatt textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--yta2); border: 1px solid var(--linje); border-radius: 8px; padding: 8px; flex: 1; resize: none; }
 /* ---------- översikt, grafer, regelkontroll, simulering ---------- */
 .sida > *, .kort, .grafyta { min-width: 0; }
-.grafyta { --morgon: #56a06a; --kvall: #2f80c4; --natt: #a8692a; --over: #2f6f9e; --kritisk: #b8432f; --skog: #193f38; --rutnat: var(--linje); --sand: #e9dfd0; --guld: #c9a03a; }
+.grafyta { --morgon: #c99a2e; --kvall: #3f7a63; --natt: #4d6488; --tackt: #56a06a; --over: #2f6f9e; --kritisk: #b8432f; --skog: #193f38; --rutnat: var(--linje); --sand: #e9dfd0; --guld: #c9a03a; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grafyta { --skog: #a8c5b0; --sand: #3a352c; --over: #5f9fd0; } }
 :root[data-theme="dark"] .grafyta { --skog: #a8c5b0; --sand: #3a352c; --over: #5f9fd0; }
 .grafyta .kort { margin-top: 12px; }
@@ -193,11 +194,11 @@ table.varme td { width: 18px; min-width: 18px; height: 24px; text-align: center;
 .regellista details { grid-column: 2 / -1; } .regellista summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 .hstapel { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 64px; gap: 8px; align-items: center; padding: 3px 0; }
 .hstapel > div { background: var(--yta2); border-radius: 6px; height: 12px; overflow: hidden; } .hstapel i { display: block; height: 100%; border-radius: 6px; }
-.hstapel i.vila { background: var(--morgon); } .hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--over); } .hstapel i.kost { background: var(--guld); } .hstapel b { text-align: right; font-size: 13px; }
+.hstapel i.vila { background: var(--tackt); } .hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--over); } .hstapel i.kost { background: var(--guld); } .hstapel b { text-align: right; font-size: 13px; }
 table.nulage td { vertical-align: middle; min-width: 120px; } table.nulage tr.nu td { background: var(--yta2); }
 .divbar { position: relative; height: 10px; background: var(--yta2); border-radius: 6px; margin-bottom: 4px; }
 .divbar::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1.5px; background: var(--dampad); }
-.divbar i { position: absolute; top: 0; bottom: 0; border-radius: 6px; } .divbar i.battre { background: var(--morgon); } .divbar i.samre { background: var(--kritisk); }
+.divbar i { position: absolute; top: 0; bottom: 0; border-radius: 6px; } .divbar i.battre { background: var(--tackt); } .divbar i.samre { background: var(--kritisk); }
 span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--dalig); font-weight: 700; }
 .alternativ { border: 1px solid var(--linje); border-radius: 14px; padding: 12px; margin-top: 10px; }
 .alternativ.bast { border: 2px solid var(--guld); }
@@ -2745,7 +2746,7 @@ function behovsstaplar(bem) {
     if (x.d % 7 > 4) h += `<rect x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" style="fill:var(--helg)"/>`;
     // upp till behovet i grönt (rött vid vakans), resurstid utöver behovet i svart ovanpå
     const inom = Math.min(t, b);
-    h += `<rect x="${x0}" y="${y(inom)}" width="${bred}" height="${Math.max(0, bas - y(inom))}" rx="3" style="fill:${vak ? "var(--kritisk)" : "var(--morgon)"};opacity:${vak ? .85 : .9}"/>`;
+    h += `<rect x="${x0}" y="${y(inom)}" width="${bred}" height="${Math.max(0, bas - y(inom))}" rx="3" style="fill:${vak ? "var(--kritisk)" : "var(--tackt)"};opacity:${vak ? .85 : .9}"/>`;
     if (t > b) h += `<rect x="${x0}" y="${y(t)}" width="${bred}" height="${Math.max(0, y(b) - y(t))}" rx="3" style="fill:var(--resurs);stroke:var(--text);stroke-width:.8"/>`;
     h += `<line x1="${x0 - 2}" x2="${x0 + bred + 2}" y1="${y(b)}" y2="${y(b)}" style="stroke:var(--text);stroke-width:2"/>`;
     h += `<rect class="traff" x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]}\nPlanerat ${t}, behov ${b}${vak ? ` – ${vak} saknas` : t > b ? ` – ${t - b} resurspass utöver behovet` : ""}"/>`;
@@ -2754,7 +2755,7 @@ function behovsstaplar(bem) {
     if (N <= 42 && kol >= 14) h += `<text x="${vX + i * kol + kol / 2}" y="${y(Math.max(t, b)) - 4}" text-anchor="middle" style="font-size:10px;font-weight:700;fill:var(--text)">${t}</text>`;
   });
   return `<div class="rull">${h}<line class="axel" x1="${vX}" x2="${W - hX}" y1="${bas}" y2="${bas}"/></svg></div>
-    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
+    <div class="legend" style="margin-top:6px"><span><i style="background:var(--tackt)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
 }
 
 function passring(n) {
@@ -3027,7 +3028,7 @@ function vilaKort(pid, res, indata) {
       <div class="${Math.min(...v.veckor.map(x => x.min)) < wv ? "fel" : ""}"><b>${sv(Math.min(...v.veckor.map(x => x.min)) / 60, 1)} h</b><span>kortaste veckovila</span></div></div>
     <h3>Veckovila, längsta lediga tid per vecka</h3>
     ${v.veckor.map(x => `<div class="hstapel"><span class="liten">Vecka ${x.vecka}</span><div style="position:relative"><i class="${x.min < wv ? "vak" : "vila"}" style="width:${Math.min(100, x.min / max * 100)}%"></i><s style="position:absolute;left:${wv / max * 100}%;top:-3px;bottom:-3px;width:2px;background:var(--text)"></s></div><b class="liten" data-tips="Från ${tidText(x.fran)}">${sv(x.min / 60, 1)} h</b></div>`).join("")}
-    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Minst ${sv(wv / 60, 0)} h</span><span><i style="background:var(--kritisk)"></i>Kortare</span><span><i style="background:var(--text);width:3px"></i>Gränsen ${sv(wv / 60, 0)} h</span></div>
+    <div class="legend" style="margin-top:6px"><span><i style="background:var(--tackt)"></i>Minst ${sv(wv / 60, 0)} h</span><span><i style="background:var(--kritisk)"></i>Kortare</span><span><i style="background:var(--text);width:3px"></i>Gränsen ${sv(wv / 60, 0)} h</span></div>
     <h3>Vila mellan passen</h3>
     ${tata.length ? `<p class="liten dampad">Kortaste vilorna (under ${sv((dv + 120) / 60, 0)} h):</p><ul class="punkter liten">${tata.slice(0, 8).map(x => `<li class="${x.min < dv ? "minus" : ""}">${vecka(x.dag)} slut ${x.slut} → ${vecka(x.nastaDag)} start ${x.start}: <b>${sv(x.min / 60, 1)} h</b>${x.min < dv ? " – under " + sv(dv / 60, 0) + " h" : ""}</li>`).join("")}</ul>`
       : `<p class="liten">All vila mellan passen är minst ${sv((dv + 120) / 60, 0)} h.</p>`}

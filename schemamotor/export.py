@@ -13,8 +13,8 @@ import json
 DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
 KOD = {"morgon": "D", "kvall": "K", "natt": "N"}
 DEL = {"morgon": "Dag", "kvall": "Kväll", "natt": "Natt"}
-FARG = {"morgon": "FFF1C7", "kvall": "D8E6FF", "natt": "3A3366"}
-TEXTFARG = {"morgon": "6B4E00", "kvall": "1F3F86", "natt": "F0EDFF"}
+FARG = {"morgon": "F6EAC8", "kvall": "D9E6DF", "natt": "DDE3EC"}
+TEXTFARG = {"morgon": "5E4710", "kvall": "173F30", "natt": "22344F"}
 
 
 def _tim(m):

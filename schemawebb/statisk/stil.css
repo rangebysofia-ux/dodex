@@ -10,10 +10,12 @@
   --accent: #193f38; --accent-text: #ffffff; --accent-svag: #e6efe8; --accent-djup: #0f2c27;
   --meny-bg: #193f38; --meny-text: #d6e2dc; --meny-aktiv: #a8c5b0; --meny-aktiv-text: #193f38;
   /* diagram (kontrollerade) */
-  --morgon: #56a06a; --kvall: #2f80c4; --natt: #a8692a; --jour: #c9a03a;
+  /* passfärger: guld för dag, skogsgrönt för kväll, mörkblått för natt (användarens val 2026-11-07) */
+  --morgon: #c99a2e; --kvall: #3f7a63; --natt: #4d6488; --jour: #8a5cc2; --tackt: #56a06a;
   /* schemats mjuka toner */
-  --morgon-bg: #e4efe7; --kvall-bg: #e2eef6; --natt-bg: #f1e8da; --jour-bg: #f6eed6;
-  --morgon-text: #2b5a38; --kvall-text: #1d5480; --natt-text: #6b4318; --jour-text: #6e5414;
+  --morgon-bg: #f6eac8; --kvall-bg: #d9e6df; --natt-bg: #dde3ec; --jour-bg: #ece2f6;
+  --morgon-text: #5e4710; --kvall-text: #173f30; --natt-text: #22344f; --jour-text: #4b2f7a;
+  --morgon-kant: #d5b46a; --kvall-kant: #5c8a76; --natt-kant: #7085a3; --jour-kant: #a98bd6;
   --bra: #2f7a4a; --bra-bg: #e3f0e7; --varn: #8a6212; --varn-bg: #faf1dc; --kritisk: #b8432f; --kritisk-bg: #f9e7e2;
   --over: #2f6f9e; --over-bg: #e2eef6;
   --resurs: #141414; --resurs-bg: #e6e6e4;
@@ -182,10 +184,10 @@ table.schema thead th { padding-bottom: 6px; }
 .pass { border: 0; width: 100%; border-radius: 8px; padding: 5px 1px; line-height: 1.15; font: inherit; cursor: pointer; display: block; }
 .pass b { display: block; font-size: 12.5px; font-weight: 800; }
 .pass small { font: 10.5px var(--mono); }
-.pass.morgon { background: var(--morgon-bg); color: var(--morgon-text); box-shadow: inset 3px 0 0 var(--salvia); }
-.pass.kvall { background: var(--kvall-bg); color: var(--kvall-text); box-shadow: inset 3px 0 0 var(--bla); }
-.pass.natt { background: var(--natt-bg); color: var(--natt-text); box-shadow: inset 3px 0 0 #d6c3a3; }
-.pass.jour { background: var(--jour-bg); color: var(--jour-text); box-shadow: inset 3px 0 0 var(--guld); }
+.pass.morgon { background: var(--morgon-bg); color: var(--morgon-text); box-shadow: inset 3px 0 0 var(--morgon-kant); }
+.pass.kvall { background: var(--kvall-bg); color: var(--kvall-text); box-shadow: inset 3px 0 0 var(--kvall-kant); }
+.pass.natt { background: var(--natt-bg); color: var(--natt-text); box-shadow: inset 3px 0 0 var(--natt-kant); }
+.pass.jour { background: var(--jour-bg); color: var(--jour-text); box-shadow: inset 3px 0 0 var(--jour-kant); }
 .pass.dold { background: none; box-shadow: none; color: var(--svag); cursor: default; }
 .pass.vald { outline: 2px solid var(--accent); outline-offset: 1px; }
 table.schema .summa { font: 600 12px var(--mono); text-align: center; padding: 2px 5px; color: var(--text); white-space: nowrap; background: var(--yta2); }
@@ -196,7 +198,7 @@ table.schema td.summa.res { color: var(--text); font-weight: 800; }
 .pass.resurs { box-shadow: inset 4px 0 0 var(--resurs) !important; }
 .pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; }
 .schema.period .pass.resurs { background: var(--resurs); color: #fff; }
-.pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #4a3608; background: var(--guld-ljus); border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #5a1f0c; background: #f4c9b6; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr.bem td { font-size: 11.5px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.3; font-variant-numeric: tabular-nums; }
 tr.bem td.vakans { color: var(--kritisk); font-weight: 800; background: var(--kritisk-bg); border-radius: 8px; }
 .info { margin: 10px 0 0; font-size: 14px; min-height: 1.5em; }
@@ -333,7 +335,7 @@ table.analys td.bast { color: var(--bra); font-weight: 800; background: var(--br
 .hstapel { display: grid; grid-template-columns: minmax(110px, 180px) 1fr 60px; gap: 10px; align-items: center; padding: 4px 0; }
 .hstapel > div { background: var(--yta2); border-radius: 6px; height: 14px; overflow: hidden; }
 .hstapel i { display: block; height: 100%; border-radius: 6px; }
-.hstapel i.vila { background: var(--morgon); } .hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--over); }
+.hstapel i.vila { background: var(--tackt); } .hstapel i.vak { background: var(--kritisk); } .hstapel i.over { background: var(--over); }
 .hstapel b { text-align: right; font-variant-numeric: tabular-nums; }
 
 
@@ -393,7 +395,7 @@ table.nulage tr.nu td { background: var(--yta2); }
 .divbar { position: relative; height: 12px; background: var(--yta2); border-radius: 6px; margin-bottom: 4px; }
 .divbar::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1.5px; background: var(--svag); }
 .divbar i { position: absolute; top: 0; bottom: 0; border-radius: 6px; }
-.divbar i.battre { background: var(--morgon); } .divbar i.samre { background: var(--kritisk); }
+.divbar i.battre { background: var(--tackt); } .divbar i.samre { background: var(--kritisk); }
 span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--kritisk); font-weight: 700; }
 
 /* Schemaassistentens knapp: en rund symbol */

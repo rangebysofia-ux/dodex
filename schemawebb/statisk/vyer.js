@@ -333,14 +333,14 @@ function ritaKlockslag(res) {
       <rect x="${x(r.s)}" y="${i * radH + 4}" width="${Math.max(2, x(r.e) - x(r.s))}" height="${radH - 8}" rx="5" style="${r.vakant ? `fill:none;stroke:${FARG[r.p.dygnsdel]};stroke-width:2;stroke-dasharray:6 4` : r.resurs ? "fill:var(--resurs)" : `fill:${FARG[r.p.dygnsdel]}`}"
         data-tips="${r.vakant ? `Vakant ${DELAR[r.p.dygnsdel].toLowerCase()}pass ${r.p.start}–${r.p.slut}` : `${esc(r.pid)}: ${DELAR[r.p.dygnsdel]} ${r.p.start}–${r.p.slut}${r.resurs ? " – resurspass, utöver behovet" : ""}\nArbetstid ${timmar(r.p.netto)}, rast ${r.p.rast} min${esc(GRAF.aktText(r.p))}`}"/>
       ${r.vakant ? "" : (r.p.aktiviteter || []).map(a => { let s0 = Math.floor(r.helS / DYGN) * DYGN + minut(a.start); if (s0 < r.helS) s0 += DYGN; const s1 = s0 - minut(a.start) + minut(a.slut);
-        return `<rect x="${x(Math.max(0, s0 - (b - DYGN)))}" y="${i * radH + 8}" width="${Math.max(2, x(Math.min(DYGN, s1 - (b - DYGN))) - x(Math.max(0, s0 - (b - DYGN))))}" height="${radH - 16}" rx="3" style="fill:var(--guld-ljus);stroke:#4a3608;stroke-width:1" data-tips="★ ${esc(a.namn || a.id)} ${a.start}–${a.slut}"/>`; }).join("")}`).join("")}
+        return `<rect x="${x(Math.max(0, s0 - (b - DYGN)))}" y="${i * radH + 8}" width="${Math.max(2, x(Math.min(DYGN, s1 - (b - DYGN))) - x(Math.max(0, s0 - (b - DYGN))))}" height="${radH - 16}" rx="3" style="fill:#f4c9b6;stroke:#5a1f0c;stroke-width:1" data-tips="★ ${esc(a.namn || a.id)} ${a.start}–${a.slut}"/>`; }).join("")}`).join("")}
   </svg>`;
   return `<div class="chips" role="group" aria-label="Dag" style="margin-bottom:12px">${DAGAR.map((n, i) => `<button class="chip" data-g="dag" data-v="${i}" aria-pressed="${i === dagIdx}">${n}</button>`).join("")}</div>
     <h3>På golvet under dygnet, vecka ${v + 1} ${DAGAR[dagIdx]}</h3>${svg}
     ${minst.length ? `<p class="dampad liten">Streckad röd linje: minsta antal på golvet under ${minst.map(m => esc(m.namn || m.id)).join(", ")}. Den som är på aktiviteten räknas inte.</p>` : ""}
     ${tp.length ? `<p class="dampad liten">Punkterna visar behov vid klockslag. Röd punkt betyder att för få är i tjänst.</p>` : ""}
     <h3>Vem arbetar när</h3>${alla.length ? gantt : `<p class="tom">Ingen arbetar den här dagen.</p>`}
-    <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:var(--guld-ljus);border:1px solid #4a3608"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
+    <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:#f4c9b6;border:1px solid #5a1f0c"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- personer
