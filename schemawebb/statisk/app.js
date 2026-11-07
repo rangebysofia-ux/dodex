@@ -409,19 +409,22 @@ function nyttOnskId() {
 
 // ---------------------------------------------------------------- aktiviteter (APT, handledning, utbildning …)
 const VEMDELTAR = { alla: "Alla som kan arbeta då", andel: "En andel av gruppen", antal: "Ett visst antal", varje: "Alla, fördelat på tillfällena" };
-function tomAkt() { return { namn: "APT", dagar: ["tis"], veckor: "alla", start: "14:00", slut: "16:00", andel: 0.5, fran_golvet: true, krav: false }; }
+const AKTTYP = { apt: "APT", utbildning: "Utbildning", mote: "Möte", studier: "Studier", dokumentation: "Dokumentation", handledning: "Handledning", annat: "Annat" };
+// förslag på minsta bemanning på golvet: den lägsta av morgonens och kvällens behov på vardagar
+function minstForslag() { const v = (st.indata.behov || {}).vardag || {}; const l = [v.morgon, v.kvall].filter(x => x > 0); return l.length ? Math.min(...l) : 0; }
+function tomAkt() { return { typ: "apt", namn: "APT", dagar: ["tis"], veckor: "alla", start: "14:00", slut: "16:00", andel: 0.5, fran_golvet: true, minst_pa_golvet: minstForslag() || undefined, krav: false }; }
 
 function aktText(a) {
   const vv = Array.isArray(a.veckor) ? `vecka ${a.veckor.join(", ")}` : a.veckor === "jämna" ? "jämna veckor" : a.veckor === "udda" ? "udda veckor" : "varje vecka";
   const dagar = a.dagar && a.dagar.length ? a.dagar.join(", ") : "alla dagar";
   const vem = a.antal ? `${a.antal} personer` : a.andel ? `${Math.round(a.andel * 100)} % av gruppen` : a.varje_person ? `alla, ${a.varje_person} ${a.varje_person === 1 ? "gång" : "gånger"} var` : "alla";
-  return `${a.namn || a.id} ${a.start}–${a.slut}, ${dagar}, ${vv}: ${vem}${a.deltagare?.length ? ` bland ${a.deltagare.join(", ")}` : ""}`;
+  return `${a.namn || a.id} ${a.start}–${a.slut}, ${dagar}, ${vv}: ${vem}${a.deltagare?.length ? ` bland ${a.deltagare.join(", ")}` : ""}${a.minst_pa_golvet ? `. Minst ${a.minst_pa_golvet} kvar på golvet` : ""}`;
 }
 
 function ritaAktiviteter() {
   const lista = st.indata.aktiviteter || [];
   const a = st.redigeraAkt;
-  let h = `<p class="dampad liten">Aktiviteter under arbetstid, till exempel APT, handledning eller utbildning. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Därför påverkar aktiviteten passlängd, vila, OB och bemanningen på golvet. Deltagarna fördelas rättvist.</p>`;
+  let h = `<p class="dampad liten">Aktiviteter under arbetstid, till exempel APT, utbildning, möte, studier, dokumentation eller handledning. De blir delaktiviteter i passen. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Därför påverkar aktiviteten passlängd, vila, OB och bemanningen på golvet. Deltagarna fördelas rättvist.</p>`;
   h += a ? ritaAktForm(a.data, a.index) : `<p><button class="primar" data-g="ny-akt">+ Ny aktivitet</button></p>`;
   h += lista.length ? lista.map((x, n) => `<div class="onsk"><div><div>${x.krav ? `<span class="niva niva-avtal">måste</span> ` : ""}★ ${esc(aktText(x))}</div>
       <div class="dampad liten">${x.fran_golvet === false ? "Räknas som i tjänst på golvet." : "Deltagarna räknas inte på golvet under aktiviteten."}${x.kommentar ? " " + esc(x.kommentar) : ""}</div></div>
@@ -436,6 +439,7 @@ function ritaAktForm(a, index) {
   const valda = new Set(a.deltagare || []);
   return `<form class="formular" id="akt-form">
     <div class="falt">
+      <div><label for="a-typ">Typ</label><select id="a-typ">${Object.entries(AKTTYP).map(([k, t]) => `<option value="${k}"${k === (a.typ || "annat") ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div><label for="a-namn">Namn</label><input id="a-namn" value="${esc(a.namn || "")}" placeholder="APT" required></div>
       <div><label for="a-start">Från</label><input id="a-start" type="time" value="${esc(a.start)}" required></div>
       <div><label for="a-slut">Till</label><input id="a-slut" type="time" value="${esc(a.slut)}" required></div>
@@ -456,6 +460,8 @@ function ritaAktForm(a, index) {
     <details${valda.size ? " open" : ""}><summary>Bara vissa personer (valfritt)</summary>
       <div class="chips" style="margin-top:6px">${st.indata.personal.map(p => `<label><input type="checkbox" name="a-pers" value="${esc(p.id)}"${valda.has(p.id) ? " checked" : ""}> ${esc(p.id)}</label>`).join("")}</div>
       <p class="dampad liten" style="margin:4px 0 0">Inga valda betyder alla som har pass som kan täcka tiden.</p></details>
+    <div class="falt"><div><label for="a-minst">Minst kvar på golvet under tiden</label><input id="a-minst" type="number" min="0" value="${a.minst_pa_golvet ?? ""}" placeholder="ingen gräns"></div>
+      <p class="dampad liten" style="align-self:end;margin:0">De som inte deltar får längre pass så att minst så många är i tjänst varje kvart. Behövs det fler än som finns blir det vakans.</p></div>
     <p><label class="check"><input type="checkbox" id="a-golv"${a.fran_golvet !== false ? " checked" : ""}> Deltagarna räknas inte på golvet under aktiviteten</label><br>
       <label class="check"><input type="checkbox" id="a-krav"${a.krav ? " checked" : ""}> Måste genomföras (annars läggs den så långt det går, efter behovet)</label></p>
     <div><label for="a-kommentar">Kommentar (valfri, utan personuppgifter)</label><input id="a-kommentar" value="${esc(a.kommentar || "")}"></div>
@@ -468,11 +474,12 @@ function kopplaAktForm() {
   if (!f) return;
   const a = st.redigeraAkt.data;
   $("#a-veckor").onchange = () => ($("#a-vissa").hidden = $("#a-veckor").value !== "vissa");
+  $("#a-typ").onchange = () => { const n = $("#a-namn"); if (!n.value.trim() || Object.values(AKTTYP).includes(n.value.trim())) n.value = $("#a-typ").value === "annat" ? "" : AKTTYP[$("#a-typ").value]; };
   $("#a-vem").onchange = () => { const v = $("#a-vem").value; $("#a-andel-ruta").hidden = v !== "andel"; $("#a-antal-ruta").hidden = v !== "antal"; $("#a-varje-ruta").hidden = v !== "varje"; };
   f.onsubmit = e => {
     e.preventDefault();
     const namn = $("#a-namn").value.trim() || "Aktivitet";
-    const ny = { id: a.id || nyttAktId(namn), namn, start: $("#a-start").value, slut: $("#a-slut").value };
+    const ny = { id: a.id || nyttAktId(namn), typ: $("#a-typ").value, namn, start: $("#a-start").value, slut: $("#a-slut").value };
     if (!(ny.slut > ny.start)) { meddela("Aktiviteten måste sluta efter att den börjar, samma dag."); return; }
     const dagar = [...f.querySelectorAll("[name=a-dag]:checked")].map(x => x.value);
     if (!dagar.length) { meddela("Välj minst en dag."); return; }
@@ -490,6 +497,7 @@ function kopplaAktForm() {
     const pers = [...f.querySelectorAll("[name=a-pers]:checked")].map(x => x.value);
     if (pers.length) ny.deltagare = pers;
     if (!$("#a-golv").checked) ny.fran_golvet = false;
+    const minst = parseInt($("#a-minst").value); if (minst > 0) ny.minst_pa_golvet = minst;
     if ($("#a-krav").checked) ny.krav = true;
     const k = $("#a-kommentar").value.trim(); if (k) ny.kommentar = k;
     st.indata.aktiviteter = st.indata.aktiviteter || [];

@@ -5,6 +5,7 @@
 <style>
 /* Layout: en kolumn för mobilen; kontroll överst, flikar för indata, fast knapp för att lägga schemat. */
 :root {
+  --resurs: #141414; --resurs-bg: #e6e6e4;
   --bg: #f8f9f7; --yta: #ffffff; --yta2: #f3f5f2; --text: #25332f; --dampad: #5d6b67; --linje: #e4e8e3; --helg: #f4f1ea;
   --accent: #193f38; --accent-text: #ffffff; --accent-svag: #e6efe8; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #a9863a;
   --morgon: #e4efe7; --morgon-text: #2f6b43; --kvall: #e2eef6; --kvall-text: #245f8a; --natt: #f1e8da; --natt-text: #7a4f1f;
@@ -15,12 +16,14 @@
   --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --resurs-bg: #2e2e2c;
   --bg: #121c1a; --yta: #1a2724; --yta2: #20302c; --text: #e8ece8; --dampad: #a9b6b1; --linje: #2c3d38; --helg: #1d2925;
   --accent: #a8c5b0; --accent-text: #13221e; --accent-svag: #24372f; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #c39f50;
   --morgon: #1f3328; --morgon-text: #b9dcc3; --kvall: #1b2f3c; --kvall-text: #b8d7e8; --natt: #362e22; --natt-text: #e9d3ae;
   --morgon-kant: #5f8f6d; --kvall-kant: #5f8fae; --natt-kant: #9c8058;
   --bra: #8fcaa0; --bra-bg: #1c3326; --dalig: #ec8b78; --dalig-bg: #3b221d; --varn: #e8c47a; --varn-bg: #352c19; color-scheme: dark; } }
 :root[data-theme="dark"] {
+  --resurs-bg: #2e2e2c;
   --bg: #121c1a; --yta: #1a2724; --yta2: #20302c; --text: #e8ece8; --dampad: #a9b6b1; --linje: #2c3d38; --helg: #1d2925;
   --accent: #a8c5b0; --accent-text: #13221e; --accent-svag: #24372f; --guld: #d5b46a; --guld-ljus: #ead29a; --guld-djup: #c39f50;
   --morgon: #1f3328; --morgon-text: #b9dcc3; --kvall: #1b2f3c; --kvall-text: #b8d7e8; --natt: #362e22; --natt-text: #e9d3ae;
@@ -96,6 +99,9 @@ table.schema .helg { background: var(--helg); }
 .pass b { display: block; font-size: 12.5px; } .pass small { font: 10.5px var(--mono); }
 .pass.morgon { background: var(--morgon); color: var(--morgon-text); box-shadow: inset 3px 0 0 var(--morgon-kant); } .pass.kvall { background: var(--kvall); color: var(--kvall-text); box-shadow: inset 3px 0 0 var(--kvall-kant); } .pass.natt { background: var(--natt); color: var(--natt-text); box-shadow: inset 3px 0 0 var(--natt-kant); }
 .pass.vald { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pass.resurs { box-shadow: inset 4px 0 0 var(--resurs), inset 0 0 0 1px var(--resurs) !important; }
+.pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border: 1px solid var(--text); border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
+.schema.period .pass.resurs { background: var(--resurs); color: #fff; }
 .pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #4a3608; background: #ead29a; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 tr.bem td { font-size: 11px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.25; }
 tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dalig-bg); }
@@ -117,7 +123,9 @@ tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dali
 .pass.vakant { background: none; border: 2px dashed; padding: 2px 0; cursor: default; }
 .pass.vakant.morgon { border-color: var(--morgon-text); color: var(--morgon-text); } .pass.vakant.kvall { border-color: var(--kvall-text); color: var(--kvall-text); } .pass.vakant.natt { border-color: var(--natt); color: var(--text); }
 tr.vakantrad td:first-child { color: var(--dalig); }
-.minus { color: var(--dalig); font-weight: 800; } .plus { color: var(--accent); font-weight: 800; } tr.bem td.over { background: var(--accent-svag); }
+.minus { color: var(--dalig); font-weight: 800; } .plus { color: var(--resurs); font-weight: 800; } tr.bem td.over { background: var(--resurs-bg); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .plus { color: var(--text); } }
+:root[data-theme="dark"] .plus { color: var(--text); }
 table.schema.period th:first-child, table.schema.period td:first-child { position: sticky; left: 0; background: var(--yta); z-index: 1; }
 table.schema.period td, table.schema.period th { padding: 1px; } table.schema.period .ny-vecka { border-left: 2px solid var(--linje); }
 @media (max-width: 560px) { .pass small { display: none; } .pass { padding: 6px 0; } }
@@ -424,7 +432,7 @@ function ritaFlik() {
     kopplaOnsk();
   } else if (st.flik === "aktiviteter") {
     const l = i.aktiviteter || [];
-    el.innerHTML = `<p class="dampad liten">Till exempel APT, handledning eller utbildning. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Deltagarna fördelas rättvist.</p>` +
+    el.innerHTML = `<p class="dampad liten">Till exempel APT, utbildning, möte, studier, dokumentation eller handledning. De blir delaktiviteter i passen. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Deltagarna fördelas rättvist.</p>` +
       (st.aktForm ? aktForm() : `<p><button class="primar" data-g="ny-akt">+ Ny aktivitet</button></p>`) +
       (l.length ? l.map((a, n) => `<div class="onsk"><div>${a.krav ? `<span class="niva skarp">måste</span> ` : ""}★ ${esc(aktBeskriv(a))}</div>
         <div class="chips"><button class="liten" data-g="andra-akt" data-n="${n}">Ändra</button><button class="liten fara" data-g="ta-bort-akt" data-n="${n}" aria-label="Ta bort">×</button></div></div>`).join("") : `<p class="tom">Inga aktiviteter.</p>`);
@@ -467,10 +475,11 @@ function beskriv(o) {
   return `${o.person} ${vill} ${vad} – ${nar}${!o.krav && (o.vikt || 1) > 1 ? ` (vikt ${o.vikt})` : ""}`;
 }
 
+const AKTTYP = { apt: "APT", utbildning: "Utbildning", mote: "Möte", studier: "Studier", dokumentation: "Dokumentation", handledning: "Handledning", annat: "Annat" };
 function aktBeskriv(a) {
   const vv = Array.isArray(a.veckor) ? `vecka ${a.veckor.join(", ")}` : a.veckor === "jämna" ? "jämna veckor" : a.veckor === "udda" ? "udda veckor" : "varje vecka";
   const vem = a.antal ? `${a.antal} personer` : a.andel ? `${Math.round(a.andel * 100)} % av gruppen` : a.varje_person ? `alla, ${a.varje_person} ${a.varje_person === 1 ? "gång" : "gånger"} var` : "alla";
-  return `${a.namn || a.id} ${a.start}–${a.slut}, ${(a.dagar || []).join(", ") || "alla dagar"}, ${vv}: ${vem}${a.deltagare?.length ? ` bland ${a.deltagare.join(", ")}` : ""}${a.fran_golvet === false ? " (räknas på golvet)" : ""}`;
+  return `${a.namn || a.id} ${a.start}–${a.slut}, ${(a.dagar || []).join(", ") || "alla dagar"}, ${vv}: ${vem}${a.deltagare?.length ? ` bland ${a.deltagare.join(", ")}` : ""}${a.fran_golvet === false ? " (räknas på golvet)" : ""}${a.minst_pa_golvet ? `. Minst ${a.minst_pa_golvet} kvar på golvet` : ""}`;
 }
 
 function aktForm() {
@@ -478,7 +487,7 @@ function aktForm() {
   const vem = a.antal ? "antal" : a.andel ? "andel" : a.varje_person ? "varje" : "alla";
   const valda = new Set(a.deltagare || []);
   return `<form class="formular" id="af">
-    <div class="falt"><div><label for="af-n">Namn</label><input id="af-n" value="${esc(a.namn || "")}" placeholder="APT"></div>
+    <div class="falt"><div><label for="af-typ">Typ</label><select id="af-typ">${Object.entries(AKTTYP).map(([k, t]) => `<option value="${k}"${k === (a.typ || "annat") ? " selected" : ""}>${t}</option>`).join("")}</select></div><div><label for="af-n">Namn</label><input id="af-n" value="${esc(a.namn || "")}" placeholder="APT"></div>
       <div><label for="af-s">Från</label><input id="af-s" type="time" value="${esc(a.start)}"></div><div><label for="af-e">Till</label><input id="af-e" type="time" value="${esc(a.slut)}"></div></div>
     <div><label>Dagar</label><div class="chips">${DAGAR.map(d => `<label><input type="checkbox" name="af-d" value="${d}"${(a.dagar || []).includes(d) ? " checked" : ""}>${d}</label>`).join("")}</div></div>
     <div class="falt"><div><label for="af-w">Veckor</label><select id="af-w">${[["alla", "Varje vecka"], ["jämna", "Jämna"], ["udda", "Udda"], ["vissa", "Vissa"]].map(([k, t]) => `<option value="${k}"${k === vv ? " selected" : ""}>${t}</option>`).join("")}</select></div>
@@ -486,6 +495,8 @@ function aktForm() {
     <div class="falt"><div><label for="af-v">Vilka deltar</label><select id="af-v">${[["alla", "Alla som kan arbeta då"], ["andel", "En andel"], ["antal", "Ett visst antal"], ["varje", "Alla, fördelat på tillfällena"]].map(([k, t]) => `<option value="${k}"${k === vem ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div id="af-tal"${vem === "alla" ? " hidden" : ""}><label for="af-t" id="af-tl">${vem === "andel" ? "Andel, %" : vem === "antal" ? "Antal per tillfälle" : "Gånger per person"}</label><input id="af-t" type="number" min="1" value="${vem === "andel" ? Math.round(a.andel * 100) : vem === "antal" ? a.antal : a.varje_person || 1}"></div></div>
     <details${valda.size ? " open" : ""}><summary class="liten">Bara vissa personer (valfritt)</summary><div class="chips" style="margin-top:6px">${st.enhet.indata.personal.map(p => `<label><input type="checkbox" name="af-p" value="${esc(p.id)}"${valda.has(p.id) ? " checked" : ""}>${esc(p.id)}</label>`).join("")}</div></details>
+    <div><label for="af-m">Minst kvar på golvet under tiden</label><input id="af-m" type="number" min="0" value="${a.minst_pa_golvet ?? ""}" placeholder="ingen gräns">
+      <p class="dampad liten" style="margin:4px 0 0">De som inte deltar får längre pass så att minst så många är i tjänst.</p></div>
     <p><label class="check"><input type="checkbox" id="af-g"${a.fran_golvet !== false ? " checked" : ""}> Deltagarna räknas inte på golvet under tiden</label><br>
       <label class="check"><input type="checkbox" id="af-k"${a.krav ? " checked" : ""}> Måste genomföras</label></p>
     <div class="chips"><button class="primar" type="submit">${st.aktForm.n == null ? "Lägg till" : "Spara"}</button><button type="button" data-g="avbryt-akt">Avbryt</button></div></form>`;
@@ -495,6 +506,7 @@ function kopplaAkt() {
   const f = $("#af"); if (!f) return;
   const a = st.aktForm.data;
   $("#af-w").onchange = () => ($("#af-wl").hidden = $("#af-w").value !== "vissa");
+  $("#af-typ").onchange = () => { const n = $("#af-n"); if (!n.value.trim() || Object.values(AKTTYP).includes(n.value.trim())) n.value = $("#af-typ").value === "annat" ? "" : AKTTYP[$("#af-typ").value]; };
   $("#af-v").onchange = () => {
     const v = $("#af-v").value; $("#af-tal").hidden = v === "alla";
     $("#af-tl").textContent = v === "andel" ? "Andel, %" : v === "antal" ? "Antal per tillfälle" : "Gånger per person";
@@ -504,7 +516,7 @@ function kopplaAkt() {
     ev.preventDefault();
     const namn = $("#af-n").value.trim() || "Aktivitet", ids = new Set((st.enhet.indata.aktiviteter || []).map(x => x.id));
     let id = a.id; if (!id) { const bas = (namn.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "AKT").slice(0, 8); id = bas; let k = 2; while (ids.has(id)) id = bas + k++; }
-    const n = { id, namn, start: $("#af-s").value, slut: $("#af-e").value };
+    const n = { id, typ: $("#af-typ").value, namn, start: $("#af-s").value, slut: $("#af-e").value };
     if (!(n.slut > n.start)) return meddela("Aktiviteten måste sluta efter att den börjar, samma dag.");
     n.dagar = [...f.querySelectorAll("[name=af-d]:checked")].map(x => x.value);
     if (!n.dagar.length) return meddela("Välj minst en dag.");
@@ -517,6 +529,7 @@ function kopplaAkt() {
     if (v === "varje") n.varje_person = Math.max(1, Math.round(t));
     const p = [...f.querySelectorAll("[name=af-p]:checked")].map(x => x.value); if (p.length) n.deltagare = p;
     if (!$("#af-g").checked) n.fran_golvet = false;
+    const m = parseInt($("#af-m").value); if (m > 0) n.minst_pa_golvet = m;
     if ($("#af-k").checked) n.krav = true;
     const l = st.enhet.indata.aktiviteter || (st.enhet.indata.aktiviteter = []);
     if (st.aktForm.n == null) l.push(n); else l[st.aktForm.n] = n;
@@ -637,7 +650,10 @@ document.addEventListener("click", async ev => {
     case "nytt-onsk": if (!i.personal.length) return; st.onskForm = { n: null, data: { person: i.personal[0].id, typ: "ledig", krav: false, vikt: 1 } }; return ritaFlik();
     case "andra-onsk": st.onskForm = { n: +el.dataset.n, data: structuredClone(i.onskemal[+el.dataset.n]) }; return ritaFlik();
     case "avbryt-onsk": st.onskForm = null; return ritaFlik();
-    case "ny-akt": st.aktForm = { n: null, data: { namn: "APT", dagar: ["tis"], veckor: "alla", start: "14:00", slut: "16:00", andel: 0.5 } }; return ritaFlik();
+    case "ny-akt": {
+      const v = (i.behov || {}).vardag || {}, l = [v.morgon, v.kvall].filter(x => x > 0);
+      st.aktForm = { n: null, data: { typ: "apt", namn: "APT", dagar: ["tis"], veckor: "alla", start: "14:00", slut: "16:00", andel: 0.5, minst_pa_golvet: l.length ? Math.min(...l) : undefined } }; return ritaFlik();
+    }
     case "andra-akt": st.aktForm = { n: +el.dataset.n, data: structuredClone(i.aktiviteter[+el.dataset.n]) }; return ritaFlik();
     case "avbryt-akt": st.aktForm = null; return ritaFlik();
     case "ta-bort-akt": i.aktiviteter.splice(+el.dataset.n, 1); if (!i.aktiviteter.length) delete i.aktiviteter; return andrad(true);
@@ -737,7 +753,7 @@ function ritaResultat() {
       Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
       `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button></div>` +
       (st.vecka === -1 ? dagTabell(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), true) : vecka(res, st.vecka)) +
-      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans, <span class="plus">+1</span> över behovet.</p></section>`;
+      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet.</p></section>`;
     h += GRAF.aktivitetKort(res);
     if (res.vakanser.length) h += `<section class="kort"><h2>Vakanser</h2><ul class="punkter">${res.vakanser.map(x => `<li>Vecka ${x.vecka} ${x.veckodag}: ${x.antal} ${DELAR[x.dygnsdel].toLowerCase()}pass</li>`).join("")}</ul></section>`;
   }
@@ -748,13 +764,13 @@ function ritaResultat() {
 // ------------------------------------------------------------------ person
 function ritaPerson(pid, res, ind) {
   const x = res.personer[pid], rad = res.schema[pid], W = res.veckor, p = ind.personal.find(q => q.id === pid) || {};
-  const kod = { morgon: "M", kvall: "K", natt: "N" };
+  const kod = { morgon: "M", kvall: "K", natt: "N" }, rs = GRAF.resurs(res, ind);
   let h = `<section class="kort"><button class="lank" data-g="person" data-p="">‹ Alla personer</button><h2 style="margin:6px 0 0">${esc(pid)}</h2>
     <p class="dampad" style="margin:2px 0 0">${Math.round((p.grad ?? 1) * 100)} % · ${(p.dygnsdelar || ["morgon", "kvall"]).map(d => DELAR[d].toLowerCase()).join(" och ")} · ${x.pass} pass · ${x.kvallspass} kvällar</p>
     <div class="rull" style="margin-top:10px"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veck = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${GRAF.aktMarke(q)}</span>` : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i], r = rs.has(pid + ":" + (v * 7 + i)); return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${r ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${r ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
   }
   h += `</tbody></table></div><p class="dampad liten" style="margin-top:6px">Tryck på ett pass för datum och OB.</p></section>`;
   return h + `<div class="grafyta">${GRAF.vilaKort(pid, res, ind)}${GRAF.obKort(pid, res, ind, { installningar: "Period" })}</div>`;
@@ -1048,7 +1064,7 @@ function behovDag(indata) {
 function vecka(res, v) { return dagTabell(res, Array.from({ length: 7 }, (_, i) => v * 7 + i), false); }
 
 function dagTabell(res, dagar, period) {
-  const pers = Object.keys(res.schema), vak = {}, vp = vakansPass(res);
+  const pers = Object.keys(res.schema), vak = {}, vp = vakansPass(res), rs = GRAF.resurs(res, st.korning.indata || st.enhet.indata);
   const kod = { morgon: "M", kvall: "K", natt: "N" };
   res.vakanser.forEach(x => (vak[x.dag] = (vak[x.dag] || 0) + x.antal));
   const kl = d => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}"`;
@@ -1058,7 +1074,8 @@ function dagTabell(res, dagar, period) {
   for (const p of pers) h += `<tr><td title="${esc(p)}">${st.red ? esc(p) : `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`}</td>` + dagar.map(d => {
     const x = res.schema[p][d], n = p + "|" + d;
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
-    return `<td ${kl(d)}>${x ? `<button class="pass ${x.dygnsdel}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}</button>` : ""}</td>`;
+    const r = x && rs.has(p + ":" + d);
+    return `<td ${kl(d)}>${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {

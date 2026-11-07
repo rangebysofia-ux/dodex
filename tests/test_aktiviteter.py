@@ -122,3 +122,47 @@ def test_justering_behaller_aktiviteter(losning):
     schema = copy.deepcopy(res["schema"])
     schema[t["deltagare"][0]][t["dag"]].pop("aktiviteter")
     assert justera(indata, schema, res)["kpi"]["aktivitet_saknas"] == 1
+
+
+def test_minst_pa_golvet_under_aktiviteten():
+    """När hälften är på APT förlängs andras pass så att minst tre är kvar på golvet varje kvart."""
+    fall = ROT / "tests" / "fall" / "aktivitet_minst_pa_golvet.json"
+    indata = json.loads(fall.read_text(encoding="utf-8"))
+    res = los(forbered(indata), tid_per_steg=6, arbetare=4, tyst=True)
+    assert res["status"] == "OK" and res["kpi"]["vakanser"] == 0
+    for t in res["aktiviteter"]:
+        for kvart in range(14 * 60, 16 * 60, 15):
+            kl = f"{kvart // 60:02d}:{kvart % 60:02d}"
+            pa_golvet = [pid for pid, rad in res["schema"].items() if rad[t["dag"]] and pid not in t["deltagare"]
+                         and rad[t["dag"]]["start"] <= kl < rad[t["dag"]]["slut"]]
+            assert len(pa_golvet) >= 3, (t, kl, pa_golvet)
+    g = kontrollera(indata, res)
+    assert g["giltigt"] and not [v for v in g["varningar"] if v["regel"] == "BEHOV"]
+    # tar man bort förlängningarna syns bristen i granskningen
+    fel = copy.deepcopy(res)
+    t = fel["aktiviteter"][0]
+    for pid, rad in fel["schema"].items():
+        p = rad[t["dag"]]
+        if p and pid not in t["deltagare"] and p["dygnsdel"] == "morgon":
+            p.update({"slut": "13:30", "netto": 360, "rast": 30})
+    assert any("under Arbetsplatsträff" in v["text"] for v in kontrollera(indata, fel)["varningar"])
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="kräver Node")
+def test_resurspass_samma_i_webben_och_exporten(losning, tmp_path):
+    """Resurspass (utöver behovet) räknas likadant i gränssnittet (grafer.js) och i exporten."""
+    from schemamotor.export import _resurs
+    indata, res = losning
+    fil = tmp_path / "r.json"
+    fil.write_text(json.dumps({"res": res, "ind": indata}), encoding="utf-8")
+    kod = (f"global.window=undefined;const G=require('./schemawebb/statisk/grafer.js');const d=require({json.dumps(str(fil))});"
+           "console.log(JSON.stringify([...G.resurs(d.res,d.ind)]))")
+    js = json.loads(subprocess.run(["node", "-e", kod], cwd=ROT, capture_output=True, text=True, check=True).stdout)
+    py = _resurs(res, indata)
+    assert {tuple(x.rsplit(":", 1)) for x in js} == {(q, str(d)) for q, d in py}
+    # lika många resurspass som pass över behovet
+    from schemamotor.build import expandera_dagvarden
+    beh = expandera_dagvarden(indata["behov"], dict)
+    over = sum(max(0, sum(1 for rad in res["schema"].values() if rad[d] and rad[d]["dygnsdel"] == k) - beh[d % 7].get(k, 0))
+               for d in range(indata["veckor"] * 7) for k in ("morgon", "kvall", "natt"))
+    assert len(py) == over

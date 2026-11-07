@@ -113,7 +113,7 @@ const ASSISTENT = (() => {
     },
     {
       name: "foresla_andringar",
-      description: "Föreslår ändringar. Inget ändras förrän användaren trycker Godkänn. Två sorter, blanda dem inte i samma förslag: (1) Passändringar i det lagda schemat, exakt som användaren säger: satt_pass (lägg eller ändra ett pass), ta_bort_pass, flytta_pass. Schemat blir exakt så när det godkänns; resten av schemat ändras inte. (2) Ändringar i indata: lagg_till_person, andra_person, ta_bort_person, satt_behov, lagg_till_onskemal, ta_bort_onskemal, lagg_till_aktivitet (till exempel APT tisdag 14–16 för halva gruppen; deltagarna arbetar hela tiden), ta_bort_aktivitet, satt_period. Schemat läggs då om automatiskt när det godkänns. Regler (vila, helger, block) ändras inte här utan under Regler.",
+      description: "Föreslår ändringar. Inget ändras förrän användaren trycker Godkänn. Två sorter, blanda dem inte i samma förslag: (1) Passändringar i det lagda schemat, exakt som användaren säger: satt_pass (lägg eller ändra ett pass), ta_bort_pass, flytta_pass. Schemat blir exakt så när det godkänns; resten av schemat ändras inte. (2) Ändringar i indata: lagg_till_person, andra_person, ta_bort_person, satt_behov, lagg_till_onskemal, ta_bort_onskemal, lagg_till_aktivitet (APT, utbildning, möte, studier, dokumentation, handledning; till exempel APT tisdag 14–16 för halva gruppen och minst 3 kvar på golvet; deltagarna arbetar hela tiden), ta_bort_aktivitet, satt_period. Schemat läggs då om automatiskt när det godkänns. Regler (vila, helger, block) ändras inte här utan under Regler.",
       schema: { type: "object", required: ["sammanfattning", "andringar"], properties: {
         sammanfattning: { type: "string", description: "En mening på svenska om vad förslaget gör." },
         andringar: { type: "array", minItems: 1, items: { type: "object", required: ["typ"], properties: {
@@ -142,6 +142,8 @@ const ASSISTENT = (() => {
           krav: { type: "boolean", description: "true = måste uppfyllas, false = önskemål." },
           vikt: { type: "integer", minimum: 1, maximum: 10 },
           namn: { type: "string", description: "lagg_till_aktivitet: aktivitetens namn, till exempel APT eller Handledning." },
+          aktivitetstyp: { type: "string", enum: ["apt", "utbildning", "mote", "studier", "dokumentation", "handledning", "annat"], description: "lagg_till_aktivitet: typ av aktivitet." },
+          minst_pa_golvet: { type: "integer", minimum: 0, description: "lagg_till_aktivitet: minsta antal kvar på golvet under aktiviteten; andras pass förlängs vid behov." },
           aktivitet_id: { type: "string", description: "ta_bort_aktivitet: aktivitetens id." },
           andel_procent: { type: "number", description: "lagg_till_aktivitet: andel av gruppen per tillfälle, till exempel 50 för hälften." },
           antal: { type: "integer", minimum: 1, description: "lagg_till_aktivitet: antal deltagare per tillfälle." },
@@ -312,6 +314,8 @@ const ASSISTENT = (() => {
             x.deltagare = a.deltagare.map(String);
           }
           if (a.fran_golvet === false) x.fran_golvet = false;
+          if (a.aktivitetstyp) x.typ = String(a.aktivitetstyp);
+          if (Number(a.minst_pa_golvet) > 0) x.minst_pa_golvet = Number(a.minst_pa_golvet);
           if (a.krav) x.krav = true;
           (indata.aktiviteter = indata.aktiviteter || []).push(x); break;
         }

@@ -173,7 +173,7 @@ const MOTOR = (() => {
       const antal = Math.min(onskat, G);
       const snitt = G ? antal * T / G : 0;
       akt.push({ id, namn: a.namn || id, start: a.start, slut: a.slut, a0, a1, dagar: [...dagar].sort((x, y) => x - y), grupp, antal, onskat,
-        krav: !!a.krav, lo: a.varje_person || Math.floor(snitt + 1e-9), hi: a.varje_person || Math.ceil(snitt - 1e-9) });
+        krav: !!a.krav, minst: a.minst_pa_golvet || 0, golv: a.fran_golvet !== false, lo: a.varje_person || Math.floor(snitt + 1e-9), hi: a.varje_person || Math.ceil(snitt - 1e-9) });
     });
 
     // dygnsbryt för sökningen: där flest dag- och kvällspass byts
@@ -347,6 +347,8 @@ const MOTOR = (() => {
           let n = 0;
           for (const pi of a.grupp) if (forlangning(pi, X, d, a) <= Math.max(pers[pi].tol, 120)) { n++; mojlig.set(pi, (mojlig.get(pi) || 0) + 1); }
           k += Math.max(0, a.antal - n) * (a.krav ? HW : WA);
+          // minsta bemanning på golvet: utöver deltagarna behövs så många som kan vara kvar (behov, som vakanser)
+          if (a.minst) k += (Math.max(0, a.antal + a.minst - n) - Math.max(0, a.antal - n)) * WV / 2;
         }
         // rättvisa: var och en ska kunna delta minst så många gånger som fördelningen kräver
         if (a.lo) for (const pi of a.grupp) k += Math.max(0, a.lo - (mojlig.get(pi) || 0)) * WA / 4;
@@ -494,7 +496,8 @@ const MOTOR = (() => {
       }
       schema[p.id] = rad;
     });
-    const tillfallen = aktiviteter(pr, schema, brott);
+    const golvVak = [];
+    const tillfallen = aktiviteter(pr, schema, brott, golvVak);
     for (const t of tillfallen) if (t.saknas && t.krav) hardTotalt++;
     pers.forEach(p => {
       const rad = schema[p.id];
@@ -512,9 +515,11 @@ const MOTOR = (() => {
       const n = pers.reduce((s, p, pi) => s + (X[pi][d] === t ? 1 : 0), 0), b = behov[d % 7][t];
       if (n < b) { vak += b - n; vakanser.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: DELNAMN[t], tid: null, antal: b - n }); }
     }
+    vakanser.push(...golvVak);
+    const golv = golvVak.reduce((s, v) => s + v.antal, 0);
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
-      kpi: { vakanser: vak, vakanta_pass: vak, vakanta_tidpunkter: 0, blocklangd: block, passlangd: Math.round(passlangd),
+      kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0) },
       personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott,
@@ -524,7 +529,7 @@ const MOTOR = (() => {
   // Välj deltagare till varje aktivitetstillfälle bland dem som arbetar: först de vars pass redan täcker,
   // sedan de som har deltagit minst. Behöver passet förlängas kortas personens andra pass i steg om 15 minuter,
   // så att arbetstiden stämmer med kontraktet. Vilan kontrolleras efter varje ändring.
-  function aktiviteter(pr, schema, brott) {
+  function aktiviteter(pr, schema, brott, golvVak) {
     const { r, N, cyk, pers } = pr, kf = tid(r.kant_fran), kt = tid(r.kant_till);
     const ut = [];
     const satt = (v, o) => {
@@ -602,6 +607,30 @@ const MOTOR = (() => {
       a.dagar.forEach((d, i) => {
         const resten = [...kan[i]].filter(pi => !delt[i].includes(pers[pi].id)).sort((x, y) => (n.get(x) || 0) - (n.get(y) || 0) || x - y);
         for (const pi of resten) { if (delt[i].length >= a.antal) break; tilldela(pi, i); }
+      });
+      // minsta bemanning på golvet: förläng pass för dem som inte deltar tills nog många är kvar varje kvart
+      if (a.minst) a.dagar.forEach((d, i) => {
+        const pagolv = t => {
+          let n = 0;
+          for (const p of pers) {
+            const rad = schema[p.id];
+            for (const dd of [d, cyk ? (d - 1 + N) % N : d - 1]) {
+              const v = dd >= 0 ? rad[dd] : null; if (!v) continue;
+              const s = tid(v.start); let e = tid(v.slut); if (e <= s) e += DYGN;
+              const tt = dd === d ? t : t + DYGN;
+              if (s <= tt && tt < e) { if (!(dd === d && a.golv && pr.akt.some(b => b.golv && b.a0 <= t && t < b.a1 && (v.aktiviteter || []).some(x => x.id === b.id)))) n++; break; }
+            }
+          }
+          return n;
+        };
+        const brist = () => { let m = 0; for (let t = a.a0; t < a.a1; t += 15) m = Math.max(m, a.minst - pagolv(t)); return m; };
+        const kand = pers.filter(p => !delt[i].includes(p.id) && schema[p.id][d] && !schema[p.id][d].aktiviteter
+          && (schema[p.id][d].dygnsdel === "morgon" || schema[p.id][d].dygnsdel === "kvall"));
+        for (const p of kand) { if (brist() <= 0) break; if (tackDag(schema[p.id], d, a) < 0) forlang(p, schema[p.id], d, a); }
+        for (let t = a.a0; t < a.a1; t += 15) {
+          const m = a.minst - pagolv(t);
+          if (m > 0) golvVak.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: null, tid: klocka(t), antal: m });
+        }
       });
       a.dagar.forEach((d, i) => {
         const saknas = a.onskat - delt[i].length;

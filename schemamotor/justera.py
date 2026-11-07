@@ -116,6 +116,18 @@ def justera(indata, schema, grund=None):
                 vakanser.append({"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": None,
                                  "tid": tp["tid"], "antal": tp["antal"] - n})
 
+    # minsta bemanning på golvet under aktiviteter
+    for a in prob.get("aktiviteter", []):
+        minst = a.get("minst_pa_golvet") or 0
+        for d in a["_dagar"] if minst else []:
+            for t0 in range(a["_start"], a["_slut"], 15):
+                t = d * DYGN + t0
+                def inne(s, e):
+                    return s <= t < e or (prob["cykliskt"] and (s <= t + L < e or s <= t - L < e))
+                n = sum(1 for s, e in intervall if inne(s, e)) - sum(1 for s, e in borta if inne(s, e))
+                if n < minst:
+                    vakanser.append({"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": None,
+                                     "tid": klocka(t0), "antal": minst - n})
     gamla = (grund or {}).get("personer", {})
     personer = {}
     for pid, p in kanda.items():

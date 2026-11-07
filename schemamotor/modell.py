@@ -28,7 +28,7 @@ FALTNAMN = {
     "nattpass": "nattpass", "tidpunkter": "tidpunkter", "delperioder": "delperioder", "varde": "värde", "start": "start", "slut": "slut",
     "tid": "tid", "antal": "antal", "helgfrekvens": "helgfrekvens", "helggrupp": "helggrupp",
     "aktiviteter": "aktivitet", "andel": "andel", "deltagare": "deltagare", "varje_person": "gånger per person",
-    "namn": "namn", "fran_golvet": "från golvet",
+    "namn": "namn", "fran_golvet": "från golvet", "minst_pa_golvet": "minst på golvet",
 }
 
 Klocka = Annotated[str, Field(pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")]
@@ -153,6 +153,9 @@ class Aktivitet(Strikt):
     deltagare: Optional[list[str]] = None
     varje_person: Optional[int] = Field(default=None, ge=1)
     fran_golvet: bool = True
+    # minsta antal i tjänst på golvet under aktiviteten; andras pass förlängs vid behov
+    minst_pa_golvet: Optional[int] = Field(default=None, ge=0)
+    typ: Optional[Literal["apt", "utbildning", "mote", "studier", "dokumentation", "handledning", "annat"]] = None
     krav: bool = False
     kommentar: Optional[str] = None
 

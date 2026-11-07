@@ -2,6 +2,7 @@
 // Nyckeltal och grafer för ett lagt schema. Delas av webben (sidor.js) och lättversionen (light/sida.html),
 // som assistent.js. Fristående: egna hjälpfunktioner, inga beroenden på resten av gränssnittet.
 // Färgerna kommer från CSS-variablerna --morgon, --kvall, --natt, --over, --kritisk, --guld, --skog.
+// Resurstid (det som ligger utöver behovet) visas svart: --resurs.
 
 const GRAF = (() => {
 const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
@@ -100,13 +101,13 @@ function varmekarta(bem, W) {
   const delar = ["morgon", "kvall", "natt"].filter(d => bem.some(x => x.b[d] || x.n[d]));
   const cell = (x, d) => {
     const diff = x.n[d] - x.b[d];
-    const stil = diff < 0 ? `background:rgba(184,67,47,${Math.min(0.85, 0.3 + 0.25 * -diff)});color:#fff` : diff > 0 ? `background:rgba(47,111,158,${Math.min(0.75, 0.18 + 0.14 * diff)});color:${diff > 2 ? "#fff" : "var(--text)"}` : "background:var(--sand)";
-    return `<td style="${stil}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]} ${PASSNAMN[d].toLowerCase()}\n${x.n[d]} i tjänst, behov ${x.b[d]}${diff < 0 ? ` – ${-diff} saknas` : diff > 0 ? ` – ${diff} över behovet` : ""}">${diff ? (diff > 0 ? "+" : "−") + Math.abs(diff) : ""}</td>`;
+    const stil = diff < 0 ? `background:rgba(184,67,47,${Math.min(0.85, 0.3 + 0.25 * -diff)});color:#fff` : diff > 0 ? `background:rgba(20,20,20,${Math.min(0.9, 0.3 + 0.2 * diff)});color:#fff` : "background:var(--sand)";
+    return `<td style="${stil}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]} ${PASSNAMN[d].toLowerCase()}\n${x.n[d]} i tjänst, behov ${x.b[d]}${diff < 0 ? ` – ${-diff} saknas` : diff > 0 ? ` – ${diff} resurspass utöver behovet` : ""}">${diff ? (diff > 0 ? "+" : "−") + Math.abs(diff) : ""}</td>`;
   };
   return `<div class="rull"><table class="varme"><thead><tr><th></th>${Array.from({ length: W }, (_, w) => `<th colspan="7" class="ny-vecka">V${w + 1}</th>`).join("")}</tr>
     <tr><th></th>${bem.map(x => `<th class="${x.d % 7 === 0 ? "ny-vecka" : ""}">${DAGAR[x.d % 7][0]}</th>`).join("")}</tr></thead>
     <tbody>${delar.map(d => `<tr><th>${PASSNAMN[d]}</th>${bem.map(x => cell(x, d).replace("<td ", `<td class="${x.d % 7 === 0 ? "ny-vecka" : ""}" `)).join("")}</tr>`).join("")}</tbody></table></div>
-    <div class="legend" style="margin-top:8px"><span><i style="background:rgba(184,67,47,.7)"></i>Underbemanning</span><span><i style="background:var(--sand)"></i>I balans</span><span><i style="background:rgba(47,111,158,.45)"></i>Överbemanning</span></div>`;
+    <div class="legend" style="margin-top:8px"><span><i style="background:rgba(184,67,47,.7)"></i>Underbemanning</span><span><i style="background:var(--sand)"></i>I balans</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span></div>`;
 }
 
 // Staplar: planerad bemanning mot behov per dag (alla dygnsdelar).
@@ -121,14 +122,17 @@ function behovsstaplar(bem) {
   bem.forEach((x, i) => {
     const x0 = vX + i * kol + (kol - bred) / 2, t = tot(x), b = beh(x), vak = delar.reduce((s, d) => s + x.vak[d], 0);
     if (x.d % 7 > 4) h += `<rect x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" style="fill:var(--helg)"/>`;
-    h += `<rect x="${x0}" y="${y(t)}" width="${bred}" height="${Math.max(0, bas - y(t))}" rx="3" style="fill:${vak ? "var(--kritisk)" : t > b ? "var(--over)" : "var(--morgon)"};opacity:${vak ? .85 : .9}"/>`;
+    // upp till behovet i grönt (rött vid vakans), resurstid utöver behovet i svart ovanpå
+    const inom = Math.min(t, b);
+    h += `<rect x="${x0}" y="${y(inom)}" width="${bred}" height="${Math.max(0, bas - y(inom))}" rx="3" style="fill:${vak ? "var(--kritisk)" : "var(--morgon)"};opacity:${vak ? .85 : .9}"/>`;
+    if (t > b) h += `<rect x="${x0}" y="${y(t)}" width="${bred}" height="${Math.max(0, y(b) - y(t))}" rx="3" style="fill:var(--resurs);stroke:var(--text);stroke-width:.8"/>`;
     h += `<line x1="${x0 - 2}" x2="${x0 + bred + 2}" y1="${y(b)}" y2="${y(b)}" style="stroke:var(--text);stroke-width:2"/>`;
-    h += `<rect class="traff" x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]}\nPlanerat ${t}, behov ${b}${vak ? ` – ${vak} saknas` : t > b ? ` – ${t - b} över` : ""}"/>`;
+    h += `<rect class="traff" x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]}\nPlanerat ${t}, behov ${b}${vak ? ` – ${vak} saknas` : t > b ? ` – ${t - b} resurspass utöver behovet` : ""}"/>`;
     if (x.d % 7 === 0) h += `<text x="${vX + i * kol + 2}" y="${bas + 26}" style="font-weight:700;fill:var(--text)">v${Math.floor(x.d / 7) + 1}</text>`;
     if (N <= 42) h += `<text x="${vX + i * kol + kol / 2}" y="${bas + 13}" text-anchor="middle">${DAGAR[x.d % 7][0]}</text>`;
   });
   return `<div class="rull">${h}<line class="axel" x1="${vX}" x2="${W - hX}" y1="${bas}" y2="${bas}"/></svg></div>
-    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Planerat, behovet täckt</span><span><i style="background:var(--over)"></i>Över behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
+    <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
 }
 
 function passring(n) {
@@ -334,6 +338,24 @@ function vilaTabell(res, indata, lank = null) {
     <div class="rull"><table><thead><tr><th>Person</th><th class="tal">Kortaste dygnsvila</th><th class="tal">Kortaste veckovila</th><th></th></tr></thead><tbody>${rader}</tbody></table></div></section>`;
 }
 
+// ---------------------------------------------------------------- resurstid
+// Pass utöver behovet (resurspass). Per dag och dygnsdel blir så många pass som ligger över behovet resurspass,
+// fördelade rättvist: den som har haft minst resurspass hittills först. Returnerar en mängd med "person:dag".
+function resurs(res, indata) {
+  const ut = new Set(), behov = behovPerDag(indata), pers = Object.keys(res.schema), antal = {};
+  const N = res.veckor * 7;
+  for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+    const har = pers.filter(p => res.schema[p][d] && res.schema[p][d].dygnsdel === del);
+    const extra = har.length - (behov[d % 7][del] || 0);
+    if (extra <= 0) continue;
+    const tur = p => (((pers.indexOf(p) - d) % pers.length) + pers.length) % pers.length;  // roterar mellan dagarna
+    har.sort((a, b) => (antal[a] || 0) - (antal[b] || 0) || tur(a) - tur(b));
+    har.slice(0, extra).forEach(p => { ut.add(p + ":" + d); antal[p] = (antal[p] || 0) + 1; });
+  }
+  return ut;
+}
+const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
+
 // ---------------------------------------------------------------- aktiviteter
 // Liten markering i passet (stjärna och kod) och text för verktygstips.
 function aktMarke(p) {
@@ -357,6 +379,6 @@ function aktivitetKort(res) {
     </tbody></table></div></section>`;
 }
 
-return { aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

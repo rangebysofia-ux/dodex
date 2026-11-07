@@ -329,7 +329,7 @@ def justera_korning(kid: int, j: JusteraIn):
 @app.get("/api/korningar/{kid}/excel", dependencies=[Depends(inloggad)])
 def excel(kid: int):
     k = _klar(kid)
-    return Response(export.excel(k["resultat"], k.get("granskning")),
+    return Response(export.excel(k["resultat"], k.get("granskning"), k.get("indata")),
                     media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f'attachment; filename="{_filnamn(k, "xlsx")}"'})
 
@@ -337,7 +337,7 @@ def excel(kid: int):
 @app.get("/api/korningar/{kid}/pdf", dependencies=[Depends(inloggad)])
 def pdf(kid: int):
     k = _klar(kid)
-    return Response(export.pdf(k["resultat"], k.get("granskning")), media_type="application/pdf",
+    return Response(export.pdf(k["resultat"], k.get("granskning"), k.get("indata")), media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{_filnamn(k, "pdf")}"'})
 
 

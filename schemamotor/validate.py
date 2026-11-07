@@ -404,6 +404,21 @@ def kontrollera(indata, schema_dok):
             if n < tp["antal"]:
                 vakanser += tp["antal"] - n
                 brott("BEHOV", None, f"{dag_text(d)} kl {tp['tid']}: {n} i tjänst, behov {tp['antal']}.", hard=False)
+    # minsta bemanning på golvet under aktiviteter (behov, mjukt)
+    for a in akt.values():
+        minst = a.get("minst_pa_golvet") or 0
+        if not minst:
+            continue
+        for d in aktivitetsdagar(a, W, indata.get("start_iso_vecka")):
+            for t0 in range(tid(a["start"]), tid(a["slut"]), 15):
+                t = d * DYGN + t0
+                def inne(s, e):
+                    return s <= t < e or (cyk and s <= t + L < e) or (cyk and s <= t - L < e)
+                n = sum(1 for lista in alla.values() for _, s, e, _ in lista if inne(s, e)) - sum(1 for s, e in borta if inne(s, e))
+                if n < minst:
+                    vakanser += minst - n
+                    brott("BEHOV", None, f"{dag_text(d)} kl {klocka(t0)} under {a.get('namn') or a['id']}: {n} på golvet, "
+                                         f"minst {minst}.", hard=False)
     return {"giltigt": not fel, "dygnsbryt": klocka(db_dag), "dygnsbryt_per_person": brytpunkter,
             "veckobryt": r["veckobryt"],
             "brott": fel, "varningar": varn, "vakanser": vakanser}

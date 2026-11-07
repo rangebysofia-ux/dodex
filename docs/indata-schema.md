@@ -65,7 +65,9 @@
 - Dagar som för önskemål: `dagar` med `veckor` (`alla`, `jämna`, `udda` eller lista med veckonummer), eller `dagindex`.
 - Hur många per tillfälle: `antal`, eller `andel` av deltagargruppen (0.5 = hälften, avrundat uppåt). Anges bara `varje_person` (till exempel 1) blir det så många per tillfälle att alla hinner delta så många gånger. Utan något av dem deltar alla.
 - `deltagare` – lista med id-koder. Utan lista är gruppen alla som har pass som kan täcka tiden (för 14–16 är det dag- och kvällspersonal).
+- `typ` – `apt`, `utbildning`, `mote`, `studier`, `dokumentation`, `handledning` eller `annat`. Bara för visning och sortering; reglerna är desamma.
 - `fran_golvet` (standard sant) – deltagarna räknas inte som i tjänst vid `tidpunkter` under aktiviteten. Behovet per dygnsdel påverkas inte: passet finns ju kvar.
+- `minst_pa_golvet` – minsta antal i tjänst på golvet varje kvart under aktiviteten, deltagarna oräknade. De som inte deltar får längre pass (morgonpass som slutar senare, kvällspass som börjar tidigare) så att nivån hålls. Är det ändå för få blir det vakans vid klockslaget, på samma nivå som behovet. Gränssnittet föreslår den lägsta av morgonens och kvällens behov på vardagar.
 - `krav` (standard falskt) – aktiviteten måste genomföras med fullt antal. Annars läggs den så långt det går, efter behovet.
 - Deltagarna fördelas rättvist: alla i gruppen deltar ungefär lika många gånger, och exakt `varje_person` gånger när det anges.
 

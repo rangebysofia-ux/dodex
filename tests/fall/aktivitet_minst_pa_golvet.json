@@ -1,0 +1,78 @@
+{
+  "beskrivning": "Aktivitet med minsta bemanning: APT tisdag 14–16 vecka 2 och 4, hälften deltar. Minst 3 ska vara kvar på golvet under APT, så de som inte deltar får längre pass. Ska gå att lösa utan avtalsbrott, utan saknade deltagare och utan vakanser.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "aktivitet_saknas": 0,
+    "vakanta_pass": 0,
+    "vakanta_tidpunkter": 0
+  },
+  "enhet": "Test – aktivitet",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "D1",
+      "grad": 1
+    },
+    {
+      "id": "D2",
+      "grad": 1
+    },
+    {
+      "id": "D3",
+      "grad": 1
+    },
+    {
+      "id": "D4",
+      "grad": 0.9
+    },
+    {
+      "id": "D5",
+      "grad": 0.9
+    },
+    {
+      "id": "D6",
+      "grad": 0.8
+    },
+    {
+      "id": "D7",
+      "grad": 0.8
+    },
+    {
+      "id": "D8",
+      "grad": 0.75
+    }
+  ],
+  "aktiviteter": [
+    {
+      "id": "APT",
+      "namn": "Arbetsplatsträff",
+      "dagar": [
+        "tis"
+      ],
+      "veckor": [
+        2,
+        4
+      ],
+      "start": "14:00",
+      "slut": "16:00",
+      "varje_person": 1,
+      "minst_pa_golvet": 3,
+      "typ": "apt"
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  }
+}

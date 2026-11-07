@@ -10,7 +10,7 @@ Google OR-Tools CP-SAT (constraint programming med SAT-teknik). Installeras med 
 - `work[person, dag]` – personen arbetar den dagen (summan av x, högst ett pass per dag).
 - Helggrupp per person med varannan helg, och en variabel per person och helg för om helgen är arbetshelg.
 - Vakansvariabler per dag och dygnsdel och per tidpunkt.
-- `y[aktivitet, dag, person]` – personen deltar i aktiviteten den dagen. `y ≤ summan av x` för passmallar som täcker hela aktivitetstiden (för nattpass även passet som började dagen före). Per tillfälle: `summan av y + brist = antal`. Deltagare med `fran_golvet` dras från täckningen vid klockslag under aktiviteten.
+- `y[aktivitet, dag, person]` – personen deltar i aktiviteten den dagen. `y ≤ summan av x` för passmallar som täcker hela aktivitetstiden (för nattpass även passet som började dagen före). Per tillfälle: `summan av y + brist = antal`. Deltagare med `fran_golvet` dras från täckningen vid klockslag under aktiviteten. Med `minst_pa_golvet` får varje kvart under aktiviteten en vakansvariabel: `i tjänst − deltagare + vakans ≥ minst`; den ingår i vakansmålet.
 
 ## Hårda regler
 

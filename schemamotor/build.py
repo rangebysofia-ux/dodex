@@ -547,6 +547,27 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             v = m.new_int_var(0, tp["antal"], f"vakt_{d}_{tp['tid']}")
             m.add(sum(tack) - sum(borta) + v >= tp["antal"])
             vak.append((v, d, None, tp["tid"]))
+    # minsta bemanning på golvet under en aktivitet (behov, samma nivå som vakanser): när en del av gruppen är
+    # på till exempel APT förlängs andras pass så att minst så många är kvar i tjänst varje kvart
+    for ai, a in enumerate(prob.get("aktiviteter", [])):
+        minst = a.get("minst_pa_golvet") or 0
+        if not minst:
+            continue
+        for d in a["_dagar"]:
+            for t in range(a["_start"], a["_slut"], 15):
+                tack = []
+                for pi, p in enumerate(prob["personer"]):
+                    for s in p["tillatna"]:
+                        if M[s]["start"] <= t < M[s]["slut"]:
+                            tack.append(x[pi, d, s])
+                        dp = (d - 1) % N if cyk else d - 1
+                        if dp >= 0 and M[s]["start"] <= t + DYGN < M[s]["slut"]:
+                            tack.append(x[pi, dp, s])
+                borta = [v for (aj, dd, pi), v in y.items() if dd == d and prob["aktiviteter"][aj]["fran_golvet"]
+                         and prob["aktiviteter"][aj]["_start"] <= t < prob["aktiviteter"][aj]["_slut"]]
+                v = m.new_int_var(0, minst, f"vakg_{d}_{t}")
+                m.add(sum(tack) - sum(borta) + v >= minst)
+                vak.append((v, d, None, klocka(t)))
     mal["vakanser"] = sum(v for v, *_ in vak)
     # aktiviteter: saknade deltagare väger alltid tyngre än ojämn fördelning mellan personerna
     vikt = 1 + len(akt_jamn) * N

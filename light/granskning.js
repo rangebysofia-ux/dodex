@@ -180,6 +180,7 @@ const GRANSKNING = (() => {
     // aktiviteter (verksamhet): den som deltar ska arbeta hela aktivitetstiden
     const akt = Object.fromEntries((indata.aktiviteter || []).map(a => [a.id, a]));
     const deltar = new Map();  // "id|dag" -> [person]
+    const borta = [];          // [start, slut] för deltagare som är borta från golvet
     for (const [pid, lista] of Object.entries(alla)) for (const [d, s, e, p] of lista) for (const x of p.aktiviteter || []) {
       const a = akt[x.id];
       if (!a) { brott("AKTIVITET", pid, `${dagText(d)}: aktiviteten ${x.id} finns inte i indata.`); continue; }
@@ -192,6 +193,7 @@ const GRANSKNING = (() => {
       if (!deltar.has(k)) deltar.set(k, []);
       if (deltar.get(k).includes(pid)) { brott("AKTIVITET", pid, `${dagText(dag)}: deltar två gånger i ${namn}.`); continue; }
       deltar.get(k).push(pid);
+      if (a.fran_golvet !== false) borta.push([a0, a1]);
     }
     for (const a of Object.values(akt)) {
       const namn = a.namn || a.id, dagar = aktivitetsdagar(a, W, indata.start_iso_vecka);
@@ -242,6 +244,16 @@ const GRANSKNING = (() => {
     for (let d = 0; d < N; d++) for (const [del, antal] of Object.entries(behov[d % 7])) {
       let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
       if (n < antal) { vakanser += antal - n; brott("BEHOV", null, `${dagText(d)}: ${antal - n} vakant ${del === "kvall" ? "kvälls" : del}pass.`, false); }
+    }
+    // minsta bemanning på golvet under aktiviteter (behov, mjukt)
+    for (const a of Object.values(akt)) {
+      const minst = a.minst_pa_golvet || 0; if (!minst) continue;
+      for (const d of aktivitetsdagar(a, W, indata.start_iso_vecka)) for (let t0 = tid(a.start); t0 < tid(a.slut); t0 += 15) {
+        const t = d * DYGN + t0, inne = (s, e) => (s <= t && t < e) || (cyk && s <= t + L && t + L < e) || (cyk && s <= t - L && t - L < e);
+        let n = 0; for (const l of Object.values(alla)) for (const [, s, e] of l) if (inne(s, e)) n++;
+        for (const [s, e] of borta) if (inne(s, e)) n--;
+        if (n < minst) { vakanser += minst - n; brott("BEHOV", null, `${dagText(d)} kl ${klocka(t0)} under ${a.namn || a.id}: ${n} på golvet, minst ${minst}.`, false); }
+      }
     }
     return { giltigt: !fel.length, dygnsbryt: klocka(dbDag), veckobryt: r.veckobryt, brott: fel, varningar: varn, vakanser };
   }

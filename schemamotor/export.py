@@ -26,6 +26,31 @@ def _akt(p):
     return "".join(f" · {a.get('id')} {a['start']}–{a['slut']}" for a in (p or {}).get("aktiviteter") or [])
 
 
+def _resurs(res, indata):
+    """Resurspass: pass utöver behovet per dag och dygnsdel, fördelade rättvist (minst resurspass hittills först,
+    i en ordning som roterar mellan dagarna). Samma regel som GRAF.resurs i schemawebb/statisk/grafer.js."""
+    if not indata:
+        return set()
+    behov = [{} for _ in range(7)]
+    grupper = {"vardag": range(5), "helg": range(5, 7), "alla": range(7)}
+    for k, v in (indata.get("behov") or {}).items():
+        for i in grupper.get(k, [DAGNAMN.index(k)] if k in DAGNAMN else []):
+            behov[i] = v
+    pers = list(res["schema"])
+    antal, ut = {}, set()
+    for d in range(res["veckor"] * 7):
+        for del_ in ("morgon", "kvall", "natt"):
+            har = [q for q in pers if res["schema"][q][d] and res["schema"][q][d]["dygnsdel"] == del_]
+            extra = len(har) - behov[d % 7].get(del_, 0)
+            if extra <= 0:
+                continue
+            har.sort(key=lambda q: (antal.get(q, 0), (pers.index(q) - d) % len(pers)))
+            for q in har[:extra]:
+                ut.add((q, d))
+                antal[q] = antal.get(q, 0) + 1
+    return ut
+
+
 def _bemanning(res, d):
     n = {"morgon": 0, "kvall": 0, "natt": 0}
     for rad in res["schema"].values():
@@ -64,7 +89,7 @@ def _vakansdagar(res):
 
 # ---------------------------------------------------------------- Excel
 
-def excel(res, granskning=None):
+def excel(res, granskning=None, indata=None):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
@@ -97,6 +122,7 @@ def excel(res, granskning=None):
             h.fill = helgfarg
         ws.column_dimensions[get_column_letter(c)].width = 11
     ws.column_dimensions["A"].width = 12
+    resurs = _resurs(res, indata)
     for i, pid in enumerate(pers):
         r = 6 + i
         ws.cell(row=r, column=1, value=pid).font = fet
@@ -109,6 +135,11 @@ def excel(res, granskning=None):
                 if p["dygnsdel"] in FARG:
                     c.fill = PatternFill("solid", fgColor=FARG[p["dygnsdel"]])
                     c.font = Font(color=TEXTFARG[p["dygnsdel"]], size=9)
+                if (pid, d) in resurs:
+                    # resurspass, utöver behovet: svart
+                    c.value += " ◼R"
+                    c.fill = PatternFill("solid", fgColor="141414")
+                    c.font = Font(color="FFFFFF", size=9, bold=True)
             elif d % 7 >= 5:
                 c.fill = helgfarg
         ws.row_dimensions[r].height = 30
@@ -190,7 +221,7 @@ def excel(res, granskning=None):
 
 # ---------------------------------------------------------------- PDF
 
-def pdf(res, granskning=None):
+def pdf(res, granskning=None, indata=None):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import getSampleStyleSheet
@@ -221,6 +252,7 @@ def pdf(res, granskning=None):
                 ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 9), ("FONT", (0, 1), (0, -1), "Helvetica-Bold", 9),
                 ("FONT", (1, 1), (-1, -1), "Helvetica", 8.5), ("ALIGN", (1, 0), (-1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("BACKGROUND", (6, 0), (7, 0), hex_("EEF1F5"))]
+        resurs = _resurs(res, indata)
         for i, pid in enumerate(pers):
             rad = [pid]
             for j in range(7):
@@ -229,6 +261,10 @@ def pdf(res, granskning=None):
                 if p and p["dygnsdel"] in FARG:
                     stil += [("BACKGROUND", (j + 1, i + 1), (j + 1, i + 1), hex_(FARG[p["dygnsdel"]])),
                              ("TEXTCOLOR", (j + 1, i + 1), (j + 1, i + 1), hex_(TEXTFARG[p["dygnsdel"]]))]
+                if p and (pid, v * 7 + j) in resurs:
+                    rad[-1] += " R"
+                    stil += [("BACKGROUND", (j + 1, i + 1), (j + 1, i + 1), hex_("141414")),
+                             ("TEXTCOLOR", (j + 1, i + 1), (j + 1, i + 1), hex_("FFFFFF"))]
             data.append(rad)
         vecka_vak = [vp.get(v * 7 + j, []) for j in range(7)]
         for k in range(max((len(x) for x in vecka_vak), default=0)):
@@ -254,7 +290,8 @@ def pdf(res, granskning=None):
         stil.append(("FONT", (0, len(data) - 1), (-1, len(data) - 1), "Helvetica-Bold", 8))
         t = Table(data, colWidths=[24 * mm] + [34 * mm] * 7, repeatRows=1)
         t.setStyle(TableStyle(stil))
-        delar += [t, Spacer(1, 3 * mm), Paragraph("M morgon, K kväll, N natt. Vakant = pass som saknar personal (streckad ram).", liten), PageBreak()]
+        delar += [t, Spacer(1, 3 * mm), Paragraph("M morgon, K kväll, N natt. Vakant = pass som saknar personal (streckad ram). "
+                                                           "Svart med R = resurspass, utöver behovet.", liten), PageBreak()]
 
     delar.append(Paragraph("Per person", st["Heading2"]))
     data = [["Person", "Pass", "Arbetstid", "Mål", "Kvällspass", "Helggrupp"]]
