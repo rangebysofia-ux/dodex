@@ -112,6 +112,8 @@ def langsta_lucka(intervall, a, b):
 def kontrollera(indata, schema_dok):
     r = dict(STANDARD)
     r.update(indata.get("regler", {}))
+    # 11 timmars dygnsvila kan inte låsas upp (AB 25 § 13 mom. 8; verksamhetens beslut 2026-11-07)
+    r["dygnsvila_minuter"] = max(660, r["dygnsvila_minuter"])
     W = indata["veckor"]
     N = W * 7
     L = N * DYGN

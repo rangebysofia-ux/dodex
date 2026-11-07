@@ -49,6 +49,7 @@ const GRANSKNING = (() => {
 
   function kontrollera(indata, dok) {
     const r = { ...STANDARD, ...(indata.regler || {}) };
+    r.dygnsvila_minuter = Math.max(660, r.dygnsvila_minuter);  // 11 h kan inte låsas upp (AB 25 § 13 mom. 8; verksamhetens beslut)
     const W = indata.veckor, N = W * 7, L = N * DYGN, cyk = indata.cykliskt !== false;
     const schema = dok.schema || dok;
     const fel = [], varn = [];

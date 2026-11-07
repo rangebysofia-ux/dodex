@@ -581,9 +581,7 @@ async function laggSchema() {
 // ---------------------------------------------------------------- vy: inställningar (regler)
 // Alla regler går att ändra. Avtal, lag och varannan helg är låsta tills avvikelsen bekräftas.
 const REGLER = [
-  { grupp: "Avtal", k: "dygnsvila_minuter", namn: "Dygnsvila", beskr: "Sammanhängande vila per dygn, räknat från dygnsbrytet.", ab: "AB 25 § 13 mom. 8 och mom. 5", niva: "avtal", typ: "hård", falt: "timmar", std: 660, min: 540, last: true,
-    avvikelse: "Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). Dygnsvilan kan bara förkortas till lägst 9 timmar i undantagsfall: det ska finnas särskilda skäl i en verksamhet med ansvar för liv, hälsa och säkerhet, bedömningen ska vara motiverad, arbetstagaren har rätt till kompenserande vila i samband med nästa dygnsvila, och MBL-förhandling krävs (mom. 8 a och mom. 5). Systemet lägger inte in den kompenserande vilan; den måste planeras.",
-    bekrafta: "Vi har särskilda skäl enligt AB 25 § 13 mom. 8 a, har MBL-förhandlat och planerar kompenserande vila" },
+  { grupp: "Avtal", k: "dygnsvila_minuter", namn: "Dygnsvila", beskr: "Sammanhängande vila per dygn, räknat från dygnsbrytet. 11 timmar är hård i schemaplaneringen och kan inte låsas upp (verksamhetens beslut).", ab: "AB 25 § 13 mom. 8 och mom. 5", niva: "avtal", typ: "hård", falt: "timmar", std: 660, last: true, aldrigUpplas: true },
   { grupp: "Avtal", k: "veckovila_minuter", namn: "Veckovila", beskr: "Sammanhängande vila per vecka, räknat från måndag 00:00.", ab: "ATL 14 §, AB 25 § 13 mom. 7 h och mom. 10 e", niva: "avtal", typ: "hård", falt: "timmar", std: 2160, last: true,
     avvikelse: "Avvikelse från veckovilan kräver lokalt kollektivavtal (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse ska veckovilan vara minst 24 timmar (mom. 7 h).",
     bekrafta: "Vi har ett lokalt kollektivavtal om avvikelse från veckovilan (AB 25 § 13 mom. 10 e)" },
@@ -627,7 +625,8 @@ function ritaInstallningar() {
     const v = r[R.k] ?? R.std, andrad = r[R.k] !== undefined && r[R.k] !== R.std, last = R.last && !avv.has(R.k);
     let falt;
     const visa = R.falt === "timmar" ? sv(v / 60, 1) + " h" : R.falt === "minuter" ? v + " min" : R.falt === "val" ? R.val[v] : v;
-    if (last) falt = `<span class="lat">${esc(visa)}</span><button class="liten" data-g="las-upp" data-k="${R.k}" aria-label="Lås upp ${R.namn}">${IKON.las} Lås upp</button>`;
+    if (last && R.aldrigUpplas) falt = `<span class="lat">${esc(visa)}</span><span class="niva">${IKON.las.replace("<svg", '<svg width="11" height="11"')} kan inte låsas upp</span>`;
+    else if (last) falt = `<span class="lat">${esc(visa)}</span><button class="liten" data-g="las-upp" data-k="${R.k}" aria-label="Lås upp ${R.namn}">${IKON.las} Lås upp</button>`;
     else if (R.falt === "check") falt = `<label class="check"><input type="checkbox" data-r="${R.k}" data-t="check"${v ? " checked" : ""}> ${v ? "På" : "Av"}</label>`;
     else if (R.falt === "val") falt = `<select data-r="${R.k}">${Object.entries(R.val).map(([a, t]) => `<option value="${a}"${String(a) === String(v) ? " selected" : ""}>${t}</option>`).join("")}</select>`;
     else if (R.falt === "tid") falt = `<input type="time" data-r="${R.k}" value="${esc(v)}">`;

@@ -75,20 +75,20 @@ def test_avtal_och_lag_kan_inte_forsvagas(bas):
 
 
 def test_avvikelse_kraver_bekraftelse(bas):
-    bas["regler"] = {"dygnsvila_minuter": 540, "helgfrekvens": "1/4"}
+    bas["regler"] = {"veckovila_minuter": 1440, "helgfrekvens": "1/4"}
     fel = kontrollera_indata(bas)
-    assert any("Dygnsvilan" in f for f in fel) and any("Varannan helg" in f for f in fel)
-    bas["avvikelser"] = ["dygnsvila_minuter", "helgfrekvens"]
+    assert any("Veckovilan" in f for f in fel) and any("Varannan helg" in f for f in fel)
+    bas["avvikelser"] = ["veckovila_minuter", "helgfrekvens"]
     assert kontrollera_indata(bas) == []
     bas["avvikelser"] = ["pass_per_vecka"]
     assert any("Avvikelser kan bara godkännas" in f for f in kontrollera_indata(bas))
 
 
-def test_dygnsvila_aldrig_under_9_timmar(bas):
-    # AB 25 § 13 mom. 8 a: lägst 9 timmar med bekräftade särskilda skäl; mom. 10: ingen lokal avvikelse därunder
+def test_dygnsvila_11_timmar_kan_inte_lasas_upp(bas):
+    # Verksamhetens beslut 2026-11-07 (AB 25 § 13 mom. 8): ingen upplåsning, inte heller med bekräftelse
     bas["regler"] = {"dygnsvila_minuter": 600}
-    assert any("mom. 8" in f for f in kontrollera_indata(bas))
     bas["avvikelser"] = ["dygnsvila_minuter"]
+    assert any("kan inte låsas upp" in f for f in kontrollera_indata(bas))
+    bas["regler"] = {"dygnsvila_minuter": 720}  # längre vila är en skärpning
+    bas["avvikelser"] = []
     assert kontrollera_indata(bas) == []
-    bas["regler"] = {"dygnsvila_minuter": 500}
-    assert any("aldrig vara kortare än 9 timmar" in f for f in kontrollera_indata(bas))

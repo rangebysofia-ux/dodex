@@ -8,7 +8,7 @@ Cykliska grundscheman i dygnet runt-verksamhet inom äldreomsorg och funktionsst
 
 - Hårda regler får aldrig brytas. Behovet är högsta mjuka nivå: en vakans är bättre än ett avtalsbrott.
 - Mjuka mål optimeras i strikt ordning (lexikografiskt); ett lägre mål kan aldrig försämra ett högre.
-- Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar att villkoren i källan är uppfyllda. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman. Dygnsvilan kan aldrig sättas under 9 timmar (AB 25 § 13 mom. 8 a och mom. 10).
+- Låsta regler (dygnsvila, veckovila, rast, varannan helg) kan bara ändras när användaren bekräftar att villkoren i källan är uppfyllda. Bekräftelsen sparas i 'avvikelser' och visas på alla scheman. 11 timmars dygnsvila är hård och kan inte låsas upp alls (AB 25 § 13 mom. 8; verksamhetens beslut 2026-11-07).
 - Varje hård regel anger sin källa (AB 25, ATL, kontrakt eller lokalt beslut) och vilken avvikelse källan tillåter.
 - Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass per vecka) kallas aldrig avtalsregler.
 - Ett färdigt schema granskas av en fristående kontroll som inte delar kod med motorn.
@@ -32,7 +32,7 @@ Måste alltid uppfyllas.
 
 | Id | Regel | Nyckel | Standard | Enhet | Nivå | Låst | Beskrivning |
 |---|---|---|---|---|---|---|---|
-| DYGNSVILA | Dygnsvila | `dygnsvila_minuter` | 660 | minuter | avtal | ja | Minst så lång sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Kontrolleras även över skarven mellan sista och första veckan. |
+| DYGNSVILA | Dygnsvila | `dygnsvila_minuter` | 660 | minuter (minst 660, kan inte låsas upp) | avtal | ja | Minst så lång sammanhängande vila per 24-timmarsperiod, räknat från dygnsbrytet. Kontrolleras även över skarven mellan sista och första veckan. |
 | DYGNSBRYT | Dygnsbryt | `dygnsbryt` | auto | klockslag eller auto | avtal | nej | Var 24-timmarsperioden börjar. 'auto' = där flest pass slutar och börjar; nattpersonal får eget. |
 | VECKOVILA | Veckovila | `veckovila_minuter` | 2160 | minuter | avtal | ja | Minst så lång sammanhängande vila per sjudagarsperiod, räknat från veckobrytet. |
 | VECKOBRYT | Veckobryt | `veckobryt` | mån 00:00 | veckodag och klockslag | avtal | nej | Var sjudagarsperioden för veckovila börjar. |
@@ -67,7 +67,7 @@ Källa och tillåten avvikelse för varje hård regel. Kontrollerat mot AB 25 i 
 
 | Id | Källa | Avvikelse |
 |---|---|---|
-| DYGNSVILA | AB 25 § 13 mom. 8 (minst 11 timmars sammanhängande ledighet per 24 timmar) och mom. 5 (arbete och dygnsvila alternerande); ATL 13 §. | Ingen lokal avvikelse: lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). Undantag till lägst 9 timmar endast vid särskilda skäl i verksamhet med ansvar för liv, hälsa och säkerhet, med motiverad bedömning, kompenserande vila i samband med nästa dygnsvila och MBL-förhandling (mom. 8 a och mom. 5). Systemet tillåter aldrig under 9 timmar och lägger inte in den kompenserande vilan. |
+| DYGNSVILA | AB 25 § 13 mom. 8 (minst 11 timmars sammanhängande ledighet per 24 timmar) och mom. 5 (arbete och dygnsvila alternerande); ATL 13 §. | Ingen. 11 timmar är hård i schemaplaneringen och kan inte låsas upp (verksamhetens beslut 2026-11-07). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (AB 25 § 13 mom. 10). AB:s undantag till lägst 9 timmar vid särskilda skäl (mom. 8 a) används inte i planeringen. |
 | DYGNSBRYT | AB 25 § 13 mom. 5: klockslaget när 24-timmarsperioden för dygnsberäkning inleds ska framgå av schemat. | – |
 | VECKOVILA | ATL 14 § (36 timmars sammanhängande ledighet per sjudagarsperiod); AB 25 § 13 mom. 7 h. | Lokalt kollektivavtal om avvikelse (AB 25 § 13 mom. 10 e). Vid tillfällig avvikelse minst 24 timmar (mom. 7 h). |
 | VECKOBRYT | ATL 14 § (sjudagarsperiod). | – |

@@ -48,10 +48,10 @@ SKYDDADE = {
     "rast_grans_minuter": (300, lambda v, g: v > g, "Rast krävs efter högst 5 timmars arbete (ATL 15 §)."),
     "rast_minuter": (30, lambda v, g: v < g, "Rasten kan inte vara kortare än 30 minuter."),
 }
-# Golv som aldrig kan låsas upp: AB 25 § 13 mom. 10 tillåter inte lokalt kollektivavtal om kortare dygnsvila,
-# och mom. 8 a medger som lägst 9 timmar.
-GOLV = {"dygnsvila_minuter": (540, "Dygnsvilan kan aldrig vara kortare än 9 timmar (AB 25 § 13 mom. 8 a). "
-                              "Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).")}
+# Verksamhetens beslut 2026-11-07: 11 timmars dygnsvila är hård i schemaplaneringen och kan inte låsas upp,
+# inte heller med undantaget till 9 timmar i mom. 8 a.
+GOLV = {"dygnsvila_minuter": (660, "Dygnsvilan är minst 11 timmar och kan inte låsas upp i schemaplaneringen "
+                              "(AB 25 § 13 mom. 8; verksamhetens beslut). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).")}
 
 
 class IndataKontrollFel(ValueError):

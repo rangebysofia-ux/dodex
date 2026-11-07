@@ -275,9 +275,8 @@ const MOTOR = (() => {
       for (const i of idx) behov[i] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
     }
 
-    // AB 25 § 13 mom. 8 a och mom. 10: dygnsvilan kan aldrig vara kortare än 9 timmar, och under 11 timmar krävs bekräftelse
-    if (r.dygnsvila_minuter < 540) fel.push("Dygnsvilan kan aldrig vara kortare än 9 timmar (AB 25 § 13 mom. 8 a). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).");
-    else if (r.dygnsvila_minuter < 660 && !(ind.avvikelser || []).includes("dygnsvila_minuter")) fel.push("Dygnsvilan kan inte vara kortare än 11 timmar (AB 25 § 13 mom. 8) utan bekräftade särskilda skäl enligt mom. 8 a.");
+    // AB 25 § 13 mom. 8 och verksamhetens beslut: 11 timmars dygnsvila är hård och kan inte låsas upp
+    if (r.dygnsvila_minuter < 660) fel.push("Dygnsvilan är minst 11 timmar och kan inte låsas upp i schemaplaneringen (AB 25 § 13 mom. 8; verksamhetens beslut).");
     const pers = [], ids = new Set();
     let vaxel = 0;  // för perioder där antal pass inte går jämnt ut
     for (const p of ind.personal || []) {
@@ -790,6 +789,7 @@ const GRANSKNING = (() => {
 
   function kontrollera(indata, dok) {
     const r = { ...STANDARD, ...(indata.regler || {}) };
+    r.dygnsvila_minuter = Math.max(660, r.dygnsvila_minuter);  // 11 h kan inte låsas upp (AB 25 § 13 mom. 8; verksamhetens beslut)
     const W = indata.veckor, N = W * 7, L = N * DYGN, cyk = indata.cykliskt !== false;
     const schema = dok.schema || dok;
     const fel = [], varn = [];
@@ -987,9 +987,8 @@ const MOTOR = (() => {
       for (const i of idx) behov[i] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
     }
 
-    // AB 25 § 13 mom. 8 a och mom. 10: dygnsvilan kan aldrig vara kortare än 9 timmar, och under 11 timmar krävs bekräftelse
-    if (r.dygnsvila_minuter < 540) fel.push("Dygnsvilan kan aldrig vara kortare än 9 timmar (AB 25 § 13 mom. 8 a). Lokalt kollektivavtal om kortare dygnsvila är inte möjligt (mom. 10).");
-    else if (r.dygnsvila_minuter < 660 && !(ind.avvikelser || []).includes("dygnsvila_minuter")) fel.push("Dygnsvilan kan inte vara kortare än 11 timmar (AB 25 § 13 mom. 8) utan bekräftade särskilda skäl enligt mom. 8 a.");
+    // AB 25 § 13 mom. 8 och verksamhetens beslut: 11 timmars dygnsvila är hård och kan inte låsas upp
+    if (r.dygnsvila_minuter < 660) fel.push("Dygnsvilan är minst 11 timmar och kan inte låsas upp i schemaplaneringen (AB 25 § 13 mom. 8; verksamhetens beslut).");
     const pers = [], ids = new Set();
     let vaxel = 0;  // för perioder där antal pass inte går jämnt ut
     for (const p of ind.personal || []) {
