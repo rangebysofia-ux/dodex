@@ -278,8 +278,8 @@ function ritaFlik() {
       </tbody></table></div>
       <div class="chips" style="margin-top:10px"><select id="ny-behovsdag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select>
         <button data-g="ny-behovsrad">Lägg till rad</button></div>
-      <h3>Minst i tjänst vid klockslag</h3>
-      <p class="dampad liten">Till exempel mitt på dagen när morgon och kväll överlappar. Syns som punkter i vyn Klockslag.</p>
+      <h3>Täckning vid klockslag</h3>
+      <p class="dampad liten">Minst så många i tjänst vid klockslaget, till exempel tidigt på morgonen eller mitt på dagen när dag och kväll överlappar. Passens längd anpassas efter det, och med rörlig starttid (Regler, Dagpass får också börja) även dagpassens start. Täckningsgraden syns i vyn Klockslag.</p>
       ${tp.length ? `<div class="rull"><table class="form"><thead><tr><th>Dagar</th><th>Klockslag</th><th>Antal</th><th></th></tr></thead><tbody>
         ${tp.map((t, n) => `<tr><td><select data-tp="${n}" data-f="k">${Object.keys(DAGNYCKEL).map(k => `<option value="${k}"${k === t.k ? " selected" : ""}>${DAGNYCKEL[k]}</option>`).join("")}</select></td>
           <td><input type="time" data-tp="${n}" data-f="tid" value="${esc(t.tid)}" style="width:120px"></td>
@@ -731,12 +731,14 @@ const REGLER = [
   { grupp: "Lokala regler", k: "block_min", namn: "Minst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 2 },
   { grupp: "Lokala regler", k: "block_max", namn: "Högst antal arbetsdagar i följd", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 5 },
   { grupp: "Lokala regler", k: "natt_vila_mellan_block_minuter", namn: "Nattpersonal: vila mellan nattblock", beskr: "Eftersträvas; bryts bara när schemat annars inte går ihop (till exempel heltid natt med 9-timmarsnätter).", niva: "lokal regel", typ: "mjuk", falt: "timmar", steg: 1, std: 2880 },
+  { grupp: "Lokala regler", k: "kvall_max_i_rad", namn: "Helst högst antal kvällar i rad", beskr: "Mjuk: eftersträvas för alla som arbetar kväll. 0 stänger av.", niva: "lokal regel", typ: "mjuk", falt: "tal", steg: 1, std: 3 },
   { grupp: "Lokala regler", k: "natt_max_i_rad", namn: "Nattpersonal: högst antal nätter i rad", niva: "lokal regel", typ: "hård", falt: "tal", steg: 1, std: 3 },
   { grupp: "Principer", k: "block_rekommenderat", namn: "Helst högst antal dagar i följd", niva: "princip", typ: "mjuk", falt: "tal", steg: 1, std: 4 },
   { grupp: "Principer", k: "spridning_kvallar", namn: "Blandning av morgon och kväll varje vecka", beskr: "För den som arbetar både morgon och kväll. Mjuk väger in efter rättvisan, Stark väger tyngst efter vakanserna.", niva: "princip", typ: "mjuk", falt: "val", val: { av: "Av", mjuk: "Mjuk", stark: "Stark" }, std: "mjuk" },
   { grupp: "Principer", k: "spridning_tolerans", namn: "Hur jämn blandningen ska vara", niva: "princip", typ: "mjuk", falt: "val", tal: true, val: { 1: "Båda sorterna varje vecka", 0: "Nästan lika många av varje" }, std: 1 },
   { grupp: "Principer", k: "jamn_bemanning", namn: "Jämn bemanning mellan dag och kväll", beskr: "Det som blir över eller saknas fördelas efter behovet, jämnt mellan dag- och kvällspass och över veckorna, i stället för att allt hamnar på samma pass.", niva: "princip", typ: "mjuk", falt: "val", val: { av: "Av", mjuk: "På" }, std: "mjuk" },
-  { grupp: "Principer", k: "morgon_start", namn: "Morgonpass börjar", niva: "princip", typ: "hård", falt: "tid", std: "07:00" },
+  { grupp: "Principer", k: "morgon_start", namn: "Dagpass börjar", niva: "princip", typ: "hård", falt: "tid", std: "07:00" },
+  { grupp: "Principer", k: "morgon_starter", namn: "Dagpass får också börja", beskr: "Rörlig start efter täckningen: skriv tider med komma, till exempel 06:30, 07:30. Motorn väljer en annan start bara när behovet vid ett klockslag kräver det (ange det under Behov, Minst i tjänst vid klockslag). Tomt = alltid den vanliga starttiden.", niva: "princip", typ: "hård", falt: "tider", std: [] },
   { grupp: "Principer", k: "kvall_slut", namn: "Kvällspass slutar", niva: "princip", typ: "hård", falt: "tid", std: "22:00" },
   { grupp: "Principer", k: "kant_fran", namn: "Passbyte tidigast", niva: "princip", typ: "hård", falt: "tid", std: "12:00" },
   { grupp: "Principer", k: "kant_till", namn: "Passbyte senast", niva: "princip", typ: "hård", falt: "tid", std: "18:00" },
@@ -759,12 +761,13 @@ function ritaInstallningar() {
   const rad = R => {
     const v = r[R.k] ?? R.std, andrad = r[R.k] !== undefined && r[R.k] !== R.std, last = R.last && !avv.has(R.k);
     let falt;
-    const visa = R.falt === "timmar" ? sv(v / 60, 1) + " h" : R.falt === "minuter" ? v + " min" : R.falt === "val" ? R.val[v] : v;
+    const visa = R.falt === "timmar" ? sv(v / 60, 1) + " h" : R.falt === "minuter" ? v + " min" : R.falt === "val" ? R.val[v] : Array.isArray(v) ? v.join(", ") : v;
     if (last && R.aldrigUpplas) falt = `<span class="lat">${esc(visa)}</span><span class="niva">${IKON.las.replace("<svg", '<svg width="11" height="11"')} kan inte låsas upp</span>`;
     else if (last) falt = `<span class="lat">${esc(visa)}</span><button class="liten" data-g="las-upp" data-k="${R.k}" aria-label="Lås upp ${R.namn}">${IKON.las} Lås upp</button>`;
     else if (R.falt === "check") falt = `<label class="check"><input type="checkbox" data-r="${R.k}" data-t="check"${v ? " checked" : ""}> ${v ? "På" : "Av"}</label>`;
     else if (R.falt === "val") falt = `<select data-r="${R.k}">${Object.entries(R.val).map(([a, t]) => `<option value="${a}"${String(a) === String(v) ? " selected" : ""}>${t}</option>`).join("")}</select>`;
     else if (R.falt === "tid") falt = `<input type="time" data-r="${R.k}" value="${esc(v)}">`;
+    else if (R.falt === "tider") falt = `<input data-r="${R.k}" data-t="tider" value="${esc((v || []).join(", "))}" placeholder="till exempel 06:30, 07:30" style="width:190px">`;
     else if (R.falt === "timmar") falt = `<input type="number" inputmode="decimal" step="0.5" min="${(R.min || 0) / 60}" data-r="${R.k}" data-t="timmar" value="${v / 60}" aria-label="${R.namn} i timmar"> <span class="dampad">h</span>`;
     else if (R.falt === "minuter") falt = `<input type="number" inputmode="numeric" step="5" min="0" data-r="${R.k}" data-t="tal" value="${v}" aria-label="${R.namn} i minuter"> <span class="dampad">min</span>`;
     else falt = `<input type="number" inputmode="decimal" step="${R.steg}" data-r="${R.k}" data-t="tal" value="${v}">`;
@@ -772,7 +775,7 @@ function ritaInstallningar() {
     return `<div class="regel"><div><div class="namn">${R.namn}</div>${R.beskr ? `<div class="beskr">${R.beskr}</div>` : ""}${R.ab ? `<div class="beskr"><b>${R.ab}</b></div>` : ""}
         <div class="chips" style="margin-top:4px"><span class="niva ${nk(R.niva)}">${R.niva}</span><span class="niva">${R.typ}</span>
         ${avv.has(R.k) ? `<span class="niva avviker">${IKON.olast.replace("<svg", '<svg width="11" height="11"')} upplåst</span>` : ""}
-        ${andrad ? `<span class="niva avviker">avviker från ${R.falt === "timmar" ? sv(R.std / 60, 1) + " h" : R.falt === "val" ? R.val[R.std] : R.std === true ? "på" : R.std === false ? "av" : R.std}</span> <button class="lank liten" data-g="aterstall-regel" data-k="${R.k}">Återställ</button>` : ""}
+        ${andrad ? `<span class="niva avviker">avviker från ${Array.isArray(R.std) ? "standard" : R.falt === "timmar" ? sv(R.std / 60, 1) + " h" : R.falt === "val" ? R.val[R.std] : R.std === true ? "på" : R.std === false ? "av" : R.std}</span> <button class="lank liten" data-g="aterstall-regel" data-k="${R.k}">Återställ</button>` : ""}
         ${avv.has(R.k) && !andrad ? `<button class="lank liten" data-g="las-igen" data-k="${R.k}">Lås igen</button>` : ""}</div></div>
       <div class="varde">${falt}</div>
       ${oppen ? `<div class="lasupp"><div><b>Avvikelse från ${R.niva === "lag" ? "lagen" : R.niva === "avtal" ? "avtalet" : "verksamhetens beslut"}.</b> ${R.avvikelse || "Ändringen gäller hela enheten."} Avvikelsen syns på alla scheman från enheten.</div>
@@ -820,6 +823,13 @@ function regelInput(el) {
   if (!el.dataset.r) return;
   const R = REGLER.find(r => r.k === el.dataset.r);
   st.indata.regler = st.indata.regler || {};
+  if (el.dataset.t === "tider") {
+    const l = el.value.split(/[,; ]+/).map(t => t.trim().replace(".", ":")).filter(Boolean).map(t => /^\d{1,2}:\d{2}$/.test(t) ? t.padStart(5, "0") : null);
+    if (l.some(t => !t)) { meddela("Skriv tiderna som 06:30, 07:30."); return; }
+    if (l.length) st.indata.regler[R.k] = [...new Set(l)].sort(); else delete st.indata.regler[R.k];
+    if (!Object.keys(st.indata.regler).length) delete st.indata.regler;
+    markeraAndrad(false); return;
+  }
   let v = el.dataset.t === "check" ? el.checked : el.dataset.t === "tal" || R.tal ? parseFloat(el.value.replace(",", ".")) : el.dataset.t === "timmar" ? Math.round(parseFloat(el.value.replace(",", ".")) * 60) : el.value;
   if (v === R.std || (typeof v === "number" && isNaN(v))) delete st.indata.regler[R.k]; else st.indata.regler[R.k] = v;
   if (!Object.keys(st.indata.regler).length) delete st.indata.regler;

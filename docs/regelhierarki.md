@@ -56,6 +56,10 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 23. **Tre schemaalternativ.** Ur ett och samma underlag kan tre scheman läggas och jämföras: *medarbetarstyrt* (rättvist: alla så lika som möjligt i kvällar, helger och blandning; önskemål före block och passlängd), *verksamhetsstyrt* (behovet först: det som blir över eller saknas sprids jämnt över dagar och dygnsdelar) och *ekonomistyrt* (lägsta uppskattade OB enligt AB 25 § 21 utan helgdagar: extra pass där OB är lägst). Behovet (vakanser) ligger alltid först och alla hårda regler gäller i alla tre; bara ordningen på de mjuka målen skiljer. `losare.profil` i indata; `PROFILER` i build.py och `PROFIL` i light/motor.js. Lättversionens motor är heuristisk och ger mindre tydliga skillnader. Beslutat av användaren 2026-11-07.
 
+24. **Rörlig starttid för dagpass efter täckningen (ändrar princip 4 när den används).** `morgon_starter`, till exempel `["06:30", "07:30"]`, ger dagpassen fler tillåtna starttider utöver `morgon_start`. Täckningen styrs av behovet vid klockslag (`tidpunkter`, i gränssnittet *Täckning vid klockslag*): motorn väljer en annan start bara när det minskar vakanserna vid ett klockslag, annars den vanliga (en annan start kostar 30 minuter i passlängdsmålet). Standard är en tom lista, alltså fast start som tidigare. Kvällspassen har fortfarande fast slut. Klockslagsvyn visar täckningsgraden. Lättversionen har fast start (den räknar inte behov vid klockslag); granskningen godtar de tillåtna starttiderna. Beslutat av användaren 2026-11-07.
+
+25. **Helst högst tre kvällar i rad (lokal regel, mjuk).** `kvall_max_i_rad` (standard 3, 0 stänger av) för alla som arbetar kväll. Räknas med blocklängden i målordningen. Granskningen visar fler kvällar i rad som något att notera (KVALL_I_RAD). Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

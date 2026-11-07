@@ -31,7 +31,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 1. Dygnsvila 11 h och veckovila 36 h (avtal) samt rast efter 5 h arbete (lag) är hårda.
 2. Behovet är högsta *mjuka* nivå. Gör det aldrig hårt: en vakans är bättre än ett avtalsbrott.
 3. Antal pass väger tyngre än passlängd. 4,75 pass per vecka för dag och kväll.
-4. Morgonpass har fast start, kvällspass fast slut, längden anpassas i fönstret 12–18.
+4. Morgonpass har fast start, kvällspass fast slut, längden anpassas i fönstret 12–18. Användaren har beslutat att en enhet får ange fler starttider för dagpass (`morgon_starter`, beslut 24 i regelhierarki.md); standard är fast start.
 5. Ingen fredagskväll före ledig helg.
 5b. Varannan helg är hård och låst för enheten. Undantag får bara göras per person.
 6. Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass) får aldrig kallas avtalsregler i text eller gränssnitt.
@@ -54,7 +54,7 @@ python -m schemamotor.validate tests/fall/six_week_basic.json /tmp/s.json
 
 ## Arbetssätt
 
-- Kör `pytest -q` före och efter varje ändring. Alla tester ska passera. Testerna tar cirka fem minuter.
+- Kör `pytest -q` före och efter varje ändring. Alla tester ska passera. Testerna tar cirka tio minuter.
 - Lägg till ett testfall i `tests/fall/` för varje ny regel: ett som ska gå att lösa och ett som ska vara olösbart, med förväntad konflikt.
 - Ny regel = tre ställen: modellen (build), granskningen (validate, skriven oberoende) och förklaringen (en regelgrupp med text och nivå i explain).
 - Lägg inte till beroenden utan att motivera dem i commit-meddelandet.

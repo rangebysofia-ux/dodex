@@ -338,7 +338,8 @@ function ritaKlockslag(res) {
   return `<div class="chips" role="group" aria-label="Dag" style="margin-bottom:12px">${DAGAR.map((n, i) => `<button class="chip" data-g="dag" data-v="${i}" aria-pressed="${i === dagIdx}">${n}</button>`).join("")}</div>
     <h3>På golvet under dygnet, vecka ${v + 1} ${DAGAR[dagIdx]}</h3>${svg}
     ${minst.length ? `<p class="dampad liten">Streckad röd linje: minsta antal på golvet under ${minst.map(m => esc(m.namn || m.id)).join(", ")}. Den som är på aktiviteten räknas inte.</p>` : ""}
-    ${tp.length ? `<p class="dampad liten">Punkterna visar behov vid klockslag. Röd punkt betyder att för få är i tjänst.</p>` : ""}
+    ${tp.length ? (() => { const beh = tp.reduce((s, t) => s + t.antal, 0), tackt = tp.reduce((s, t) => s + Math.min(t.antal, steg[Math.floor(minut(t.tid) / 15)]), 0);
+      return `<p class="liten"><b>Täckningsgrad vid klockslagen: ${beh ? Math.round(tackt / beh * 100) : 100} %</b> <span class="dampad">(${tackt} av ${beh}). Punkterna visar behovet; röd punkt = för få på golvet.${(st.korning.indata.regler?.morgon_starter || []).length ? " Dagpassens starttid anpassas efter behovet." : ""}</span></p>`; })() : ""}
     <h3>Vem arbetar när</h3>${alla.length ? gantt : `<p class="tom">Ingen arbetar den här dagen.</p>`}
     <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:#f4c9b6;border:1px solid #5a1f0c"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
 }

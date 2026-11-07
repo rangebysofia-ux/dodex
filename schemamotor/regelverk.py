@@ -59,6 +59,8 @@ HARDA = [
     ("TOLERANS", "tolerans_minuter", "Tolerans för arbetstid mot kontrakt", "kontrakt", "minuter per period", False,
      "Nattpersonal: minst ett halvt nattpass.", "TID"),
     ("MORGON_START", "morgon_start", "Dagpass börjar", "princip", "klockslag", False, "Fast start; slutet anpassas.", "PASSFONSTER"),
+    ("MORGON_STARTER", "morgon_starter", "Dagpass får också börja", "princip", "klockslag", False,
+     "Rörlig start efter täckningen vid klockslag. Motorn väljer en annan start än den vanliga bara när behovet kräver det. Tom lista = fast start.", "PASSFONSTER"),
     ("KVALL_SLUT", "kvall_slut", "Kvällspass slutar", "princip", "klockslag", False, "Fast slut; starten anpassas.", "PASSFONSTER"),
     ("PASSBYTE_FRAN", "kant_fran", "Passbyte tidigast", "princip", "klockslag", False, "Dagpassets slut och kvällspassets start ligger i fönstret.", "PASSFONSTER"),
     ("PASSBYTE_TILL", "kant_till", "Passbyte senast", "princip", "klockslag", False, "", "PASSFONSTER"),
@@ -84,6 +86,7 @@ KALLOR = {
     "HEL_HELG": LOKAL, "HELG_START": LOKAL, "HELG_SLUT": LOKAL, "FREDAGSKVALL": LOKAL,
     "PASS_PER_VECKA": LOKAL, "MIN_PASSLANGD": LOKAL, "BLOCK_MIN": LOKAL, "BLOCK_MAX": LOKAL, "NATT_I_RAD": ("Verksamhetens beslut 2026-11-07 (lokal regel, inte avtal).", "Verksamheten kan ändra."),
     "TOLERANS": ("Kontrakt: arbetstiden ska motsvara anställningens omfattning.", "Per person (tolerans_minuter)."),
+    "MORGON_STARTER": ("Planeringsprincip; användarens beslut 2026-11-07 (rörlig start efter täckningen).", "Verksamheten kan ändra."),
     "MORGON_START": ("Planeringsprincip.", "Verksamheten kan ändra."), "KVALL_SLUT": ("Planeringsprincip.", "Verksamheten kan ändra."),
     "PASSBYTE_FRAN": ("Planeringsprincip.", "Verksamheten kan ändra."), "PASSBYTE_TILL": ("Planeringsprincip.", "Verksamheten kan ändra."),
     "STEG": ("Planeringsprincip.", "Verksamheten kan ändra."), "LANGD_BAND": ("Planeringsprincip.", "Verksamheten kan ändra."),
@@ -122,6 +125,7 @@ MJUKA = {
 }
 
 INSTALLNINGAR_MJUKA = {
+    "kvall_max_i_rad": ("Helst högst antal kvällar i rad (räknas med blocklängden)", "kvällar; 0 stänger av"),
     "natt_vila_mellan_block_minuter": ("Nattpersonal: vila mellan nattblock", "minuter (2880 = 48 h); 0 stänger av"),
     "block_rekommenderat": ("Helst högst antal dagar i följd", "dagar"),
     "jamn_bemanning": ("Jämn bemanning mellan dag och kväll", "'mjuk' (på) eller 'av'"),

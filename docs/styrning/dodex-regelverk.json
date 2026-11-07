@@ -275,6 +275,20 @@
       "avvikelse": "Verksamheten kan ändra."
     },
     {
+      "id": "MORGON_STARTER",
+      "nyckel": "morgon_starter",
+      "namn": "Dagpass får också börja",
+      "niva": "princip",
+      "typ": "hård",
+      "standard": [],
+      "enhet": "klockslag",
+      "last": false,
+      "beskrivning": "Rörlig start efter täckningen vid klockslag. Motorn väljer en annan start än den vanliga bara när behovet kräver det. Tom lista = fast start.",
+      "granskningskod": "PASSFONSTER",
+      "kalla": "Planeringsprincip; användarens beslut 2026-11-07 (rörlig start efter täckningen).",
+      "avvikelse": "Verksamheten kan ändra."
+    },
+    {
       "id": "KVALL_SLUT",
       "nyckel": "kvall_slut",
       "namn": "Kvällspass slutar",
@@ -552,6 +566,12 @@
     }
   ],
   "installningar_for_mjuka_mal": [
+    {
+      "nyckel": "kvall_max_i_rad",
+      "namn": "Helst högst antal kvällar i rad (räknas med blocklängden)",
+      "varden": "kvällar; 0 stänger av",
+      "standard": 3
+    },
     {
       "nyckel": "natt_vila_mellan_block_minuter",
       "namn": "Nattpersonal: vila mellan nattblock",

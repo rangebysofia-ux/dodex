@@ -9,11 +9,11 @@ const GRANSKNING = (() => {
     dygnsvila_minuter: 660, veckovila_minuter: 2160, dygnsbryt: "auto", veckobryt: "mån 00:00",
     rast_grans_minuter: 300, rast_minuter: 30, pass_per_vecka: 4.75, morgon_start: "07:00",
     kvall_slut: "22:00", kant_fran: "12:00", kant_till: "18:00", block_min: 2, block_max: 5,
-    block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
+    block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
   const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
-    HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", PASSFONSTER: "princip",
+    HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
@@ -121,7 +121,8 @@ const GRANSKNING = (() => {
           if (rast < r.rast_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: över 5 h arbete utan rast.`);
           else if (paPlats - rast > 2 * r.rast_grans_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: rasten kan inte placeras så att ingen del blir över 5 h.`);
         }
-        if (p.dygnsdel === "morgon" && (s % DYGN !== tid(r.morgon_start) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
+        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid)]);
+        if (p.dygnsdel === "morgon" && (!starter.has(s % DYGN) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: morgonpass ${p.start}–${p.slut} följer inte fönstret.`);
         if (p.dygnsdel === "kvall" && (e % DYGN !== tid(r.kvall_slut) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: kvällspass ${p.start}–${p.slut} följer inte fönstret.`);
@@ -137,6 +138,18 @@ const GRANSKNING = (() => {
           if (alla_ && (!work[(d - 1 + N) % N] || (!cyk && d === 0))) {
             let langd = grans + 1; while (langd < N && work[(d + langd) % N]) langd++;
             brott(regel, pid, `${langd} ${regel === "NATT_I_RAD" ? "nätter i rad" : "arbetsdagar i följd"} från ${dagText(d)} (gräns ${grans}).`, hard);
+          }
+        }
+      }
+      // högst kvall_max_i_rad kvällar i rad (lokal regel, mjuk)
+      if (r.kvall_max_i_rad) {
+        const km = r.kvall_max_i_rad, kv = Array(N).fill(0);
+        lista.forEach(([d, , , p]) => { if (p.dygnsdel === "kvall") kv[d] = 1; });
+        for (let d = 0; d < (cyk ? N : N - km); d++) {
+          let alla_ = true; for (let k = 0; k <= km; k++) if (!kv[(d + k) % N]) { alla_ = false; break; }
+          if (alla_ && (!kv[(d - 1 + N) % N] || (!cyk && d === 0))) {
+            let l = km + 1; while (l < N && kv[(d + l) % N]) l++;
+            brott("KVALL_I_RAD", pid, `${l} kvällar i rad från ${dagText(d)} (helst högst ${km}).`, false);
           }
         }
       }

@@ -32,6 +32,11 @@ STANDARDREGLER = {
     "rast_minuter": 30,
     "pass_per_vecka": 4.75,
     "morgon_start": "07:00",
+    # tillåtna starttider för dagpass (rörlig start efter behovet vid klockslag); tom = bara morgon_start.
+    # Användarens beslut 2026-11-07. Motorn väljer en annan start än morgon_start bara när täckningen kräver det.
+    "morgon_starter": [],
+    # högst så många kvällar i rad (mjuk regel för alla som arbetar kväll; 0 stänger av). Användarens beslut 2026-11-07.
+    "kvall_max_i_rad": 3,
     "kvall_slut": "22:00",
     "kant_fran": "12:00",
     "kant_till": "18:00",
@@ -211,11 +216,13 @@ def forbered(indata):
     mallar = []
     ms, ks = tid(r["morgon_start"]), tid(r["kvall_slut"])
     kf, kt = tid(r["kant_fran"]), tid(r["kant_till"])
-    for slut in range(kf, kt + 1, steg):
-        n = netto_for(slut - ms, rg, rl)
-        if n:
-            mallar.append({"id": f"M{klocka(ms)}-{klocka(slut)}", "dygnsdel": "morgon", "start": ms, "slut": slut,
-                           "netto": n, "rast": (slut - ms) - n})
+    starter = sorted({tid(t) for t in (r.get("morgon_starter") or [])} | {ms})
+    for m_start in starter:
+        for slut in range(kf, kt + 1, steg):
+            n = netto_for(slut - m_start, rg, rl)
+            if n:
+                mallar.append({"id": f"M{klocka(m_start)}-{klocka(slut)}", "dygnsdel": "morgon", "start": m_start, "slut": slut,
+                               "netto": n, "rast": (slut - m_start) - n, "annan_start": m_start != ms})
     for start in range(kf, kt + 1, steg):
         n = netto_for(ks - start, rg, rl)
         if n:
@@ -700,12 +707,25 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             b = m.new_bool_var("")
             m.add(sum(fonster) <= rek).only_enforce_if(b.Not())
             over.append(b)
+    # högst kvall_max_i_rad kvällar i rad (mjukt, räknas med blocklängden)
+    km = r.get("kvall_max_i_rad") or 0
+    if km:
+        for pi, p in enumerate(prob["personer"]):
+            kv = [s for s in p["tillatna"] if M[s]["dygnsdel"] == "kvall"]
+            if not kv:
+                continue
+            for d in range(N if cyk else N - km):
+                b = m.new_bool_var("")
+                m.add(sum(x[pi, (d + k) % N, s] for k in range(km + 1) for s in kv) <= km + b)
+                over.append(b)
     mal["blocklangd"] = sum(over)
 
     # passlängd: avvikelse från mållängd per pass plus avvikelse från kontrakterad tid, i minuter
     mal["passlangd"] = sum(x[pi, d, s] * int(round(abs(M[s]["netto"] - p["mal_langd"])))
                            for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"]) \
-        + sum(p["_avv"] for p in prob["personer"] if p.get("_avv") is not None)
+        + sum(p["_avv"] for p in prob["personer"] if p.get("_avv") is not None) \
+        + sum(x[pi, d, s] * 30 for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"]
+              if M[s].get("annan_start"))  # annan starttid än morgon_start bara när täckningen kräver det
 
     rattvisa = []
     for del_ in ("kvall", "morgon"):

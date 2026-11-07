@@ -1,0 +1,74 @@
+{
+  "beskrivning": "Rörlig starttid på morgonen: dagpass får börja 06:30, 07:00 eller 07:30. Behovet är minst en i tjänst kl 06:45 på vardagar, vilket bara går med start 06:30. Ska gå att lösa utan vakanser vid klockslaget; övriga dagpass börjar 07:00. Högst tre kvällar i rad eftersträvas.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0,
+    "vakanta_tidpunkter": 0
+  },
+  "enhet": "Test – aktivitet",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 1
+    }
+  },
+  "personal": [
+    {
+      "id": "D1",
+      "grad": 1
+    },
+    {
+      "id": "D2",
+      "grad": 1
+    },
+    {
+      "id": "D3",
+      "grad": 1
+    },
+    {
+      "id": "D4",
+      "grad": 0.9
+    },
+    {
+      "id": "D5",
+      "grad": 0.9
+    },
+    {
+      "id": "D6",
+      "grad": 0.8
+    },
+    {
+      "id": "D7",
+      "grad": 0.8
+    },
+    {
+      "id": "D8",
+      "grad": 0.75
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  },
+  "regler": {
+    "morgon_starter": [
+      "06:30",
+      "07:00",
+      "07:30"
+    ]
+  },
+  "tidpunkter": {
+    "vardag": [
+      {
+        "tid": "06:45",
+        "antal": 1
+      }
+    ]
+  }
+}

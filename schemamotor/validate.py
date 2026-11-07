@@ -23,14 +23,14 @@ STANDARD = {
     "dygnsvila_minuter": 660, "veckovila_minuter": 2160, "dygnsbryt": "auto", "veckobryt": "mån 00:00",
     "rast_grans_minuter": 300, "rast_minuter": 30, "pass_per_vecka": 4.75, "morgon_start": "07:00",
     "kvall_slut": "22:00", "kant_fran": "12:00", "kant_till": "18:00", "block_min": 2, "block_max": 5,
-    "block_rekommenderat": 4, "natt_max_i_rad": 3, "natt_vila_mellan_block_minuter": 2880, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
+    "block_rekommenderat": 4, "natt_max_i_rad": 3, "natt_vila_mellan_block_minuter": 2880, "morgon_starter": [], "kvall_max_i_rad": 3, "helg_start": "fre 22:00", "helg_slut": "mån 06:00", "hel_helg": True,
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
     "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1, "jamn_bemanning": "mjuk",
 }
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
-        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel"}
+        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel"}
 
 
 def tid(s):
@@ -209,7 +209,8 @@ def kontrollera(indata, schema_dok):
                     brott("RAST", pid, f"{dag_text(d)} {p['start']}–{p['slut']}: rasten kan inte placeras så att "
                                        f"ingen del blir längre än {r['rast_grans_minuter'] / 60:g} h.")
             del_ = p.get("dygnsdel")
-            if del_ == "morgon" and (s % DYGN != tid(r["morgon_start"]) or not
+            starter = {tid(r["morgon_start"])} | {tid(t) for t in r.get("morgon_starter") or []}
+            if del_ == "morgon" and (s % DYGN not in starter or not
                                      tid(r["kant_fran"]) <= e % DYGN <= tid(r["kant_till"])):
                 brott("PASSFONSTER", pid, f"{dag_text(d)}: morgonpass {p['start']}–{p['slut']} följer inte fönstret.")
             if del_ == "kvall" and (e % DYGN != tid(r["kvall_slut"]) or not
@@ -236,6 +237,19 @@ def kontrollera(indata, schema_dok):
                             langd += 1
                         sort_ = "nätter i rad" if regel == "NATT_I_RAD" else "arbetsdagar i följd"
                         brott(regel, pid, f"{langd} {sort_} från {dag_text(d)} (gräns {grans}).", hard)
+        # högst kvall_max_i_rad kvällar i rad (lokal regel, mjuk)
+        km = r.get("kvall_max_i_rad") or 0
+        if km:
+            kvall = [0] * N
+            for d, _, _, p in lista:
+                if p.get("dygnsdel") == "kvall":
+                    kvall[d] = 1
+            for d in range(N if cyk else N - km):
+                if all(kvall[(d + k) % N] for k in range(km + 1)) and (not kvall[(d - 1) % N] or (not cyk and d == 0)):
+                    langd = km + 1
+                    while langd < N and kvall[(d + langd) % N]:
+                        langd += 1
+                    brott("KVALL_I_RAD", pid, f"{langd} kvällar i rad från {dag_text(d)} (helst högst {km}).", hard=False)
         # helger
         hs, he = veckotid(r["helg_start"]), veckotid(r["helg_slut"])
         helger = []

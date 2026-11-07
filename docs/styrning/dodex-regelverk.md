@@ -50,6 +50,7 @@ Måste alltid uppfyllas.
 | NATT_I_RAD | Nattpersonal: högst nätter i rad | `natt_max_i_rad` | 3 | nätter | lokal regel | nej | Gäller personal som bara arbetar natt. 0 stänger av. |
 | TOLERANS | Tolerans för arbetstid mot kontrakt | `tolerans_minuter` | 60 | minuter per period | kontrakt | nej | Nattpersonal: minst ett halvt nattpass. |
 | MORGON_START | Dagpass börjar | `morgon_start` | 07:00 | klockslag | princip | nej | Fast start; slutet anpassas. |
+| MORGON_STARTER | Dagpass får också börja | `morgon_starter` | [] | klockslag | princip | nej | Rörlig start efter täckningen vid klockslag. Motorn väljer en annan start än den vanliga bara när behovet kräver det. Tom lista = fast start. |
 | KVALL_SLUT | Kvällspass slutar | `kvall_slut` | 22:00 | klockslag | princip | nej | Fast slut; starten anpassas. |
 | PASSBYTE_FRAN | Passbyte tidigast | `kant_fran` | 12:00 | klockslag | princip | nej | Dagpassets slut och kvällspassets start ligger i fönstret. |
 | PASSBYTE_TILL | Passbyte senast | `kant_till` | 18:00 | klockslag | princip | nej |  |
@@ -88,6 +89,7 @@ Källa och tillåten avvikelse för varje hård regel. Kontrollerat mot AB 25 i 
 | NATT_I_RAD | Verksamhetens beslut 2026-11-07 (lokal regel, inte avtal). | Verksamheten kan ändra. |
 | TOLERANS | Kontrakt: arbetstiden ska motsvara anställningens omfattning. | Per person (tolerans_minuter). |
 | MORGON_START | Planeringsprincip. | Verksamheten kan ändra. |
+| MORGON_STARTER | Planeringsprincip; användarens beslut 2026-11-07 (rörlig start efter täckningen). | Verksamheten kan ändra. |
 | KVALL_SLUT | Planeringsprincip. | Verksamheten kan ändra. |
 | PASSBYTE_FRAN | Planeringsprincip. | Verksamheten kan ändra. |
 | PASSBYTE_TILL | Planeringsprincip. | Verksamheten kan ändra. |
@@ -121,6 +123,7 @@ Optimeras i den här ordningen. Ett lägre mål kan aldrig försämra ett högre
 
 | Nyckel | Namn | Värden | Standard |
 |---|---|---|---|
+| `kvall_max_i_rad` | Helst högst antal kvällar i rad (räknas med blocklängden) | kvällar; 0 stänger av | 3 |
 | `natt_vila_mellan_block_minuter` | Nattpersonal: vila mellan nattblock | minuter (2880 = 48 h); 0 stänger av | 2880 |
 | `block_rekommenderat` | Helst högst antal dagar i följd | dagar | 4 |
 | `jamn_bemanning` | Jämn bemanning mellan dag och kväll | 'mjuk' (på) eller 'av' | mjuk |
