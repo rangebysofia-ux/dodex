@@ -188,6 +188,11 @@ table.schema thead th { padding-bottom: 6px; }
 .pass.jour { background: var(--jour-bg); color: var(--jour-text); box-shadow: inset 3px 0 0 var(--guld); }
 .pass.dold { background: none; box-shadow: none; color: var(--svag); cursor: default; }
 .pass.vald { outline: 2px solid var(--accent); outline-offset: 1px; }
+table.schema .summa { font: 600 12px var(--mono); text-align: center; padding: 2px 5px; color: var(--text); white-space: nowrap; background: var(--yta2); }
+table.schema th.summa { font: 700 11px var(--sans); color: var(--dampad); cursor: help; }
+table.schema .summa.forsta { border-left: 2px solid var(--linje); }
+table.schema td.summa.fel { color: #fff; background: var(--kritisk); }
+table.schema td.summa.res { color: var(--text); font-weight: 800; }
 .pass.resurs { box-shadow: inset 4px 0 0 var(--resurs) !important; }
 .pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; }
 .schema.period .pass.resurs { background: var(--resurs); color: #fff; }

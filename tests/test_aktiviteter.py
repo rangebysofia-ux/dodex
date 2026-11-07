@@ -166,3 +166,25 @@ def test_resurspass_samma_i_webben_och_exporten(losning, tmp_path):
     over = sum(max(0, sum(1 for rad in res["schema"].values() if rad[d] and rad[d]["dygnsdel"] == k) - beh[d % 7].get(k, 0))
                for d in range(indata["veckor"] * 7) for k in ("morgon", "kvall", "natt"))
     assert len(py) == over
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="kräver Node")
+def test_sammanstallning_per_rad(losning, tmp_path):
+    """Sammanställningen per rad i schemat stämmer med schemat och med granskningens vila."""
+    indata, res = losning
+    fil = tmp_path / "r.json"
+    fil.write_text(json.dumps({"res": res, "ind": indata}), encoding="utf-8")
+    kod = (f"const G=require('./schemawebb/statisk/grafer.js');const d=require({json.dumps(str(fil))});"
+           "const rs=G.resurs(d.res,d.ind),ut={};for(const p of Object.keys(d.res.schema)){"
+           "ut[p]={v1:G.radSumma(d.res,d.ind,p,[0,1,2,3,4,5,6],rs),alla:G.radSumma(d.res,d.ind,p,[...Array(28).keys()],rs)}}"
+           "console.log(JSON.stringify(ut))")
+    ut = json.loads(subprocess.run(["node", "-e", kod], cwd=ROT, capture_output=True, text=True, check=True).stdout)
+    for pid, s in ut.items():
+        rad = res["schema"][pid]
+        assert s["alla"]["pass"] == res["personer"][pid]["pass"]
+        assert s["alla"]["minuter"] == res["personer"][pid]["minuter"]
+        assert s["v1"]["pass"] == sum(1 for p in rad[:7] if p)
+        assert s["alla"]["kvall"] == res["personer"][pid]["kvallspass"]
+        assert s["alla"]["morgon"] + s["alla"]["kvall"] + s["alla"]["natt"] == s["alla"]["pass"]
+        # inga brott i granskningen betyder att vilan i sammanställningen håller gränserna
+        assert s["alla"]["dygnsvila"] >= 660 and s["alla"]["veckovila"] >= 2160

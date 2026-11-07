@@ -178,7 +178,7 @@ function ritaSchemavy() {
     h += st.vecka === -1 ? schemaDagar(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), filter, true) : schemaVecka(res, Math.max(0, st.vecka), filter);
     h += `<p class="info" id="info">${cellInfo(res)}</p>
       <div class="legend"><span><i style="background:var(--morgon)"></i>Morgon</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span>
-      <span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span><span><i style="background:var(--resurs)"></i>◼ R resurspass, utöver behovet</span><span class="minus">−1 vakans</span><span class="plus">+1 resurstid</span><span>Raden längst ned: i tjänst${filter !== "alla" ? (st.vecka === -1 ? "" : " / behov") : ""}${st.vecka === -1 ? ". Håll muspekaren över en ruta för detaljer" : ""}</span></div>`;
+      <span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span><span><i style="background:var(--resurs)"></i>◼ R resurspass, utöver behovet</span><span class="minus">−1 vakans</span><span class="plus">+1 resurstid</span><span>Kolumnerna till höger: pass, D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (rött = under gränsen)</span><span>Raden längst ned: i tjänst${filter !== "alla" ? (st.vecka === -1 ? "" : " / behov") : ""}${st.vecka === -1 ? ". Håll muspekaren över en ruta för detaljer" : ""}</span></div>`;
   }
   return h + `</section>`;
 }
@@ -206,11 +206,11 @@ function schemaVecka(res, v, filter) { return schemaDagar(res, Array.from({ leng
 
 function schemaDagar(res, dagar, filter, period) {
   const pers = Object.keys(res.schema), bem = bemanning(res, st.korning.indata), vp = vakansPass(res, st.korning.indata);
-  const rs = GRAF.resurs(res, st.korning.indata);
+  const rs = GRAF.resurs(res, st.korning.indata), ind = st.korning.indata, kol = GRAF.summaKol(res);
   const kl = (d, extra = "") => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}${extra}"`;
-  let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${60 + dagar.length * 34}px"` : ""}><thead>`;
-  if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">Vecka ${Math.floor(dagar[0] / 7) + w + 1}</th>`).join("")}</tr>`;
-  h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>` + dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7].slice(0, 2) : DAGAR[d % 7]}</th>`).join("") + `</tr></thead><tbody>`;
+  let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${60 + dagar.length * 34 + kol.length * 46}px"` : ""}><thead>`;
+  if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">Vecka ${Math.floor(dagar[0] / 7) + w + 1}</th>`).join("")}<th colspan="${kol.length}" class="summa forsta" style="text-align:left">Hela perioden</th></tr>`;
+  h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>` + dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7].slice(0, 2) : DAGAR[d % 7]}</th>`).join("") + GRAF.summaHuvud(kol) + `</tr></thead><tbody>`;
   for (const pid of pers) {
     const red = !!st.red;
     h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a></td>` + dagar.map(d => {
@@ -221,7 +221,7 @@ function schemaDagar(res, dagar, filter, period) {
       const resurs = rs.has(n);
       return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${resurs ? " resurs" : ""}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter || resurs ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${resurs ? "\n◼ Resurspass, utöver behovet" : ""}${esc(GRAF.aktText(p))}"` : ""}
         aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}${resurs ? ", resurspass" : ""}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${resurs && !period ? GRAF.resursMarke : ""}${GRAF.aktMarke(p)}</button></td>`;
-    }).join("") + `</tr>`;
+    }).join("") + GRAF.summaCeller(GRAF.radSumma(res, ind, pid, dagar, rs), kol, ind) + `</tr>`;
   }
   // vakanta pass som egna rader med streckad kant
   const synliga = d => vp[d].filter(x => filter === "alla" || x.dygnsdel === filter);
@@ -230,7 +230,7 @@ function schemaDagar(res, dagar, filter, period) {
     h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
       const x = synliga(d)[r];
       return `<td ${kl(d)}>${x ? `<span class="pass vakant ${x.dygnsdel}" data-tips="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${x.start}–${x.slut} (vanligaste tiden)" aria-label="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass ${DAGAR[d % 7]}"><b>${KOD[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</span>` : ""}</td>`;
-    }).join("") + `</tr>`;
+    }).join("") + `<td colspan="${kol.length}" class="summa forsta"></td></tr>`;
   }
   h += `<tr class="bem"><td>${period ? "I tj." : "I tjänst"}</td>` + dagar.map(d => {
     const x = bem[d];
@@ -242,7 +242,7 @@ function schemaDagar(res, dagar, filter, period) {
     if (period) return `<td ${kl(d, klass)} data-tips="${tips}">${marke || "✓"}</td>`;
     const antal = filter === "alla" ? `M${x.n.morgon}<br>K${x.n.kvall}<br>N${x.n.natt}` : `${x.n[filter]} / ${x.b[filter]}`;
     return `<td ${kl(d, klass)} data-tips="${tips}">${antal}${marke ? "<br>" + marke : ""}</td>`;
-  }).join("") + `</tr></tbody></table></div>`;
+  }).join("") + GRAF.summaTotal(res, ind, dagar, rs, kol) + `</tr></tbody></table></div>`;
   return h;
 }
 

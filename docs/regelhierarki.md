@@ -42,6 +42,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 16. **Resurstid visas svart.** Det som ligger utöver behovet är resurstid. Per dag och dygnsdel blir så många pass som ligger över behovet resurspass, och de fördelas rättvist mellan personerna (den som har haft minst resurspass först). Resurspassen märks svarta med ◼ R i schemat, personvyn och exporten. Resurstiden är svart i bemanningsgrafen och värmekartan och i raden ”I tjänst” (+1). Påverkar inte lösningen, bara visningen. Beslutat av användaren 2026-11-07.
 
+17. **Sammanställning per rad i schemat.** Varje persons rad i schemat visar antal pass, dag-, kvälls- och nattpass, helgdagar, resurspass, aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (en vecka eller hela perioden). Vila under gränsen visas röd. På webben är sammanställningen kolumner till höger i schemat; i telefonen är den en egen tabell under schemat. Påverkar bara visningen. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

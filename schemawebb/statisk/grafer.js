@@ -303,6 +303,59 @@ function vila(rad, W, cykliskt = true, veckobryt = "mån 00:00") {
 const tidText = t => { const d = ((Math.floor(t / DYGN_MIN) % 7) + 7) % 7, m = ((t % DYGN_MIN) + DYGN_MIN) % DYGN_MIN; return `${DAGNAMN[d]} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
 const regelVarde = (indata, k, std) => indata.regler?.[k] ?? std;
 
+// ---------------------------------------------------------------- sammanställning per rad i schemat
+// Räknas för de dagar som visas (en vecka eller hela perioden): pass, dag/kväll/natt, helgdagar, resurspass,
+// aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila.
+function radSumma(res, indata, pid, dagar, rs) {
+  const rad = res.schema[pid], i = new Set(dagar), l = dagar.map(d => rad[d]).filter(Boolean);
+  const v = vila(rad, res.veckor, res.cykliskt !== false, regelVarde(indata, "veckobryt", "mån 00:00"));
+  const mel = v.mellan.filter(x => i.has(x.dag)), veckor = new Set(dagar.map(d => Math.floor(d / 7)));
+  const vv = v.veckor.filter(x => veckor.has(x.vecka - 1));
+  return { pass: l.length, morgon: l.filter(p => p.dygnsdel === "morgon").length, kvall: l.filter(p => p.dygnsdel === "kvall").length,
+    natt: l.filter(p => p.dygnsdel === "natt").length, helg: dagar.filter(d => rad[d] && d % 7 > 4).length,
+    resurs: dagar.filter(d => rad[d] && rs.has(pid + ":" + d)).length, akt: l.reduce((s, p) => s + (p.aktiviteter || []).length, 0),
+    minuter: l.reduce((s, p) => s + (p.netto || 0), 0), dygnsvila: mel.length ? Math.min(...mel.map(x => x.min)) : null,
+    veckovila: vv.length ? Math.min(...vv.map(x => x.min)) : null };
+}
+const SUMMAKOL = [["pass", "Pass", "Antal pass"], ["morgon", "D", "Dagpass (morgon)"], ["kvall", "K", "Kvällspass"], ["natt", "N", "Nattpass"],
+  ["helg", "Hlg", "Arbetade helgdagar (lör och sön)"], ["resurs", "◼R", "Resurspass, utöver behovet"], ["akt", "★", "Aktiviteter (APT, utbildning …)"],
+  ["minuter", "Tid", "Arbetstid"], ["dygnsvila", "Vila", "Kortaste vila mellan två pass"], ["veckovila", "V-vila", "Kortaste veckovila (sammanhängande ledighet per vecka)"]];
+// vilka kolumner som behövs: natt och aktiviteter bara när de finns
+function summaKol(res) {
+  const rader = Object.values(res.schema);
+  const natt = rader.some(r => r.some(p => p && p.dygnsdel === "natt")), akt = rader.some(r => r.some(p => p && p.aktiviteter));
+  return SUMMAKOL.filter(([k]) => (k !== "natt" || natt) && (k !== "akt" || akt));
+}
+function summaHuvud(kol) { return kol.map(([k, t, tips], i) => `<th class="summa${i ? "" : " forsta"}" title="${tips}">${t}</th>`).join(""); }
+function summaCeller(s, kol, indata) {
+  const dv = regelVarde(indata, "dygnsvila_minuter", 660), wv = regelVarde(indata, "veckovila_minuter", 2160);
+  const h = m => sv(m / 60, 1);
+  return kol.map(([k], i) => {
+    const v = s[k], f = i ? "" : " forsta";
+    if (k === "minuter") return `<td class="summa nw${f}">${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}</td>`;
+    if (k === "dygnsvila" || k === "veckovila") {
+      if (v == null) return `<td class="summa${f}">–</td>`;
+      const fel = v < (k === "dygnsvila" ? dv : wv);
+      return `<td class="summa nw${f}${fel ? " fel" : ""}" title="${fel ? "Under gränsen" : "Inom gränsen"} (${h(k === "dygnsvila" ? dv : wv)} h)">${h(v)} h</td>`;
+    }
+    return `<td class="summa${f}${k === "resurs" && v ? " res" : ""}">${k === "resurs" && v ? "◼ " : ""}${v || (k === "pass" ? 0 : "")}</td>`;
+  }).join("");
+}
+// summa för raden "I tjänst": totalt för alla personer
+function summaTotal(res, indata, dagar, rs, kol) {
+  const t = {}; Object.keys(res.schema).forEach(pid => { const s = radSumma(res, indata, pid, dagar, rs); for (const [k] of kol) if (typeof s[k] === "number" && !k.includes("vila")) t[k] = (t[k] || 0) + s[k]; });
+  return kol.map(([k], i) => `<td class="summa${i ? "" : " forsta"}">${k.includes("vila") ? "" : k === "minuter" ? Math.round((t[k] || 0) / 60) + " h" : t[k] || 0}</td>`).join("");
+}
+
+// Sammanställningen som egen tabell (för smala skärmar): en rad per person.
+function summaTabell(res, indata, dagar, rs, rubrik) {
+  const kol = summaKol(res), pers = Object.keys(res.schema);
+  return `<div class="rull"><table class="schema summatabell"><thead><tr><th>${rubrik || ""}</th>${summaHuvud(kol).replace(/ forsta/g, "")}</tr></thead><tbody>
+    ${pers.map(pid => `<tr><td>${esc(pid)}</td>${summaCeller(radSumma(res, indata, pid, dagar, rs), kol, indata).replace(/ forsta/g, "")}</tr>`).join("")}
+    <tr class="bem"><td>Alla</td>${summaTotal(res, indata, dagar, rs, kol).replace(/ forsta/g, "")}</tr></tbody></table></div>
+    <p class="dampad liten" style="margin-top:4px">D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter. Vila = kortaste vila mellan två pass, V-vila = kortaste veckovila. Rött = under gränsen.</p>`;
+}
+
 // Kort för en person: veckovila per vecka och vila mellan passen.
 function vilaKort(pid, res, indata) {
   const rad = res.schema[pid]; if (!rad) return "";
@@ -379,6 +432,6 @@ function aktivitetKort(res) {
     </tbody></table></div></section>`;
 }
 
-return { resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
