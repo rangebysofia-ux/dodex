@@ -28,6 +28,37 @@ Märkning i lathunden:
 
 **Exempel:** Ett kvällspass som slutar 22:00 kan följas av ett pass som börjar tidigast 09:00. Ett dagpass som börjar 07:00 går alltså inte.
 
+### Hur dygnsvilan räknas: fast dygnsbryt, inte flytande
+
+| | |
+|---|---|
+| **Fast dygnsbryt (AB)** | Dygnsvilan räknas för varje 24-timmarsperiod från ett **bestämt klockslag**, dygnsbrytet. Klockslaget ska stå i schemat. **AB 25 § 13 mom. 5** |
+| **Flytande dygnsvila** | Med flytande menas att *varje* 24-timmarsperiod, oavsett var den börjar, ska innehålla 11 timmars sammanhängande vila. AB 25 räknar inte så, utan från dygnsbrytet i schemat. |
+| **Var dygnsbrytet läggs** | Där vilan naturligt ligger, oftast vid skiftbytet mitt på dagen (kring kl. 15 för dag och kväll). Med dygnsbrytet mitt i en arbetsperiod kan vilan delas i två delar som var för sig är kortare än 11 timmar, även om personen har lång vila totalt. |
+| **Nattpersonal** | Behöver ett eget dygnsbryt, i regel när nattpasset slutar (06:45). Annars hamnar nattpasset mitt i perioden och vilan delas. |
+| **Alternerande** | Arbete och dygnsvila ska följa på varandra regelbundet under varje 24-timmarsperiod. **AB 25 § 13 mom. 5** |
+| **I DODEX** | Granskningen kontrollerar **två saker**: 11 timmar sammanhängande inom varje 24-timmarsperiod från dygnsbrytet (som AB kräver), och dessutom **11 timmar mellan alla pass**. Det andra är strängare än AB och gör att vilan håller även om dygnsbrytet flyttas. Det är dock inte samma sak som en helt flytande kontroll av varje tänkbar 24-timmarsperiod. Dygnsbrytet föreslås automatiskt (`auto`), och nattpersonal får ett eget. |
+
+**Exempel med dygnsbryt kl. 15:00:** Ett dagpass 07:00–15:00 följt av ett kvällspass 14:00–22:00 nästa dag ger 23 timmars vila mellan passen. Perioden 15:00–15:00 innehåller vila 15:00–14:00, alltså 23 timmar. Båda kontrollerna är uppfyllda.
+
+### Kompenserande vila
+
+Kompenserande vila är vila som ska ges i efterhand när dygnsvilan har blivit kortare än 11 timmar. Den är lika lång som den vila som gick förlorad, om inget annat anges nedan.
+
+| Situation | Vad som gäller | Källa |
+|---|---|---|
+| **Planerad kortare dygnsvila** (lägst 9 timmar, särskilda skäl i verksamhet med ansvar för liv, hälsa och säkerhet, efter MBL-förhandling) | Kompenserande vila lika lång som den minskade dygnsvilan. Läggs **i samband med nästa dygnsvila** och ska vara sammanhängande. | AB 25 § 13 mom. 8 a |
+| **Oförutsedd händelse** som arbetsgivaren inte kunnat förutse, påverka eller planera för | Kompenserande vila lika lång som den minskade dygnsvilan, i samband med nästa dygnsvila. Går det inte av objektiva skäl: **så snart som möjligt, senast inom 14 kalenderdagar**. Är nästa planerade vila redan tillräckligt lång räknas kompensationen som given. Arbetsgivaren ska meddela när vilan läggs. | AB 25 § 13 mom. 8 b |
+| **Före nästa pass i stället** | Arbetsgivaren kan, till exempel av arbetsmiljöskäl, lägga den kompenserande vilan före nästa arbetspass i stället för i anslutning till nästa dygnsvila. | Anm. 1 till mom. 8 b |
+| **Ny händelse innan vilan getts** | Vila för båda händelserna läggs sammanhängande med den följande dygnsvilan. | Anm. 2 till mom. 8 b |
+| **Arbete och jour i direkt anslutning** (undantagsfall, högst 20 timmar sammanlagt) | Vilan efteråt ska vara minst lika lång som den sammanlagda arbetstiden. Inträffar en oförutsedd händelse ska den kompenserande vilan vara **dubbelt så lång** som det aktiva arbetet. | AB 25 § 13 mom. 5 och anm. 3 till mom. 8 b |
+| **Beredskap** där aktivt arbete bryter dygnsvilan | Kompenserande vila så snart som möjligt, sammanhängande, **senast inom 14 kalenderdagar**. Vid beredskap flera dygn i följd: i samband med dygnsvilan efter beredskapsperiodens slut. | AB 25 § 13 mom. 8 |
+| **Beredskap (RiB) under veckovila** | Om aktivt arbete bryter vecko- eller dygnsvilan ska kompenserande vila ges. | AB 25 § 13 mom. 7 i |
+| **Allmänna val och folkomröstningar** | Dygnsvilan kan tillfälligt förkortas för valarbete på valdagen. Kompenserande vila i samband med nästa dygnsvila. | AB 25 § 13 mom. 9 |
+| **Lön** | Läggs den kompenserande vilan under ordinarie arbetstid görs **inget löneavdrag**. | AB 25 § 13 mom. 8 och 9 |
+
+**I DODEX:** Grundschemat planeras alltid med 11 timmars dygnsvila, så kompenserande vila behövs inte i ett lagt schema. Den uppstår i den dagliga driften, till exempel vid en oförutsedd händelse eller beredskap, och planeras då utanför schemamotorn.
+
 ## 2. Veckovila
 
 | | |
