@@ -1,0 +1,16 @@
+{
+  "name": "DODEX Scheduler",
+  "short_name": "DODEX",
+  "description": "Cykliska grundscheman för dygnet runt-verksamhet.",
+  "lang": "sv",
+  "start_url": "../",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#193f38",
+  "theme_color": "#193f38",
+  "icons": [
+    { "src": "ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ikon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

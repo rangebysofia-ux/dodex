@@ -39,3 +39,8 @@ Använd id-koder i stället för namn för personal och i kommentarer. Då inneh
 - Inloggningen är ett gemensamt lösenord, sparat som en signerad kaka i 30 dagar. Fel lösenord ger en sekunds fördröjning.
 - Avtal och lag (dygnsvila, veckovila, rast) kan inte försvagas, varken i gränssnittet eller via JSON.
 - Separata användarkonton och behörigheter finns inte än.
+
+
+## Ikon på hemskärmen
+
+När webbtjänsten sparas på hemskärmen (Safari: Dela → Lägg till på hemskärmen; Chrome: Installera app) visas DODEX-klockan på skogsgrön botten och namnet DODEX. Ikonerna (`schemawebb/statisk/ikon-*.png`) och `manifest.json` görs om från `logga.svg` med `node scripts/ikoner.js`. Det fungerar för den publicerade tjänsten, till exempel på Render; lättversionen på claude.ai får Claudes ikon, eftersom den sidan ägs av claude.ai.
