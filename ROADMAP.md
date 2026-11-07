@@ -40,6 +40,12 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 - [x] **14. Aktiviteter under arbetstid.** APT, utbildning, möte, studier, dokumentation, handledning med dag, tid, antal deltagare och minsta bemanning på golvet (antal, andel eller gånger per person). Deltagarna arbetar hela aktivitetstiden och fördelas rättvist; tiden påverkar passlängd, vila, OB och bemanning. Motor, granskning, förklaring, lättversion, gränssnitt, export och assistent (docs/indata-schema.md, beslut 15 i docs/regelhierarki.md).
 - [x] **15. Bemanningsbalans som i Excel-mallen.** Budget, bemanningsbehov, personal och övrig arbetstid med resultat per vecka och period, import av mallen (namn blir id-koder) och blad i Excel-exporten (docs/bemanningsbalans.md).
 
+## Fas 6 – En DODEX (webb och telefon ihop)
+
+- [x] **16. Samma filformat.** En enhet med alla inställningar och färdiga scheman sparas som fil i webben eller telefonen och öppnas i den andra. Indata förs över orörd; scheman granskas om av den som öppnar filen (docs/enhetsfil.md).
+- [ ] **17. Gemensamt gränssnitt.** En sida i taget flyttas till delade filer som både webben och lättversionen använder, med schemavyn först. Inga inställningar får försvinna på vägen.
+- [ ] **18. Två motorer i samma program.** Fullständiga motorn när servern finns, lättmotorn annars, märkt som snabbförslag.
+
 ## Senare
 
 Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr` och OB enligt AB 25 § 21 (docs/ob.md); löneskillnader per person och lokala OB-nivåer återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*

@@ -351,6 +351,30 @@ def manuell_korning(eid: int):
     return {"id": kid}
 
 
+class ImporteradKorningIn(BaseModel):
+    namn: str = Field(default="Importerat schema", max_length=200)
+    indata: dict
+    resultat: dict
+    forvantade_vakanser: Optional[float] = None
+
+
+@app.post("/api/enheter/{eid}/importerad-korning", dependencies=[Depends(inloggad)], status_code=201)
+def importerad_korning(eid: int, k: ImporteradKorningIn):
+    """Ett schema från en enhetsfil (docs/enhetsfil.md). Det granskas om här; filens egen granskning används inte."""
+    if not db.enhet(eid):
+        raise HTTPException(404, "Enheten finns inte.")
+    if k.resultat.get("status") != "OK" or not isinstance(k.resultat.get("schema"), dict):
+        return JSONResponse({"fel": ["Schemat i filen är inte färdigt och kan inte importeras."]}, status_code=422)
+    try:
+        g = validate.kontrollera(copy.deepcopy(k.indata), copy.deepcopy(k.resultat))
+    except Exception:  # noqa: BLE001 – en trasig fil ska ge ett begripligt svar
+        return JSONResponse({"fel": ["Schemat i filen gick inte att granska och importerades inte."]}, status_code=422)
+    balans = {"forvantade_vakanser": k.forvantade_vakanser} if k.forvantade_vakanser is not None else None
+    kid = db.skapa_korning(eid, k.namn.strip() or "Importerat schema", k.indata, balans)
+    db.uppdatera_korning(kid, status="klar", steg=None, sekunder=0, resultat=k.resultat, granskning=g)
+    return {"id": kid, "brott": len(g.get("brott", []))}
+
+
 class JusteraIn(BaseModel):
     schemadata: dict = Field(alias="schema")
     namn: Optional[str] = None

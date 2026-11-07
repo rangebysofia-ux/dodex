@@ -160,13 +160,15 @@ async function visaEnheter() {
     <section class="kort valkommen"><div class="logga ljus">${loggaText()}</div>
       <p class="dampad" style="margin:8px 0 0">Planering som skapar balans – idag och imorgon. En enhet är en arbetsgrupp med medarbetare, behov, önskemål och regler; varje schema du lägger sparas som en körning.</p></section>
     ${GUIDE.val({ harEnheter: enheter.length > 0 })}
-    <h2 id="mina-enheter" style="margin:6px 4px 0">Mina enheter</h2>
+    <div class="rubrikrad" style="margin:6px 4px 0"><h2 id="mina-enheter" style="margin:0">Mina enheter</h2>
+      <label class="knapp liten" title="Öppna en enhet som har sparats som fil, i webben eller i telefonen">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div>
     <section class="lista-enheter">${enheter.length ? enheter.map(e => `
       <div class="kort enhet">
         <a class="namn" href="#/e/${e.id}/schema">${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
         <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/schema">${IKON.schema} Schema</a><a class="knapp liten" href="#/e/${e.id}/oversikt">Översikt</a>
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
+          <button class="liten" data-g="spara-fil" data-id="${e.id}" title="Enheten med alla inställningar och scheman, att öppna i webben eller i telefonen">Spara som fil</button>
           <button class="liten fara" data-g="ta-bort-enhet" data-id="${e.id}" data-namn="${esc(e.namn)}">Ta bort</button></div>
       </div>`).join("") : `<div class="kort tom">Inga enheter än. Skapa en ny eller börja från ett exempel nedan.</div>`}</section>
     <section class="kort" id="exempel">
@@ -671,10 +673,46 @@ document.addEventListener("input", e => {
   }
 });
 document.addEventListener("change", e => {
+  if (e.target.id === "enhetsfil-in") { const f = e.target.files[0]; e.target.value = ""; if (f) oppnaEnhetsfil(f); return; }
   if (e.target.dataset.g === "byt-korning") { location.hash = `#/e/${st.enhet.id}/${e.target.dataset.vy}/${e.target.value}`; return; }
   if (e.target.tagName === "SELECT" && (e.target.closest("#flik") || e.target.closest("#regler")) && (e.target.dataset.s || e.target.dataset.r || e.target.dataset.tp !== undefined))
     e.target.dispatchEvent(new Event("input", { bubbles: true }));
 });
+
+// ---------------------------------------------------------------- enhetsfil (samma format som lättversionen)
+async function sparaEnhetsfil(eid) {
+  try {
+    const e = await api("GET", "enheter/" + eid);
+    const lista = (await api("GET", `enheter/${eid}/korningar`)).filter(k => k.status === "klar" && k.losning === "OK");
+    const korningar = [];
+    for (const k of lista) korningar.push(await api("GET", "korningar/" + k.id));
+    const url = URL.createObjectURL(new Blob([ENHETSFIL.text(e, korningar, "webb")], { type: "application/json" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: ENHETSFIL.filnamn(e.namn) });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    meddela(`Sparat: alla inställningar och ${korningar.length} ${korningar.length === 1 ? "schema" : "scheman"}.`);
+  } catch (err) { meddela("Kunde inte spara filen: " + err.message); }
+}
+
+async function oppnaEnhetsfil(fil) {
+  let d;
+  try { d = ENHETSFIL.las(await fil.text()); } catch (err) { meddela(err.message); return; }
+  try {
+    const { id } = await api("POST", "enheter", { namn: d.namn, indata: d.indata });
+    const fel = [...d.varningar];
+    let brott = 0;
+    for (const k of d.korningar.slice().reverse()) {
+      try { brott += (await api("POST", `enheter/${id}/importerad-korning`, { namn: k.namn, indata: k.indata, resultat: k.resultat, forvantade_vakanser: k.forvantade_vakanser })).brott; }
+      catch (err) { fel.push(`${k.namn}: ${err.message}`); }
+    }
+    const kontroll = await api("POST", "kontrollera", { indata: d.indata }).catch(() => null);
+    let text = `${d.namn} är öppnad med alla inställningar och ${d.korningar.length} ${d.korningar.length === 1 ? "schema" : "scheman"}.`;
+    if (brott) text += ` Granskningen här hittar ${brott} brott mot hårda regler – se Regelkontroll.`;
+    if (kontroll?.fel?.length) text += " Inställningarna behöver rättas innan ett nytt schema läggs.";
+    if (fel.length) text += " " + fel.join(" ");
+    st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/schema`;
+    setTimeout(() => meddela(text), 300);
+  } catch (err) { meddela("Kunde inte öppna filen: " + err.message); }
+}
 
 async function laggSchema() {
   if (!(await spara())) return;
@@ -902,6 +940,7 @@ document.addEventListener("click", async e => {
         const { id } = await api("POST", "enheter", { namn: x.namn, indata: x.indata });
         st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/oversikt`; break;
       }
+      case "spara-fil": return sparaEnhetsfil(el.dataset.id);
       case "kopiera": {
         const e2 = await api("GET", "enheter/" + el.dataset.id);
         await api("POST", "enheter", { namn: e2.namn + " (kopia)", indata: e2.indata });

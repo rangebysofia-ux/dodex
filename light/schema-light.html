@@ -49,11 +49,12 @@ p { margin: 0 0 8px; }
 .rad { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .dampad { color: var(--dampad); } .liten { font-size: 13px; }
 .tom { color: var(--dampad); text-align: center; padding: 20px 0; }
-button { font: inherit; font-size: 14px; border: 1px solid var(--linje); background: var(--yta); color: var(--text); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+button, label.knapp { font: inherit; font-size: 14px; border: 1px solid var(--linje); background: var(--yta); color: var(--text); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
 button.primar { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
 button.fara { color: var(--dalig); }
 button.lank { border: 0; background: none; color: var(--accent); padding: 4px 2px; }
 button.liten { padding: 3px 9px; font-size: 13px; }
+label.knapp { display: inline-block; }
 button:disabled { opacity: .5; cursor: default; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 label { display: block; color: var(--dampad); font-size: 12.5px; margin-bottom: 3px; }
@@ -3571,6 +3572,80 @@ const GUIDE = (() => {
 if (typeof module !== "undefined") module.exports = GUIDE;
 </script>
 <script>"use strict";
+// Enhetsfil: en enhet med inställningar och sparade scheman i en fil som både webben (app.js) och
+// lättversionen (light/sida.html) kan spara och öppna. Se docs/enhetsfil.md.
+// Indata förs över orörd – ingen inställning tas bort eller skrivs om. Scheman granskas om av den
+// som öppnar filen (validate.py i webben, granskning.js i lättversionen), så filen behöver inte litas på.
+// Fristående: inga regler, inga beroenden.
+
+const ENHETSFIL = (() => {
+const FORMAT = "dodex-enhet", VERSION = 1;
+
+const kopia = x => JSON.parse(JSON.stringify(x));
+const iso = t => new Date(typeof t === "number" ? t * (t < 1e11 ? 1000 : 1) : t || Date.now()).toISOString();
+
+// körning från webben ({resultat, balans:{...}}) eller lättversionen ({data:"{...}"}) till filens form
+function korningTillFil(k) {
+  const d = typeof k.data === "string" ? JSON.parse(k.data) : k;
+  if (!d.resultat || d.resultat.status !== "OK") return null;
+  const b = d.balans;
+  return {
+    namn: k.namn || "Schema",
+    skapad: iso(k.skapad),
+    indata: kopia(d.indata),
+    resultat: kopia(d.resultat),
+    forvantade_vakanser: typeof b === "number" ? b : b && typeof b.forvantade_vakanser === "number" ? b.forvantade_vakanser : null,
+  };
+}
+
+// enhet = {namn, indata}; korningar = lista i webbens eller lättversionens form
+function skapa(enhet, korningar, kalla) {
+  return {
+    format: FORMAT, version: VERSION, kalla: kalla || "", sparad: iso(),
+    enhet: { namn: enhet.namn || "Enhet", indata: kopia(enhet.indata) },
+    korningar: (korningar || []).map(korningTillFil).filter(Boolean),
+  };
+}
+
+function text(enhet, korningar, kalla) { return JSON.stringify(skapa(enhet, korningar, kalla), null, 2); }
+
+function filnamn(namn) { return ((namn || "enhet").replace(/[^\wåäöÅÄÖ -]/g, "").trim() || "enhet") + ".dodex.json"; }
+
+// Läs en enhetsfil – eller ren indata, som testfallen i tests/fall. Kastar Error med svensk text.
+function las(innehall) {
+  let d = innehall;
+  if (typeof d === "string") {
+    try { d = JSON.parse(d); } catch { throw new Error("Filen är inte en DODEX-fil (den går inte att läsa som JSON)."); }
+  }
+  if (!d || typeof d !== "object" || Array.isArray(d)) throw new Error("Filen är inte en DODEX-fil.");
+  const varningar = [];
+  if (d.format === undefined && Array.isArray(d.personal)) {
+    return { namn: d.enhet || "Importerad enhet", indata: kopia(d), korningar: [], varningar };
+  }
+  if (d.format !== FORMAT) throw new Error("Filen är inte en DODEX-fil.");
+  if (typeof d.version !== "number" || d.version > VERSION) {
+    throw new Error("Filen är sparad med en nyare version av DODEX. Uppdatera programmet och försök igen.");
+  }
+  const e = d.enhet;
+  if (!e || typeof e.indata !== "object" || !e.indata || Array.isArray(e.indata)) throw new Error("Filen saknar enhetens inställningar.");
+  const korningar = [];
+  for (const [i, k] of (Array.isArray(d.korningar) ? d.korningar : []).entries()) {
+    if (!k || typeof k.indata !== "object" || !k.resultat || k.resultat.status !== "OK" || typeof k.resultat.schema !== "object") {
+      varningar.push(`Schema ${i + 1} i filen gick inte att läsa och hoppades över.`); continue;
+    }
+    const t = Date.parse(k.skapad);
+    korningar.push({ namn: String(k.namn || `Schema ${i + 1}`), skapad: Number.isNaN(t) ? Date.now() : t,
+      indata: kopia(k.indata), resultat: kopia(k.resultat),
+      forvantade_vakanser: typeof k.forvantade_vakanser === "number" ? k.forvantade_vakanser : null });
+  }
+  return { namn: String(e.namn || "Importerad enhet"), indata: kopia(e.indata), korningar, varningar };
+}
+
+return { FORMAT, VERSION, skapa, text, las, filnamn };
+})();
+if (typeof module !== "undefined") module.exports = ENHETSFIL;
+</script>
+<script>"use strict";
 // Konsekvensanalys i lättversionen: en översättning av schemamotor/analys.py (underlag, förslag,
 // konsekvenser, rangordning). Schemat för varje förslag läggs av motor.js och granskas av granskning.js.
 // Ändras analys.py ska den här filen ändras på samma sätt; tests/js/analys_test.js jämför dem.
@@ -3883,10 +3958,10 @@ async function visaLista() {
       <p class="dampad" style="margin:6px 0 0">Lägg cykliska grundscheman direkt i mobilen. Samma hårda regler som det fullständiga systemet: dygnsvila och veckovila (avtal), rast (lag), antal pass, varannan helg och block på 2–5 dagar.</p>
       <p class="liten dampad" style="margin:6px 0 0">${lager.typ === "konto" ? "Sparas privat i ditt Claude-konto och syns i mobil och dator." : "Sparas bara i den här webbläsaren."}</p></header>
     ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
-    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><button class="primar" data-guide="ny">Ny enhet</button></div>
+    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><label class="knapp" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label><button class="primar" data-guide="ny">Ny enhet</button></div></div>
       ${st.enheter.length ? st.enheter.map(e => `<div class="onsk"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${esc(e.namn)}</button>
         <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div></div>
-        <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>`).join("")
+        <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten" data-g="spara-fil" data-id="${e.id}">Spara som fil</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>`).join("")
       : `<p class="tom">Inga enheter än. Skapa en ny eller börja från ett exempel.</p>`}</section>
     <section class="kort" id="exempel"><h2>Exempel</h2><p class="dampad liten">Testfall från projektet, med id-koder i stället för namn.</p>
       ${EXEMPEL.map((x, i) => `<div class="onsk"><div><b>${esc(x.namn)}</b><div class="dampad liten">${esc(x.beskrivning)}</div></div><button class="liten" data-g="exempel" data-i="${i}">Använd</button></div>`).join("")}</section>`;
@@ -4198,6 +4273,7 @@ document.addEventListener("click", async ev => {
     case "ny": return skapa("Ny enhet", NY());
     case "exempel": { const x = EXEMPEL[+el.dataset.i]; return skapa(x.namn, x.indata); }
     case "oppna": return oppna(structuredClone(st.enheter.find(e => e.id === el.dataset.id)));
+    case "spara-fil": return sparaEnhetsfil(st.enheter.find(x => x.id === el.dataset.id));
     case "kopiera": { const e = st.enheter.find(x => x.id === el.dataset.id); await lager.sparaEnhet({ id: nyttId(), namn: e.namn + " (kopia)", indata: e.indata }); meddela("Kopia skapad."); return visaLista(); }
     case "ta-bort":
       if (el.dataset.ok !== "1") { el.dataset.ok = "1"; el.textContent = "Säker?"; setTimeout(() => { el.dataset.ok = ""; el.textContent = "Ta bort"; }, 4000); return; }
@@ -4374,7 +4450,7 @@ function ritaResultat() {
   let h = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button><span class="chips" style="align-items:center"><span class="dampad liten">${datum(k.skapad)}</span>${temaKnapp()}</span></div>
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
-      <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · ${sv(res.sekunder)} s · bemanningsbalansen förutsåg ${vakText(k.balans)}</span></div>
+      <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer${typeof res.sekunder === "number" ? ` · ${sv(res.sekunder)} s` : ""}${typeof k.balans === "number" ? ` · bemanningsbalansen förutsåg ${vakText(k.balans)}` : ""}</span></div>
     ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button><button data-g="tre-alternativ">⚖ Tre alternativ: medarbetare, verksamhet, ekonomi</button>
       <div class="chips andra"><span class="dampad liten">Ändra:</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button class="liten" data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div></div>`}
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
@@ -4531,6 +4607,7 @@ async function sparaJustering() {
 }
 
 document.addEventListener("change", e => {
+  if (e.target.id === "enhetsfil-in") { const f = e.target.files[0]; e.target.value = ""; if (f) oppnaEnhetsfil(f); return; }
   if (e.target.id === "rp-del") { const o = e.target.selectedOptions[0]; $("#rp-start").value = o.dataset.start; $("#rp-slut").value = o.dataset.slut; }
 });
 
@@ -4796,6 +4873,50 @@ async function excel() {
     if (e && e.code === "declined") return;
     meddela(e && e.message ? e.message : "Nedladdningen misslyckades.");
   }
+}
+
+// ------------------------------------------------------------------ enhetsfil (samma format som webben)
+async function sparaEnhetsfil(e) {
+  if (!e) return;
+  let korningar;
+  try { korningar = await lager.korningar(e.id); } catch (err) { meddela(err.message); return; }
+  const text = ENHETSFIL.text(e, korningar, "light"), filnamn = ENHETSFIL.filnamn(e.namn);
+  const antal = JSON.parse(text).korningar.length, klart = `Sparat: alla inställningar och ${antal} ${antal === 1 ? "schema" : "scheman"}.`;
+  let dl = null;
+  try { dl = window.claude && await window.claude.use("downloads"); } catch { dl = null; }
+  try {
+    if (dl) await dl.save({ filename: filnamn, data: new TextEncoder().encode(text) });
+    else {
+      const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+      const a = Object.assign(document.createElement("a"), { href: url, download: filnamn });
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    meddela(klart);
+  } catch (err) { if (err && err.code === "declined") return; meddela("Kunde inte spara filen: " + (err && err.message || err)); }
+}
+
+async function oppnaEnhetsfil(fil) {
+  let d;
+  try { d = ENHETSFIL.las(await fil.text()); } catch (err) { meddela(err.message); return; }
+  // indata sparas precis som i filen – ingen inställning tas bort
+  const e = { id: nyttId(), namn: d.namn, indata: d.indata };
+  try { await lager.sparaEnhet(e); } catch (err) { meddela("Kunde inte spara: " + err.message); return; }
+  const fel = [...d.varningar];
+  let brott = 0, n = 0;
+  for (const x of d.korningar) {
+    let g;
+    try { g = GRANSKNING.kontrollera(x.indata, x.resultat); } catch { fel.push(`${x.namn} gick inte att granska och hoppades över.`); continue; }
+    brott += g.brott.length;
+    const k = { id: nyttId(), enhet: e.id, namn: x.namn, skapad: x.skapad, status: g.giltigt ? "OK" : "BROTT",
+      vakanta: x.resultat.kpi ? x.resultat.kpi.vakanta_pass : 0,
+      data: JSON.stringify({ resultat: x.resultat, granskning: g, balans: x.forvantade_vakanser, indata: x.indata }) };
+    try { await lager.sparaKorning(k); n++; } catch (err) { fel.push(`${x.namn}: ${err.message}`); }
+  }
+  let text = `${d.namn} är öppnad med alla inställningar och ${n} ${n === 1 ? "schema" : "scheman"}.`;
+  if (brott) text += ` Granskningen här hittar ${brott} brott mot hårda regler – se Regelkontroll.`;
+  if (fel.length) text += " " + fel.join(" ");
+  await oppna(e);
+  meddela(text);
 }
 
 // ------------------------------------------------------------------ schemaassistent (via Claude-kontot)

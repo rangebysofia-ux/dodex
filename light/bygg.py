@@ -32,6 +32,7 @@ def main():
                 .replace("__ASSISTENT__", skydda((HAR.parent / "schemawebb" / "statisk" / "assistent.js").read_text(encoding="utf-8")))
                 .replace("__OB__", skydda((HAR.parent / "schemawebb" / "statisk" / "ob.js").read_text(encoding="utf-8")))
                 .replace("__GUIDE__", skydda((HAR.parent / "schemawebb" / "statisk" / "guide.js").read_text(encoding="utf-8")))
+                .replace("__ENHETSFIL__", skydda((HAR.parent / "schemawebb" / "statisk" / "enhetsfil.js").read_text(encoding="utf-8")))
                 .replace("__BEMANNINGSBALANS__", skydda((HAR.parent / "schemawebb" / "statisk" / "bemanningsbalans.js").read_text(encoding="utf-8")))
                 .replace("__GRAFER__", skydda((HAR.parent / "schemawebb" / "statisk" / "grafer.js").read_text(encoding="utf-8")))
                 .replace("__ANALYS__", skydda((HAR / "analys.js").read_text(encoding="utf-8")))
