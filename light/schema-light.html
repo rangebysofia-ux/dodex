@@ -272,6 +272,25 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
 
+  // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
+  // Samma förenkling som ob_kategori i schemamotor/build.py.
+  const OB_KR = { B: 68.10, B_natt: 78.30, C: 58.40, D: 26.40 };
+  function obKategori(wd, minut) {
+    const m = ((minut % DYGN) + DYGN) % DYGN; wd = (wd + Math.floor(minut / DYGN)) % 7;
+    if (wd >= 5 || (wd === 4 && m >= 17 * 60) || (wd === 0 && m < 7 * 60))
+      return (m >= 22 * 60 && (wd + 1) % 7 >= 5) || (m < 6 * 60 && wd >= 5) ? "B_natt" : "B";
+    if ((m >= 22 * 60 && wd <= 3) || (m < 6 * 60 && wd >= 1 && wd <= 4)) return "C";
+    if (m >= 19 * 60 && m < 22 * 60 && wd <= 4) return "D";
+    return null;
+  }
+  function obKronor(s, e, wd) { let kr = 0; for (let t = s; t < e; t += 15) { const k = obKategori(wd, t); if (k) kr += OB_KR[k] / 4; } return kr; }
+  // Profiler för tre schemaalternativ (vakanser och hårda regler väger alltid tyngst):
+  // medarbetare = rättvist och önskemål, verksamhet = jämn täckning av behovet, ekonomi = lägsta OB.
+  const PROFIL = {
+    standard: { f: 1, o: 1, s: 1, j: 1, e: 0 }, medarbetare: { f: 15, o: 3, s: 3, j: 0.3, e: 0 },
+    verksamhet: { f: 0.5, o: 1, s: 1, j: 4, e: 0 }, ekonomi: { f: 0.5, o: 1, s: 0.5, j: 0.3, e: 3 },
+  };
+
   const tid = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return String(m / 60 | 0).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
   const onsite = (net, r) => net > r.rast_grans_minuter ? net + r.rast_minuter : net;
@@ -464,6 +483,7 @@ const MOTOR = (() => {
     const tidsgrans = opt.sekunder ?? 8;
     const rapport = opt.rapport || (() => {});
     const per = pers.map((p, pi) => ({ onsk: onsk.filter(o => o.pi === pi), tillat: Array.from({ length: N }, (_, d) => tillatna(p, d, r, W)) }));
+    const prof = PROFIL[opt.profil] || PROFIL.standard;
 
     // passtider per person och typ (utan förlängning)
     const tider = pers.map(p => {
@@ -568,7 +588,10 @@ const MOTOR = (() => {
         }
       }
       const ws = r.spridning_kvallar === "stark" ? 400 : 25;
-      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO + f * WF + spr * ws + nv * WNV };
+      // ekonomi: uppskattad OB för personens pass
+      let eko = 0;
+      if (prof.e) for (let d = 0; d < N; d++) if (x[d]) eko += obKronor(t[x[d]][0], t[x[d]][1], d % 7);
+      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO * prof.o + f * WF * prof.f + spr * ws * prof.s + nv * WNV + eko * prof.e };
     }
 
     function bygg() {
@@ -638,7 +661,7 @@ const MOTOR = (() => {
         }
         k += Math.abs(om - ok) + Math.abs(vm - vk); toM += om; toK += ok; tvM += vm; tvK += vk;
       }
-      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ;
+      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ * prof.j;
     }
 
     let bastX = null, bastKost = Infinity;
@@ -724,7 +747,13 @@ const MOTOR = (() => {
       if (bastKost < WV) break;  // inga hårda brott och inga vakanser: bra nog
     }
     rapport({ andel: 1, kost: bastKost });
-    return resultat(pr, bastX, tider, personKost, (Date.now() - start) / 1000);
+    const res = resultat(pr, bastX, tider, personKost, (Date.now() - start) / 1000);
+    res.profil = opt.profil || "standard";
+    // uppskattad OB per vecka för jämförelsen (efter förlängningar)
+    let ob = 0;
+    for (const rad of Object.values(res.schema)) rad.forEach((v, d) => { if (v) { const s = tid(v.start); let e = tid(v.slut); if (e <= s) e += DYGN; ob += obKronor(s, e, d % 7); } });
+    res.kpi.ob_kr_vecka = Math.round(ob / W);
+    return res;
   }
 
   // ------------------------------------------------------------------ resultat och passlängder
@@ -967,7 +996,7 @@ if (typeof module !== "undefined") module.exports = MOTOR;
 if (typeof self !== "undefined" && typeof window === "undefined" && typeof module === "undefined") {
   self.onmessage = e => {
     try {
-      const res = MOTOR.los(e.data.indata, { sekunder: e.data.sekunder, seed: e.data.seed, rapport: m => self.postMessage({ typ: "framsteg", ...m }) });
+      const res = MOTOR.los(e.data.indata, { sekunder: e.data.sekunder, seed: e.data.seed, profil: e.data.profil, rapport: m => self.postMessage({ typ: "framsteg", ...m }) });
       self.postMessage({ typ: "klar", resultat: res });
     } catch (err) { self.postMessage({ typ: "fel", fel: String(err && err.message || err) }); }
   };
@@ -1270,6 +1299,25 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
 
+  // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
+  // Samma förenkling som ob_kategori i schemamotor/build.py.
+  const OB_KR = { B: 68.10, B_natt: 78.30, C: 58.40, D: 26.40 };
+  function obKategori(wd, minut) {
+    const m = ((minut % DYGN) + DYGN) % DYGN; wd = (wd + Math.floor(minut / DYGN)) % 7;
+    if (wd >= 5 || (wd === 4 && m >= 17 * 60) || (wd === 0 && m < 7 * 60))
+      return (m >= 22 * 60 && (wd + 1) % 7 >= 5) || (m < 6 * 60 && wd >= 5) ? "B_natt" : "B";
+    if ((m >= 22 * 60 && wd <= 3) || (m < 6 * 60 && wd >= 1 && wd <= 4)) return "C";
+    if (m >= 19 * 60 && m < 22 * 60 && wd <= 4) return "D";
+    return null;
+  }
+  function obKronor(s, e, wd) { let kr = 0; for (let t = s; t < e; t += 15) { const k = obKategori(wd, t); if (k) kr += OB_KR[k] / 4; } return kr; }
+  // Profiler för tre schemaalternativ (vakanser och hårda regler väger alltid tyngst):
+  // medarbetare = rättvist och önskemål, verksamhet = jämn täckning av behovet, ekonomi = lägsta OB.
+  const PROFIL = {
+    standard: { f: 1, o: 1, s: 1, j: 1, e: 0 }, medarbetare: { f: 15, o: 3, s: 3, j: 0.3, e: 0 },
+    verksamhet: { f: 0.5, o: 1, s: 1, j: 4, e: 0 }, ekonomi: { f: 0.5, o: 1, s: 0.5, j: 0.3, e: 3 },
+  };
+
   const tid = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return String(m / 60 | 0).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
   const onsite = (net, r) => net > r.rast_grans_minuter ? net + r.rast_minuter : net;
@@ -1462,6 +1510,7 @@ const MOTOR = (() => {
     const tidsgrans = opt.sekunder ?? 8;
     const rapport = opt.rapport || (() => {});
     const per = pers.map((p, pi) => ({ onsk: onsk.filter(o => o.pi === pi), tillat: Array.from({ length: N }, (_, d) => tillatna(p, d, r, W)) }));
+    const prof = PROFIL[opt.profil] || PROFIL.standard;
 
     // passtider per person och typ (utan förlängning)
     const tider = pers.map(p => {
@@ -1566,7 +1615,10 @@ const MOTOR = (() => {
         }
       }
       const ws = r.spridning_kvallar === "stark" ? 400 : 25;
-      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO + f * WF + spr * ws + nv * WNV };
+      // ekonomi: uppskattad OB för personens pass
+      let eko = 0;
+      if (prof.e) for (let d = 0; d < N; d++) if (x[d]) eko += obKronor(t[x[d]][0], t[x[d]][1], d % 7);
+      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO * prof.o + f * WF * prof.f + spr * ws * prof.s + nv * WNV + eko * prof.e };
     }
 
     function bygg() {
@@ -1636,7 +1688,7 @@ const MOTOR = (() => {
         }
         k += Math.abs(om - ok) + Math.abs(vm - vk); toM += om; toK += ok; tvM += vm; tvK += vk;
       }
-      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ;
+      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ * prof.j;
     }
 
     let bastX = null, bastKost = Infinity;
@@ -1722,7 +1774,13 @@ const MOTOR = (() => {
       if (bastKost < WV) break;  // inga hårda brott och inga vakanser: bra nog
     }
     rapport({ andel: 1, kost: bastKost });
-    return resultat(pr, bastX, tider, personKost, (Date.now() - start) / 1000);
+    const res = resultat(pr, bastX, tider, personKost, (Date.now() - start) / 1000);
+    res.profil = opt.profil || "standard";
+    // uppskattad OB per vecka för jämförelsen (efter förlängningar)
+    let ob = 0;
+    for (const rad of Object.values(res.schema)) rad.forEach((v, d) => { if (v) { const s = tid(v.start); let e = tid(v.slut); if (e <= s) e += DYGN; ob += obKronor(s, e, d % 7); } });
+    res.kpi.ob_kr_vecka = Math.round(ob / W);
+    return res;
   }
 
   // ------------------------------------------------------------------ resultat och passlängder
@@ -1965,7 +2023,7 @@ if (typeof module !== "undefined") module.exports = MOTOR;
 if (typeof self !== "undefined" && typeof window === "undefined" && typeof module === "undefined") {
   self.onmessage = e => {
     try {
-      const res = MOTOR.los(e.data.indata, { sekunder: e.data.sekunder, seed: e.data.seed, rapport: m => self.postMessage({ typ: "framsteg", ...m }) });
+      const res = MOTOR.los(e.data.indata, { sekunder: e.data.sekunder, seed: e.data.seed, profil: e.data.profil, rapport: m => self.postMessage({ typ: "framsteg", ...m }) });
       self.postMessage({ typ: "klar", resultat: res });
     } catch (err) { self.postMessage({ typ: "fel", fel: String(err && err.message || err) }); }
   };
@@ -2693,6 +2751,7 @@ function behovsstaplar(bem) {
     h += `<rect class="traff" x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]}\nPlanerat ${t}, behov ${b}${vak ? ` – ${vak} saknas` : t > b ? ` – ${t - b} resurspass utöver behovet` : ""}"/>`;
     if (x.d % 7 === 0) h += `<text x="${vX + i * kol + 2}" y="${bas + 26}" style="font-weight:700;fill:var(--text)">v${Math.floor(x.d / 7) + 1}</text>`;
     if (N <= 42) h += `<text x="${vX + i * kol + kol / 2}" y="${bas + 13}" text-anchor="middle">${DAGAR[x.d % 7][0]}</text>`;
+    if (N <= 42 && kol >= 14) h += `<text x="${vX + i * kol + kol / 2}" y="${y(Math.max(t, b)) - 4}" text-anchor="middle" style="font-size:10px;font-weight:700;fill:var(--text)">${t}</text>`;
   });
   return `<div class="rull">${h}<line class="axel" x1="${vX}" x2="${W - hX}" y1="${bas}" y2="${bas}"/></svg></div>
     <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;
@@ -4106,6 +4165,7 @@ document.addEventListener("click", async ev => {
     case "senaste": if (st.korningar.length) { st.rflik = "schema"; return visaKorning(st.korningar[0]); } return;
     case "andra-inst": { st.flik = el.dataset.f; await oppna(st.enhet, { installningar: true }); $("#flik")?.closest("section")?.scrollIntoView({ block: "start" }); return; }
     case "nytt-schema": await oppna(st.enhet, { installningar: true }); return laggSchema();
+    case "tre-alternativ": return treAlternativ();
     case "rflik": st.rflik = el.dataset.f; st.person = null; ritaResultat(); return;
     case "person": st.person = el.dataset.p || null; st.rflik = "personer"; ritaResultat(); window.scrollTo(0, 0); return;
     case "redigera": st.red = { schema: structuredClone(st.korning.resultat.schema), historik: [], andringar: 0, panel: null }; raknaOmUtkast(); return;
@@ -4138,6 +4198,66 @@ document.addEventListener("click", async ev => {
 
 // ------------------------------------------------------------------ lägga schema
 let arbetare = null;
+
+// ------------------------------------------------------------------ tre alternativ
+const PROFILER = {
+  medarbetare: ["Medarbetarstyrt", "Rättvist: alla så lika som möjligt, och önskemål före passlängd."],
+  verksamhet: ["Verksamhetsstyrt", "Behovet först: det som blir över eller saknas sprids jämnt."],
+  ekonomi: ["Ekonomistyrt", "Lägsta OB-kostnad: extra pass där OB är lägst."],
+};
+function korProfil(indata, profil, rapport) {
+  return new Promise(ok => {
+    const reserv = () => setTimeout(() => ok(MOTOR_HUVUD.los(indata, { sekunder: st.sekunder, profil, seed: Date.now() % 100000 })), 30);
+    try {
+      const w = new Worker(URL.createObjectURL(new Blob([$("#motor-kod").textContent], { type: "text/javascript" })));
+      w.onmessage = e => { if (e.data.typ === "framsteg") rapport(e.data.andel); else { w.terminate(); e.data.typ === "klar" ? ok(e.data.resultat) : reserv(); } };
+      w.onerror = () => { w.terminate(); reserv(); };
+      w.postMessage({ indata, sekunder: st.sekunder, seed: Date.now() % 100000, profil });
+    } catch { reserv(); }
+  });
+}
+async function treAlternativ() {
+  const ind = st.enhet.indata, b = MOTOR_HUVUD.balans(ind);
+  if (b.fel) return meddela("Rätta felen i inställningarna först.");
+  st.vy = "jamfor"; $("#fot").hidden = true;
+  const nya = [];
+  const profiler = Object.keys(PROFILER);
+  for (const [i, p] of profiler.entries()) {
+    $("#sida").innerHTML = `<section class="kort"><h1>Tre alternativ</h1><div class="banner info" style="margin-top:10px"><strong>Lägger ${PROFILER[p][0].toLowerCase()} schema (${i + 1} av 3) …</strong><span class="liten">${PROFILER[p][1]}</span><div class="matare"><div id="matare"></div></div></div></section>`;
+    const res = await korProfil(ind, p, a => { const m = $("#matare"); if (m) m.style.width = Math.round(a * 100) + "%"; });
+    if (res.status === "INDATAFEL") return meddela(res.fel[0]);
+    const g = GRANSKNING.kontrollera(ind, res);
+    const k = { id: nyttId(), enhet: st.enhet.id, namn: PROFILER[p][0], skapad: Date.now(), status: res.status === "OK" && g.giltigt ? "OK" : "BROTT",
+      vakanta: res.kpi.vakanta_pass, data: JSON.stringify({ resultat: res, granskning: g, balans: b.forvantade_vakanser, indata: ind }) };
+    st.korningar.unshift(k); nya.push(k);
+    try { await lager.sparaKorning(k); } catch (e) { meddela("Kunde inte spara: " + e.message); }
+  }
+  st.jamfor = nya.map(k => k.id);
+  ritaJamfor();
+}
+function ritaJamfor() {
+  const k = st.jamfor.map(id => st.korningar.find(x => x.id === id)).filter(Boolean).map(x => ({ ...x, ...JSON.parse(x.data) }));
+  const rad = (namn, f, lagreBattre = true, fmt = v => v) => {
+    const v = k.map(f), b = lagreBattre ? Math.min(...v.filter(x => typeof x === "number")) : null;
+    return `<tr><td>${namn}</td>${v.map(x => `<td class="tal"${lagreBattre && x === b && v.some(y => y !== b) ? ' style="color:var(--bra);font-weight:800"' : ""}>${fmt(x)}</td>`).join("")}</tr>`;
+  };
+  const rs = x => GRAF.nyckeltalFor(x);
+  $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="senaste">‹ Till schemat</button></div><h1 style="margin-top:4px">Tre alternativ</h1>
+    <p class="dampad liten">Alla håller avtal, lag och lokala regler, och behovet kommer först. Grönt = bäst på raden.</p></header>
+    <section class="kort"><div class="rull"><table class="jamfor"><thead><tr><th></th>${k.map(x => `<th>${esc(x.namn)}</th>`).join("")}</tr></thead><tbody>
+      ${rad("Vakanta pass", x => x.resultat.kpi.vakanta_pass)}
+      ${rad("Brott mot hårda regler", x => (x.resultat.brott || []).length + x.granskning.brott.length)}
+      ${rad("Rättvisa, skillnad i kvällar", x => x.resultat.kpi.rattvisa)}
+      ${rad("Dagar i följd över 4", x => x.resultat.kpi.blocklangd)}
+      ${rad("Brutna önskemål", x => x.resultat.kpi.onskemal)}
+      ${rad("Resurspass", x => rs(x).resursPass, false)}
+      ${rad("OB per vecka, kr (uppskattad)", x => x.resultat.kpi.ob_kr_vecka, true, v => (v ?? 0).toLocaleString("sv-SE"))}
+      <tr><td></td>${k.map(x => `<td><button class="liten primar" data-g="visa-korning" data-id="${x.id}">Öppna</button></td>`).join("")}</tr>
+    </tbody></table></div>
+    <ul class="punkter liten" style="margin-top:8px">${Object.values(PROFILER).map(([n, t]) => `<li><b>${n}:</b> ${t}</li>`).join("")}</ul></section>
+    <div class="grafyta">${k.map(x => `<section class="kort"><h2>${esc(x.namn)}</h2>${GRAF.varmekarta(GRAF.bemanning(x.resultat, x.indata), x.resultat.veckor)}</section>`).join("")}</div>`;
+  window.scrollTo(0, 0);
+}
 function laggSchema() {
   const b = MOTOR_HUVUD.balans(st.enhet.indata);
   if (b.fel) { meddela("Rätta felen i kontrollen först."); $("#kontroll").scrollIntoView({ behavior: "smooth" }); return; }
@@ -4185,7 +4305,7 @@ function ritaResultat() {
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · ${sv(res.sekunder)} s · bemanningsbalansen förutsåg ${vakText(k.balans)}</span></div>
-    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button>
+    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button><button data-g="tre-alternativ">⚖ Tre alternativ: medarbetare, verksamhet, ekonomi</button>
       <div class="chips andra"><span class="dampad liten">Ändra:</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button class="liten" data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div></div>`}
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
   if (flik === "oversikt") h += ritaOversikt(k, brott);
@@ -4207,6 +4327,9 @@ function ritaResultat() {
     { const dagar = st.vecka === -1 ? Array.from({ length: res.veckor * 7 }, (_, d) => d) : Array.from({ length: 7 }, (_, i) => st.vecka * 7 + i);
       const ind = st.korning.indata || st.enhet.indata;
       h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`; }
+    { const bem = GRAF.bemanning(res, st.korning.indata || st.enhet.indata);
+      h += `<div class="grafyta"><section class="kort"><h2>Bemanning mot behov</h2><p class="dampad liten">Antal pass per dag. Strecket är behovet, svart är resurstid.</p>${GRAF.behovsstaplar(bem)}</section>
+        <section class="kort"><h2>Värmekarta</h2><p class="dampad liten">Röd = för få, svart = fler än behovet, beige = i balans.</p>${GRAF.varmekarta(bem, res.veckor)}</section></div>`; }
     h += GRAF.aktivitetKort(res);
     if (res.vakanser.length) h += `<section class="kort"><h2>Vakanser</h2><ul class="punkter">${res.vakanser.map(x => `<li>Vecka ${x.vecka} ${x.veckodag}: ${x.antal} ${DELAR[x.dygnsdel].toLowerCase()}pass</li>`).join("")}</ul></section>`;
   }

@@ -695,6 +695,7 @@ document.addEventListener("click", async ev => {
     case "senaste": if (st.korningar.length) { st.rflik = "schema"; return visaKorning(st.korningar[0]); } return;
     case "andra-inst": { st.flik = el.dataset.f; await oppna(st.enhet, { installningar: true }); $("#flik")?.closest("section")?.scrollIntoView({ block: "start" }); return; }
     case "nytt-schema": await oppna(st.enhet, { installningar: true }); return laggSchema();
+    case "tre-alternativ": return treAlternativ();
     case "rflik": st.rflik = el.dataset.f; st.person = null; ritaResultat(); return;
     case "person": st.person = el.dataset.p || null; st.rflik = "personer"; ritaResultat(); window.scrollTo(0, 0); return;
     case "redigera": st.red = { schema: structuredClone(st.korning.resultat.schema), historik: [], andringar: 0, panel: null }; raknaOmUtkast(); return;
@@ -727,6 +728,66 @@ document.addEventListener("click", async ev => {
 
 // ------------------------------------------------------------------ lägga schema
 let arbetare = null;
+
+// ------------------------------------------------------------------ tre alternativ
+const PROFILER = {
+  medarbetare: ["Medarbetarstyrt", "Rättvist: alla så lika som möjligt, och önskemål före passlängd."],
+  verksamhet: ["Verksamhetsstyrt", "Behovet först: det som blir över eller saknas sprids jämnt."],
+  ekonomi: ["Ekonomistyrt", "Lägsta OB-kostnad: extra pass där OB är lägst."],
+};
+function korProfil(indata, profil, rapport) {
+  return new Promise(ok => {
+    const reserv = () => setTimeout(() => ok(MOTOR_HUVUD.los(indata, { sekunder: st.sekunder, profil, seed: Date.now() % 100000 })), 30);
+    try {
+      const w = new Worker(URL.createObjectURL(new Blob([$("#motor-kod").textContent], { type: "text/javascript" })));
+      w.onmessage = e => { if (e.data.typ === "framsteg") rapport(e.data.andel); else { w.terminate(); e.data.typ === "klar" ? ok(e.data.resultat) : reserv(); } };
+      w.onerror = () => { w.terminate(); reserv(); };
+      w.postMessage({ indata, sekunder: st.sekunder, seed: Date.now() % 100000, profil });
+    } catch { reserv(); }
+  });
+}
+async function treAlternativ() {
+  const ind = st.enhet.indata, b = MOTOR_HUVUD.balans(ind);
+  if (b.fel) return meddela("Rätta felen i inställningarna först.");
+  st.vy = "jamfor"; $("#fot").hidden = true;
+  const nya = [];
+  const profiler = Object.keys(PROFILER);
+  for (const [i, p] of profiler.entries()) {
+    $("#sida").innerHTML = `<section class="kort"><h1>Tre alternativ</h1><div class="banner info" style="margin-top:10px"><strong>Lägger ${PROFILER[p][0].toLowerCase()} schema (${i + 1} av 3) …</strong><span class="liten">${PROFILER[p][1]}</span><div class="matare"><div id="matare"></div></div></div></section>`;
+    const res = await korProfil(ind, p, a => { const m = $("#matare"); if (m) m.style.width = Math.round(a * 100) + "%"; });
+    if (res.status === "INDATAFEL") return meddela(res.fel[0]);
+    const g = GRANSKNING.kontrollera(ind, res);
+    const k = { id: nyttId(), enhet: st.enhet.id, namn: PROFILER[p][0], skapad: Date.now(), status: res.status === "OK" && g.giltigt ? "OK" : "BROTT",
+      vakanta: res.kpi.vakanta_pass, data: JSON.stringify({ resultat: res, granskning: g, balans: b.forvantade_vakanser, indata: ind }) };
+    st.korningar.unshift(k); nya.push(k);
+    try { await lager.sparaKorning(k); } catch (e) { meddela("Kunde inte spara: " + e.message); }
+  }
+  st.jamfor = nya.map(k => k.id);
+  ritaJamfor();
+}
+function ritaJamfor() {
+  const k = st.jamfor.map(id => st.korningar.find(x => x.id === id)).filter(Boolean).map(x => ({ ...x, ...JSON.parse(x.data) }));
+  const rad = (namn, f, lagreBattre = true, fmt = v => v) => {
+    const v = k.map(f), b = lagreBattre ? Math.min(...v.filter(x => typeof x === "number")) : null;
+    return `<tr><td>${namn}</td>${v.map(x => `<td class="tal"${lagreBattre && x === b && v.some(y => y !== b) ? ' style="color:var(--bra);font-weight:800"' : ""}>${fmt(x)}</td>`).join("")}</tr>`;
+  };
+  const rs = x => GRAF.nyckeltalFor(x);
+  $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="senaste">‹ Till schemat</button></div><h1 style="margin-top:4px">Tre alternativ</h1>
+    <p class="dampad liten">Alla håller avtal, lag och lokala regler, och behovet kommer först. Grönt = bäst på raden.</p></header>
+    <section class="kort"><div class="rull"><table class="jamfor"><thead><tr><th></th>${k.map(x => `<th>${esc(x.namn)}</th>`).join("")}</tr></thead><tbody>
+      ${rad("Vakanta pass", x => x.resultat.kpi.vakanta_pass)}
+      ${rad("Brott mot hårda regler", x => (x.resultat.brott || []).length + x.granskning.brott.length)}
+      ${rad("Rättvisa, skillnad i kvällar", x => x.resultat.kpi.rattvisa)}
+      ${rad("Dagar i följd över 4", x => x.resultat.kpi.blocklangd)}
+      ${rad("Brutna önskemål", x => x.resultat.kpi.onskemal)}
+      ${rad("Resurspass", x => rs(x).resursPass, false)}
+      ${rad("OB per vecka, kr (uppskattad)", x => x.resultat.kpi.ob_kr_vecka, true, v => (v ?? 0).toLocaleString("sv-SE"))}
+      <tr><td></td>${k.map(x => `<td><button class="liten primar" data-g="visa-korning" data-id="${x.id}">Öppna</button></td>`).join("")}</tr>
+    </tbody></table></div>
+    <ul class="punkter liten" style="margin-top:8px">${Object.values(PROFILER).map(([n, t]) => `<li><b>${n}:</b> ${t}</li>`).join("")}</ul></section>
+    <div class="grafyta">${k.map(x => `<section class="kort"><h2>${esc(x.namn)}</h2>${GRAF.varmekarta(GRAF.bemanning(x.resultat, x.indata), x.resultat.veckor)}</section>`).join("")}</div>`;
+  window.scrollTo(0, 0);
+}
 function laggSchema() {
   const b = MOTOR_HUVUD.balans(st.enhet.indata);
   if (b.fel) { meddela("Rätta felen i kontrollen först."); $("#kontroll").scrollIntoView({ behavior: "smooth" }); return; }
@@ -774,7 +835,7 @@ function ritaResultat() {
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · ${sv(res.sekunder)} s · bemanningsbalansen förutsåg ${vakText(k.balans)}</span></div>
-    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button>
+    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button><button data-g="tre-alternativ">⚖ Tre alternativ: medarbetare, verksamhet, ekonomi</button>
       <div class="chips andra"><span class="dampad liten">Ändra:</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button class="liten" data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div></div>`}
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
   if (flik === "oversikt") h += ritaOversikt(k, brott);
@@ -796,6 +857,9 @@ function ritaResultat() {
     { const dagar = st.vecka === -1 ? Array.from({ length: res.veckor * 7 }, (_, d) => d) : Array.from({ length: 7 }, (_, i) => st.vecka * 7 + i);
       const ind = st.korning.indata || st.enhet.indata;
       h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`; }
+    { const bem = GRAF.bemanning(res, st.korning.indata || st.enhet.indata);
+      h += `<div class="grafyta"><section class="kort"><h2>Bemanning mot behov</h2><p class="dampad liten">Antal pass per dag. Strecket är behovet, svart är resurstid.</p>${GRAF.behovsstaplar(bem)}</section>
+        <section class="kort"><h2>Värmekarta</h2><p class="dampad liten">Röd = för få, svart = fler än behovet, beige = i balans.</p>${GRAF.varmekarta(bem, res.veckor)}</section></div>`; }
     h += GRAF.aktivitetKort(res);
     if (res.vakanser.length) h += `<section class="kort"><h2>Vakanser</h2><ul class="punkter">${res.vakanser.map(x => `<li>Vecka ${x.vecka} ${x.veckodag}: ${x.antal} ${DELAR[x.dygnsdel].toLowerCase()}pass</li>`).join("")}</ul></section>`;
   }

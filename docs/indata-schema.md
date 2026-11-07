@@ -91,6 +91,8 @@ Exempel: APT tisdag 14–16 vecka 2 och 4, där var och en går en gång (ungef�
 
 **ob_prognos_procent** – valfri uppräkning av OB i procent per år för tid efter sista kontrollerade avtalsnivån (2027-03-31). Standard 3. 0 stänger av; då räknas sådan tid utan kronor. Prognosen visas alltid som prognos, inte avtal (se `docs/ob.md`).
 
+**losare** – `tid_per_steg_s` (sekunder per optimeringssteg) och `profil`: `standard`, `medarbetare` (rättvist), `verksamhet` (jämn täckning av behovet) eller `ekonomi` (lägst OB). Se docs/optimering.md.
+
 **forvantat** och **beskrivning** – används bara i testfallen.
 
 ### Kontroll

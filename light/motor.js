@@ -24,6 +24,25 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
 
+  // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
+  // Samma förenkling som ob_kategori i schemamotor/build.py.
+  const OB_KR = { B: 68.10, B_natt: 78.30, C: 58.40, D: 26.40 };
+  function obKategori(wd, minut) {
+    const m = ((minut % DYGN) + DYGN) % DYGN; wd = (wd + Math.floor(minut / DYGN)) % 7;
+    if (wd >= 5 || (wd === 4 && m >= 17 * 60) || (wd === 0 && m < 7 * 60))
+      return (m >= 22 * 60 && (wd + 1) % 7 >= 5) || (m < 6 * 60 && wd >= 5) ? "B_natt" : "B";
+    if ((m >= 22 * 60 && wd <= 3) || (m < 6 * 60 && wd >= 1 && wd <= 4)) return "C";
+    if (m >= 19 * 60 && m < 22 * 60 && wd <= 4) return "D";
+    return null;
+  }
+  function obKronor(s, e, wd) { let kr = 0; for (let t = s; t < e; t += 15) { const k = obKategori(wd, t); if (k) kr += OB_KR[k] / 4; } return kr; }
+  // Profiler för tre schemaalternativ (vakanser och hårda regler väger alltid tyngst):
+  // medarbetare = rättvist och önskemål, verksamhet = jämn täckning av behovet, ekonomi = lägsta OB.
+  const PROFIL = {
+    standard: { f: 1, o: 1, s: 1, j: 1, e: 0 }, medarbetare: { f: 15, o: 3, s: 3, j: 0.3, e: 0 },
+    verksamhet: { f: 0.5, o: 1, s: 1, j: 4, e: 0 }, ekonomi: { f: 0.5, o: 1, s: 0.5, j: 0.3, e: 3 },
+  };
+
   const tid = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return String(m / 60 | 0).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
   const onsite = (net, r) => net > r.rast_grans_minuter ? net + r.rast_minuter : net;
@@ -216,6 +235,7 @@ const MOTOR = (() => {
     const tidsgrans = opt.sekunder ?? 8;
     const rapport = opt.rapport || (() => {});
     const per = pers.map((p, pi) => ({ onsk: onsk.filter(o => o.pi === pi), tillat: Array.from({ length: N }, (_, d) => tillatna(p, d, r, W)) }));
+    const prof = PROFIL[opt.profil] || PROFIL.standard;
 
     // passtider per person och typ (utan förlängning)
     const tider = pers.map(p => {
@@ -320,7 +340,10 @@ const MOTOR = (() => {
         }
       }
       const ws = r.spridning_kvallar === "stark" ? 400 : 25;
-      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO + f * WF + spr * ws + nv * WNV };
+      // ekonomi: uppskattad OB för personens pass
+      let eko = 0;
+      if (prof.e) for (let d = 0; d < N; d++) if (x[d]) eko += obKronor(t[x[d]][0], t[x[d]][1], d % 7);
+      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO * prof.o + f * WF * prof.f + spr * ws * prof.s + nv * WNV + eko * prof.e };
     }
 
     function bygg() {
@@ -390,7 +413,7 @@ const MOTOR = (() => {
         }
         k += Math.abs(om - ok) + Math.abs(vm - vk); toM += om; toK += ok; tvM += vm; tvK += vk;
       }
-      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ;
+      return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ * prof.j;
     }
 
     let bastX = null, bastKost = Infinity;
@@ -476,7 +499,13 @@ const MOTOR = (() => {
       if (bastKost < WV) break;  // inga hårda brott och inga vakanser: bra nog
     }
     rapport({ andel: 1, kost: bastKost });
-    return resultat(pr, bastX, tider, personKost, (Date.now() - start) / 1000);
+    const res = resultat(pr, bastX, tider, personKost, (Date.now() - start) / 1000);
+    res.profil = opt.profil || "standard";
+    // uppskattad OB per vecka för jämförelsen (efter förlängningar)
+    let ob = 0;
+    for (const rad of Object.values(res.schema)) rad.forEach((v, d) => { if (v) { const s = tid(v.start); let e = tid(v.slut); if (e <= s) e += DYGN; ob += obKronor(s, e, d % 7); } });
+    res.kpi.ob_kr_vecka = Math.round(ob / W);
+    return res;
   }
 
   // ------------------------------------------------------------------ resultat och passlängder
@@ -719,7 +748,7 @@ if (typeof module !== "undefined") module.exports = MOTOR;
 if (typeof self !== "undefined" && typeof window === "undefined" && typeof module === "undefined") {
   self.onmessage = e => {
     try {
-      const res = MOTOR.los(e.data.indata, { sekunder: e.data.sekunder, seed: e.data.seed, rapport: m => self.postMessage({ typ: "framsteg", ...m }) });
+      const res = MOTOR.los(e.data.indata, { sekunder: e.data.sekunder, seed: e.data.seed, profil: e.data.profil, rapport: m => self.postMessage({ typ: "framsteg", ...m }) });
       self.postMessage({ typ: "klar", resultat: res });
     } catch (err) { self.postMessage({ typ: "fel", fel: String(err && err.message || err) }); }
   };

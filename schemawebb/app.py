@@ -23,7 +23,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -267,6 +267,11 @@ def las_bemanningsbalans(d: ExcelIn):
 class KorningIn(BaseModel):
     namn: Optional[str] = None
     tid_per_steg_s: Optional[float] = None
+    # schemaalternativ: medarbetarstyrt, verksamhetsstyrt eller ekonomistyrt (se PROFILER i build.py)
+    profil: Optional[Literal["standard", "medarbetare", "verksamhet", "ekonomi"]] = None
+
+
+PROFILNAMN = {"medarbetare": "Medarbetarstyrt", "verksamhet": "Verksamhetsstyrt", "ekonomi": "Ekonomistyrt"}
 
 
 @app.post("/api/enheter/{eid}/korningar", dependencies=[Depends(inloggad)], status_code=202)
@@ -281,6 +286,11 @@ def ny_korning(eid: int, k: KorningIn):
     tid_s = k.tid_per_steg_s or indata.get("losare", {}).get("tid_per_steg_s", 15)
     tid_s = max(1.0, min(MAX_TID, float(tid_s)))
     namn = (k.namn or "").strip() or f"Körning {len(db.korningar(eid)) + 1}"
+    if k.profil and k.profil != "standard":
+        indata = copy.deepcopy(indata)
+        indata["losare"] = {**(indata.get("losare") or {}), "profil": k.profil}
+        if not (k.namn or "").strip():
+            namn = f"{PROFILNAMN[k.profil]} ({len(db.korningar(eid)) + 1})"
     kid = db.skapa_korning(eid, namn, indata, kontroll["balans"])
     korare.submit(_kor, kid, tid_s)
     return {"id": kid}

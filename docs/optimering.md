@@ -33,6 +33,19 @@ I cykliska scheman räknas alla fönster runt periodgränsen.
 
 Mjukt mål efter vakanser och aktiviteter: **natt_vila**, antal gånger vilan mellan två nattblock är kortare än `natt_vila_mellan_block_minuter` (48 h). Villkoret är `arbete(d) + ledigt(d+1) + pass(d+k) ≤ 2 + brott` för de k där nästa pass börjar för tidigt.
 
+## Profiler (tre alternativ)
+
+`losare.profil` väljer ordningen på de mjuka målen (`PROFILER` i build.py). Vakanser, aktiviteter och vila mellan nattblock ligger först i alla profiler.
+
+| Profil | Ordning efter vakanser |
+|---|---|
+| standard | blocklängd, passlängd, rättvisa och jämn bemanning, spridning, önskemål |
+| medarbetare | rättvisa, spridning, önskemål, jämn bemanning, blocklängd, passlängd |
+| verksamhet | jämn bemanning, blocklängd, passlängd, rättvisa, spridning, önskemål |
+| ekonomi | OB-kostnad (kr, `ob_kronor`), passlängd, blocklängd, rättvisa och jämn bemanning, spridning, önskemål |
+
+Resultatet har `kpi.ob_kr_vecka`, uppskattad OB per vecka för alla profiler, för jämförelsen.
+
 ## Två faser
 
 En modell med alla passlängder och exakt arbetstid är svår att hitta en första lösning i. Därför löses problemet i två faser:

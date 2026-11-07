@@ -54,6 +54,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 22. **Nattpersonal: 48 timmars vila mellan nattblocken (lokal regel, mjuk).** `natt_vila_mellan_block_minuter` (standard 2880, 0 stänger av). Med tre nätter i rad, varannan helg och ingen fredagsnatt före ledig helg ryms högst 14 nätter på fyra veckor, men heltid 34:20 med 9-timmarsnätter kräver 15. Därför är vilan mjuk: den eftersträvas direkt efter vakanser och aktiviteter, och bryts bara när schemat annars inte går ihop. Granskningen visar varje brott som något att notera. Beslutat av användaren 2026-11-07.
 
+23. **Tre schemaalternativ.** Ur ett och samma underlag kan tre scheman läggas och jämföras: *medarbetarstyrt* (rättvist: alla så lika som möjligt i kvällar, helger och blandning; önskemål före block och passlängd), *verksamhetsstyrt* (behovet först: det som blir över eller saknas sprids jämnt över dagar och dygnsdelar) och *ekonomistyrt* (lägsta uppskattade OB enligt AB 25 § 21 utan helgdagar: extra pass där OB är lägst). Behovet (vakanser) ligger alltid först och alla hårda regler gäller i alla tre; bara ordningen på de mjuka målen skiljer. `losare.profil` i indata; `PROFILER` i build.py och `PROFIL` i light/motor.js. Lättversionens motor är heuristisk och ger mindre tydliga skillnader. Beslutat av användaren 2026-11-07.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

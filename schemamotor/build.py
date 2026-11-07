@@ -75,6 +75,66 @@ def malordning(r, mal):
     return ordning
 
 
+# Profiler för tre schemaalternativ. Behovet (vakanser) ligger alltid först: det är högsta mjuka nivå.
+#   standard     – som tidigare
+#   medarbetare  – rättvist: alla så lika som möjligt (kvällar, helger, blandning) och önskemål före block och passlängd
+#   verksamhet   – verksamhetens behov först: det som blir över eller saknas sprids jämnt över dagar och dygnsdelar
+#   ekonomi      – lägsta uppskattade OB-kostnad (AB 25 § 21, utan helgdagar): extra pass där OB är lägst
+PROFILER = {
+    "standard": None,
+    "medarbetare": ["vakanser", "aktiviteter", "natt_vila", "rattvisa", "spridning", "onskemal", "jamn_bemanning",
+                    "blocklangd", "passlangd"],
+    "verksamhet": ["vakanser", "aktiviteter", "natt_vila", "jamn_bemanning", "blocklangd", "passlangd", "rattvisa",
+                   "spridning", "onskemal"],
+    "ekonomi": ["vakanser", "aktiviteter", "natt_vila", "ekonomi", "passlangd", "blocklangd", "rattvisa_jamn",
+                "spridning", "onskemal"],
+}
+
+
+def profilordning(prob, fas):
+    """Målordningen för profilen. fas: "monster" (fas 1), "langder" (fas 2) eller "hela"."""
+    profil = prob.get("profil") or "standard"
+    if PROFILER.get(profil) is None:
+        if fas == "monster":
+            return malordning(prob["r"], ["vakanser", "aktiviteter", "natt_vila", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"])
+        if fas == "langder":
+            return ["vakanser", "aktiviteter", "passlangd", "onskemal"]
+        return malordning(prob["r"], MALORDNING)
+    ordning = [m for m in PROFILER[profil] if not (m == "spridning" and prob["r"].get("spridning_kvallar") == "av")]
+    if fas == "monster":
+        return [m for m in ordning if m != "passlangd"]
+    if fas == "langder":
+        return [m for m in ordning if m in ("vakanser", "aktiviteter", "ekonomi", "passlangd", "onskemal")]
+    return ordning
+
+
+OB_KR = {"B": 68.10, "B_natt": 78.30, "C": 58.40, "D": 26.40}  # kr per timme, AB 25 § 21, nivå från 2025-04-01
+
+
+def ob_kategori(wd, minut):
+    """OB-kategori för en minut på veckodag wd (0 = måndag), utan helgdagar. Förenkling av schemawebb/statisk/ob.js."""
+    m = minut % DYGN
+    wd = (wd + minut // DYGN) % 7
+    if wd in (5, 6) or (wd == 4 and m >= 17 * 60) or (wd == 0 and m < 7 * 60):
+        natt = (m >= 22 * 60 and (wd + 1) % 7 in (5, 6)) or (m < 6 * 60 and wd in (5, 6))
+        return "B_natt" if natt else "B"
+    if (m >= 22 * 60 and wd <= 3) or (m < 6 * 60 and 1 <= wd <= 4):
+        return "C"
+    if 19 * 60 <= m < 22 * 60 and wd <= 4:
+        return "D"
+    return None
+
+
+def ob_kronor(mall, wd):
+    """Uppskattad OB i kronor för ett pass (passmall) som börjar veckodag wd."""
+    kr = 0.0
+    for t in range(mall["start"], mall["slut"], 15):
+        k = ob_kategori(wd, t)
+        if k:
+            kr += OB_KR[k] / 4
+    return kr
+
+
 class IndataFel(Exception):
     pass
 
@@ -289,7 +349,8 @@ def forbered(indata):
 
     return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov,
             "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
-            "aktiviteter": aktiviteter, "enhet": indata.get("enhet", "")}
+            "aktiviteter": aktiviteter, "enhet": indata.get("enhet", ""),
+            "profil": (indata.get("losare") or {}).get("profil") or "standard"}
 
 
 def tacker(mall, start, slut):
@@ -688,6 +749,12 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
     mal["spridning"] = sum(spridning) if spridning else 0
     mal["onskemal"] = sum(onsk_straff) if onsk_straff else 0
     mal["natt_vila"] = sum(natt_vila) if natt_vila else 0
+    # ekonomi: uppskattad OB-kostnad i kronor (bara med profilen ekonomi, för att inte göra modellen tyngre i onödan)
+    if prob.get("profil") == "ekonomi":
+        mal["ekonomi"] = sum(x[pi, d, s] * int(round(ob_kronor(M[s], d % 7)))
+                             for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"])
+    else:
+        mal["ekonomi"] = 0
 
     var = {"x": x, "work": work, "vak": vak, "y": y, "akt_brist": akt_brist}
     return m, var, mal, grupper
@@ -749,7 +816,7 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
     # Fas 1: arbetsmönster (vilka dagar och vilken dygnsdel) med alla hårda regler utom exakt arbetstid.
     enkel = monsterproblem(prob)
     m1, var1, mal1, _ = bygg_modell(enkel, utan_tid=True)
-    r1, status1 = lexikografiskt(m1, var1, mal1, malordning(prob["r"], ["vakanser", "aktiviteter", "natt_vila", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"]),
+    r1, status1 = lexikografiskt(m1, var1, mal1, profilordning(prob, "monster"),
                                  tid_per_steg, arbetare, tyst, "mönster – ")
     if r1 is None and status1 == cp_model.INFEASIBLE:
         # Mönstermodellen har färre passlängder. Kontrollera med alla längder (utan exakt arbetstid)
@@ -772,13 +839,13 @@ def los(prob, tid_per_steg=20, arbetare=1, tyst=False):
                 m2.add(var2["work"][pi, d] == (1 if del_ else 0))
                 if del_:
                     m2.add(sum(var2["x"][pi, d, s] for s in p["tillatna"] if M[s]["dygnsdel"] == del_) == 1)
-        r2, status2 = lexikografiskt(m2, var2, mal2, ["vakanser", "aktiviteter", "passlangd", "onskemal"],
+        r2, status2 = lexikografiskt(m2, var2, mal2, profilordning(prob, "langder"),
                                      tid_per_steg, arbetare, tyst, "längder – ")
         if r2:
             return slutresultat(prob, var2, mal2, r2[1], r1[0] + r2[0])
         m2, var2, mal2, _ = bygg_modell(prob)  # mönstret gick inte att fylla: lös fritt nedan
     # Reserv: hela modellen på en gång.
-    r3, status3 = lexikografiskt(m2, var2, mal2, malordning(prob["r"], MALORDNING), tid_per_steg * 2, arbetare, tyst, "hela – ")
+    r3, status3 = lexikografiskt(m2, var2, mal2, profilordning(prob, "hela"), tid_per_steg * 2, arbetare, tyst, "hela – ")
     if r3:
         return slutresultat(prob, var2, mal2, r3[1], r3[0])
     namn = "INFEASIBLE" if status3 == cp_model.INFEASIBLE else "UNKNOWN"
@@ -853,6 +920,9 @@ def tolka(prob, solver, var, steg, kpi_mal):
     kpi["vakanta_pass"] = sum(v["antal"] for v in vakanser if v["dygnsdel"])
     kpi["vakanta_tidpunkter"] = sum(v["antal"] for v in vakanser if v["tid"])
     kpi["aktivitet_saknas"] = sum(t["saknas"] for t in tillfallen)
+    # uppskattad OB per vecka (AB 25 § 21, utan helgdagar), för att jämföra alternativ
+    kpi["ob_kr_vecka"] = round(sum(ob_kronor({"start": tid(p["start"]), "slut": tid(p["slut"]) + (DYGN if tid(p["slut"]) <= tid(p["start"]) else 0)}, d % 7)
+                                   for rad in schema.values() for d, p in enumerate(rad) if p) / prob["W"])
     personer = {}
     for p in prob["personer"]:
         rad = [x for x in schema[p["id"]] if x]
@@ -860,7 +930,7 @@ def tolka(prob, solver, var, steg, kpi_mal):
                              "mal_minuter": p["mal_minuter"], "kvallspass": sum(x["dygnsdel"] == "kvall" for x in rad),
                              "helggrupp": ("A" if solver.value(p["_grupp"]) else "B") if "_grupp" in p else None,
                              "aktiviteter": sum(len(x.get("aktiviteter", [])) for x in rad)}
-    return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"],
+    return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"], "profil": prob.get("profil", "standard"),
             "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "aktiviteter": tillfallen,
             "schema": schema}
 

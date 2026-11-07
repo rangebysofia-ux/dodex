@@ -136,6 +136,7 @@ function behovsstaplar(bem) {
     h += `<rect class="traff" x="${vX + i * kol}" y="${top}" width="${kol}" height="${bas - top}" data-tips="Vecka ${Math.floor(x.d / 7) + 1} ${DAGAR[x.d % 7]}\nPlanerat ${t}, behov ${b}${vak ? ` – ${vak} saknas` : t > b ? ` – ${t - b} resurspass utöver behovet` : ""}"/>`;
     if (x.d % 7 === 0) h += `<text x="${vX + i * kol + 2}" y="${bas + 26}" style="font-weight:700;fill:var(--text)">v${Math.floor(x.d / 7) + 1}</text>`;
     if (N <= 42) h += `<text x="${vX + i * kol + kol / 2}" y="${bas + 13}" text-anchor="middle">${DAGAR[x.d % 7][0]}</text>`;
+    if (N <= 42 && kol >= 14) h += `<text x="${vX + i * kol + kol / 2}" y="${y(Math.max(t, b)) - 4}" text-anchor="middle" style="font-size:10px;font-weight:700;fill:var(--text)">${t}</text>`;
   });
   return `<div class="rull">${h}<line class="axel" x1="${vX}" x2="${W - hX}" y1="${bas}" y2="${bas}"/></svg></div>
     <div class="legend" style="margin-top:6px"><span><i style="background:var(--morgon)"></i>Planerat, behovet täckt</span><span><i style="background:var(--resurs)"></i>Resurstid, utöver behovet</span><span><i style="background:var(--kritisk)"></i>Vakans</span><span><i style="background:var(--text);height:3px"></i>Behov</span></div>`;

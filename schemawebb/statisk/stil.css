@@ -452,3 +452,6 @@ i.vvlegend { display: inline-block; width: 14px; height: 14px; border-radius: 3p
 @media (max-width: 640px) { .lada { padding: 12px 12px 0; } .lada-fot { flex-direction: column; align-items: stretch; } }
 .lada > *, .lada .flikar { flex-shrink: 0; }
 .lada .flikar { overflow: visible; }
+
+.tre { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+table.jamfor th { vertical-align: top; min-width: 180px; }

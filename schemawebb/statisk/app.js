@@ -932,6 +932,16 @@ document.addEventListener("click", async e => {
       case "andra-onsk": st.redigeraOnsk = { index: +el.dataset.n, data: structuredClone(st.indata.onskemal[+el.dataset.n]) }; $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); break;
       case "avbryt-onsk": st.redigeraOnsk = null; $("#flik").innerHTML = ritaFlik(); break;
       case "lada": oppnaLada(el.dataset.f); break;
+      case "tre-alternativ": {
+        if (!(await spara())) return;
+        el.disabled = true; el.textContent = "Startar …";
+        try {
+          const ids = [];
+          for (const profil of ["medarbetare", "verksamhet", "ekonomi"]) ids.push((await api("POST", `enheter/${st.enhet.id}/korningar`, { profil })).id);
+          st.korningar = null; location.hash = `#/jamfor/${ids.join(",")}`;
+        } catch (e) { meddela(e.status === 422 ? "Rätta felen i kontrollen först." : e.message); el.disabled = false; el.textContent = "⚖ Tre alternativ"; }
+        break;
+      }
       case "stang-lada": stangLada(); if (st.andrad) await spara(); break;
       case "ladflik":
         st.flik = el.dataset.f; st.redigeraOnsk = null; st.redigeraAkt = null;
