@@ -249,7 +249,7 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 <script>
 "use strict";
 const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
-const DELAR = { morgon: "Morgon", kvall: "Kväll", natt: "Natt" };
+const DELAR = { morgon: "Dag", kvall: "Kväll", natt: "Natt" };
 const ARBETAR = { "morgon,kvall": "Dag och kväll", "morgon": "Bara morgon", "kvall": "Bara kväll", "natt": "Natt" };
 const UNDANTAG = { "1/4": "var fjärde", "3/4": "tre av fyra", "alla": "alla", "ingen": "inga" };
 const ONSKTYP = { ledig: "Ledig", arbetar: "Arbetar", tidigast_start: "Börjar tidigast", senast_slut: "Slutar senast", endast_dygnsdel: "Bara dygnsdel" };
@@ -426,7 +426,7 @@ function ritaFlik() {
   } else if (st.flik === "behov") {
     const b = i.behov || (i.behov = {});
     el.innerHTML = `<p class="dampad liten">Antal pass per dygnsdel. Rader längre ned gäller före rader ovanför.</p>
-      <div class="rull"><table><thead><tr><th>Dagar</th><th>Morgon</th><th>Kväll</th><th>Natt</th><th></th></tr></thead><tbody>
+      <div class="rull"><table><thead><tr><th>Dagar</th><th>Dag</th><th>Kväll</th><th>Natt</th><th></th></tr></thead><tbody>
       ${Object.keys(b).map(k => `<tr><th>${DAGNYCKEL[k] || esc(k)}</th>${["morgon", "kvall", "natt"].map(d => `<td><input type="number" inputmode="numeric" min="0" data-b="${k}" data-d="${d}" value="${b[k][d] ?? 0}" style="width:64px" aria-label="${DAGNYCKEL[k]} ${DELAR[d]}"></td>`).join("")}
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
       <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
@@ -760,7 +760,7 @@ function ritaResultat() {
       Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
       `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button></div>` +
       (st.vecka === -1 ? dagTabell(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), true) : vecka(res, st.vecka)) +
-      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">M morgon, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet.</p></section>`;
+      `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">D dag, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet.</p></section>`;
     { const dagar = st.vecka === -1 ? Array.from({ length: res.veckor * 7 }, (_, d) => d) : Array.from({ length: 7 }, (_, i) => st.vecka * 7 + i);
       const ind = st.korning.indata || st.enhet.indata;
       h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`; }
@@ -774,7 +774,7 @@ function ritaResultat() {
 // ------------------------------------------------------------------ person
 function ritaPerson(pid, res, ind) {
   const x = res.personer[pid], rad = res.schema[pid], W = res.veckor, p = ind.personal.find(q => q.id === pid) || {};
-  const kod = { morgon: "M", kvall: "K", natt: "N" }, rs = GRAF.resurs(res, ind);
+  const kod = { morgon: "D", kvall: "K", natt: "N" }, rs = GRAF.resurs(res, ind);
   let h = `<section class="kort"><button class="lank" data-g="person" data-p="">‹ Alla personer</button><h2 style="margin:6px 0 0">${esc(pid)}</h2>
     <p class="dampad" style="margin:2px 0 0">${Math.round((p.grad ?? 1) * 100)} % · ${(p.dygnsdelar || ["morgon", "kvall"]).map(d => DELAR[d].toLowerCase()).join(" och ")} · ${x.pass} pass · ${x.kvallspass} kvällar</p>
     <div class="rull" style="margin-top:10px"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
@@ -1075,7 +1075,7 @@ function vecka(res, v) { return dagTabell(res, Array.from({ length: 7 }, (_, i) 
 
 function dagTabell(res, dagar, period) {
   const ind = st.korning.indata || st.enhet.indata, pers = Object.keys(res.schema), vak = {}, vp = vakansPass(res), rs = GRAF.resurs(res, ind);
-  const kod = { morgon: "M", kvall: "K", natt: "N" };
+  const kod = { morgon: "D", kvall: "K", natt: "N" };
   res.vakanser.forEach(x => (vak[x.dag] = (vak[x.dag] || 0) + x.antal));
   const kl = d => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}"`;
   let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${46 + dagar.length * 30}px"` : ""}><thead>`;
@@ -1098,7 +1098,7 @@ function dagTabell(res, dagar, period) {
     pers.forEach(p => { const x = res.schema[p][d]; if (x) c[x.dygnsdel]++; });
     const over = ["morgon", "kvall", "natt"].reduce((s, k) => s + Math.max(0, c[k] - bd[d % 7][k]), 0);
     const marke = `${vak[d] ? `<span class="minus">−${vak[d]}</span>` : ""}${over ? `<span class="plus">+${over}</span>` : ""}`;
-    return `<td ${kl(d).replace('class="', `class="${vak[d] ? "vakans " : over ? "over " : ""}`)}>${period ? (marke || "✓") : `M${c.morgon}<br>K${c.kvall}<br>N${c.natt}${marke ? "<br>" + marke : ""}`}</td>`;
+    return `<td ${kl(d).replace('class="', `class="${vak[d] ? "vakans " : over ? "over " : ""}`)}>${period ? (marke || "✓") : `D${c.morgon}<br>K${c.kvall}<br>N${c.natt}${marke ? "<br>" + marke : ""}`}</td>`;
   }).join("") + `</tr></tbody></table></div>`;
   return h;
 }
@@ -1113,7 +1113,7 @@ function cellInfo() {
 function tabellRader() {
   const res = st.korning.resultat, N = res.veckor * 7;
   const rader = [["Person", ...Array.from({ length: N }, (_, d) => `V${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}`)]];
-  for (const [p, rad] of Object.entries(res.schema)) rader.push([p, ...rad.map(x => x ? `${{ morgon: "M", kvall: "K", natt: "N" }[x.dygnsdel]} ${x.start}-${x.slut}` : "")]);
+  for (const [p, rad] of Object.entries(res.schema)) rader.push([p, ...rad.map(x => x ? `${{ morgon: "D", kvall: "K", natt: "N" }[x.dygnsdel]} ${x.start}-${x.slut}` : "")]);
   for (const del of ["morgon", "kvall", "natt"]) rader.push([`I tjänst ${DELAR[del].toLowerCase()}`, ...Array.from({ length: N }, (_, d) => Object.values(res.schema).filter(r => r[d] && r[d].dygnsdel === del).length)]);
   return rader;
 }

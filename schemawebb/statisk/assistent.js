@@ -94,7 +94,7 @@ const ASSISTENT = (() => {
     },
     {
       name: "las_person",
-      description: "Visar en persons schema vecka för vecka (M morgon, K kväll, N natt, - ledig) med tider, timmar, antal kvällar och helger, samt personens önskemål.",
+      description: "Visar en persons schema vecka för vecka (D dag, K kväll, N natt, - ledig) med tider, timmar, antal kvällar och helger, samt personens önskemål.",
       schema: { type: "object", properties: { id: { type: "string", description: "Personens id, till exempel A1." } }, required: ["id"] },
       kor(ctx, inp) {
         const id = String(inp.id || ""), p = ctx.indata.personal.find(x => x.id.toLowerCase() === id.toLowerCase());
@@ -106,7 +106,7 @@ const ASSISTENT = (() => {
           const rad = r.schema[p.id];
           ut.sammanfattning = personRader(r).find(x => x.person === p.id);
           ut.veckor = Array.from({ length: r.veckor }, (_, w) => ({ vecka: w + 1,
-            dagar: DAGAR.map((n, i) => { const q = rad[w * 7 + i]; return `${n} ${q ? ({ morgon: "M", kvall: "K", natt: "N" }[q.dygnsdel]) + " " + q.start + "–" + q.slut : "-"}`; }).join(", ") }));
+            dagar: DAGAR.map((n, i) => { const q = rad[w * 7 + i]; return `${n} ${q ? ({ morgon: "D", kvall: "K", natt: "N" }[q.dygnsdel]) + " " + q.start + "–" + q.slut : "-"}`; }).join(", ") }));
         }
         return ut;
       },

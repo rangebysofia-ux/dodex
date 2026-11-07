@@ -2,7 +2,7 @@
 // Vyer för en körning: Schema (alla pass, morgon, kväll, natt eller klockslag), Personer och Bemanning.
 // Laddas före app.js och använder dess hjälpfunktioner när vyerna ritas.
 
-const KOD = { morgon: "M", kvall: "K", natt: "N" };
+const KOD = { morgon: "D", kvall: "K", natt: "N" };
 const FARG = { morgon: "var(--morgon)", kvall: "var(--kvall)", natt: "var(--natt)" };
 const KPI_NAMN = [["vakanta_pass", "Vakanta pass"], ["vakanta_tidpunkter", "Vakanta tidpunkter"], ["blocklangd", "Arbetsdagar i följd över 4"],
   ["passlangd", "Passlängd, avvikelse i minuter"], ["rattvisa", "Rättvisa, spridning"], ["onskemal", "Brutna önskemål"]];
@@ -124,7 +124,7 @@ function sammanfattning() {
       <div class="${brott ? "fel" : "bra"}"><b>${brott}</b><span>Brott mot hårda regler</span></div>
       <div><b>${sv(hVecka, 1)} h</b><span>schemalagt per vecka</span></div>
       <div><b>${sv(aa)}</b><span>årsarbetare${ind.budget_timmar_vecka ? ` · budget ${sv(ind.budget_timmar_vecka, 1)} h` : ""}</span></div>
-      <div class="${f.antalBada && !f.jamn ? "fel" : "bra"}"><b>${f.antalBada ? (f.jamn ? "Jämnt" : "Ojämnt") : "–"}</b><span>morgon och kväll${f.antalBada ? `, störst skillnad ${sv(f.storst, 1)} pass` : ""}</span></div>
+      <div class="${f.antalBada && !f.jamn ? "fel" : "bra"}"><b>${f.antalBada ? (f.jamn ? "Jämnt" : "Ojämnt") : "–"}</b><span>dag och kväll${f.antalBada ? `, störst skillnad ${sv(f.storst, 1)} pass` : ""}</span></div>
     </div></section>`;
 }
 
@@ -167,7 +167,7 @@ function kopplaKorningsval() {
 // ---------------------------------------------------------------- schema
 function ritaSchemavy() {
   const res = st.red?.res || st.korning.resultat, filter = st.sv.filter || "alla";
-  const F = [["alla", "Alla pass"], ["morgon", "Morgon"], ["kvall", "Kväll"], ["natt", "Natt"], ["tider", "Klockslag"]];
+  const F = [["alla", "Alla pass"], ["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"], ["tider", "Klockslag"]];
   let h = `<section class="kort${st.red ? " redigerar" : ""}"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema</h2>
     ${st.red ? "" : `<button class="liten" data-g="redigera">${IKON.penna || "✎"} Redigera schemat</button>`}
     <div class="chips" role="group" aria-label="Visa" style="margin-left:auto">${F.map(([v, t]) => `<button class="chip" data-g="filter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
@@ -177,7 +177,7 @@ function ritaSchemavy() {
   else {
     h += st.vecka === -1 ? schemaDagar(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), filter, true) : schemaVecka(res, Math.max(0, st.vecka), filter);
     h += `<p class="info" id="info">${cellInfo(res)}</p>
-      <div class="legend"><span><i style="background:var(--morgon)"></i>Morgon</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span>
+      <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span>
       <span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span><span><i style="background:var(--resurs)"></i>◼ R resurspass, utöver behovet</span><span class="minus">−1 vakans</span><span class="plus">+1 resurstid</span><span>Kolumnerna till höger: pass, D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (rött = under gränsen)</span><span>Raden längst ned: i tjänst${filter !== "alla" ? (st.vecka === -1 ? "" : " / behov") : ""}${st.vecka === -1 ? ". Håll muspekaren över en ruta för detaljer" : ""}</span></div>`;
   }
   return h + `</section>`;
@@ -240,7 +240,7 @@ function schemaDagar(res, dagar, filter, period) {
     const marke = `${vak ? `<span class="minus">−${vak}</span>` : ""}${over ? `<span class="plus">+${over}</span>` : ""}`;
     const klass = vak ? " vakans" : over ? " over" : "";
     if (period) return `<td ${kl(d, klass)} data-tips="${tips}">${marke || "✓"}</td>`;
-    const antal = filter === "alla" ? `M${x.n.morgon}<br>K${x.n.kvall}<br>N${x.n.natt}` : `${x.n[filter]} / ${x.b[filter]}`;
+    const antal = filter === "alla" ? `D${x.n.morgon}<br>K${x.n.kvall}<br>N${x.n.natt}` : `${x.n[filter]} / ${x.b[filter]}`;
     return `<td ${kl(d, klass)} data-tips="${tips}">${antal}${marke ? "<br>" + marke : ""}</td>`;
   }).join("") + GRAF.summaTotal(res, ind, dagar, rs, kol) + `</tr></tbody></table></div>`;
   return h;
@@ -317,7 +317,7 @@ function ritaKlockslag(res) {
     ${minst.length ? `<p class="dampad liten">Streckad röd linje: minsta antal på golvet under ${minst.map(m => esc(m.namn || m.id)).join(", ")}. Den som är på aktiviteten räknas inte.</p>` : ""}
     ${tp.length ? `<p class="dampad liten">Punkterna visar behov vid klockslag. Röd punkt betyder att för få är i tjänst.</p>` : ""}
     <h3>Vem arbetar när</h3>${alla.length ? gantt : `<p class="tom">Ingen arbetar den här dagen.</p>`}
-    <div class="legend"><span><i style="background:var(--morgon)"></i>Morgon</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:var(--guld-ljus);border:1px solid #4a3608"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
+    <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:var(--guld-ljus);border:1px solid #4a3608"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- personer
@@ -349,7 +349,7 @@ function allaPersoner() {
   let h = `<section class="kort"><h2>Timmar och årsarbetare</h2>
     <div class="kpi" style="margin-bottom:12px"><div><b>${sv(sumMin / 60 / W, 1)} h</b><span>schemalagt per vecka</span></div><div><b>${sv(sumAA)}</b><span>årsarbetare (schemalagt)</span></div>
       <div><b>${sv(sumKontr, 1)} h</b><span>kontrakterat per vecka</span></div>${bud ? `<div class="${sumMin / 60 / W > bud + 0.05 ? "fel" : "bra"}"><b>${sv(bud - sumMin / 60 / W, 1)} h</b><span>${sumMin / 60 / W > bud + 0.05 ? "över" : "kvar av"} budget ${sv(bud, 1)} h</span></div>` : ""}</div>
-    <div class="rull"><table><thead><tr><th>Person</th><th class="tal">Grad</th><th class="tal">Pass</th><th class="tal">Tid totalt</th><th class="tal">Per vecka</th><th class="tal">Årsarbetare</th><th class="tal">Morgon</th><th class="tal">Kväll</th><th class="tal">Natt</th><th>Helg</th><th class="tal">OB per år</th></tr></thead>
+    <div class="rull"><table><thead><tr><th>Person</th><th class="tal">Grad</th><th class="tal">Pass</th><th class="tal">Tid totalt</th><th class="tal">Per vecka</th><th class="tal">Årsarbetare</th><th class="tal">Dag</th><th class="tal">Kväll</th><th class="tal">Natt</th><th>Helg</th><th class="tal">OB per år</th></tr></thead>
     <tbody>${rader}<tr><td><b>Totalt</b></td><td></td><td class="tal"><b>${Object.values(res.personer).reduce((s, x) => s + x.pass, 0)}</b></td><td class="tal nw"><b>${timmar(sumMin)}</b></td><td class="tal nw"><b>${sv(sumMin / 60 / W, 1)} h</b></td><td class="tal"><b>${sv(sumAA)}</b></td><td colspan="4"></td><td class="tal nw"><b>${ob ? kr(Object.values(ob.per).reduce((s, x) => s + x.ar.kr, 0)) : "–"}</b></td></tr></tbody></table></div>
     <p class="dampad liten" style="margin-top:8px">Tryck på en person för hela schemat med timmar, OB och kostnad. OB per år räknas enligt AB 25 § 21 från ${esc(ob?.start || "")}${ob?.antaget ? " (antaget startdatum)" : ""}. En årsarbetare är en heltid (${sv(heltidFor(ind, "") / 60, 2)} h per vecka). Schemalagd tid kan skilja några minuter från kontraktet inom toleransen.</p></section>`;
   return h + fordelningKort(f);
@@ -370,7 +370,7 @@ function fordelningKort(f) {
     const veckor = r.typ === "bada" ? `<div class="veckomix">${r.veckor.map((v, w) => `<span class="${v.k + v.m && (!v.k || !v.m) ? "ensidig" : ""}" data-tips="Vecka ${w + 1}: ${v.k} kvällar, ${v.m} morgnar">${v.k}/${v.m}</span>`).join("")}</div>` : "";
     h += `<div class="fordelningsrad"><span class="namn">${esc(r.pid)}</span><div><div class="${r.typ === "bada" ? "mal" : ""}" ${mal}><div class="fordelning">${seg}</div></div>${veckor}</div><span class="etikett liten">${etikett}</span></div>`;
   }
-  return h + `<div class="legend" style="margin-top:10px"><span><i style="background:var(--morgon)"></i>Morgon</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--text);width:3px"></i>Jämn andel</span></div></section>`;
+  return h + `<div class="legend" style="margin-top:10px"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--text);width:3px"></i>Jämn andel</span></div></section>`;
 }
 
 function personkort(pid) {
@@ -388,7 +388,7 @@ function personkort(pid) {
       <div><b>${sv(x.minuter / 60 / W, 1)} h</b><span>per vecka</span></div>
       <div><b>${sv(x.minuter / W / ht)}</b><span>årsarbetare</span></div>
     </div>
-    <h3>Morgon, kväll och natt</h3>
+    <h3>Dag, kväll och natt</h3>
     <div class="fordelningsrad" style="border:0"><span class="namn"></span><div class="${r.typ === "bada" ? "mal" : ""}" ${r.typ === "bada" ? `style="--mal:${(r.c.morgon + r.c.kvall - r.mal) / (r.c.morgon + r.c.kvall + r.c.natt || 1) * 100}%"` : ""}><div class="fordelning" style="height:16px">
       ${["morgon", "kvall", "natt"].filter(d => r.c[d]).map(d => `<i style="width:${r.c[d] / (x.pass || 1) * 100}%;background:${FARG[d]}"></i>`).join("")}</div></div>
       <span class="liten">${r.typ === "bada" ? (r.jamn ? `<span class="status ok">Jämnt</span>` : `<span class="status dalig">${r.avvikelse > 0 ? "+" : ""}${sv(r.avvikelse, 1)} kvällar</span>`) : `<span class="niva avviker">Undantag</span>`}</span></div>
@@ -416,7 +416,7 @@ function ritaBemanning() {
   for (const rad of Object.values(res.schema)) for (const q of rad) if (q) (passTid[q.dygnsdel] = passTid[q.dygnsdel] || []).push(q.netto);
   const snitt = d => passTid[d] && passTid[d].length ? passTid[d].reduce((a, b) => a + b, 0) / passTid[d].length : 480;
   bem.forEach(x => delar.forEach(d => { behovSum += x.b[d]; tackt += Math.min(x.n[d], x.b[d]); vakSum += x.vak[d]; over += Math.max(0, x.n[d] - x.b[d]); }));
-  const F = [["alla", "Alla"], ["morgon", "Morgon"], ["kvall", "Kväll"], ["natt", "Natt"]];
+  const F = [["alla", "Alla"], ["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
   let h = `<section class="kort"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Bemanning och vakanser</h2>
     <div class="chips" role="group" aria-label="Dygnsdel">${F.map(([v, t]) => `<button class="chip" data-g="bfilter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
     <div class="kpi" style="margin-bottom:14px">
@@ -676,7 +676,7 @@ async function visaJamfor(ids) {
       "Status": r ? (r.status === "OK" ? "Schema" : r.status === "INFEASIBLE" ? "Går inte att lägga" : "Inget schema") : x.status,
       ...Object.fromEntries(KPI_NAMN.map(([n, t]) => [t, r?.kpi?.[n] ?? "–"])),
       "Brott i granskningen": x.granskning ? x.granskning.brott.length : "–",
-      "Morgon och kväll": f ? (f.jamn ? "Jämnt" : "Ojämnt") : "–",
+      "Dag och kväll": f ? (f.jamn ? "Jämnt" : "Ojämnt") : "–",
       "Förutsagda vakanser": x.balans?.forvantade_vakanser ?? "–",
       "Personer": p.length,
       "Årsarbetare (kontrakt)": sv(p.reduce((s, q) => s + (q.grad ?? 1), 0)),

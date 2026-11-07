@@ -9,7 +9,7 @@
 //   #/jamfor/7,8                jämför körningar
 
 const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
-const DELAR = { morgon: "Morgon", kvall: "Kväll", natt: "Natt" };
+const DELAR = { morgon: "Dag", kvall: "Kväll", natt: "Natt" };
 const ARBETAR = { "morgon,kvall": "Dag och kväll", "morgon": "Bara morgon", "kvall": "Bara kväll", "natt": "Natt" };
 const HELGER = { "2/4": "Varannan (2/4)", "1/4": "Var fjärde (1/4)", "3/4": "Tre av fyra (3/4)", "alla": "Alla", "ingen": "Inga" };
 const ONSKTYP = { ledig: "Ledig", arbetar: "Arbetar", tidigast_start: "Börjar tidigast", senast_slut: "Slutar senast", endast_dygnsdel: "Bara dygnsdel" };
@@ -268,7 +268,7 @@ function ritaFlik() {
       Object.entries(i.tidpunkter || {}).forEach(([k, l]) => l.forEach(t => tp.push({ k, ...t })));
       return `
       <p class="dampad liten">Antal pass per dygnsdel. Rader längre ned skriver över rader ovanför, till exempel en egen rad för fredag.</p>
-      <div class="rull"><table class="form"><thead><tr><th>Dagar</th><th>Morgon</th><th>Kväll</th><th>Natt</th><th></th></tr></thead><tbody>
+      <div class="rull"><table class="form"><thead><tr><th>Dagar</th><th>Dag</th><th>Kväll</th><th>Natt</th><th></th></tr></thead><tbody>
       ${Object.keys(b).map(k => `<tr><th>${DAGNYCKEL[k] || esc(k)}</th>${Object.keys(DELAR).map(d =>
         `<td><input type="number" inputmode="numeric" min="0" data-s="behov.${k}.${d}" data-t="heltal" value="${b[k][d] ?? 0}" style="width:74px" aria-label="${DAGNYCKEL[k]} ${DELAR[d]}"></td>`).join("")}
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}

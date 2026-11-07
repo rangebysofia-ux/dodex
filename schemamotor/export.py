@@ -11,8 +11,8 @@ import io
 import json
 
 DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
-KOD = {"morgon": "M", "kvall": "K", "natt": "N"}
-DEL = {"morgon": "Morgon", "kvall": "Kväll", "natt": "Natt"}
+KOD = {"morgon": "D", "kvall": "K", "natt": "N"}
+DEL = {"morgon": "Dag", "kvall": "Kväll", "natt": "Natt"}
 FARG = {"morgon": "FFF1C7", "kvall": "D8E6FF", "natt": "3A3366"}
 TEXTFARG = {"morgon": "6B4E00", "kvall": "1F3F86", "natt": "F0EDFF"}
 
@@ -290,7 +290,7 @@ def pdf(res, granskning=None, indata=None):
         stil.append(("FONT", (0, len(data) - 1), (-1, len(data) - 1), "Helvetica-Bold", 8))
         t = Table(data, colWidths=[24 * mm] + [34 * mm] * 7, repeatRows=1)
         t.setStyle(TableStyle(stil))
-        delar += [t, Spacer(1, 3 * mm), Paragraph("M morgon, K kväll, N natt. Vakant = pass som saknar personal (streckad ram). "
+        delar += [t, Spacer(1, 3 * mm), Paragraph("D dag, K kväll, N natt. Vakant = pass som saknar personal (streckad ram). "
                                                            "Svart med R = resurspass, utöver behovet.", liten), PageBreak()]
 
     delar.append(Paragraph("Per person", st["Heading2"]))
