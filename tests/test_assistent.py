@@ -1,5 +1,6 @@
 """Schemaassistentens verktyg (schemawebb/statisk/assistent.js), körda med Node mot ett riktigt schema."""
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -85,3 +86,20 @@ def test_aktivitet_via_assistenten(ut):
     ind = json.loads((ROT / "tests" / "fall" / "friday_rule_vacancy.json").read_text(encoding="utf-8"))
     ind["aktiviteter"] = a
     assert kontrollera_indata(ind) == []
+
+
+def test_verktygen_ryms_i_artefaktens_granser():
+    """Lättversionen frågar Claude via artefaktens sample-funktion, som avvisar hela frågan om ett verktyg
+    är för stort: namn 1–128 tecken av A–Z a–z 0–9 _ -, beskrivning högst 1 KB, inputSchema högst 4 KB."""
+    if not shutil.which("node"):
+        pytest.skip("Node saknas")
+    kod = ("const A=require(process.argv[1]);process.stdout.write(JSON.stringify(A.verktyg.map(v=>"
+           "({namn:v.name,beskrivning:Buffer.byteLength(v.description),schema:Buffer.byteLength(JSON.stringify(v.schema)),typ:v.schema&&v.schema.type}))))")
+    verktyg = json.loads(subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "assistent.js")],
+                                        capture_output=True, text=True, timeout=60, check=True).stdout)
+    assert verktyg
+    for v in verktyg:
+        assert re.fullmatch(r"[A-Za-z0-9_-]{1,128}", v["namn"]), v
+        assert v["beskrivning"] <= 1024, v
+        assert v["schema"] <= 4096, v
+        assert v["typ"] == "object", v

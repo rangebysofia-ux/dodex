@@ -1352,6 +1352,17 @@ function ritaChatt() {
   const l = $("#chatt-logg"); l.innerHTML = h; l.scrollTop = l.scrollHeight;
   $("#chatt-skicka").disabled = chatt.upptagen;
 }
+const CHATTFEL = {
+  not_granted: "Assistenten fick inte tillåtelse att fråga Claude. Tillåt det under artefaktens Behörigheter och försök igen.",
+  rate_limited: "För många frågor just nu, eller så är användningsgränsen för ditt Claude-konto nådd. Vänta en stund.",
+  sampling_disabled: "Claude är inte tillgängligt för ditt konto eller din organisation.",
+  session_expired: "Du behöver logga in i Claude igen.",
+  tools_unavailable: "Den här Claude-appen kan inte låta assistenten läsa schemat. Öppna sidan i Claude i webbläsaren eller i datorappen.",
+  prompt_too_large: "Samtalet har blivit för långt. Stäng chatten, öppna den igen och ställ frågan på nytt.",
+  refused: "Claude ville inte svara på den frågan. Formulera den på ett annat sätt.",
+  empty_completion: "Claude gav inget svar. Försök med en kortare fråga.",
+  invalid_request: "Assistenten skickade en fråga som Claude inte tog emot. Det är ett fel i DODEX – meddela den som underhåller systemet.",
+};
 async function skickaChatt(text) {
   if (!st.enhet || chatt.upptagen || !text.trim()) return;
   let sample = null;
@@ -1371,7 +1382,8 @@ async function skickaChatt(text) {
     chatt.visning.push({ roll: "assistent", text: svar });
   } catch (e) {
     chatt.turer.pop();
-    chatt.visning.push({ roll: "fel", text: e.code === "not_granted" ? "Assistenten fick inte tillåtelse att fråga Claude." : e.code === "rate_limited" ? "För många frågor just nu. Vänta en stund." : "Det gick inte att fråga Claude just nu." });
+    if (e && e.code === "cancelled") { chatt.upptagen = false; chatt.text = ""; return ritaChatt(); }
+    chatt.visning.push({ roll: "fel", text: CHATTFEL[e && e.code] || `Det gick inte att fråga Claude just nu (${(e && e.code) || "okänt fel"}). Försök igen om en stund.` });
   }
   chatt.upptagen = false; chatt.text = ""; ritaChatt();
 }
