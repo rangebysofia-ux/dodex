@@ -180,6 +180,7 @@ class Aktivitet(Strikt):
     # minsta antal i tjänst på golvet under aktiviteten; andras pass förlängs vid behov
     minst_pa_golvet: Optional[int] = Field(default=None, ge=0)
     typ: Optional[Literal["apt", "utbildning", "mote", "studier", "dokumentation", "handledning", "annat"]] = None
+    farg: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")  # bara för visning
     krav: bool = False
     kommentar: Optional[str] = None
 

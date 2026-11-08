@@ -42,7 +42,8 @@ def _pass(p, prob, natt):
     # aktiviteter följer med passet; täcker passet inte längre tiden visar granskningen det
     kanda = {a["id"]: a for a in prob.get("aktiviteter", [])}
     akt = [{"id": a["id"], "namn": kanda[a["id"]].get("namn") or a["id"], "start": kanda[a["id"]]["start"],
-            "slut": kanda[a["id"]]["slut"]} for a in p.get("aktiviteter") or [] if isinstance(a, dict) and a.get("id") in kanda]
+            "slut": kanda[a["id"]]["slut"], **{k: kanda[a["id"]][k] for k in ("typ", "farg") if kanda[a["id"]].get(k)}}
+           for a in p.get("aktiviteter") or [] if isinstance(a, dict) and a.get("id") in kanda]
     if akt:
         ut["aktiviteter"] = akt
     return ut

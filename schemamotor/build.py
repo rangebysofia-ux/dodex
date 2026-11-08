@@ -1044,7 +1044,8 @@ def tolka(prob, solver, var, steg, kpi_mal):
                                           a["_start"], a["_slut"]) == 0):
                     dd = (d - 1) % N
                 rad[dd].setdefault("aktiviteter", []).append(
-                    {"id": a["id"], "namn": a.get("namn") or a["id"], "start": a["start"], "slut": a["slut"]})
+                    {"id": a["id"], "namn": a.get("namn") or a["id"], "start": a["start"], "slut": a["slut"],
+                     **{k: a[k] for k in ("typ", "farg") if a.get(k)}})  # typ och färg för visningen
                 delt.append(p["id"])
             tillfallen.append({"aktivitet": a["id"], "namn": a.get("namn") or a["id"], "dag": d, "vecka": d // 7 + 1,
                                "veckodag": DAGNAMN[d % 7], "start": a["start"], "slut": a["slut"],

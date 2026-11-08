@@ -419,6 +419,30 @@ def spara_organisation(o: OrganisationIn):
     return {"ok": True}
 
 
+class AktTyp(BaseModel):
+    id: str = Field(min_length=1, max_length=60, pattern=r"^[a-z0-9-]+$")
+    namn: str = Field(min_length=1, max_length=60)
+    typ: Literal["apt", "utbildning", "mote", "studier", "dokumentation", "handledning", "annat"] = "annat"
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class AktTyperIn(BaseModel):
+    typer: list[AktTyp] = Field(max_length=200)
+
+
+@app.get("/api/aktivitetstyper", dependencies=[Depends(inloggad)])
+def hamta_aktivitetstyper():
+    return {"typer": db.installning("aktivitetstyper")}  # None = standardtyperna i organisation.js
+
+
+@app.put("/api/aktivitetstyper", dependencies=[Depends(inloggad)])
+def spara_aktivitetstyper(a: AktTyperIn):
+    if len({t.id for t in a.typer}) != len(a.typer):
+        raise HTTPException(422, "Samma aktivitetstyp finns två gånger.")
+    db.satt_installning("aktivitetstyper", [t.model_dump() for t in a.typer])
+    return {"ok": True}
+
+
 class FlyttaIn(BaseModel):
     org: Optional[str] = None
 

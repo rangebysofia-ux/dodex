@@ -72,6 +72,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 31. **Områden direkt när en enhet skapas.** Guiden frågar om enheten har områden, avdelningar eller team, med namn och färg. Båda sätten ska gå: *ett gemensamt schema* där områdena är team (beslut 30), eller *eget schema per område* där varje område blir en egen enhet under en grupp i organisationen. Personal och behov delas jämnt som ett förslag. Färger är bara för visning och påverkar inte schemaläggningen. Se `docs/team.md`. Beslutat av användaren 2026-11-08.
 
+32. **Organisationen byggs upp utan schema.** Verksamheter, enheter, områden och team, och organisationens aktivitetstyper med namn och färg, läggs upp på sidan Organisation innan något schema läggs. En aktivitet i en enhet får sin typs namn, kategori och färg. Se `docs/organisation.md`. Beslutat av användaren 2026-11-08.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

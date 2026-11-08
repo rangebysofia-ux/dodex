@@ -42,6 +42,18 @@ Varje verksamhet och grupp har en färg, så att man ser direkt vilken sorts enh
 
 Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
 
+## Sidan Organisation
+
+Hela organisationen kan byggas upp innan något schema läggs (användarens önskemål 2026-11-08, beslut 32 i `regelhierarki.md`). Sidan nås via **Organisation** i sidomenyn i webben och via knappen **Organisation** vid Mina enheter i telefonen.
+
+- **Struktur:** verksamheter och grupper i fritt antal nivåer, med färg, *+ Enhet*, *+ Undergrupp*, *Byt namn* och *Ta bort*.
+  - *+ Enhet* skapar en tom enhet med bara namn. Personal, behov och regler fylls i sedan, i enheten.
+  - Varje enhet visas med färg, namn och områden/team. *+ Område/team* delar upp enheten i team med ett gemensamt schema (`docs/team.md`). Det första teamet tar över enhetens behov, så att inget behov försvinner.
+  - Ska ett område ha eget schema blir det en egen enhet under en undergrupp, till exempel Hemtjänst Centrum › Öst.
+- **Aktivitetstyper:** organisationens typer av aktiviteter med namn, färg och kategori (APT, utbildning, möte, studier, dokumentation, handledning, annat). Typerna går att ändra, ta bort och lägga till, till exempel Brandövning.
+  - När en aktivitet läggs in i en enhet väljs typen. Aktiviteten får då typens namn, kategori och färg.
+  - I schemat visas aktivitetens markering i dess färg, och i aktivitetslistan med en färgprick. En aktivitet utan färg får kategorins standardfärg.
+
 ## Teknik
 
 - `schemawebb/statisk/organisation.js` (ORG) delas av webben och lättversionen och innehåller startstrukturen, ändringarna, valrutan och trädet.
@@ -54,4 +66,7 @@ Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
 - `farg` på en grupp (`#rrggbb`, kan saknas). `ORG.farg` räknar fram den ärvda färgen och `ORG.ikon` ritar huset.
 - `farg` på en enhet: kolumnen `farg` i `enheter` (webben, `POST /api/enheter/{id}/farg`) och fältet `farg` på enheten i lättversionen. `ORG.enhetsfarg` ger enhetens egen färg eller verksamhetens.
 - `ORG.grupp(noder, namn, forelder)` hittar eller skapar gruppen som områdena i guiden samlas under.
-- Tester: `tests/test_organisation.py`.
+- `ORG.stod` ritar sidan Organisation. `TEAM.laggTill`, `TEAM.bytNamn` och `TEAM.taBort` ändrar en enhets team.
+- Aktivitetstyper: `ORG.AKT_STANDARD`, `aktLagg`, `aktAndra`, `aktTaBort`, `aktAlternativ`, `aktFalt` och `aktFarg`. Webben: `GET` och `PUT /api/aktivitetstyper`, där `null` betyder standardtyperna. Lättversionen: dokumentet `akttyper` i användarens lagring.
+- `GET /api/enheter` innehåller enhetens team (id, namn och färg).
+- Tester: `tests/test_organisation.py`, `tests/test_omraden.py` och `tests/test_organisationsstod.py`.

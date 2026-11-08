@@ -50,6 +50,25 @@ const namn = (team, id) => ((team || []).find(t => t.id === id) || {}).namn || i
 // kort märkning i schemat: "Team 2" → "T2", "Norr" → "Nor"
 const kort = (team, id) => { const n = namn(team, id); const m = n.match(/(\d+)\s*$/); return m ? "T" + m[1] : n.slice(0, 3); };
 
+// Organisationsstödet: lägga till, döpa om och ta bort team i en enhets indata. Det första teamet tar över
+// enhetens behov, så att inget behov försvinner när enheten delas upp. Enhetens behov är sedan summan av teamens.
+function laggTill(ind, namnet, fargen) {
+  const T = ind.team || (ind.team = []);
+  const t = { id: nyttId(T), namn: String(namnet || "").trim() || `Team ${T.length + 1}`, farg: fargen || nyFarg(T), behov: {} };
+  if (!T.length && ind.behov && Object.keys(ind.behov).length) t.behov = JSON.parse(JSON.stringify(ind.behov));
+  T.push(t);
+  ind.behov = summaBehov(T);
+  return t;
+}
+function bytNamn(ind, id, namnet) { const t = (ind.team || []).find(x => x.id === id); if (t && String(namnet || "").trim()) t.namn = String(namnet).trim(); }
+function taBort(ind, id) {
+  const T = ind.team || [], i = T.findIndex(t => t.id === id);
+  if (i < 0) return;
+  T.splice(i, 1);
+  (ind.personal || []).forEach(q => { if (q.team === id) delete q.team; });
+  if (T.length) ind.behov = summaBehov(T); else delete ind.team;  // sista teamet: behovet ligger kvar på enheten
+}
+
 // Kort i resultatet: per team hur många pass som behövdes, hur många som täcktes av egen personal, hur många
 // som lånades in och hur många som saknas. Och vilka som lånades ut mest.
 function tackningKort(res) {
@@ -68,6 +87,6 @@ function tackningKort(res) {
     ${ut.length ? `<p class="liten" style="margin:8px 0 0"><span class="dampad">Utlånade pass:</span> ${ut.map(([pid, k]) => `${esc(pid)} ${k.utlanad}`).join(" · ")}</p>` : `<p class="liten dampad" style="margin:8px 0 0">Ingen behövde lånas ut.</p>`}</section>`;
 }
 
-return { FARGER, farg, nyFarg, hemMarke, lanMarke, prick, perDag, komprimera, summaBehov, nyttId, namn, kort, tackningKort, DAGAR, DELAR, esc };
+return { laggTill, bytNamn, taBort, FARGER, farg, nyFarg, hemMarke, lanMarke, prick, perDag, komprimera, summaBehov, nyttId, namn, kort, tackningKort, DAGAR, DELAR, esc };
 })();
 if (typeof module !== "undefined") module.exports = TEAM;

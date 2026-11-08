@@ -728,7 +728,7 @@ const MOTOR = (() => {
         const p = pers[pi], rad = schema[p.id], d = a.dagar[i];
         let dd = tackDag(rad, d, a);
         if (dd < 0) { if (!forlang(p, rad, d, a)) return false; dd = d; }
-        rad[dd] = { ...rad[dd], aktiviteter: [...(rad[dd].aktiviteter || []), { id: a.id, namn: a.namn, start: a.start, slut: a.slut }] };
+        rad[dd] = { ...rad[dd], aktiviteter: [...(rad[dd].aktiviteter || []), { id: a.id, namn: a.namn, start: a.start, slut: a.slut, ...(a.typ ? { typ: a.typ } : {}), ...(a.farg ? { farg: a.farg } : {}) }] };
         delt[i].push(p.id); n.set(pi, (n.get(pi) || 0) + 1);
         return true;
       };

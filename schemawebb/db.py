@@ -126,9 +126,16 @@ def enheter():
     with _las:
         rader = _db().execute(
             "select e.id, e.namn, e.andrad, e.org, e.farg, json_array_length(json_extract(e.indata, '$.personal')) as personer, "
+            "json_extract(e.indata, '$.team') as team, "
             "(select count(*) from korningar k where k.enhet_id = e.id) as korningar "
             "from enheter e order by e.andrad desc").fetchall()
-    return [dict(r) for r in rader]
+    ut = []
+    for r in rader:
+        e = dict(r)
+        # områden/team för organisationsstödet: bara id, namn och färg
+        e["team"] = [{k: t.get(k) for k in ("id", "namn", "farg")} for t in json.loads(e["team"] or "[]") if isinstance(t, dict)]
+        ut.append(e)
+    return ut
 
 
 def enhet(eid):

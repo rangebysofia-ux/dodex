@@ -454,9 +454,12 @@ const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼
 
 // ---------------------------------------------------------------- aktiviteter
 // Liten markering i passet (stjärna och kod) och text för verktygstips.
+// Färg per aktivitet: egen, annars kategorins standardfärg (samma som organisationens standardtyper).
+const AKTFARG = { apt: "#3f6bb0", utbildning: "#2f8a6f", mote: "#b08a2e", studier: "#9a4fa8", dokumentation: "#2b8aa0", handledning: "#c46a2b", annat: "#7a6a55" };
+const aktFarg = a => (a && /^#[0-9a-f]{6}$/i.test(a.farg || "") ? a.farg : a && AKTFARG[a.typ]) || "";
 function aktMarke(p) {
-  const l = (p && p.aktiviteter) || [];
-  return l.length ? `<i class="akt" aria-label="${esc(l.map(a => `${a.namn || a.id} ${a.start}–${a.slut}`).join(", "))}">★${esc(l.map(a => a.id).join(" "))}</i>` : "";
+  const l = (p && p.aktiviteter) || [], f = aktFarg(l[0]);
+  return l.length ? `<i class="akt"${f ? ` style="--ak:${f}"` : ""} aria-label="${esc(l.map(a => `${a.namn || a.id} ${a.start}–${a.slut}`).join(", "))}">★${esc(l.map(a => a.id).join(" "))}</i>` : "";
 }
 function aktText(p) {
   const l = (p && p.aktiviteter) || [];
@@ -470,7 +473,7 @@ function aktivitetKort(res) {
   return `<section class="kort"><h2>Aktiviteter</h2>
     <p class="dampad liten">Den som deltar arbetar hela aktivitetstiden. Tiden räknas som arbetstid och ingår i passet, så den påverkar passlängd, vila, OB och bemanning.${saknas ? "" : " Alla tillfällen har så många deltagare som behövs."}</p>
     <div class="rull"><table class="lista"><thead><tr><th>Aktivitet</th><th>När</th><th>Deltar</th><th class="tal">Antal</th></tr></thead><tbody>
-    ${l.map(t => `<tr><td><b>★ ${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
+    ${l.map(t => `<tr><td><b>${(() => { const f = aktFarg(t); return f ? `<span class="team-prick" style="--tf:${f}"></span>` : "★ "; })()}${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
       <td>${esc(t.deltagare.join(", ")) || "–"}</td><td class="tal nw${t.saknas ? " fel" : ""}">${t.deltagare.length} av ${t.behov}${t.saknas ? ` · ${t.saknas} saknas` : ""}</td></tr>`).join("")}
     </tbody></table></div>${(() => {
       // dag- och kvällspersonal som inte kan delta alls, för att inget av deras pass kan täcka tiden
@@ -691,6 +694,6 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

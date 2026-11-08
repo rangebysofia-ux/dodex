@@ -121,6 +121,7 @@ td.vvdag { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pass.resurs { outline: 1.5px solid #e8e4d8; outline-offset: -1.5px; } }
 :root[data-theme="dark"] .pass.resurs { outline: 1.5px solid #e8e4d8; outline-offset: -1.5px; }
 .pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #5a1f0c; background: #f4c9b6; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pass .akt[style] { color: #fff; background: var(--ak); }
 tr.bem td { font-size: 11px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.25; }
 tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dalig-bg); }
 .mono { font-family: var(--mono); font-size: 13px; }
@@ -355,6 +356,23 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .omrade-rad input:not([type=color]) { flex: 1; }
 .omraden > button { justify-self: start; }
 .omrade-chip { display: inline-block; padding: 1px 10px; border-radius: 999px; font-weight: 700; background: color-mix(in srgb, var(--ef) 18%, transparent); border: 1px solid var(--ef); }
+
+/* sidan Organisation (organisation.js) */
+.os-trad { display: grid; gap: 10px; }
+.os-verktyg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 2px 0 10px; }
+.os-innehall { display: grid; gap: 8px; padding-bottom: 10px; }
+.os-enhet { border: 1px solid var(--linje); border-left: 5px solid var(--ef); border-radius: 12px; padding: 8px 10px; background: var(--yta); }
+.os-rad { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.os-namn { font-size: 15.5px; } .os-namn a { color: inherit; }
+.os-hus { font-size: 18px; }
+.os-knappar { margin-left: auto; } .os-verktyg .os-knappar { margin-left: 0; }
+.os-team { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px 34px; }
+.os-teamchip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--tf) 16%, transparent); border: 1px solid var(--tf); }
+.os-teamchip .lank { color: var(--text); font-weight: 700; }
+.os-x { border: 0; background: none; color: var(--dampad); font-size: 16px; line-height: 1; padding: 0 6px; cursor: pointer; }
+.os-typer { display: grid; gap: 8px; }
+.os-typ { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; max-width: 560px; }
+.os-typ select { width: auto; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -1098,7 +1116,7 @@ const MOTOR = (() => {
         const p = pers[pi], rad = schema[p.id], d = a.dagar[i];
         let dd = tackDag(rad, d, a);
         if (dd < 0) { if (!forlang(p, rad, d, a)) return false; dd = d; }
-        rad[dd] = { ...rad[dd], aktiviteter: [...(rad[dd].aktiviteter || []), { id: a.id, namn: a.namn, start: a.start, slut: a.slut }] };
+        rad[dd] = { ...rad[dd], aktiviteter: [...(rad[dd].aktiviteter || []), { id: a.id, namn: a.namn, start: a.start, slut: a.slut, ...(a.typ ? { typ: a.typ } : {}), ...(a.farg ? { farg: a.farg } : {}) }] };
         delt[i].push(p.id); n.set(pi, (n.get(pi) || 0) + 1);
         return true;
       };
@@ -2268,7 +2286,7 @@ const MOTOR = (() => {
         const p = pers[pi], rad = schema[p.id], d = a.dagar[i];
         let dd = tackDag(rad, d, a);
         if (dd < 0) { if (!forlang(p, rad, d, a)) return false; dd = d; }
-        rad[dd] = { ...rad[dd], aktiviteter: [...(rad[dd].aktiviteter || []), { id: a.id, namn: a.namn, start: a.start, slut: a.slut }] };
+        rad[dd] = { ...rad[dd], aktiviteter: [...(rad[dd].aktiviteter || []), { id: a.id, namn: a.namn, start: a.start, slut: a.slut, ...(a.typ ? { typ: a.typ } : {}), ...(a.farg ? { farg: a.farg } : {}) }] };
         delt[i].push(p.id); n.set(pi, (n.get(pi) || 0) + 1);
         return true;
       };
@@ -3431,9 +3449,12 @@ const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼
 
 // ---------------------------------------------------------------- aktiviteter
 // Liten markering i passet (stjärna och kod) och text för verktygstips.
+// Färg per aktivitet: egen, annars kategorins standardfärg (samma som organisationens standardtyper).
+const AKTFARG = { apt: "#3f6bb0", utbildning: "#2f8a6f", mote: "#b08a2e", studier: "#9a4fa8", dokumentation: "#2b8aa0", handledning: "#c46a2b", annat: "#7a6a55" };
+const aktFarg = a => (a && /^#[0-9a-f]{6}$/i.test(a.farg || "") ? a.farg : a && AKTFARG[a.typ]) || "";
 function aktMarke(p) {
-  const l = (p && p.aktiviteter) || [];
-  return l.length ? `<i class="akt" aria-label="${esc(l.map(a => `${a.namn || a.id} ${a.start}–${a.slut}`).join(", "))}">★${esc(l.map(a => a.id).join(" "))}</i>` : "";
+  const l = (p && p.aktiviteter) || [], f = aktFarg(l[0]);
+  return l.length ? `<i class="akt"${f ? ` style="--ak:${f}"` : ""} aria-label="${esc(l.map(a => `${a.namn || a.id} ${a.start}–${a.slut}`).join(", "))}">★${esc(l.map(a => a.id).join(" "))}</i>` : "";
 }
 function aktText(p) {
   const l = (p && p.aktiviteter) || [];
@@ -3447,7 +3468,7 @@ function aktivitetKort(res) {
   return `<section class="kort"><h2>Aktiviteter</h2>
     <p class="dampad liten">Den som deltar arbetar hela aktivitetstiden. Tiden räknas som arbetstid och ingår i passet, så den påverkar passlängd, vila, OB och bemanning.${saknas ? "" : " Alla tillfällen har så många deltagare som behövs."}</p>
     <div class="rull"><table class="lista"><thead><tr><th>Aktivitet</th><th>När</th><th>Deltar</th><th class="tal">Antal</th></tr></thead><tbody>
-    ${l.map(t => `<tr><td><b>★ ${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
+    ${l.map(t => `<tr><td><b>${(() => { const f = aktFarg(t); return f ? `<span class="team-prick" style="--tf:${f}"></span>` : "★ "; })()}${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
       <td>${esc(t.deltagare.join(", ")) || "–"}</td><td class="tal nw${t.saknas ? " fel" : ""}">${t.deltagare.length} av ${t.behov}${t.saknas ? ` · ${t.saknas} saknas` : ""}</td></tr>`).join("")}
     </tbody></table></div>${(() => {
       // dag- och kvällspersonal som inte kan delta alls, för att inget av deras pass kan täcka tiden
@@ -3668,7 +3689,7 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
 </script>
@@ -4764,6 +4785,84 @@ function taBort(noder, id) {
   return { noder: noder.filter(n => n.id !== id), flyttaTill: x ? x.forelder || null : null };
 }
 
+// ---------------------------------------------------------------- aktivitetstyper
+// Organisationens aktivitetstyper: namn och färg, och vilken sorts aktivitet det är (kategorin som motorn känner).
+// En enhets aktivitet får typens kategori och färg när typen väljs. Färgen är bara för visning.
+const KATEGORI = { apt: "APT", utbildning: "Utbildning", mote: "Möte", studier: "Studier", dokumentation: "Dokumentation", handledning: "Handledning", annat: "Annat" };
+const AKT_STANDARD = [
+  { id: "apt", namn: "APT", typ: "apt", farg: "#3f6bb0" },
+  { id: "utbildning", namn: "Utbildning", typ: "utbildning", farg: "#2f8a6f" },
+  { id: "mote", namn: "Möte", typ: "mote", farg: "#b08a2e" },
+  { id: "studier", namn: "Studier", typ: "studier", farg: "#9a4fa8" },
+  { id: "dokumentation", namn: "Dokumentation", typ: "dokumentation", farg: "#2b8aa0" },
+  { id: "handledning", namn: "Handledning", typ: "handledning", farg: "#c46a2b" },
+  { id: "annat", namn: "Annat", typ: "annat", farg: "#7a6a55" },
+];
+const aktKopia = l => (l && l.length ? l : AKT_STANDARD).map(x => ({ ...x }));
+function aktLagg(l, namn, typ = "annat") {
+  namn = String(namn || "").trim();
+  if (!namn) throw new Error("Skriv ett namn på aktivitetstypen.");
+  if (l.some(x => x.namn.toLowerCase() === namn.toLowerCase())) throw new Error(`Det finns redan en aktivitetstyp som heter ${namn}.`);
+  let id = nyttId(l, namn);
+  return [...l, { id, namn, typ: KATEGORI[typ] ? typ : "annat", farg: PALETT[l.length % PALETT.length] }];
+}
+function aktAndra(l, id, falt, varde) {
+  if (falt === "farg" && !giltigFarg(varde)) throw new Error("Ogiltig färg.");
+  if (falt === "typ" && !KATEGORI[varde]) throw new Error("Okänd kategori.");
+  if (falt === "namn" && !String(varde || "").trim()) throw new Error("Skriv ett namn.");
+  return l.map(x => x.id === id ? { ...x, [falt]: falt === "namn" ? String(varde).trim() : varde } : x);
+}
+const aktTaBort = (l, id) => l.filter(x => x.id !== id);
+// Färgen för en aktivitet i en enhet: egen, annars typens med samma kategori.
+const aktFarg = (l, a) => (a && giltigFarg(a.farg) ? a.farg : ((aktKopia(l).find(x => x.typ === (a && a.typ)) || {}).farg || "#7a6a55"));
+
+// Valet av typ i en enhets aktivitetsformulär: organisationens typer. Den valda är den med samma kategori och färg.
+function aktAlternativ(l, a) {
+  l = aktKopia(l);
+  const vald = l.find(x => x.typ === (a.typ || "annat") && x.farg === a.farg) || l.find(x => x.typ === (a.typ || "annat")) || l[0];
+  return l.map(x => `<option value="${esc(x.id)}"${x === vald ? " selected" : ""}>${esc(x.namn)}</option>`).join("");
+}
+const aktTyp = (l, id) => aktKopia(l).find(x => x.id === id) || { id: "annat", namn: "Annat", typ: "annat" };
+// Fälten en aktivitet får av sin typ: kategori och färg.
+const aktFalt = t => ({ typ: KATEGORI[t.typ] ? t.typ : "annat", ...(giltigFarg(t.farg) ? { farg: t.farg } : {}) });
+// Namnet följer typen när det är tomt eller samma som en typs namn.
+const aktNamnEfterTyp = (l, nuvarande, t) => (!String(nuvarande || "").trim() || aktKopia(l).some(x => x.namn === String(nuvarande).trim()) ? (t.id === "annat" ? "" : t.namn) : nuvarande);
+
+// ---------------------------------------------------------------- sidan Organisation
+// Hela strukturen på ett ställe, utan att något schema behöver läggas: verksamheter och grupper, enheterna under
+// dem med färg och områden/team, och organisationens aktivitetstyper. enheter = [{id, namn, org, farg, team}].
+// lank(e) ger adressen eller data-attributen för att öppna en enhet.
+function stod(noder, enheter, typer, { lank = () => "", stangda = new Set() } = {}) {
+  const per = new Map();
+  for (const e of enheter) { const k = e.org && finns(noder, e.org) ? e.org : ""; if (!per.has(k)) per.set(k, []); per.get(k).push(e); }
+  const enhet = e => `<div class="os-enhet" style="--ef:${enhetsfarg(noder, e)}">
+      <div class="os-rad"><input type="color" class="org-farg" data-enhetfarg="${esc(e.id)}" value="${enhetsfarg(noder, e)}" aria-label="Färg för ${esc(e.namn)}" title="Färg">
+        <span class="os-hus" aria-hidden="true">🏠</span><b class="os-namn">${lank(e) ? `<a ${lank(e)}>${esc(e.namn)}</a>` : esc(e.namn)}</b>
+        <span class="chips os-knappar"><button class="liten" data-os="enhet-namn" data-e="${esc(e.id)}">Byt namn</button><button class="liten" data-os="team-ny" data-e="${esc(e.id)}">+ Område/team</button></span></div>
+      ${(e.team || []).length ? `<div class="os-team">${e.team.map((t, i) => `<span class="os-teamchip" style="--tf:${giltigFarg(t.farg) ? t.farg : PALETT[i % PALETT.length]}"><button class="lank" data-os="team-namn" data-e="${esc(e.id)}" data-t="${esc(t.id)}" title="Byt namn">${esc(t.namn || t.id)}</button><button class="os-x" data-os="team-bort" data-e="${esc(e.id)}" data-t="${esc(t.id)}" aria-label="Ta bort ${esc(t.namn || t.id)}">×</button></span>`).join("")}</div>` : ""}</div>`;
+  const grupp = (x, niva) => {
+    const egna = per.get(x.id) || [], under = barn(noder, x.id);
+    return `<details class="org-grupp os-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${stangda.has(x.id) ? "" : " open"}>
+      <summary><span class="org-prick" aria-hidden="true"></span><span class="org-namn">${esc(x.namn)}</span></summary>
+      <div class="os-verktyg"><input type="color" class="org-farg" data-orgfarg="${esc(x.id)}" value="${farg(noder, x.id)}" aria-label="Färg för ${esc(x.namn)}" title="Färg">
+        <span class="chips os-knappar"><button class="liten primar" data-os="enhet-ny" data-org="${esc(x.id)}">+ Enhet</button><button class="liten" data-orgg="under" data-id="${esc(x.id)}">+ Undergrupp</button><button class="liten" data-orgg="byt" data-id="${esc(x.id)}">Byt namn</button>${under.length ? "" : `<button class="liten fara" data-orgg="bort" data-id="${esc(x.id)}">Ta bort</button>`}</span></div>
+      <div class="os-innehall">${egna.map(enhet).join("")}${under.map(y => grupp(y, niva + 1)).join("")}${!egna.length && !under.length ? `<p class="dampad liten org-tom">Inga enheter här än.</p>` : ""}</div></details>`;
+  };
+  const utan = per.get("") || [];
+  const typRad = t => `<div class="os-typ"><input type="color" class="org-farg" data-akt="${esc(t.id)}" data-falt="farg" value="${giltigFarg(t.farg) ? t.farg : "#7a6a55"}" aria-label="Färg för ${esc(t.namn)}" title="Färg">
+      <input data-akt="${esc(t.id)}" data-falt="namn" value="${esc(t.namn)}" aria-label="Namn"><select data-akt="${esc(t.id)}" data-falt="typ" aria-label="Kategori för ${esc(t.namn)}">${Object.entries(KATEGORI).map(([k, v]) => `<option value="${k}"${k === t.typ ? " selected" : ""}>${v}</option>`).join("")}</select>
+      <button class="liten fara" data-os="akt-bort" data-id="${esc(t.id)}" aria-label="Ta bort ${esc(t.namn)}">×</button></div>`;
+  return `<section class="kort"><h2>Struktur</h2>
+      <p class="dampad liten"><b>+ Enhet</b> lägger till en enhet under en verksamhet. <b>+ Område/team</b> delar upp enheten i områden eller team med ett gemensamt schema. Ska ett område ha eget schema, gör det till en egen enhet under en undergrupp. Färgerna är bara till för att hitta rätt.</p>
+      <div class="org-trad os-trad">${barn(noder, null).map(x => grupp(x, 0)).join("")}
+      ${utan.length ? `<details class="org-grupp niva0" open><summary><span class="org-namn">Utan placering</span></summary><div class="os-innehall">${utan.map(enhet).join("")}</div></details>` : ""}</div>
+      <form class="chips" id="org-ny" style="margin-top:12px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till verksamhet</button></form></section>
+    <section class="kort"><h2>Aktivitetstyper</h2>
+      <p class="dampad liten">Typer av aktiviteter under arbetstid, med namn och färg. Välj typen när du lägger in en aktivitet i en enhet, så får den namnet och färgen. Kategorin säger vad det är för slags aktivitet.</p>
+      <div class="os-typer">${typer.map(typRad).join("")}</div>
+      <form class="chips" id="akt-ny" style="margin-top:10px"><input id="akt-ny-namn" placeholder="Ny typ, till exempel Brandövning" style="max-width:280px"><button type="submit" class="liten">+ Lägg till typ</button></form></section>`;
+}
+
 // <option>-lista med indrag, för att välja var en enhet ska ligga
 function alternativ(noder, valt, { tom = "Utan placering" } = {}) {
   const ut = [`<option value=""${valt ? "" : " selected"}>${esc(tom)}</option>`];
@@ -4803,7 +4902,7 @@ function redigera(noder) {
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;
 </script>
@@ -4859,6 +4958,25 @@ const namn = (team, id) => ((team || []).find(t => t.id === id) || {}).namn || i
 // kort märkning i schemat: "Team 2" → "T2", "Norr" → "Nor"
 const kort = (team, id) => { const n = namn(team, id); const m = n.match(/(\d+)\s*$/); return m ? "T" + m[1] : n.slice(0, 3); };
 
+// Organisationsstödet: lägga till, döpa om och ta bort team i en enhets indata. Det första teamet tar över
+// enhetens behov, så att inget behov försvinner när enheten delas upp. Enhetens behov är sedan summan av teamens.
+function laggTill(ind, namnet, fargen) {
+  const T = ind.team || (ind.team = []);
+  const t = { id: nyttId(T), namn: String(namnet || "").trim() || `Team ${T.length + 1}`, farg: fargen || nyFarg(T), behov: {} };
+  if (!T.length && ind.behov && Object.keys(ind.behov).length) t.behov = JSON.parse(JSON.stringify(ind.behov));
+  T.push(t);
+  ind.behov = summaBehov(T);
+  return t;
+}
+function bytNamn(ind, id, namnet) { const t = (ind.team || []).find(x => x.id === id); if (t && String(namnet || "").trim()) t.namn = String(namnet).trim(); }
+function taBort(ind, id) {
+  const T = ind.team || [], i = T.findIndex(t => t.id === id);
+  if (i < 0) return;
+  T.splice(i, 1);
+  (ind.personal || []).forEach(q => { if (q.team === id) delete q.team; });
+  if (T.length) ind.behov = summaBehov(T); else delete ind.team;  // sista teamet: behovet ligger kvar på enheten
+}
+
 // Kort i resultatet: per team hur många pass som behövdes, hur många som täcktes av egen personal, hur många
 // som lånades in och hur många som saknas. Och vilka som lånades ut mest.
 function tackningKort(res) {
@@ -4877,7 +4995,7 @@ function tackningKort(res) {
     ${ut.length ? `<p class="liten" style="margin:8px 0 0"><span class="dampad">Utlånade pass:</span> ${ut.map(([pid, k]) => `${esc(pid)} ${k.utlanad}`).join(" · ")}</p>` : `<p class="liten dampad" style="margin:8px 0 0">Ingen behövde lånas ut.</p>`}</section>`;
 }
 
-return { FARGER, farg, nyFarg, hemMarke, lanMarke, prick, perDag, komprimera, summaBehov, nyttId, namn, kort, tackningKort, DAGAR, DELAR, esc };
+return { laggTill, bytNamn, taBort, FARGER, farg, nyFarg, hemMarke, lanMarke, prick, perDag, komprimera, summaBehov, nyttId, namn, kort, tackningKort, DAGAR, DELAR, esc };
 })();
 if (typeof module !== "undefined") module.exports = TEAM;
 </script>
@@ -5140,6 +5258,15 @@ const lager = {
     if (this.db) return this.db.doc(`${this.bas}/org`).set({ noder });
     const d = this.lokal(); d.org = noder; this.lokalSpara(d);
   },
+  // organisationens aktivitetstyper (organisation.js); null = standardtyperna
+  async akttyper() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/akttyper`).get()); return d.exists ? (d.data().typer || null) : null; } catch { return null; } }
+    return this.lokal().akttyper || null;
+  },
+  async sparaAkttyper(typer) {
+    if (this.db) return this.db.doc(`${this.bas}/akttyper`).set({ typer });
+    const d = this.lokal(); d.akttyper = typer; this.lokalSpara(d);
+  },
   async sparaEnhet(e) {
     const rad = { id: e.id, namn: e.namn, indata: e.indata, andrad: Date.now(), ...(e.org ? { org: e.org } : {}), ...(e.farg ? { farg: e.farg } : {}) };
     if (this.db) return this.db.doc(`${this.bas}/e_${e.id}`).set(rad);
@@ -5200,12 +5327,13 @@ async function visaLista() {
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
+  try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
   if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
       <div style="display:grid;justify-items:end;gap:4px">${temaKnapp()}<span class="dampad" style="font-size:11.5px">© Sofia Rångeby</span></div></div></header>
     ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
-    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><button class="liten" data-g="org-red">${st.orgRed ? "✓ Klar" : "Ändra organisation"}</button><label class="knapp liten" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div></div>
+    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><button class="liten" data-g="organisation">Organisation</button><label class="knapp liten" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div></div>
       ${st.orgRed ? `<div class="formular" style="margin-top:10px"><b>Organisation</b><span class="dampad liten">Verksamheter och grupper som enheterna ordnas under. Påverkar inte schemaläggningen. En borttagen grupps enheter flyttas upp ett steg.</span>${ORG.redigera(st.org)}</div>` : ""}
       <div class="org-trad" style="margin-top:10px">${ORG.trad(st.org, st.enheter, { stangda: st.orgStangda || new Set(),
         nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}">+ Ny</button>`,
@@ -5333,7 +5461,7 @@ function ritaFlik() {
     const l = i.aktiviteter || [];
     el.innerHTML = `<p class="dampad liten">Till exempel APT, utbildning, möte, studier, dokumentation eller handledning. De blir delaktiviteter i passen. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Deltagarna fördelas rättvist.</p>` +
       (st.aktForm ? aktForm() : `<p><button class="primar" data-g="ny-akt">+ Ny aktivitet</button></p>`) +
-      (l.length ? l.map((a, n) => `<div class="onsk"><div>${a.krav ? `<span class="niva skarp">måste</span> ` : ""}★ ${esc(aktBeskriv(a))}</div>
+      (l.length ? l.map((a, n) => `<div class="onsk"><div>${a.krav ? `<span class="niva skarp">måste</span> ` : ""}<span class="team-prick" style="--tf:${ORG.aktFarg(st.akttyper, a)}"></span>${esc(aktBeskriv(a))}</div>
         <div class="chips"><button class="liten" data-g="andra-akt" data-n="${n}">Ändra</button><button class="liten fara" data-g="ta-bort-akt" data-n="${n}" aria-label="Ta bort">×</button></div></div>`).join("") : `<p class="tom">Inga aktiviteter.</p>`);
     kopplaAkt();
   } else if (st.flik === "balans") {
@@ -5388,7 +5516,6 @@ function beskriv(o) {
   return `${o.person} ${vill} ${vad} – ${nar}${!o.krav && (o.vikt || 1) > 1 ? ` (vikt ${o.vikt})` : ""}`;
 }
 
-const AKTTYP = { apt: "APT", utbildning: "Utbildning", mote: "Möte", studier: "Studier", dokumentation: "Dokumentation", handledning: "Handledning", annat: "Annat" };
 function aktBeskriv(a) {
   const vv = Array.isArray(a.veckor) ? `vecka ${a.veckor.join(", ")}` : a.veckor === "jämna" ? "jämna veckor" : a.veckor === "udda" ? "udda veckor" : "varje vecka";
   const vem = a.antal ? `${a.antal} personer` : a.andel ? `${Math.round(a.andel * 100)} % av gruppen` : a.varje_person ? `alla, ${a.varje_person} ${a.varje_person === 1 ? "gång" : "gånger"} var` : "alla";
@@ -5400,7 +5527,7 @@ function aktForm() {
   const vem = a.antal ? "antal" : a.andel ? "andel" : a.varje_person ? "varje" : "alla";
   const valda = new Set(a.deltagare || []);
   return `<form class="formular" id="af">
-    <div class="falt"><div><label for="af-typ">Typ</label><select id="af-typ">${Object.entries(AKTTYP).map(([k, t]) => `<option value="${k}"${k === (a.typ || "annat") ? " selected" : ""}>${t}</option>`).join("")}</select></div><div><label for="af-n">Namn</label><input id="af-n" value="${esc(a.namn || "")}" placeholder="APT"></div>
+    <div class="falt"><div><label for="af-typ">Typ</label><select id="af-typ">${ORG.aktAlternativ(st.akttyper, a)}</select></div><div><label for="af-n">Namn</label><input id="af-n" value="${esc(a.namn || "")}" placeholder="APT"></div>
       <div><label for="af-s">Från</label><input id="af-s" type="time" value="${esc(a.start)}"></div><div><label for="af-e">Till</label><input id="af-e" type="time" value="${esc(a.slut)}"></div></div>
     <div><label>Dagar</label><div class="chips">${DAGAR.map(d => `<label><input type="checkbox" name="af-d" value="${d}"${(a.dagar || []).includes(d) ? " checked" : ""}>${d}</label>`).join("")}</div></div>
     <div class="falt"><div><label for="af-w">Veckor</label><select id="af-w">${[["alla", "Varje vecka"], ["jämna", "Jämna"], ["udda", "Udda"], ["vissa", "Vissa"]].map(([k, t]) => `<option value="${k}"${k === vv ? " selected" : ""}>${t}</option>`).join("")}</select></div>
@@ -5419,7 +5546,7 @@ function kopplaAkt() {
   const f = $("#af"); if (!f) return;
   const a = st.aktForm.data;
   $("#af-w").onchange = () => ($("#af-wl").hidden = $("#af-w").value !== "vissa");
-  $("#af-typ").onchange = () => { const n = $("#af-n"); if (!n.value.trim() || Object.values(AKTTYP).includes(n.value.trim())) n.value = $("#af-typ").value === "annat" ? "" : AKTTYP[$("#af-typ").value]; };
+  $("#af-typ").onchange = () => { const n = $("#af-n"); n.value = ORG.aktNamnEfterTyp(st.akttyper, n.value, ORG.aktTyp(st.akttyper, $("#af-typ").value)); };
   $("#af-v").onchange = () => {
     const v = $("#af-v").value; $("#af-tal").hidden = v === "alla";
     $("#af-tl").textContent = v === "andel" ? "Andel, %" : v === "antal" ? "Antal per tillfälle" : "Gånger per person";
@@ -5429,7 +5556,7 @@ function kopplaAkt() {
     ev.preventDefault();
     const namn = $("#af-n").value.trim() || "Aktivitet", ids = new Set((st.enhet.indata.aktiviteter || []).map(x => x.id));
     let id = a.id; if (!id) { const bas = (namn.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "AKT").slice(0, 8); id = bas; let k = 2; while (ids.has(id)) id = bas + k++; }
-    const n = { id, typ: $("#af-typ").value, namn, start: $("#af-s").value, slut: $("#af-e").value };
+    const n = { id, ...ORG.aktFalt(ORG.aktTyp(st.akttyper, $("#af-typ").value)), namn, start: $("#af-s").value, slut: $("#af-e").value };
     if (!(n.slut > n.start)) return meddela("Aktiviteten måste sluta efter att den börjar, samma dag.");
     n.dagar = [...f.querySelectorAll("[name=af-d]:checked")].map(x => x.value);
     if (!n.dagar.length) return meddela("Välj minst en dag.");
@@ -5617,6 +5744,7 @@ document.addEventListener("click", async ev => {
     case "kalender": st.kalForskj = 0; return visaKalender();
     case "team-filter": st.teamFilter = el.dataset.v || null; return ritaResultat();
     case "org-red": st.orgRed = !st.orgRed; return visaLista();
+    case "organisation": window.scrollTo(0, 0); return visaOrganisation();
     case "kal-flytta": st.kalForskj = +el.dataset.v ? (st.kalForskj || 0) + +el.dataset.v : 0; return visaKalender();
     case "godkann": st.godkannForm = st.korning.id; return ritaResultat();
     case "godkann-avbryt": st.godkannForm = null; return ritaResultat();
@@ -5740,14 +5868,65 @@ async function sparaOrg(noder, flytta) {
   try {
     await lager.sparaOrg(noder);
     if (flytta) for (const e of st.enheter.filter(x => x.org === flytta.fran)) await lager.sparaEnhet({ ...e, org: flytta.till });
-    st.org = noder; visaLista();
+    st.org = noder; ritaOmOrg();
   } catch (err) { meddela("Kunde inte spara: " + err.message); }
 }
+const ritaOmOrg = () => (st.vy === "organisation" ? visaOrganisation() : visaLista());
+
+// ------------------------------------------------------------------ vy: Organisation (organisation.js, delad med webben)
+// Verksamheter, enheter, områden/team och aktivitetstyper, utan att något schema behöver läggas.
+async function visaOrganisation() {
+  st.vy = "organisation"; st.enhet = null; $("#fot").hidden = true;
+  try { st.enheter = await lager.enheter(); } catch { st.enheter = []; }
+  try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
+  try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
+  const enh = st.enheter.map(e => ({ ...e, team: (e.indata && e.indata.team) || [] }));
+  $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button>${temaKnapp()}</div>
+      <h1 style="margin-top:4px">Organisation</h1><p class="dampad liten" style="margin:4px 0 0">Bygg upp verksamheter, enheter, områden och team, och aktivitetstyperna. Personal, behov och regler fyller du i sedan, i varje enhet.</p></header>
+    ${ORG.stod(st.org, enh, st.akttyper, { stangda: st.orgStangda || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
+}
+async function andraEnhetL(id, andring) {
+  const e = st.enheter.find(x => String(x.id) === String(id)); if (!e) return;
+  const n = structuredClone(e);
+  if (andring(n) === false) return;
+  await lager.sparaEnhet(n);
+}
+async function sparaAkttyper(l) { await lager.sparaAkttyper(l); st.akttyper = l; }
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-os]"); if (!el || st.vy !== "organisation") return;
+  e.preventDefault();
+  const id = el.dataset.e, t = el.dataset.t;
+  try {
+    switch (el.dataset.os) {
+      case "enhet-ny": {
+        const namn = prompt(`Namn på den nya enheten i ${ORG.sokvag(st.org, el.dataset.org)}`); if (!namn || !namn.trim()) return;
+        await lager.sparaEnhet({ id: nyttId(), namn: namn.trim(), indata: GUIDE.tomIndata(namn.trim()), org: el.dataset.org });
+        meddela(`${namn.trim()} är skapad. Lägg till områden eller team, eller öppna enheten och fyll i personal och behov.`); break;
+      }
+      case "enhet-namn": { const n = prompt("Nytt namn på enheten"); if (!n || !n.trim()) return; await andraEnhetL(id, x => { x.namn = n.trim(); x.indata.enhet = n.trim(); }); break; }
+      case "team-ny": { const n = prompt("Namn på området eller teamet"); if (!n || !n.trim()) return; await andraEnhetL(id, x => { TEAM.laggTill(x.indata, n); }); break; }
+      case "team-namn": { const n = prompt("Nytt namn"); if (!n || !n.trim()) return; await andraEnhetL(id, x => { TEAM.bytNamn(x.indata, t, n); }); break; }
+      case "team-bort": await andraEnhetL(id, x => { const tt = (x.indata.team || []).find(y => y.id === t); if (!confirm(`Ta bort ${tt ? tt.namn : t}? Medarbetarna blir utan hemteam.`)) return false; TEAM.taBort(x.indata, t); }); break;
+      case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
+      default: return;
+    }
+    visaOrganisation();
+  } catch (err) { meddela("Kunde inte spara: " + err.message); }
+});
+document.addEventListener("change", async e => {
+  const el = e.target; if (!el.dataset || !el.dataset.akt || st.vy !== "organisation") return;
+  try { await sparaAkttyper(ORG.aktAndra(st.akttyper, el.dataset.akt, el.dataset.falt, el.value)); } catch (err) { meddela(err.message); visaOrganisation(); }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "akt-ny") return;
+  e.preventDefault();
+  try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
+});
 // Enhetens färg: egen eller verksamhetens (organisation.js).
 const fargVal = e => `<label class="org-plats">Färg <input type="color" class="org-farg" data-enhetfarg="${e.id}" value="${ORG.enhetsfarg(st.org, e)}" aria-label="Färg för ${esc(e.namn)}">${e.farg ? `<button class="lank liten" data-enhetfargarv="${e.id}" title="Använd verksamhetens färg">↺ verksamhetens</button>` : ""}</label>`;
 async function fargaEnhet(id, farg) {
   const e = st.enheter.find(x => String(x.id) === String(id)); if (!e) return;
-  try { const n = { ...e, farg: farg || null }; await lager.sparaEnhet(n); Object.assign(e, n); visaLista(); } catch (err) { meddela("Kunde inte spara: " + err.message); }
+  try { const n = { ...e, farg: farg || null }; await lager.sparaEnhet(n); Object.assign(e, n); ritaOmOrg(); } catch (err) { meddela("Kunde inte spara: " + err.message); }
 }
 document.addEventListener("change", e => { const id = e.target.dataset && e.target.dataset.enhetfarg; if (id) fargaEnhet(id, e.target.value); });
 document.addEventListener("click", e => { const el = e.target.closest("[data-enhetfargarv]"); if (el) { e.preventDefault(); fargaEnhet(el.dataset.enhetfargarv, null); } });
@@ -6216,7 +6395,7 @@ function dagTabell(res, dagar, period) {
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
     const vv = !x && vvAlla[p].get(d);
-    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
