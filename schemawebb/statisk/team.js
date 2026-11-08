@@ -32,6 +32,19 @@ function summaBehov(team) {
   return komprimera(tot);
 }
 
+// Teamets färg: egen, annars en ur paletten efter ordningen. Bara för visning.
+const FARGER = ["#c46a2b", "#2f8a6f", "#3f6bb0", "#9a4fa8", "#c0473f", "#2b8aa0", "#b08a2e", "#5f8a2f", "#b5487e", "#5b5bb8"];
+function farg(team, id) {
+  const i = (team || []).findIndex(t => t.id === id);
+  if (i < 0) return "#8b8f8a";
+  return /^#[0-9a-f]{6}$/i.test(team[i].farg || "") ? team[i].farg : FARGER[i % FARGER.length];
+}
+const nyFarg = team => FARGER[(team || []).length % FARGER.length];
+// Hemteamets märke under personens id och märket för ett lånat pass.
+const hemMarke = (team, id) => `<small class="team-hem" style="--tf:${farg(team, id)}">${esc(kort(team, id))}</small>`;
+const lanMarke = (team, id) => `<i class="team-lan" style="--tf:${farg(team, id)}" title="Lånad till ${esc(namn(team, id))}">→${esc(kort(team, id))}</i>`;
+const prick = (team, id) => `<span class="team-prick" style="--tf:${farg(team, id)}" aria-hidden="true"></span>`;
+
 function nyttId(team) { let i = (team || []).length + 1; while ((team || []).some(t => t.id === `T${i}`)) i++; return `T${i}`; }
 const namn = (team, id) => ((team || []).find(t => t.id === id) || {}).namn || id || "";
 // kort märkning i schemat: "Team 2" → "T2", "Norr" → "Nor"
@@ -51,10 +64,10 @@ function tackningKort(res) {
   const ut = Object.entries(res.personer || {}).filter(([, k]) => k.utlanad).sort((a, b) => b[1].utlanad - a[1].utlanad);
   return `<section class="kort team-kort"><h2>Team</h2><p class="dampad liten">Var och en arbetar i sitt hemteam. Där ett team har färre än sitt behov lånas personal in från ett team som har fler.</p>
     <div class="rull"><table class="jamfor"><thead><tr><th>Team</th><th class="tal">Behov, pass</th><th class="tal">Egna</th><th class="tal">Inlånade</th><th class="tal">Saknas</th></tr></thead><tbody>
-    ${per.map(x => `<tr><td><b>${esc(x.t.namn)}</b></td><td class="tal">${x.behov}</td><td class="tal">${x.egna}</td><td class="tal">${x.inl || "–"}</td><td class="tal${x.sakn ? " minus" : ""}">${x.sakn || "–"}</td></tr>`).join("")}</tbody></table></div>
+    ${per.map(x => `<tr><td>${prick(res.team, x.t.id)}<b>${esc(x.t.namn)}</b></td><td class="tal">${x.behov}</td><td class="tal">${x.egna}</td><td class="tal">${x.inl || "–"}</td><td class="tal${x.sakn ? " minus" : ""}">${x.sakn || "–"}</td></tr>`).join("")}</tbody></table></div>
     ${ut.length ? `<p class="liten" style="margin:8px 0 0"><span class="dampad">Utlånade pass:</span> ${ut.map(([pid, k]) => `${esc(pid)} ${k.utlanad}`).join(" · ")}</p>` : `<p class="liten dampad" style="margin:8px 0 0">Ingen behövde lånas ut.</p>`}</section>`;
 }
 
-return { perDag, komprimera, summaBehov, nyttId, namn, kort, tackningKort, DAGAR, DELAR, esc };
+return { FARGER, farg, nyFarg, hemMarke, lanMarke, prick, perDag, komprimera, summaBehov, nyttId, namn, kort, tackningKort, DAGAR, DELAR, esc };
 })();
 if (typeof module !== "undefined") module.exports = TEAM;

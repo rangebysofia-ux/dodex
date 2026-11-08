@@ -32,7 +32,7 @@ async function visaOversikt(id) {
   const okLista = st.korningar.filter(x => x.status === "klar" && x.losning === "OK");
   const foregaende = k ? okLista.find(x => x.id !== k.id && x.id < k.id) : null;
   const ind = st.indata, kt = kontrakteradTid(ind);
-  let h = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>${st.org ? ORG.ikon(st.org, st.enhet.org, GUIDE.HUS) : ""}${esc(st.enhet.namn)}</h1>${st.org && st.enhet.org && ORG.finns(st.org, st.enhet.org) ? `<span class="org-etikett" style="--ef:${ORG.farg(st.org, st.enhet.org)}">${esc(ORG.sokvag(st.org, st.enhet.org))}</span>` : ""}
+  let h = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>${st.org ? ORG.ikon(st.org, st.enhet, GUIDE.HUS) : ""}${esc(st.enhet.namn)}</h1>${st.org && st.enhet.org && ORG.finns(st.org, st.enhet.org) ? `<span class="org-etikett" style="--ef:${ORG.enhetsfarg(st.org, st.enhet)}">${esc(ORG.sokvag(st.org, st.enhet.org))}</span>` : ""}
       <p class="dampad" style="margin:4px 0 0">${ind.personal.length} medarbetare · ${ind.veckor} veckor${ind.cykliskt !== false ? ", cykliskt" : ""} · ${sv(kt, 1)} h kontrakterat per vecka${ind.budget_timmar_vecka ? ` av budget ${sv(ind.budget_timmar_vecka, 1)} h` : ""}${k ? ` · senaste schema ${datum(k.skapad)}` : ""}</p></div>
       <div>${k ? `<a class="knapp liten" href="#/e/${id}/schema/${k.id}">${IKON.schema} Öppna schemat</a>` : ""}</div></div></section>
     ${nyckeltalskort(k, foregaende)}`;

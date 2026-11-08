@@ -37,6 +37,7 @@ Varje verksamhet och grupp har en färg, så att man ser direkt vilken sorts enh
 - Startfärgerna: Äldreomsorg guld, SÄBO orange, Hemtjänst grön, LSS blå och Förskola lila.
 - En undergrupp utan egen färg ärver färgen från närmaste grupp ovanför.
 - Färgen ändras under **Ändra struktur**, med den runda färgrutan framför gruppens namn.
+- En enhet kan också ha en egen färg (väljs vid enheten i listan, ↺ går tillbaka till verksamhetens). Områden som skapas i guiden får var sin färg.
 - Enheter utan placering blir grå.
 
 Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
@@ -51,4 +52,6 @@ Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
   - `org` på enheten, i tabellen `enheter` (kolumnen läggs till i äldre databaser).
 - **Lättversionen:** strukturen sparas i dokumentet `org` i användarens lagring, och `org` sparas på varje enhet.
 - `farg` på en grupp (`#rrggbb`, kan saknas). `ORG.farg` räknar fram den ärvda färgen och `ORG.ikon` ritar huset.
+- `farg` på en enhet: kolumnen `farg` i `enheter` (webben, `POST /api/enheter/{id}/farg`) och fältet `farg` på enheten i lättversionen. `ORG.enhetsfarg` ger enhetens egen färg eller verksamhetens.
+- `ORG.grupp(noder, namn, forelder)` hittar eller skapar gruppen som områdena i guiden samlas under.
 - Tester: `tests/test_organisation.py`.

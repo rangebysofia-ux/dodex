@@ -122,4 +122,4 @@ Exempel: APT tisdag 14–16 vecka 2 och 4, där var och en går en gång (ungef�
 
 schemamotor/validate.py läser samma `schema`-format, antingen hela utdatafilen eller en fil med bara `{"schema": {...}}`. Ett schema från ett annat system kan granskas genom att räkna om det till detta format. `dygnsdel` behövs för fönsterkontrollen och för behovet; `rast` för rastkontrollen.
 
-**team** – valfria team i arbetsgruppen: `id`, `namn` och `behov` (som enhetens). `personal[].team` anger hemteamet. Enhetens behov är summan av teamens. Se `docs/team.md`.
+**team** – valfria team i arbetsgruppen: `id`, `namn`, `behov` (som enhetens) och `farg` (valfri, bara för visning). `personal[].team` anger hemteamet. Enhetens behov är summan av teamens. Se `docs/team.md`.

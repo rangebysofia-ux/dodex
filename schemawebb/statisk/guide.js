@@ -19,7 +19,7 @@ const GUIDE = (() => {
   function ny() {
     // Inget är förifyllt (användarens önskemål 2026-11-08): antal, sysselsättning och behov fylls i av användaren.
     // Passtiderna och perioden är regelns standardvärden och syns i sina steg.
-    return { steg: 1, namn: "", antalDag: 0, antalNatt: 0, gradSatt: "samma", grad: "", budget: "", personer: [], harUndantag: false,
+    return { steg: 1, namn: "", omraden: "nej", omradesLista: [], antalDag: 0, antalNatt: 0, gradSatt: "samma", grad: "", budget: "", personer: [], harUndantag: false,
       behov: { vardag: { morgon: 0, kvall: 0, natt: 0 }, helg: { morgon: 0, kvall: 0, natt: 0 } }, behovDag: null,
       tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "06:45" }, veckor: 4, startdatum: "", timkostnad: "" };
   }
@@ -29,6 +29,39 @@ const GUIDE = (() => {
     const gamla = new Map(g.personer.map(p => [p.id, p]));
     g.personer = [...Array.from({ length: g.antalDag }, (_, i) => `A${i + 1}`), ...Array.from({ length: g.antalNatt }, (_, i) => `N${i + 1}`)]
       .map(id => gamla.get(id) || { id, grad: g.grad, arbetar: id[0] === "N" ? "natt" : "morgon,kvall", helg: "2/4" });
+    if (!harOmraden(g)) g.personer.forEach(p => delete p.omrade);
+  }
+
+  // ---------------------------------------------------------------- områden, avdelningar eller team
+  // Färger för områdena i tur och ordning (samma palett som organisationen).
+  const OMRADESFARGER = ["#c46a2b", "#2f8a6f", "#3f6bb0", "#9a4fa8", "#c0473f", "#2b8aa0", "#b08a2e", "#5f8a2f", "#b5487e", "#5b5bb8"];
+  const harOmraden = g => g.omraden === "team" || g.omraden === "egna";
+  const omradenMedNamn = g => (g.omradesLista || []).filter(o => String(o.namn || "").trim());
+  function taBortOmrade(g, i) {
+    g.omradesLista.splice(i, 1);
+    g.personer.forEach(p => { if (p.omrade === i) delete p.omrade; else if (p.omrade > i) p.omrade--; });
+  }
+  function laggOmrade(g) { const n = g.omradesLista.length; g.omradesLista.push({ namn: "", farg: OMRADESFARGER[n % OMRADESFARGER.length] }); }
+
+  // Dela ett antal jämnt på n delar; resten går till de första.
+  const dela = (antal, n, i) => Math.floor(antal / n) + (i < antal % n ? 1 : 0);
+  function delatBehov(g, n, i) {
+    const B = structuredClone(g.behovDag || g.behov);
+    for (const d of Object.values(B)) for (const k of ["morgon", "kvall", "natt"]) d[k] = dela(d[k] || 0, n, i);
+    return B;
+  }
+  // Personerna fördelas i tur och ordning, dag/kväll och natt var för sig, om de inte redan har ett område.
+  // Nattpersonalen går bara till områden som har nattbehov (och dag/kväll till områden med dag- eller kvällsbehov).
+  function omradeFor(g, n) {
+    const har = (i, delar) => Object.values(delatBehov(g, n, i)).some(d => delar.some(k => d[k] > 0));
+    const alla = Array.from({ length: n }, (_, i) => i);
+    const val = { A: alla.filter(i => har(i, ["morgon", "kvall"])), N: alla.filter(i => har(i, ["natt"])) };
+    const ut = {}, i = { A: 0, N: 0 };
+    for (const p of g.personer) {
+      const typ = p.id[0] === "N" ? "N" : "A", L = val[typ].length ? val[typ] : alla;
+      ut[p.id] = p.omrade ?? L[i[typ]++ % L.length];
+    }
+    return ut;
   }
 
   const nattTimmarPass = g => { const m = t => { const [h, x] = t.split(":").map(Number); return h * 60 + x; };
@@ -66,15 +99,20 @@ const GUIDE = (() => {
   const kontrakt = g => Object.values(grader(g)).reduce((s, x) => s + x / 100 * HELTID, 0);
 
   function indata(g) {
-    const gr = grader(g);
+    const gr = grader(g); let teamLista;
     const personal = g.personer.map(p => {
       const ut = { id: p.id, grad: Math.round(gr[p.id]) / 100 };
       const arb = g.harUndantag || p.id[0] === "N" ? p.arbetar : p.id[0] === "N" ? "natt" : "morgon,kvall";
       if (arb !== "morgon,kvall") ut.dygnsdelar = arb.split(",");
       if (g.harUndantag && p.helg !== "2/4") ut.helgfrekvens = p.helg;
-      if (p.team) ut.team = p.team;
       return ut;
     });
+    if (g.omraden === "team") {
+      const O = omradenMedNamn(g), hem = omradeFor(g, O.length);
+      personal.forEach(p => { p.team = `T${hem[p.id] + 1}`; });
+      // behovet delas jämnt mellan teamen som ett förslag; det ändras under fliken Team
+      teamLista = O.map((o, i) => ({ id: `T${i + 1}`, namn: o.namn.trim(), farg: o.farg, behov: delatBehov(g, O.length, i) }));
+    } else teamLista = null;
     const ut = { enhet: g.namn || "Ny enhet", veckor: Number(g.veckor) || 4, cykliskt: true, behov: structuredClone(g.behovDag || g.behov), personal, onskemal: [] };
     const regler = {};
     if (g.tider.morgon !== "07:00") regler.morgon_start = g.tider.morgon;
@@ -85,8 +123,22 @@ const GUIDE = (() => {
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);
     if (g.passMall) ut.bemanningsbalans = { pass: structuredClone(g.passMall) };
-    if (g.team && g.team.length) ut.team = structuredClone(g.team);  // behovet per team anges under fliken Team  // passen från mallen, påverkar inte schemat
+    if (teamLista && teamLista.length) ut.team = teamLista;
     return ut;
+  }
+
+  // Eget schema per område: en enhet per område med sin del av personalen och behovet.
+  function omradesEnheter(g) {
+    synka(g);
+    const O = omradenMedNamn(g), hem = omradeFor(g, O.length), alla = indata({ ...g, omraden: "nej" });
+    return O.map((o, i) => {
+      const ind = structuredClone(alla);
+      ind.enhet = o.namn.trim();
+      ind.personal = ind.personal.filter(p => hem[p.id] === i);
+      ind.behov = delatBehov(g, O.length, i);
+      if (ind.budget_timmar_vecka) ind.budget_timmar_vecka = Math.round(ind.budget_timmar_vecka * ind.personal.length / Math.max(1, alla.personal.length) * 10) / 10;
+      return { namn: o.namn.trim(), farg: o.farg, indata: ind };
+    });
   }
 
   // Den tomma enheten som AI-assistenten fyller i tillsammans med användaren.
@@ -132,8 +184,17 @@ const GUIDE = (() => {
     let h = "";
     if (g.steg === 0) return klistraHtml(g);
     switch (g.steg) {
-      case 1: h = fraga("Vad heter gruppen?", "Till exempel avdelningen, boendet eller arbetslaget.") +
-        `<input id="g-namn" data-gf="namn" value="${esc(g.namn)}" placeholder="Solgården avd 2" style="max-width:420px">`; break;
+      case 1: h = fraga("Vad heter gruppen?", "Till exempel avdelningen, boendet, arbetslaget eller hemtjänstgruppen.") +
+        `<input id="g-namn" data-gf="namn" value="${esc(g.namn)}" placeholder="Hemtjänst Centrum" style="max-width:420px">
+        ${g.orgval ? `<div style="max-width:420px;margin-top:12px"><label for="g-plats">Var i organisationen?</label><select id="g-plats" data-gf="plats">${g.orgval}</select></div>` : ""}
+        <h3 style="margin-top:18px">Finns det områden, avdelningar eller team?</h3>
+        <div class="valknappar">${valknapp("omraden", "nej", "Nej", !harOmraden(g))}${valknapp("omraden", "team", "Ja, ett gemensamt schema", g.omraden === "team")}${valknapp("omraden", "egna", "Ja, eget schema per område", g.omraden === "egna")}</div>` +
+        (harOmraden(g) ? `<div class="omraden">${g.omradesLista.map((o, i) => `<div class="omrade-rad"><input type="color" class="org-farg" data-go="${i}.farg" value="${esc(o.farg)}" aria-label="Färg för område ${i + 1}" title="Färg"><input data-go="${i}.namn" value="${esc(o.namn)}" placeholder="Område ${i + 1}" aria-label="Namn på område ${i + 1}"><button class="liten fara" data-guide="omrade-bort" data-i="${i}" aria-label="Ta bort område ${i + 1}">×</button></div>`).join("")}
+          <button class="liten" data-guide="omrade-ny">+ Lägg till område</button></div>` +
+          tips(g.omraden === "team"
+            ? "Alla områden ingår i ett och samma schema. Varje område blir ett team med eget behov och egen färg, och var och en får ett hemområde. Där ett område har för få kan personal lånas in från ett annat."
+            : `Varje område blir en egen enhet med egen personal, eget behov och eget schema, samlade under ${g.namn ? `<b>${esc(g.namn)}</b>` : "gruppens namn"} i organisationen.`) +
+          `<p class="liten dampad">Personalen och behovet som du anger i nästa steg delas jämnt mellan områdena som ett förslag. Det går att ändra efteråt.</p>` : ""); break;
       case 2: h = fraga("Hur många medarbetare är det i gruppen?") +
         `<div class="falt" style="max-width:520px">${tal("g-dk", "antalDag", g.antalDag, "Arbetar dag och kväll")}${tal("g-natt", "antalNatt", g.antalNatt, "Arbetar natt", 40)}</div>` +
         tips(`Ni är ${g.antalDag + g.antalNatt} totalt. De får id-koder (A1, A2 … och N1, N2 …) i stället för namn.`); break;
@@ -169,11 +230,13 @@ const GUIDE = (() => {
           <div><label for="g-start">Startdatum, måndag (valfritt)</label><input id="g-start" type="date" data-gf="startdatum" value="${esc(g.startdatum)}"></div>
           <div><label for="g-tk">Timkostnad, kr (valfritt)</label><input id="g-tk" type="number" min="0" inputmode="decimal" data-gf="timkostnad" value="${esc(g.timkostnad)}"></div></div>` +
         tips("Startdatum och timkostnad behövs för OB och personalkostnad. De kan anges senare."); break;
-      default: h = fraga("Hur vill du lägga schemat?") +
+      default: if (g.omraden === "egna") { h = sistaEgna(g, fraga, r); break; }
+        h = fraga("Hur vill du lägga schemat?") +
         `<ul class="punkter liten"><li><b>${esc(g.namn || "Ny enhet")}</b>, ${g.veckor} veckor${g.startdatum ? ` från ${esc(g.startdatum)}` : ""}</li>
           <li>${g.antalDag} med dag och kväll, ${g.antalNatt} med natt, ${sv(k)} h kontrakterat per vecka${g.harUndantag ? `, ${g.personer.filter(p => p.helg !== "2/4" || (p.id[0] === "A" && p.arbetar !== "morgon,kvall")).length} med undantag` : ""}</li>
           <li>Behov ${g.behovDag ? `per veckodag (${VECKODAGAR.map(d => `${d} ${g.behovDag[d].morgon}/${g.behovDag[d].kvall}/${g.behovDag[d].natt}`).join(", ")})` : `vardag ${g.behov.vardag.morgon}/${g.behov.vardag.kvall}/${g.behov.vardag.natt}, helg ${g.behov.helg.morgon}/${g.behov.helg.kvall}/${g.behov.helg.natt}`} (dag/kväll/natt), ungefär ${sv(r.behovTimmar)} h per vecka</li>
-          <li>Dag från ${g.tider.morgon}, kväll till ${g.tider.kvall}, natt ${g.tider.nattStart}–${g.tider.nattSlut}</li></ul>
+          <li>Dag från ${g.tider.morgon}, kväll till ${g.tider.kvall}, natt ${g.tider.nattStart}–${g.tider.nattSlut}</li>
+          ${g.omraden === "team" ? `<li>${omradenMedNamn(g).length} områden i ett gemensamt schema: ${omradenMedNamn(g).map(o => `<span class="omrade-chip" style="--ef:${esc(o.farg)}">${esc(o.namn)}</span>`).join(" ")}</li>` : ""}</ul>
         <div class="valrutor" style="margin-top:14px">
           <button class="valruta huvud" data-guide="skapa-ai"><span class="valikon" aria-hidden="true">🤖</span><b>Låt AI lägga schemat</b><span>Ett schema som följer reglerna, med så få vakanser som möjligt och jämn fördelning. Du kan justera det efteråt.</span></button>
           <button class="valruta" data-guide="skapa-manuellt"><span class="valikon" aria-hidden="true">✋</span><b>Lägg schemat själv</b><span>Börja med ett tomt schema och lägg passen. Varje pass granskas direkt mot reglerna.</span></button>
@@ -186,6 +249,18 @@ const GUIDE = (() => {
     return `<section class="kort guide">${prickar}${h}${nav}</section>`;
   }
 
+  // Sista steget när varje område får ett eget schema: visa fördelningen och skapa enheterna.
+  function sistaEgna(g, fraga, r) {
+    const E = omradesEnheter(g), del = b => { const B = Object.values(b), s = k => B.reduce((x, d) => x + (d[k] || 0), 0); return B.length === 2 ? `${b.vardag.morgon}/${b.vardag.kvall}/${b.vardag.natt} vardag, ${b.helg.morgon}/${b.helg.kvall}/${b.helg.natt} helg` : `${s("morgon")}/${s("kvall")}/${s("natt")} per vecka`; };
+    return fraga(`Skapa ${E.length} områden under ${esc(g.namn)}`) +
+      `<p class="dampad">Varje område blir en egen enhet med eget schema. Personalen och behovet är delat jämnt som ett förslag. Kontrollera dem i varje område innan du lägger schemat.</p>
+      <div class="rull"><table class="guidetabell"><thead><tr><th>Område</th><th>Medarbetare</th><th>Behov (dag/kväll/natt)</th></tr></thead><tbody>
+      ${E.map(e => `<tr><th><span class="omrade-chip" style="--ef:${esc(e.farg)}">${esc(e.namn)}</span></th><td>${e.indata.personal.map(p => esc(p.id)).join(", ") || "–"}</td><td>${del(e.indata.behov)}</td></tr>`).join("")}</tbody></table></div>
+      <ul class="punkter liten"><li>${g.veckor} veckor${g.startdatum ? ` från ${esc(g.startdatum)}` : ""}, dag från ${g.tider.morgon}, kväll till ${g.tider.kvall}, natt ${g.tider.nattStart}–${g.tider.nattSlut}</li>
+        <li>Totalt ungefär ${sv(r.behovTimmar)} h behov per vecka.</li></ul>
+      <div class="valrutor" style="margin-top:14px"><button class="valruta huvud" data-guide="skapa-omraden"><span class="valikon" aria-hidden="true">🏠</span><b>Skapa områdena</b><span>En grupp ${esc(g.namn)} i organisationen med ${E.length} enheter under.</span></button></div>`;
+  }
+
   // Läs ett fält i guiden till tillståndet. Returnerar true om något ändrades.
   function las(g, el) {
     if (el.dataset.gk) {
@@ -196,6 +271,7 @@ const GUIDE = (() => {
     }
     if (el.dataset.gb) { const [d, k] = el.dataset.gb.split("."); (g.behovDag && g.behovDag[d] ? g.behovDag : g.behov)[d][k] = Math.max(0, parseInt(el.value) || 0); return true; }
     if (el.dataset.gt) { if (el.value) g.tider[el.dataset.gt] = el.value; return true; }
+    if (el.dataset.go) { const [i, k] = el.dataset.go.split("."); g.omradesLista[+i][k] = el.value; return k === "farg"; }
     if (el.dataset.gp) { const [i, k] = el.dataset.gp.split("."); g.personer[+i][k] = k === "grad" ? Math.max(0, parseInt(el.value) || 0) : el.value; return true; }
     const f = el.dataset.gf; if (!f) return false;
     if (["antalDag", "antalNatt", "grad", "veckor"].includes(f)) g[f] = Math.max(0, parseInt(el.value) || 0);
@@ -254,7 +330,7 @@ const GUIDE = (() => {
       const medTeam = (p.team || []).length > 0;
       h += `<h3>Medarbetare: ${p.personer.length} (${dk} dag och kväll, ${n} natt)${medTeam ? ` i ${p.team.length} team` : ""}</h3><div class="rull"><table class="guidetabell"><thead><tr><th>Id</th><th>Från inklistringen</th><th>Grad</th><th>Arbetar</th><th>Helger</th>${medTeam ? "<th>Team</th>" : ""}</tr></thead><tbody>
         ${p.personer.map(x => `<tr><th>${x.id}</th><td class="dampad">${esc(x.rad)}</td><td>${x.grad} %</td><td>${DEL[x.arbetar]}</td><td>${HELGER[x.helg]}</td>${medTeam ? `<td>${esc(x.team || "–")}</td>` : ""}</tr>`).join("")}</tbody></table></div>
-        ${medTeam ? `<p class="liten dampad" style="margin:6px 0 0">Teamen följer med till enheten. Ange behovet per team under fliken Team efteråt.</p>` : ""}
+        ${medTeam ? `<p class="liten dampad" style="margin:6px 0 0">Teamen blir områden i ett gemensamt schema. Behovet delas mellan dem som ett förslag, och det går att ändra under fliken Team.</p>` : ""}
         <p class="liten dampad" style="margin:6px 0 0">Kolumnen ”Från inklistringen” visas bara här och sparas inte. Enheten får id-koderna. Spara gärna en egen nyckel.</p>`;
     }
     if (b.behov) {
@@ -294,9 +370,10 @@ const GUIDE = (() => {
       const dk = p.personer.filter(x => x.arbetar !== "natt"), n = p.personer.filter(x => x.arbetar === "natt");
       g.antalDag = dk.length; g.antalNatt = n.length;
       // team från rubrikrader i listan ("team 1" …): id T1, T2 … och personernas hemteam
-      g.team = (p.team || []).map((n, i) => ({ id: `T${i + 1}`, namn: n, behov: {} }));
-      const tid = Object.fromEntries(g.team.map(t => [t.namn, t.id]));
-      g.personer = p.personer.map(x => ({ id: x.id, grad: x.grad, arbetar: x.arbetar, helg: x.helg, ...(x.team ? { team: tid[x.team] } : {}) }));  // utan det inklistrade
+      // team från rubrikrader i listan ("team 1" …) blir områden i ett gemensamt schema, med hemområde per person
+      const T = p.team || [];
+      if (T.length) { g.omraden = "team"; g.omradesLista = T.map((n, i) => ({ namn: n, farg: OMRADESFARGER[i % OMRADESFARGER.length] })); }
+      g.personer = p.personer.map(x => ({ id: x.id, grad: x.grad, arbetar: x.arbetar, helg: x.helg, ...(x.team && T.includes(x.team) ? { omrade: T.indexOf(x.team) } : {}) }));  // utan det inklistrade
       const grader = new Set(g.personer.map(x => x.grad));
       if (grader.size === 1) { g.gradSatt = "samma"; g.grad = g.personer[0].grad; } else g.gradSatt = "olika";
       g.harUndantag = g.personer.some(x => x.helg !== "2/4" || (x.arbetar !== "natt" && x.arbetar !== "morgon,kvall"));
@@ -324,10 +401,19 @@ const GUIDE = (() => {
     g.behovDag = null;
   }
 
-  function satt(g, falt, varde) { g[falt] = falt === "harUndantag" ? varde === "ja" : varde; }
+  function satt(g, falt, varde) {
+    g[falt] = falt === "harUndantag" ? varde === "ja" : varde;
+    if (falt === "omraden" && harOmraden(g)) while (g.omradesLista.length < 2) laggOmrade(g);
+  }
 
   // Kontroll innan nästa fråga; returnerar ett felmeddelande eller null.
   function kontrollera(g) {
+    if (g.steg === 1 && harOmraden(g)) {
+      const namn = omradenMedNamn(g).map(o => o.namn.trim().toLowerCase());
+      if (namn.length < 2) return "Skriv namn på minst två områden, eller välj Nej.";
+      if (new Set(namn).size < namn.length) return "Två områden har samma namn.";
+      if (g.omraden === "egna" && !String(g.namn || "").trim()) return "Skriv gruppens namn. Områdena samlas under det.";
+    }
     if (g.steg === 2 && !g.antalDag && !g.antalNatt) return "Lägg till minst en medarbetare.";
     if (g.steg === 3) {
       const gr = Object.values(grader(g));
@@ -344,6 +430,6 @@ const GUIDE = (() => {
     return null;
   }
 
-  return { HUS, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
+  return { HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
 })();
 if (typeof module !== "undefined") module.exports = GUIDE;

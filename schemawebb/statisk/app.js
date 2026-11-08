@@ -158,7 +158,7 @@ async function visaInloggning(s) {
 async function visaEnheter() {
   st.vy = "hem"; st.enhet = null; st.korning = null;
   if (!st.guide) st.nyOrg = null;  // gruppen gäller bara den enhet som skapas i guiden
-  if (st.guide) { if (!$(".guide")) { ritaMeny(); sokvag([["Enheter", "#/"], ["Ny enhet"]]); } vy().innerHTML = GUIDE.html(st.guide); return; }
+  if (st.guide) { if (!$(".guide")) { ritaMeny(); sokvag([["Enheter", "#/"], ["Ny enhet"]]); } st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; vy().innerHTML = GUIDE.html(st.guide); return; }
   try { st.enhetLista = await api("GET", "enheter"); } catch { /* behåll */ }
   ritaMeny();
   sokvag([["Enheter"]]);
@@ -175,14 +175,15 @@ async function visaEnheter() {
     <section class="org-trad">${ORG.trad(st.org, enheter, { stangda: st.orgStangda || new Set(),
       nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}" title="Ny enhet i ${esc(ORG.sokvag(st.org, id))}">+ Ny enhet</button>`,
       ritaEnhet: e => `
-      <div class="kort enhet" style="--ef:${ORG.farg(st.org, e.org)}">
-        <a class="namn" href="#/e/${e.id}/schema">${ORG.ikon(st.org, e.org, GUIDE.HUS)}${esc(e.namn)}</a>
+      <div class="kort enhet" style="--ef:${ORG.enhetsfarg(st.org, e)}">
+        <a class="namn" href="#/e/${e.id}/schema">${ORG.ikon(st.org, e, GUIDE.HUS)}${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
         <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/schema">${IKON.schema} Schema</a><a class="knapp liten" href="#/e/${e.id}/oversikt">Översikt</a>
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
           <button class="liten" data-g="spara-fil" data-id="${e.id}" title="Enheten med alla inställningar och scheman, att öppna i webben eller i telefonen">Spara som fil</button>
           <button class="liten fara" data-g="ta-bort-enhet" data-id="${e.id}" data-namn="${esc(e.namn)}">Ta bort</button></div>
         <label class="org-plats">Plats <select data-flytta="${e.id}" aria-label="Plats i organisationen för ${esc(e.namn)}">${ORG.alternativ(st.org, e.org)}</select></label>
+        ${fargVal(e)}
       </div>` })}</section>
     ${enheter.length ? "" : `<div class="kort tom">Inga enheter än. Tryck <b>+ Ny enhet</b> vid en verksamhet, eller börja från ett exempel nedan.</div>`}
     <section class="kort" id="exempel">
@@ -287,7 +288,7 @@ function ritaFlik() {
       const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
       return `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Medarbetare). Personalen är gemensam – där ett team har för få lånas personal in från ett team som har fler. Enhetens behov blir summan av teamens. Se docs/team.md.</p>
         ${T.map((t, n) => { const b = TEAM.perDag(t.behov), ant = i.personal.filter(q => q.team === t.id).length;
-          return `<div class="kort" style="box-shadow:none;margin:10px 0"><div class="rubrikrad"><input data-s="team.${n}.namn" value="${esc(t.namn || "")}" placeholder="Teamets namn" style="font-weight:700;max-width:260px" aria-label="Teamets namn">
+          return `<div class="kort" style="box-shadow:none;margin:10px 0"><div class="rubrikrad"><input type="color" class="org-farg" data-s="team.${n}.farg" value="${TEAM.farg(T, t.id)}" aria-label="Färg för ${esc(t.namn || t.id)}" title="Färg"><input data-s="team.${n}.namn" value="${esc(t.namn || "")}" placeholder="Teamets namn" style="font-weight:700;max-width:260px" aria-label="Teamets namn">
             <span class="dampad liten">${ant} medarbetare</span><button class="liten fara" data-g="ta-bort-team" data-n="${n}">Ta bort</button></div>
             <div class="rull"><table class="form"><thead><tr><th></th>${DL.map(([, x]) => `<th>${x}</th>`).join("")}</tr></thead><tbody>
             ${[["vardag", "Vardag (mån–fre)", 0], ["helg", "Helg (lör–sön)", 5]].map(([k, txt, di]) => `<tr><th>${txt}</th>${DL.map(([d]) => `<td><input type="number" min="0" inputmode="numeric" data-s="team.${n}.behov.${k}.${d}" data-t="heltal" value="${b[di][d] || ""}" placeholder="0" style="width:74px" aria-label="${esc(t.namn)} ${txt} ${d}"></td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`; }).join("")}
@@ -927,7 +928,8 @@ function regelInput(el) {
 }
 
 // ---------------------------------------------------------------- klick
-// startguiden (guide.js)
+// startguiden (guide.js). Platsen i organisationen: vald i guiden, annars gruppen där man tryckte + Ny enhet.
+const platsFor = g => (g.plats !== undefined ? g.plats : st.nyOrg) || null;
 document.addEventListener("click", async e => {
   const el = e.target.closest("[data-guide]"); if (!el) return;
   const g = st.guide, val = el.dataset.guide;
@@ -949,8 +951,21 @@ document.addEventListener("click", async e => {
       case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaEnheter(); }
       case "satt": GUIDE.satt(g, el.dataset.falt, el.dataset.varde); return visaEnheter();
       case "minsta": { const r = GUIDE.berakna(g); g.antalDag = Math.max(g.antalDag, r.minDag); g.antalNatt = Math.max(g.antalNatt, r.minNatt); return visaEnheter(); }
+      case "omrade-ny": GUIDE.laggOmrade(g); return visaEnheter();
+      case "omrade-bort": GUIDE.taBortOmrade(g, +el.dataset.i); return visaEnheter();
+      case "skapa-omraden": {
+        // gruppen i organisationen (eller den som redan finns med samma namn) och en enhet per område
+        if (!st.org) st.org = ORG.kopia((await api("GET", "organisation")).noder);
+        const { noder, id: gid } = ORG.grupp(st.org, g.namn, platsFor(g));
+        if (noder !== st.org) { await api("PUT", "organisation", { noder }); st.org = noder; }
+        const E = GUIDE.omradesEnheter(g);
+        for (const x of E) await api("POST", "enheter", { namn: x.namn, indata: x.indata, org: gid, farg: x.farg });
+        st.guide = null; st.nyOrg = null; st.enhetLista = null;
+        meddela(`${E.length} områden är skapade under ${ORG.sokvag(st.org, gid)}. Kontrollera personal och behov i varje område och lägg sedan schemat.`);
+        return visaEnheter();
+      }
       case "skapa": case "skapa-ai": case "skapa-manuellt": {
-        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: GUIDE.indata(g), org: st.nyOrg || null });
+        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: GUIDE.indata(g), org: platsFor(g) });
         st.guide = null; st.enhet = null; st.enhetLista = null;
         if (val === "skapa-ai") { await laddaEnhet(id); await laggSchema(); }
         else if (val === "skapa-manuellt") { const k = await api("POST", `enheter/${id}/manuell`); st.startaRedigering = true; location.hash = `#/e/${id}/schema/${k.id}`; }
@@ -992,7 +1007,7 @@ document.addEventListener("click", async e => {
       case "spara-fil": return sparaEnhetsfil(el.dataset.id);
       case "kopiera": {
         const e2 = await api("GET", "enheter/" + el.dataset.id);
-        await api("POST", "enheter", { namn: e2.namn + " (kopia)", indata: e2.indata, org: e2.org || null });
+        await api("POST", "enheter", { namn: e2.namn + " (kopia)", indata: e2.indata, org: e2.org || null, farg: e2.farg || null });
         meddela("Kopia skapad. Pröva ändringar i den och jämför sedan körningarna."); visaEnheter(); break;
       }
       case "ta-bort-enhet":
@@ -1010,7 +1025,7 @@ document.addEventListener("click", async e => {
       case "lagg-schema": await laggSchema(); break;
       case "ny-team": {
         const T = st.indata.team || (st.indata.team = []);
-        T.push({ id: TEAM.nyttId(T), namn: `Team ${T.length + 1}`, behov: { vardag: { morgon: 0, kvall: 0, natt: 0 }, helg: { morgon: 0, kvall: 0, natt: 0 } } });
+        T.push({ id: TEAM.nyttId(T), namn: `Team ${T.length + 1}`, farg: TEAM.nyFarg(T), behov: { vardag: { morgon: 0, kvall: 0, natt: 0 }, helg: { morgon: 0, kvall: 0, natt: 0 } } });
         st.indata.behov = TEAM.summaBehov(T); markeraAndrad(true); break;
       }
       case "ta-bort-team": {
@@ -1105,6 +1120,13 @@ function startaPollning(steg) {
 function stoppaPollning() { clearTimeout(st.pollning); st.pollning = null; }
 
 // ---------------------------------------------------------------- organisationsstruktur (organisation.js)
+// Enhetens färg: egen eller verksamhetens (organisation.js).
+const fargVal = e => `<label class="org-plats">Färg <input type="color" class="org-farg" data-enhetfarg="${e.id}" value="${ORG.enhetsfarg(st.org, e)}" aria-label="Färg för ${esc(e.namn)}">${e.farg ? `<button class="lank liten" data-enhetfargarv="${e.id}" title="Använd verksamhetens färg">↺ verksamhetens</button>` : ""}</label>`;
+async function fargaEnhet(id, farg) {
+  try { await api("POST", `enheter/${id}/farg`, { farg }); visaEnheter(); } catch (err) { meddela(err.message); }
+}
+document.addEventListener("change", e => { const id = e.target.dataset?.enhetfarg; if (id) fargaEnhet(id, e.target.value); });
+document.addEventListener("click", e => { const el = e.target.closest("[data-enhetfargarv]"); if (el) { e.preventDefault(); fargaEnhet(el.dataset.enhetfargarv, null); } });
 async function sparaOrg(noder) {
   try { await api("PUT", "organisation", { noder }); st.org = noder; visaEnheter(); }
   catch (err) { meddela(err.message); }

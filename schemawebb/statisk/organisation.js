@@ -35,8 +35,10 @@ function sattFarg(noder, id, f) {
   if (f && !giltigFarg(f)) throw new Error("Ogiltig färg.");
   return noder.map(x => x.id === id ? { ...x, farg: f || null } : x);
 }
-// Husmärket för en enhet, i gruppens färg.
-const ikon = (noder, orgId, hus = "🏠") => `<span class="enhet-ikon" style="--ef:${farg(noder, orgId)}" aria-hidden="true">${hus}</span>`;
+// Enhetens färg: egen om den har en, annars verksamhetens.
+const enhetsfarg = (noder, e) => (e && giltigFarg(e.farg) ? e.farg : farg(noder, e && e.org));
+// Husmärket för en enhet. Andra argumentet är enheten ({org, farg}) eller bara verksamhetens id.
+const ikon = (noder, e, hus = "🏠") => `<span class="enhet-ikon" style="--ef:${typeof e === "object" && e ? enhetsfarg(noder, e) : farg(noder, e)}" aria-hidden="true">${hus}</span>`;
 
 const kopia = n => (n && n.length ? n : STANDARD).map(x => ({ ...x }));
 const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || null));
@@ -63,6 +65,14 @@ function lagg(noder, namn, forelder) {
   if (forelder && !finns(noder, forelder)) throw new Error("Den överordnade gruppen finns inte.");
   if (barn(noder, forelder).some(x => x.namn.toLowerCase() === namn.toLowerCase())) throw new Error(`Det finns redan en grupp som heter ${namn} här.`);
   return [...noder, { id: nyttId(noder, namn), namn, forelder: forelder || null }];
+}
+// Gruppen med det namnet under forelder; skapas om den inte finns. Returnerar { noder, id }.
+function grupp(noder, namn, forelder) {
+  namn = String(namn || "").trim();
+  const finnsRedan = barn(noder, forelder || null).find(x => x.namn.toLowerCase() === namn.toLowerCase());
+  if (finnsRedan) return { noder, id: finnsRedan.id };
+  const ny = lagg(noder, namn, forelder || null);
+  return { noder: ny, id: ny[ny.length - 1].id };
 }
 function bytNamn(noder, id, namn) {
   namn = String(namn || "").trim();
@@ -115,6 +125,6 @@ function redigera(noder) {
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { STANDARD, PALETT, farg, sattFarg, ikon, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;

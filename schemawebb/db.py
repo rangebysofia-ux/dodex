@@ -81,8 +81,11 @@ def anslut(fil=None):
         _conn.execute("pragma journal_mode = wal")
         _conn.executescript(SCHEMA)
         # enheten placeras i organisationsstrukturen (kolumnen läggs till i äldre databaser)
-        if "org" not in [r[1] for r in _conn.execute("pragma table_info(enheter)")]:
+        kolumner = [r[1] for r in _conn.execute("pragma table_info(enheter)")]
+        if "org" not in kolumner:
             _conn.execute("alter table enheter add column org text")
+        if "farg" not in kolumner:  # enhetens egen färg; saknas den gäller verksamhetens
+            _conn.execute("alter table enheter add column farg text")
         # körningar som var igång när servern stängdes blir aldrig klara
         _conn.execute("update korningar set status = 'fel', fel = 'Avbröts när servern startades om. Kör igen.' "
                       "where status in ('i kö', 'kör')")
@@ -122,7 +125,7 @@ def hamta(sql, *args):
 def enheter():
     with _las:
         rader = _db().execute(
-            "select e.id, e.namn, e.andrad, e.org, json_array_length(json_extract(e.indata, '$.personal')) as personer, "
+            "select e.id, e.namn, e.andrad, e.org, e.farg, json_array_length(json_extract(e.indata, '$.personal')) as personer, "
             "(select count(*) from korningar k where k.enhet_id = e.id) as korningar "
             "from enheter e order by e.andrad desc").fetchall()
     return [dict(r) for r in rader]
@@ -133,10 +136,10 @@ def enhet(eid):
     return r[0] if r else None
 
 
-def skapa_enhet(namn, indata, org=None):
+def skapa_enhet(namn, indata, org=None, farg=None):
     nu = time.time()
-    return kor("insert into enheter (namn, indata, skapad, andrad, org) values (?, ?, ?, ?, ?)",
-               namn, json.dumps(indata, ensure_ascii=False), nu, nu, org or None).lastrowid
+    return kor("insert into enheter (namn, indata, skapad, andrad, org, farg) values (?, ?, ?, ?, ?, ?)",
+               namn, json.dumps(indata, ensure_ascii=False), nu, nu, org or None, farg or None).lastrowid
 
 
 def spara_enhet(eid, namn, indata, org=...):
@@ -150,6 +153,10 @@ def spara_enhet(eid, namn, indata, org=...):
 
 def flytta_enhet(eid, org):
     return kor("update enheter set org = ? where id = ?", org or None, eid).rowcount
+
+
+def farga_enhet(eid, farg):
+    return kor("update enheter set farg = ? where id = ?", farg or None, eid).rowcount
 
 
 def flytta_alla(fran, till):

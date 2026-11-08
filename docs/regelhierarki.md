@@ -70,6 +70,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 30. **Team med eget behov och gemensam personal.** En arbetsgrupp kan ha flera team. Varje team har ett eget behov, och varje medarbetare ett hemteam. Personalen är gemensam: där ett team har för få lånas personal in från ett team som har fler. Enhetens behov är summan av teamens. Behovet (vakanser) går först. Därefter, direkt efter aktiviteter och vila mellan nattblock, kommer det mjuka målet att varje team täcks av sin egen personal (`hemteam`). Lån syns i schemat (→T2) och i teamkortet. Se `docs/team.md`. Beslutat av användaren 2026-11-08.
 
+31. **Områden direkt när en enhet skapas.** Guiden frågar om enheten har områden, avdelningar eller team, med namn och färg. Båda sätten ska gå: *ett gemensamt schema* där områdena är team (beslut 30), eller *eget schema per område* där varje område blir en egen enhet under en grupp i organisationen. Personal och behov delas jämnt som ett förslag. Färger är bara för visning och påverkar inte schemaläggningen. Se `docs/team.md`. Beslutat av användaren 2026-11-08.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

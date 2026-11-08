@@ -347,6 +347,7 @@ class EnhetIn(BaseModel):
     namn: str
     indata: dict
     org: Optional[str] = None  # plats i organisationsstrukturen; utelämnad = behåll vid ändring
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")  # enhetens egen färg, annars verksamhetens
 
 
 @app.get("/api/enheter", dependencies=[Depends(inloggad)])
@@ -356,7 +357,7 @@ def lista_enheter():
 
 @app.post("/api/enheter", dependencies=[Depends(inloggad)], status_code=201)
 def ny_enhet(e: EnhetIn):
-    return {"id": db.skapa_enhet(e.namn.strip() or "Ny enhet", e.indata, e.org)}
+    return {"id": db.skapa_enhet(e.namn.strip() or "Ny enhet", e.indata, e.org, e.farg)}
 
 
 @app.get("/api/enheter/{eid}", dependencies=[Depends(inloggad)])
@@ -425,6 +426,17 @@ class FlyttaIn(BaseModel):
 @app.post("/api/enheter/{eid}/flytta", dependencies=[Depends(inloggad)])
 def flytta_enhet(eid: int, f: FlyttaIn):
     if not db.flytta_enhet(eid, f.org):
+        raise HTTPException(404, "Enheten finns inte.")
+    return {"ok": True}
+
+
+class FargIn(BaseModel):
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")  # None = verksamhetens färg
+
+
+@app.post("/api/enheter/{eid}/farg", dependencies=[Depends(inloggad)])
+def farga_enhet(eid: int, f: FargIn):
+    if not db.farga_enhet(eid, f.farg):
         raise HTTPException(404, "Enheten finns inte.")
     return {"ok": True}
 

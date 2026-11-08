@@ -115,6 +115,7 @@ class Team(Strikt):
     """Ett team i arbetsgruppen med eget behov. Personalen är gemensam men har ett hemteam (se docs/team.md)."""
     id: str = Field(min_length=1, max_length=40)
     namn: str = Field(default="", max_length=80)
+    farg: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")  # bara för visning
     behov: dict[str, dict[str, int]] = Field(default_factory=dict)
 
     @field_validator("behov")
