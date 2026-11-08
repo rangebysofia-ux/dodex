@@ -53,6 +53,18 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 - [ ] **20. Resurspass jämnt fördelade.** Uppföljning per veckodag och mellan dag och kväll, med varning när resurstiden samlas på samma dagar eller på en dygnsdel. Mjukt mål i motorn om det behövs utöver jämn bemanning (beslut 13).
 - [ ] **21. Ledigheter i resurstiden.** Visa per dag var det finns resurs, så att ledigheter (semester, kompledighet, utbildning) kan planeras där utan vikarie, och följ upp planerat mot utfall.
 
+## Fas 8 – Från grundschema till drift
+
+Grundschemat (det som läggs, jämförs och justeras) och den löpande planeringen hålls isär. När ett schema är godkänt och aktiverat blir det underlaget för planeringen, där frånvaro och vikarier hanteras per datum.
+
+- [ ] **22. Godkänt och aktiverat schema.** Ett valt schema godkänns och aktiveras från ett datum. Det får en egen färg och låses: ändringar görs sedan som avvikelser i planeringen, inte i grundschemat. Ett nytt grundschema kan tas fram och aktiveras senare utan att det gamla försvinner.
+- [ ] **23. Planeringsdelen.** Det aktiverade schemat rullas ut på riktiga datum (kalender). Där registreras frånvaro per pass (sjuk, semester, vård av barn, utbildning, annan ledighet), och då blir passet vakant. Resurspass och resurstid visas, så att frånvaro kan täckas inom gruppen först (kopplas till punkt 21).
+- [ ] **24. Boka vikarier.** Vakanta pass i planeringen kan bokas med vikarie ur en vikarielista (id-koder, tillgänglighet), och reglerna för vila gäller också vikarien. Bokade, obokade och övertid syns per dag.
+- [ ] **25. Faktiska löner och kostnader.** Lön per person (månadslön eller timlön) i stället för en schablon, plus OB, övertid och vikariekostnad. Kostnaden räknas för grundschemat och för planeringen.
+- [ ] **26. Uppföljning.** Planerat mot utfall per vecka och månad: frånvaro, vikariebehov, övertid, resurstid som användes och kostnad mot budget. Underlag för balansmallen och för Power BI-export.
+
+Att tänka på: lön och frånvaro (särskilt sjukfrånvaro) är känsliga personuppgifter. De hör hemma i webbtjänsten med inloggning, inte i lättversionen, och kräver att kommunen godkänner var data lagras (personuppgiftsbiträdesavtal). Lönesystemet (till exempel Heroma, Personec eller Visma) är fortfarande grunden för lönen; DODEX planerar och följer upp och kan exportera, men ersätter inte lönesystemet.
+
 ## Senare
 
 Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr` och OB enligt AB 25 § 21 (docs/ob.md); löneskillnader per person och lokala OB-nivåer återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*
