@@ -17,8 +17,10 @@ const GUIDE = (() => {
   const SISTA = FRAGOR.length;
 
   function ny() {
-    return { steg: 1, namn: "", antalDag: 8, antalNatt: 2, gradSatt: "samma", grad: 100, budget: "", personer: [], harUndantag: false,
-      behov: { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 2, natt: 1 } }, behovDag: null,
+    // Inget är förifyllt (användarens önskemål 2026-11-08): antal, sysselsättning och behov fylls i av användaren.
+    // Passtiderna och perioden är regelns standardvärden och syns i sina steg.
+    return { steg: 1, namn: "", antalDag: 0, antalNatt: 0, gradSatt: "samma", grad: "", budget: "", personer: [], harUndantag: false,
+      behov: { vardag: { morgon: 0, kvall: 0, natt: 0 }, helg: { morgon: 0, kvall: 0, natt: 0 } }, behovDag: null,
       tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "06:45" }, veckor: 4, startdatum: "", timkostnad: "" };
   }
 
@@ -119,7 +121,7 @@ const GUIDE = (() => {
     const tips = (t, varn = false) => `<div class="guidetips${varn ? " varn" : ""}">${varn ? "⚠" : "💡"} ${t}</div>`;
     const fraga = (t, under = "") => `<p class="guidefraga-nr">Fråga ${g.steg} av ${SISTA}</p><h2 class="guidefraga">${t}</h2>${under ? `<p class="dampad">${under}</p>` : ""}`;
     const valknapp = (falt, varde, text, aktiv) => `<button class="valknapp" data-guide="satt" data-falt="${falt}" data-varde="${varde}" aria-pressed="${aktiv}">${text}</button>`;
-    const tal = (id, falt, varde, etikett, max = 80) => `<div><label for="${id}">${etikett}</label><input id="${id}" type="number" min="0" max="${max}" inputmode="numeric" data-gf="${falt}" value="${varde}"></div>`;
+    const tal = (id, falt, varde, etikett, max = 80) => `<div><label for="${id}">${etikett}</label><input id="${id}" type="number" min="0" max="${max}" inputmode="numeric" data-gf="${falt}" value="${varde || ""}" placeholder="0"></div>`;
     let h = "";
     if (g.steg === 0) return klistraHtml(g);
     switch (g.steg) {
@@ -130,9 +132,9 @@ const GUIDE = (() => {
         tips(`Ni är ${g.antalDag + g.antalNatt} totalt. De får id-koder (A1, A2 … och N1, N2 …) i stället för namn.`); break;
       case 3: h = fraga("Vilken sysselsättningsgrad har de?") +
         `<div class="valknappar">${valknapp("gradSatt", "samma", "Samma för alla", g.gradSatt === "samma")}${valknapp("gradSatt", "olika", "Olika per person", g.gradSatt === "olika")}${valknapp("gradSatt", "budget", "Fördela en budget i timmar", g.gradSatt === "budget")}</div>` +
-        (g.gradSatt === "samma" ? `<div style="max-width:220px;margin-top:12px"><label for="g-grad">Sysselsättningsgrad, %</label><input id="g-grad" type="number" min="10" max="100" step="5" data-gf="grad" value="${g.grad}"></div>` : "") +
+        (g.gradSatt === "samma" ? `<div style="max-width:220px;margin-top:12px"><label for="g-grad">Sysselsättningsgrad, %</label><input id="g-grad" type="number" min="10" max="100" step="5" data-gf="grad" value="${g.grad || ""}" placeholder="till exempel 100"></div>` : "") +
         (g.gradSatt === "budget" ? `<div style="max-width:260px;margin-top:12px"><label for="g-budget">Timmar per vecka i budget</label><input id="g-budget" type="number" min="0" step="0.5" inputmode="decimal" data-gf="budget" value="${esc(g.budget)}"></div>` : "") +
-        (g.gradSatt === "olika" ? `<div class="rull" style="margin-top:12px"><table class="guidetabell"><thead><tr><th>Medarbetare</th><th>Grad %</th></tr></thead><tbody>${g.personer.map((p, i) => `<tr><th>${esc(p.id)}</th><td><input type="number" min="10" max="100" step="5" data-gp="${i}.grad" value="${p.grad}" aria-label="Grad för ${esc(p.id)}"></td></tr>`).join("")}</tbody></table></div>` : "") +
+        (g.gradSatt === "olika" ? `<div class="rull" style="margin-top:12px"><table class="guidetabell"><thead><tr><th>Medarbetare</th><th>Grad %</th></tr></thead><tbody>${g.personer.map((p, i) => `<tr><th>${esc(p.id)}</th><td><input type="number" min="10" max="100" step="5" data-gp="${i}.grad" value="${p.grad || ""}" placeholder="%" aria-label="Grad för ${esc(p.id)}"></td></tr>`).join("")}</tbody></table></div>` : "") +
         tips(`Kontrakterad tid blir <b>${sv(k)} h per vecka</b> (${sv(k / HELTID, 2)} årsarbetare)${budget && g.gradSatt === "budget" ? ` av budgeten ${sv(budget)} h` : ""}.`); break;
       case 4: h = fraga("Finns det undantag?", "Till exempel någon som bara arbetar kväll, bara natt, eller inte varannan helg.") +
         `<div class="valknappar">${valknapp("harUndantag", "nej", "Nej, alla arbetar som vanligt", !g.harUndantag)}${valknapp("harUndantag", "ja", "Ja, några har undantag", g.harUndantag)}</div>` +
@@ -143,10 +145,10 @@ const GUIDE = (() => {
       case 5: h = fraga("Hur ser behovet ut i veckan?", "Hur många behöver vara i tjänst per pass?") +
         `<div class="rull"><table class="guidetabell"><thead><tr><th></th><th>Dag</th><th>Kväll</th><th>Natt</th></tr></thead><tbody>
         ${(g.behovDag ? VECKODAGAR.map(d => [d, d[0].toUpperCase() + d.slice(1), g.behovDag[d]]) : [["vardag", "Vardag (mån–fre)", g.behov.vardag], ["helg", "Helg (lör–sön)", g.behov.helg]])
-          .map(([d, t, b]) => `<tr><th>${t}</th>${["morgon", "kvall", "natt"].map(x => `<td><input type="number" min="0" max="30" inputmode="numeric" data-gb="${d}.${x}" value="${b[x]}" aria-label="${t} ${x}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+          .map(([d, t, b]) => `<tr><th>${t}</th>${["morgon", "kvall", "natt"].map(x => `<td><input type="number" min="0" max="30" inputmode="numeric" data-gb="${d}.${x}" value="${b[x] || ""}" placeholder="0" aria-label="${t} ${x}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
         (g.kurvMall ? `<details open style="margin-top:12px"><summary>Bemanningskurva från mallen</summary><div class="grafyta" style="margin-top:8px">${kurvaSvg(g.kurvMall)}</div></details>` : "") +
         (g.behovDag ? `<p class="liten dampad" style="margin:8px 0 0">Behovet skiljer sig mellan veckodagarna och läggs per dag. <button class="lank" data-guide="behov-forenkla">Förenkla till vardag och helg</button></p>` : "") +
-        tips(`Det blir ${r.dagPass} dag- och kvällspass och ${r.natter} nätter per vecka, ungefär <b>${sv(r.behovTimmar)} h per vecka</b>. För helgerna behövs minst <b>${r.minDag} med dag och kväll</b> och <b>${r.minNatt} med natt</b>${r.fredagStyr ? " (fredagskvällen styr: den som arbetar fredag kväll arbetar helgen)" : ""}.`) +
+        (!r.dagPass && !r.natter ? tips("Skriv hur många som behöver vara i tjänst på dag, kväll och natt.") : tips(`Det blir ${r.dagPass} dag- och kvällspass och ${r.natter} nätter per vecka, ungefär <b>${sv(r.behovTimmar)} h per vecka</b>. För helgerna behövs minst <b>${r.minDag} med dag och kväll</b> och <b>${r.minNatt} med natt</b>${r.fredagStyr ? " (fredagskvällen styr: den som arbetar fredag kväll arbetar helgen)" : ""}.`)) +
         (g.antalDag < r.minDag || g.antalNatt < r.minNatt ? tips(`Ni är ${g.antalDag} med dag och kväll och ${g.antalNatt} med natt. Färre än minsta antal ger vakanser på helgerna. <button class="liten" data-guide="minsta">Ändra till ${r.minDag} och ${r.minNatt}</button>`, true) : "") +
         (k < r.behovTimmar - 0.5 ? tips(`Kontrakterad tid (${sv(k)} h) är mindre än behovet (${sv(r.behovTimmar)} h). Räkna med vakanser.`, true) : ""); break;
       case 6: h = fraga("Vilka tider gäller för passen?") +
@@ -317,8 +319,14 @@ const GUIDE = (() => {
     if (g.steg === 2 && !g.antalDag && !g.antalNatt) return "Lägg till minst en medarbetare.";
     if (g.steg === 3) {
       const gr = Object.values(grader(g));
+      if (g.gradSatt === "samma" && !Number(g.grad)) return "Ange sysselsättningsgraden.";
+      if (g.gradSatt === "olika" && gr.some(x => !Number(x))) return "Ange sysselsättningsgraden för alla.";
       if (g.gradSatt === "budget" && !Number(g.budget)) return "Ange budgeten i timmar per vecka.";
       if (gr.some(x => x < 10 || x > 100)) return "Sysselsättningsgraden ska vara 10–100 %.";
+    }
+    if (g.steg === 5) {
+      const B = g.behovDag ? Object.values(g.behovDag) : [g.behov.vardag, g.behov.helg];
+      if (!B.some(x => x.morgon || x.kvall || x.natt)) return "Ange behovet – hur många som behöver vara i tjänst.";
     }
     if (g.steg === 7 && g.startdatum && new Date(g.startdatum + "T00:00:00Z").getUTCDay() !== 1) return "Startdatum ska vara en måndag.";
     return null;

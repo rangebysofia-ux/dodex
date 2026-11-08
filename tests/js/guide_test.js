@@ -1,6 +1,7 @@
 // Frågeguiden: beräkningar och indata (guide.js). tests/test_guide.py kontrollerar indata mot modell.py.
 const G = require("../../schemawebb/statisk/guide.js");
-const g = G.ny(); g.namn = "Avd T"; g.behov.helg.kvall = 3; g.antalDag = 10; g.antalNatt = 2; g.startdatum = "2026-12-07"; g.timkostnad = "320";
+const g = G.ny(); g.namn = "Avd T"; g.grad = 100;
+g.behov = { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 3, natt: 1 } }; g.antalDag = 10; g.antalNatt = 2; g.startdatum = "2026-12-07"; g.timkostnad = "320";
 const r = G.berakna(g);
 G.satt(g, "gradSatt", "budget"); g.budget = "300";
 const budget = { grader: G.grader(g), indata: G.indata(g) };

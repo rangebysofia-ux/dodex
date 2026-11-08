@@ -941,7 +941,11 @@ document.addEventListener("click", async e => {
     }
   } catch (err) { meddela(err.message); }
 });
-document.addEventListener("change", e => { if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target)) visaEnheter().then(() => document.getElementById(e.target.id)?.focus()); });
+document.addEventListener("change", e => {
+  // rita om efter en kort stund, så att ett tryck på Nästa direkt efter att man har skrivit hinner gå fram
+  if (st.guide && e.target.closest(".guide") && GUIDE.las(st.guide, e.target))
+    setTimeout(() => { if (st.guide) visaEnheter().then(() => { const x = document.getElementById(e.target.id); if (x && document.activeElement === document.body) x.focus(); }); }, 150);
+});
 document.addEventListener("input", e => { if (st.guide && e.target.closest(".guide")) GUIDE.las(st.guide, e.target); });
 
 document.addEventListener("click", async e => {

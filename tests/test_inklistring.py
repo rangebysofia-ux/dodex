@@ -104,7 +104,7 @@ def test_bemanningsmall_med_block_per_veckodag(tmp_path):
     """Verksamhetens mall: ett block per veckodag med Från, Till, Rast, Arbetstid och antal per pass,
     tomma rader (00:00) och summarader. Grupper som Avdelningar och Löpare räknas ihop."""
     mall = (ROT / "tests" / "data" / "bemanningsmall_veckodagar.txt").read_text(encoding="utf-8")
-    d = tolka(tmp_path, behov=mall)
+    d = tolka(tmp_path, personal="P1 100%\nP2 75%", behov=mall)
     b = d["behov"]
     assert b["behov"]["mån"] == {"morgon": 14, "kvall": 12, "natt": 0}
     assert b["behov"]["fre"] == {"morgon": 14, "kvall": 12, "natt": 0}
