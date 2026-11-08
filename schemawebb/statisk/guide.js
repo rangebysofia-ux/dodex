@@ -213,6 +213,7 @@ const GUIDE = (() => {
     if (b.behov) {
       h += `<h3 style="margin-top:14px">Behov per dag (dag/kväll/natt)</h3><div class="rull"><table class="guidetabell"><thead><tr><th></th>${VECKODAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
         ${[["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]].map(([k, t]) => `<tr><th>${t}</th>${VECKODAGAR.map(d => `<td>${b.behov[d][k]}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+        (b.grupper && b.grupper.length ? `<p class="liten dampad" style="margin:6px 0 0">Räknat med: ${b.grupper.map(esc).join(", ")}.</p>` : "") +
         (b.tider && Object.keys(b.tider).length ? `<p class="liten dampad" style="margin:6px 0 0">Tider från passen: ${[b.tider.morgon && `dag från ${b.tider.morgon}`, b.tider.kvall && `kväll till ${b.tider.kvall}`, b.tider.nattStart && `natt ${b.tider.nattStart}–${b.tider.nattSlut}`].filter(Boolean).join(", ")}.</p>` : "");
     }
     const varn = [...p.varningar, ...b.varningar];
@@ -229,7 +230,7 @@ const GUIDE = (() => {
           <p class="liten dampad">Grad som 75 %, 0,75 eller timmar per vecka. Arbetar: dag/kväll, bara dag, bara kväll eller natt. Helger: varannan (standard), var fjärde, alla eller inga.</p></div>
         <div><label for="kl-behov">Behov – hur många i tjänst</label>
           <textarea id="kl-behov" data-gk="behov" rows="8" placeholder="&#9;Dag&#9;Kväll&#9;Natt&#10;Vardag&#9;3&#9;2&#9;1&#10;Helg&#9;2&#9;2&#9;1">${esc(g.klistra.behov)}</textarea>
-          <p class="liten dampad">En rad per vardag/helg eller veckodag med antal för dag, kväll och natt. Det går också med pass och tider, en kolumn per veckodag: 07:00-15:30 &nbsp;2 2 2 2 2 2 2.</p></div>
+          <p class="liten dampad">En rad per vardag/helg eller veckodag med antal för dag, kväll och natt. Det går också med pass och tider: en kolumn per veckodag (07:00-15:30 &nbsp;2 2 2 2 2 2 2), eller bemanningsmallen med ett block per veckodag (Från, Till, Rast, Arbetstid, antal).</p></div>
       </div>
       <div id="klistra-forhand" class="klistra-forhand">${klistraForhand(g)}</div>
       <div class="guidenav"><button data-guide="avbryt">Avbryt</button><button class="primar" data-guide="anvand-klistrat">Använd och fortsätt ›</button></div></section>`;

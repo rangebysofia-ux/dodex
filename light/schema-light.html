@@ -3437,23 +3437,44 @@ function pass(cell) {
   return { start: s, slut: e, del: e <= s || s >= 20 * 60 ? "natt" : s < 11 * 60 ? "morgon" : "kvall" };
 }
 const arTal = c => /^\d+([.,]\d+)?$/.test(String(c).trim());
+const arKlock = c => /^\d{1,2}[:.]\d{2}$/.test(String(c).trim()) && minuter(String(c).trim()) < 24 * 60;
+// vanligaste värdet, viktat med antal (till exempel den starttid flest pass har)
+const vanligast = lista => { const m = new Map(); for (const [v, n] of lista) m.set(v, (m.get(v) || 0) + n); let b = null, bn = -1; for (const [v, n] of m) if (n > bn) { b = v; bn = n; } return b; };
 
 // ---------------------------------------------------------------- behov
 // Returnerar { behov: {mån: {morgon, kvall, natt}, …} | null, tider: {…}, varningar: [] }.
 function behov(text) {
   const R = rader(text), varningar = [], per = Array.from({ length: 7 }, () => null);
-  const tider = { morgonStart: [], kvallSlut: [], nattStart: [], nattSlut: [] };
+  const tider = { morgonStart: [], kvallSlut: [], natt: [] }, grupper = new Set(), langa = new Set();
   const satt = (dagLista, d, n, lagg) => dagLista.forEach(i => {
     per[i] = per[i] || { morgon: 0, kvall: 0, natt: 0 }; per[i][d] = lagg ? per[i][d] + n : n;
   });
-  const noteraTid = p => {
-    if (p.del === "morgon") tider.morgonStart.push(p.start);
-    if (p.del === "kvall") tider.kvallSlut.push(p.slut);
-    if (p.del === "natt") { tider.nattStart.push(p.start); tider.nattSlut.push(p.slut); }
+  const noteraTid = (p, n = 1) => {
+    if (p.del === "morgon") tider.morgonStart.push([p.start, n]);
+    if (p.del === "kvall") tider.kvallSlut.push([p.slut, n]);
+    if (p.del === "natt") tider.natt.push([`${p.start}-${p.slut}`, n]);
+    const langd = (p.slut - p.start + 1440) % 1440;
+    if (p.del !== "natt" && langd > 10 * 60) langa.add(`${klock(p.start)}–${klock(p.slut)}`);
   };
-  let kolDagar = null, kolDelar = null, kanda = 0;
+  let kolDagar = null, kolDelar = null, kanda = 0, blockDag = null, grupp = "";
   for (const r of R) {
     const celler = r.filter(c => c !== "");
+    // bemanningsmall med ett block per veckodag: "Måndag  Från  Till  Rast  Arbetstid  Antal",
+    // sedan en rad per pass: (grupp)  07:00  15:00  00:30  07:30  12
+    const forstaCell = celler[0];
+    if (forstaCell && dagar(forstaCell) && celler.filter(c => dagar(c)).length === 1 && !celler.some(arTal) && !celler.some(arKlock) && (celler.length > 1 || blockDag)) {
+      blockDag = dagar(forstaCell); kolDagar = null; kolDelar = null; grupp = ""; continue;
+    }
+    const klockor = celler.filter(arKlock);
+    if (klockor.length >= 2 && !celler.some(c => pass(c))) {
+      const etikett = celler.find(c => !arTal(c) && !arKlock(c) && !dagar(c));
+      if (etikett) grupp = etikett;
+      const n = celler.filter(arTal).map(tal), antal = n.length ? n[n.length - 1] : 0;
+      if (klockor[0] === klockor[1] || !antal) continue;  // tomma rader (00:00–00:00) och pass utan personal
+      const pp = pass(`${klockor[0]}-${klockor[1]}`), dl = blockDag || (celler.map(dagar).find(Boolean)) || GRUPPER.alla;
+      noteraTid(pp, antal); satt(dl, pp.del, antal, true); if (grupp) grupper.add(grupp); kanda++; continue;
+    }
+    if (blockDag && !celler.some(c => !arTal(c) && !/^\d+[:.]\d{2}$/.test(c))) continue;  // summarader som "202:00  26"
     // rubrikrad med veckodagar: pass eller dygnsdelar står i raderna
     const dagCeller = r.map(dagar);
     if (dagCeller.filter(Boolean).length >= 2 && !celler.some(arTal)) { kolDagar = dagCeller; kolDelar = null; continue; }
@@ -3472,7 +3493,7 @@ function behov(text) {
       const etikett = celler.find(c => !arTal(c));
       const p = etikett && pass(etikett), d = p ? p.del : etikett && del(etikett);
       if (!d) { if (celler.some(arTal)) varningar.push(`Raden ”${rad.slice(0, 40)}” har varken dygnsdel eller tider och hoppades över.`); continue; }
-      if (p) noteraTid(p);
+      if (p) noteraTid(p, celler.filter(arTal).map(tal).reduce((a, b) => a + b, 0) || 1);
       const iTabb = r.length === kolDagar.length || r.length === kolDagar.length + 1;
       const kol = kolDagar.map((x, i) => [x, i]).filter(([x]) => x);
       if (iTabb && r.length === kolDagar.length) kol.forEach(([x, i]) => { if (arTal(r[i])) satt(x, d, tal(r[i]), true); });
@@ -3483,7 +3504,7 @@ function behov(text) {
     if (forsta) {
       const tider2 = celler.map(pass).filter(Boolean);
       const n = celler.filter(arTal).map(tal);
-      if (tider2.length === 1 && n.length === 1) { noteraTid(tider2[0]); satt(forsta, tider2[0].del, n[0], true); kanda++; continue; }
+      if (tider2.length === 1 && n.length === 1) { noteraTid(tider2[0], n[0]); satt(forsta, tider2[0].del, n[0], true); kanda++; continue; }
       const ordning = kolDelar ? kolDelar.filter(Boolean) : DELAR;
       if (kolDelar && r.length === kolDelar.length) kolDelar.forEach((x, i) => { if (x && arTal(r[i])) satt(forsta, x, tal(r[i])); });
       else ordning.forEach((x, j) => { if (j < n.length) satt(forsta, x, n[j]); });
@@ -3493,7 +3514,7 @@ function behov(text) {
     }
     // pass med tider utan rubrik, till exempel "07:00-15:30 2" (gäller alla dagar)
     const p = celler.map(pass).find(Boolean), n = celler.filter(arTal).map(tal);
-    if (p && n.length === 1) { noteraTid(p); satt(GRUPPER.alla, p.del, n[0], true); kanda++; continue; }
+    if (p && n.length === 1) { noteraTid(p, n[0]); satt(GRUPPER.alla, p.del, n[0], true); kanda++; continue; }
     if (celler.some(arTal)) varningar.push(`Raden ”${rad.slice(0, 40)}” gick inte att tolka och hoppades över.`);
   }
   if (!kanda) return { behov: null, tider: null, varningar: R.length ? [...varningar, "Hittade inget behov. Skriv till exempel ”Vardag 3 2 1” och ”Helg 3 2 1” (dag, kväll, natt), eller klistra in en tabell från Excel."] : [] };
@@ -3503,11 +3524,15 @@ function behov(text) {
   for (const d of DAGAR) for (const x of DELAR) if (!Number.isInteger(ut[d][x]) || ut[d][x] < 0) {
     varningar.push(`Behovet ${ut[d][x]} för ${d} ska vara ett heltal och avrundades.`); ut[d][x] = Math.max(0, Math.round(ut[d][x]));
   }
+  // enhetens tider: den starttid och sluttid som flest pass har
   const t = {};
-  if (tider.morgonStart.length) t.morgon = klock(Math.min(...tider.morgonStart));
-  if (tider.kvallSlut.length) t.kvall = klock(Math.max(...tider.kvallSlut));
-  if (tider.nattStart.length) { t.nattStart = klock(tider.nattStart[0]); t.nattSlut = klock(tider.nattSlut[0]); }
-  return { behov: ut, tider: t, varningar };
+  if (tider.morgonStart.length) t.morgon = klock(vanligast(tider.morgonStart));
+  if (tider.kvallSlut.length) t.kvall = klock(vanligast(tider.kvallSlut));
+  if (tider.natt.length) { const [a, b] = vanligast(tider.natt).split("-").map(Number); t.nattStart = klock(a); t.nattSlut = klock(b); }
+  const andraStarter = [...new Set(tider.morgonStart.map(([v]) => v))].filter(v => t.morgon && v !== minuter(t.morgon));
+  if (andraStarter.length) varningar.push(`Dagpass börjar också ${andraStarter.sort((a, b) => a - b).map(klock).join(", ")}. Enheten får starttiden ${t.morgon}; fler starttider kan läggas till under Regler (Fler starttider för dagpass).`);
+  if (langa.size) varningar.push(`Långa pass (${[...langa].join(", ")}) räknas som dagpass. Motorn lägger dagpass inom 12–18 för passbyte, så kontrollera behovet på kvällen.`);
+  return { behov: ut, tider: t, varningar, grupper: [...grupper] };
 }
 
 // ---------------------------------------------------------------- personal
@@ -3783,6 +3808,7 @@ const GUIDE = (() => {
     if (b.behov) {
       h += `<h3 style="margin-top:14px">Behov per dag (dag/kväll/natt)</h3><div class="rull"><table class="guidetabell"><thead><tr><th></th>${VECKODAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
         ${[["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]].map(([k, t]) => `<tr><th>${t}</th>${VECKODAGAR.map(d => `<td>${b.behov[d][k]}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+        (b.grupper && b.grupper.length ? `<p class="liten dampad" style="margin:6px 0 0">Räknat med: ${b.grupper.map(esc).join(", ")}.</p>` : "") +
         (b.tider && Object.keys(b.tider).length ? `<p class="liten dampad" style="margin:6px 0 0">Tider från passen: ${[b.tider.morgon && `dag från ${b.tider.morgon}`, b.tider.kvall && `kväll till ${b.tider.kvall}`, b.tider.nattStart && `natt ${b.tider.nattStart}–${b.tider.nattSlut}`].filter(Boolean).join(", ")}.</p>` : "");
     }
     const varn = [...p.varningar, ...b.varningar];
@@ -3799,7 +3825,7 @@ const GUIDE = (() => {
           <p class="liten dampad">Grad som 75 %, 0,75 eller timmar per vecka. Arbetar: dag/kväll, bara dag, bara kväll eller natt. Helger: varannan (standard), var fjärde, alla eller inga.</p></div>
         <div><label for="kl-behov">Behov – hur många i tjänst</label>
           <textarea id="kl-behov" data-gk="behov" rows="8" placeholder="&#9;Dag&#9;Kväll&#9;Natt&#10;Vardag&#9;3&#9;2&#9;1&#10;Helg&#9;2&#9;2&#9;1">${esc(g.klistra.behov)}</textarea>
-          <p class="liten dampad">En rad per vardag/helg eller veckodag med antal för dag, kväll och natt. Det går också med pass och tider, en kolumn per veckodag: 07:00-15:30 &nbsp;2 2 2 2 2 2 2.</p></div>
+          <p class="liten dampad">En rad per vardag/helg eller veckodag med antal för dag, kväll och natt. Det går också med pass och tider: en kolumn per veckodag (07:00-15:30 &nbsp;2 2 2 2 2 2 2), eller bemanningsmallen med ett block per veckodag (Från, Till, Rast, Arbetstid, antal).</p></div>
       </div>
       <div id="klistra-forhand" class="klistra-forhand">${klistraForhand(g)}</div>
       <div class="guidenav"><button data-guide="avbryt">Avbryt</button><button class="primar" data-guide="anvand-klistrat">Använd och fortsätt ›</button></div></section>`;
