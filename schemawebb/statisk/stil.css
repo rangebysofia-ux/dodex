@@ -428,6 +428,9 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 .valknappar { display: flex; flex-wrap: wrap; gap: 8px; } .valknapp { border-radius: 999px; padding: 9px 16px; border: 1px solid var(--linje); background: var(--yta2); font: inherit; cursor: pointer; }
 .valknapp[aria-pressed="true"] { background: var(--skog); color: #fff; border-color: var(--skog); }
 .guidetabell select { min-width: 140px; }
+.klistra-rutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 10px; }
+.klistra-rutor textarea { width: 100%; box-sizing: border-box; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 12; resize: vertical; }
+.klistra-forhand { margin-top: 14px; } .klistra-forhand h3 { margin: 0 0 6px; font-size: 15px; } .klistra-forhand td { padding: 3px 8px; }
 
 /* bemanningsbalans */
 .bb table.bbtabell input, .bb table.bbtabell select { padding: 6px 8px; }

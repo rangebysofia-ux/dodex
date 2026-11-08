@@ -43,6 +43,7 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 ## Fas 6 – En DODEX (webb och telefon ihop)
 
 - [x] **16. Samma filformat.** En enhet med alla inställningar och färdiga scheman sparas som fil i webben eller telefonen och öppnas i den andra. Indata förs över orörd; scheman granskas om av den som öppnar filen (docs/enhetsfil.md).
+- [x] **16b. Klistra in personal och behov.** Från Excel eller text till startguiden, med förhandsvisning; namn blir id-koder och sparas aldrig (docs/inklistring.md).
 - [ ] **17. Gemensamt gränssnitt.** En sida i taget flyttas till delade filer som både webben och lättversionen använder, med schemavyn först. Inga inställningar får försvinna på vägen.
 - [ ] **18. Två motorer i samma program.** Fullständiga motorn när servern finns, lättmotorn annars, märkt som snabbförslag.
 

@@ -31,6 +31,7 @@ def main():
                 .replace("__MOTOR_HUVUDTRAD__", skydda(motor) + "\nconst MOTOR_HUVUD = MOTOR;")
                 .replace("__ASSISTENT__", skydda((HAR.parent / "schemawebb" / "statisk" / "assistent.js").read_text(encoding="utf-8")))
                 .replace("__OB__", skydda((HAR.parent / "schemawebb" / "statisk" / "ob.js").read_text(encoding="utf-8")))
+                .replace("__INKLISTRING__", skydda((HAR.parent / "schemawebb" / "statisk" / "inklistring.js").read_text(encoding="utf-8")))
                 .replace("__GUIDE__", skydda((HAR.parent / "schemawebb" / "statisk" / "guide.js").read_text(encoding="utf-8")))
                 .replace("__ENHETSFIL__", skydda((HAR.parent / "schemawebb" / "statisk" / "enhetsfil.js").read_text(encoding="utf-8")))
                 .replace("__BEMANNINGSBALANS__", skydda((HAR.parent / "schemawebb" / "statisk" / "bemanningsbalans.js").read_text(encoding="utf-8")))

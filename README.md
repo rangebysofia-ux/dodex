@@ -50,6 +50,7 @@ Efter installationen finns kommandona även som `schema-balans`, `schema-build`,
 Det första man möter är **Vad vill du göra?**:
 
 - **Skapa ny enhet** öppnar en frågeguide med en fråga i taget: vad gruppen heter, hur många medarbetare (dag och kväll, natt), sysselsättning (samma, olika per person eller en budget som fördelas), undantag (bara dag, bara kväll, natt, andra helger), behovet i veckan (dag, kväll och natt för vardag och helg), tider för passen, och period. Guiden visar hur många timmar behovet motsvarar och hur många som behövs för helgerna. Sist väljer man **🤖 Låt AI lägga schemat** (motorn lägger det) eller **✋ Lägg schemat själv** (ett tomt schema i redigeringsläge, där varje pass granskas direkt; `POST /api/enheter/{id}/manuell`).
+- **Klistra in från Excel** – klistra in personal (grad, dag/kväll/natt, helger) och behov (per vardag/helg, veckodag eller pass med tider), se förhandsvisningen och gå vidare i guiden. Namn blir id-koder och sparas aldrig (`docs/inklistring.md`).
 - **Få hjälp av AI-assistenten** skapar en tom enhet och öppnar 🤖 med en förifylld fråga. Assistenten föreslår indata som användaren godkänner.
 - **Börja från ett exempel** och **Fortsätt med en enhet**.
 - **Spara som fil** och **Öppna fil** – en enhet med alla inställningar och färdiga scheman flyttas mellan webben och telefonen (Schema light). Inga inställningar försvinner, och scheman granskas om när filen öppnas (`docs/enhetsfil.md`).
@@ -88,6 +89,7 @@ Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad
 - `docs/styrning/dodex-regelverk.md` och `.json` – alla hårda regler och mjuka mål med standardvärden, som styrdokument för andra system (genereras med `python -m schemamotor.regelverk`)
 - `docs/avtal-regler.md` – vila, rast och dygnsbryt
 - `docs/indata-schema.md` – format för indata och schema
+- `docs/inklistring.md` – vad som går att klistra in för personal och behov
 - `docs/enhetsfil.md` – filen som flyttar en enhet mellan webben och telefonen
 - `docs/optimering.md` – hur modellen fungerar
 - `docs/hallbarhet.md`, `docs/ekonomi.md` – hur resultatet värderas

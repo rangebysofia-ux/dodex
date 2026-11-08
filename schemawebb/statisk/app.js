@@ -904,6 +904,9 @@ document.addEventListener("click", async e => {
         const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: GUIDE.tomIndata("Ny enhet") });
         st.enhet = null; st.enhetLista = null; st.oppnaAssistent = true; location.hash = `#/e/${id}/medarbetare`; return;
       }
+      case "klistra": st.guide = GUIDE.nyKlistra(); window.scrollTo(0, 0); return visaEnheter();
+      case "anvand-klistrat": { const fel = GUIDE.anvandKlistrat(g); if (fel) return meddela(fel); window.scrollTo(0, 0); return visaEnheter(); }
+      case "behov-forenkla": GUIDE.forenklaBehov(g); return visaEnheter();
       case "avbryt": st.guide = null; return visaEnheter();
       case "tillbaka": g.steg--; return visaEnheter();
       case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaEnheter(); }

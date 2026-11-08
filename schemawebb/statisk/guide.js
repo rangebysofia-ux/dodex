@@ -5,6 +5,9 @@
 // Guiden räknar bara fram förslag och tips; schemat läggs och granskas som vanligt efteråt.
 
 const GUIDE = (() => {
+  // inklistring.js läses in före guide.js i webben och lättversionen; i Node hämtas den här
+  const KL = typeof KLISTRA !== "undefined" ? KLISTRA : typeof require === "function" ? require("./inklistring.js") : null;
+  const VECKODAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const sv = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toString().replace(".", ",");
   const HELTID = 37, PASS_PER_VECKA = 4.75;
@@ -15,7 +18,7 @@ const GUIDE = (() => {
 
   function ny() {
     return { steg: 1, namn: "", antalDag: 8, antalNatt: 2, gradSatt: "samma", grad: 100, budget: "", personer: [], harUndantag: false,
-      behov: { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 2, natt: 1 } },
+      behov: { vardag: { morgon: 2, kvall: 2, natt: 1 }, helg: { morgon: 2, kvall: 2, natt: 1 } }, behovDag: null,
       tider: { morgon: "07:00", kvall: "22:00", nattStart: "21:45", nattSlut: "06:45" }, veckor: 4, startdatum: "", timkostnad: "" };
   }
 
@@ -31,8 +34,14 @@ const GUIDE = (() => {
 
   // Vad behovet kräver: pass och timmar per vecka, och minsta antal med varannan helg och fredagsregeln.
   function berakna(g) {
-    const v = g.behov.vardag, h = g.behov.helg;
-    const dagPass = 5 * (v.morgon + v.kvall) + 2 * (h.morgon + h.kvall), natter = 5 * v.natt + 2 * h.natt;
+    let v = g.behov.vardag, h = g.behov.helg, dagPass = 5 * (v.morgon + v.kvall) + 2 * (h.morgon + h.kvall), natter = 5 * v.natt + 2 * h.natt;
+    if (g.behovDag) {
+      // behov per veckodag: summera veckan; helgen räknas på den tyngsta helgdagen och fredagskvällen
+      const B = VECKODAGAR.map(d => g.behovDag[d]), max = (lista, k) => Math.max(...lista.map(x => x[k]));
+      dagPass = B.reduce((s, x) => s + x.morgon + x.kvall, 0); natter = B.reduce((s, x) => s + x.natt, 0);
+      h = { morgon: max(B.slice(5), "morgon"), kvall: max(B.slice(5), "kvall"), natt: max(B.slice(5), "natt") };
+      v = { morgon: max(B.slice(0, 5), "morgon"), kvall: B[4].kvall, natt: max(B.slice(0, 5), "natt") };
+    }
     const dagTimmar = dagPass * HELTID / PASS_PER_VECKA, nattTimmar = natter * nattTimmarPass(g);
     const perHelg = h.morgon + Math.max(h.kvall, v.kvall);
     return { dagPass, natter, dagTimmar, nattTimmar, behovTimmar: dagTimmar + nattTimmar, perHelg, fredagStyr: v.kvall > h.kvall,
@@ -63,7 +72,7 @@ const GUIDE = (() => {
       if (g.harUndantag && p.helg !== "2/4") ut.helgfrekvens = p.helg;
       return ut;
     });
-    const ut = { enhet: g.namn || "Ny enhet", veckor: Number(g.veckor) || 4, cykliskt: true, behov: structuredClone(g.behov), personal, onskemal: [] };
+    const ut = { enhet: g.namn || "Ny enhet", veckor: Number(g.veckor) || 4, cykliskt: true, behov: structuredClone(g.behovDag || g.behov), personal, onskemal: [] };
     const regler = {};
     if (g.tider.morgon !== "07:00") regler.morgon_start = g.tider.morgon;
     if (g.tider.kvall !== "22:00") regler.kvall_slut = g.tider.kvall;
@@ -88,6 +97,7 @@ const GUIDE = (() => {
     return `<section class="kort"><h1>Vad vill du göra?</h1><p class="dampad" style="margin:6px 0 14px">Välj en väg. Allt går att ändra efteråt.</p>
       <div class="valrutor">
         ${ruta("ny", "✚", "Skapa ny enhet", "Svara på några frågor om gruppen, behovet och tiderna. Välj sedan om 🤖 lägger schemat eller om du gör det själv.", " huvud")}
+        ${ruta("klistra", "📋", "Klistra in från Excel", "Klistra in personal och behov från en lista eller ett Excel-blad. Namn blir id-koder.")}
         ${ruta("ai", "🤖", "Berätta för AI-assistenten", "Börja med en tom enhet och beskriv med egna ord. Assistenten föreslår, du godkänner.")}
         ${ruta("exempel", "◎", "Börja från ett exempel", "Färdiga testfall att pröva systemet med.")}
         ${harEnheter ? ruta("enheter", "▤", "Fortsätt med en enhet", "Öppna en enhet du redan har.") : ""}
@@ -110,6 +120,7 @@ const GUIDE = (() => {
     const valknapp = (falt, varde, text, aktiv) => `<button class="valknapp" data-guide="satt" data-falt="${falt}" data-varde="${varde}" aria-pressed="${aktiv}">${text}</button>`;
     const tal = (id, falt, varde, etikett, max = 80) => `<div><label for="${id}">${etikett}</label><input id="${id}" type="number" min="0" max="${max}" inputmode="numeric" data-gf="${falt}" value="${varde}"></div>`;
     let h = "";
+    if (g.steg === 0) return klistraHtml(g);
     switch (g.steg) {
       case 1: h = fraga("Vad heter gruppen?", "Till exempel avdelningen, boendet eller arbetslaget.") +
         `<input id="g-namn" data-gf="namn" value="${esc(g.namn)}" placeholder="Solgården avd 2" style="max-width:420px">`; break;
@@ -130,7 +141,9 @@ const GUIDE = (() => {
           tips("Undantag från varannan helg görs per person och visas som undantag i schemat. Enhetens regel är fortfarande varannan helg.") : tips("Alla med dag och kväll arbetar båda, och alla arbetar varannan helg.")); break;
       case 5: h = fraga("Hur ser behovet ut i veckan?", "Hur många behöver vara i tjänst per pass?") +
         `<div class="rull"><table class="guidetabell"><thead><tr><th></th><th>Dag</th><th>Kväll</th><th>Natt</th></tr></thead><tbody>
-        ${[["vardag", "Vardag (mån–fre)"], ["helg", "Helg (lör–sön)"]].map(([d, t]) => `<tr><th>${t}</th>${["morgon", "kvall", "natt"].map(x => `<td><input type="number" min="0" max="30" inputmode="numeric" data-gb="${d}.${x}" value="${g.behov[d][x]}" aria-label="${t} ${x}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+        ${(g.behovDag ? VECKODAGAR.map(d => [d, d[0].toUpperCase() + d.slice(1), g.behovDag[d]]) : [["vardag", "Vardag (mån–fre)", g.behov.vardag], ["helg", "Helg (lör–sön)", g.behov.helg]])
+          .map(([d, t, b]) => `<tr><th>${t}</th>${["morgon", "kvall", "natt"].map(x => `<td><input type="number" min="0" max="30" inputmode="numeric" data-gb="${d}.${x}" value="${b[x]}" aria-label="${t} ${x}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+        (g.behovDag ? `<p class="liten dampad" style="margin:8px 0 0">Behovet skiljer sig mellan veckodagarna och läggs per dag. <button class="lank" data-guide="behov-forenkla">Förenkla till vardag och helg</button></p>` : "") +
         tips(`Det blir ${r.dagPass} dag- och kvällspass och ${r.natter} nätter per vecka, ungefär <b>${sv(r.behovTimmar)} h per vecka</b>. För helgerna behövs minst <b>${r.minDag} med dag och kväll</b> och <b>${r.minNatt} med natt</b>${r.fredagStyr ? " (fredagskvällen styr: den som arbetar fredag kväll arbetar helgen)" : ""}.`) +
         (g.antalDag < r.minDag || g.antalNatt < r.minNatt ? tips(`Ni är ${g.antalDag} med dag och kväll och ${g.antalNatt} med natt. Färre än minsta antal ger vakanser på helgerna. <button class="liten" data-guide="minsta">Ändra till ${r.minDag} och ${r.minNatt}</button>`, true) : "") +
         (k < r.behovTimmar - 0.5 ? tips(`Kontrakterad tid (${sv(k)} h) är mindre än behovet (${sv(r.behovTimmar)} h). Räkna med vakanser.`, true) : ""); break;
@@ -148,7 +161,7 @@ const GUIDE = (() => {
       default: h = fraga("Hur vill du lägga schemat?") +
         `<ul class="punkter liten"><li><b>${esc(g.namn || "Ny enhet")}</b>, ${g.veckor} veckor${g.startdatum ? ` från ${esc(g.startdatum)}` : ""}</li>
           <li>${g.antalDag} med dag och kväll, ${g.antalNatt} med natt, ${sv(k)} h kontrakterat per vecka${g.harUndantag ? `, ${g.personer.filter(p => p.helg !== "2/4" || (p.id[0] === "A" && p.arbetar !== "morgon,kvall")).length} med undantag` : ""}</li>
-          <li>Behov vardag ${g.behov.vardag.morgon}/${g.behov.vardag.kvall}/${g.behov.vardag.natt}, helg ${g.behov.helg.morgon}/${g.behov.helg.kvall}/${g.behov.helg.natt} (dag/kväll/natt), ungefär ${sv(r.behovTimmar)} h per vecka</li>
+          <li>Behov ${g.behovDag ? `per veckodag (${VECKODAGAR.map(d => `${d} ${g.behovDag[d].morgon}/${g.behovDag[d].kvall}/${g.behovDag[d].natt}`).join(", ")})` : `vardag ${g.behov.vardag.morgon}/${g.behov.vardag.kvall}/${g.behov.vardag.natt}, helg ${g.behov.helg.morgon}/${g.behov.helg.kvall}/${g.behov.helg.natt}`} (dag/kväll/natt), ungefär ${sv(r.behovTimmar)} h per vecka</li>
           <li>Dag från ${g.tider.morgon}, kväll till ${g.tider.kvall}, natt ${g.tider.nattStart}–${g.tider.nattSlut}</li></ul>
         <div class="valrutor" style="margin-top:14px">
           <button class="valruta huvud" data-guide="skapa-ai"><span class="valikon" aria-hidden="true">🤖</span><b>Låt AI lägga schemat</b><span>Ett schema som följer reglerna, med så få vakanser som möjligt och jämn fördelning. Du kan justera det efteråt.</span></button>
@@ -156,7 +169,7 @@ const GUIDE = (() => {
         </div>
         <p style="margin-top:12px"><button class="lank" data-guide="skapa">Bara skapa enheten, lägg schemat senare</button></p>`;
     }
-    const nav = `<div class="guidenav">${g.steg > 1 ? `<button data-guide="tillbaka">‹ Tillbaka</button>` : `<button data-guide="avbryt">Avbryt</button>`}
+    const nav = `<div class="guidenav">${g.steg > 1 || g.klistra ? `<button data-guide="tillbaka">‹ Tillbaka</button>` : `<button data-guide="avbryt">Avbryt</button>`}
       ${g.steg < SISTA ? `<button class="primar" data-guide="nasta">Nästa ›</button>` : ""}</div>`;
     const prickar = `<div class="guideprickar" aria-hidden="true">${FRAGOR.map((t, i) => `<i class="${i + 1 === g.steg ? "aktiv" : i + 1 < g.steg ? "klar" : ""}" title="${t}"></i>`).join("")}</div>`;
     return `<section class="kort guide">${prickar}${h}${nav}</section>`;
@@ -164,7 +177,13 @@ const GUIDE = (() => {
 
   // Läs ett fält i guiden till tillståndet. Returnerar true om något ändrades.
   function las(g, el) {
-    if (el.dataset.gb) { const [d, k] = el.dataset.gb.split("."); g.behov[d][k] = Math.max(0, parseInt(el.value) || 0); return true; }
+    if (el.dataset.gk) {
+      g.klistra[el.dataset.gk] = el.value;
+      const f = typeof document !== "undefined" && document.getElementById("klistra-forhand");
+      if (f) f.innerHTML = klistraForhand(g);
+      return el.type !== "textarea";  // textrutan ritas inte om medan man skriver
+    }
+    if (el.dataset.gb) { const [d, k] = el.dataset.gb.split("."); (g.behovDag && g.behovDag[d] ? g.behovDag : g.behov)[d][k] = Math.max(0, parseInt(el.value) || 0); return true; }
     if (el.dataset.gt) { if (el.value) g.tider[el.dataset.gt] = el.value; return true; }
     if (el.dataset.gp) { const [i, k] = el.dataset.gp.split("."); g.personer[+i][k] = k === "grad" ? Math.max(0, parseInt(el.value) || 0) : el.value; return true; }
     const f = el.dataset.gf; if (!f) return false;
@@ -172,6 +191,81 @@ const GUIDE = (() => {
     else g[f] = el.value;
     if (f === "grad") g.personer.forEach(p => (p.grad = g.grad));
     return true;
+  }
+
+  // ---------------------------------------------------------------- klistra in från Excel
+  function nyKlistra() { const g = ny(); g.steg = 0; g.klistra = { personal: "", behov: "" }; return g; }
+
+  function tolka(g) {
+    return { p: KL.personal(g.klistra.personal), b: KL.behov(g.klistra.behov) };
+  }
+
+  function klistraForhand(g) {
+    if (!KL) return "";
+    const { p, b } = tolka(g), DEL = { "morgon,kvall": "Dag och kväll", morgon: "Bara dag", kvall: "Bara kväll", natt: "Natt" };
+    let h = "";
+    if (p.personer.length) {
+      const dk = p.personer.filter(x => x.arbetar !== "natt").length, n = p.personer.length - dk;
+      h += `<h3>Medarbetare: ${p.personer.length} (${dk} dag och kväll, ${n} natt)</h3><div class="rull"><table class="guidetabell"><thead><tr><th>Id</th><th>Från inklistringen</th><th>Grad</th><th>Arbetar</th><th>Helger</th></tr></thead><tbody>
+        ${p.personer.map(x => `<tr><th>${x.id}</th><td class="dampad">${esc(x.rad)}</td><td>${x.grad} %</td><td>${DEL[x.arbetar]}</td><td>${HELGER[x.helg]}</td></tr>`).join("")}</tbody></table></div>
+        <p class="liten dampad" style="margin:6px 0 0">Kolumnen ”Från inklistringen” visas bara här och sparas inte. Enheten får id-koderna. Spara gärna en egen nyckel.</p>`;
+    }
+    if (b.behov) {
+      h += `<h3 style="margin-top:14px">Behov per dag (dag/kväll/natt)</h3><div class="rull"><table class="guidetabell"><thead><tr><th></th>${VECKODAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
+        ${[["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]].map(([k, t]) => `<tr><th>${t}</th>${VECKODAGAR.map(d => `<td>${b.behov[d][k]}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+        (b.tider && Object.keys(b.tider).length ? `<p class="liten dampad" style="margin:6px 0 0">Tider från passen: ${[b.tider.morgon && `dag från ${b.tider.morgon}`, b.tider.kvall && `kväll till ${b.tider.kvall}`, b.tider.nattStart && `natt ${b.tider.nattStart}–${b.tider.nattSlut}`].filter(Boolean).join(", ")}.</p>` : "");
+    }
+    const varn = [...p.varningar, ...b.varningar];
+    if (varn.length) h += `<div class="guidetips varn">⚠ ${varn.map(esc).join("<br>")}</div>`;
+    return h || `<p class="dampad liten">Förhandsvisningen visas här när du har klistrat in något.</p>`;
+  }
+
+  function klistraHtml(g) {
+    return `<section class="kort guide"><p class="guidefraga-nr">Klistra in</p><h2 class="guidefraga">Klistra in personal och behov</h2>
+      <p class="dampad">Kopiera raderna i Excel (eller skriv dem) och klistra in. Du kan fylla i det ena, det andra eller båda; resten fyller du i guiden efteråt.</p>
+      <div class="klistra-rutor">
+        <div><label for="kl-personal">Personal – en rad per person</label>
+          <textarea id="kl-personal" data-gk="personal" rows="8" placeholder="Namn&#9;Grad&#9;Arbetar&#9;Helger&#10;Person 1&#9;100%&#9;dag/kväll&#9;varannan&#10;Person 2&#9;75%&#9;bara kväll&#10;Person 3&#9;90%&#9;natt">${esc(g.klistra.personal)}</textarea>
+          <p class="liten dampad">Grad som 75 %, 0,75 eller timmar per vecka. Arbetar: dag/kväll, bara dag, bara kväll eller natt. Helger: varannan (standard), var fjärde, alla eller inga.</p></div>
+        <div><label for="kl-behov">Behov – hur många i tjänst</label>
+          <textarea id="kl-behov" data-gk="behov" rows="8" placeholder="&#9;Dag&#9;Kväll&#9;Natt&#10;Vardag&#9;3&#9;2&#9;1&#10;Helg&#9;2&#9;2&#9;1">${esc(g.klistra.behov)}</textarea>
+          <p class="liten dampad">En rad per vardag/helg eller veckodag med antal för dag, kväll och natt. Det går också med pass och tider, en kolumn per veckodag: 07:00-15:30 &nbsp;2 2 2 2 2 2 2.</p></div>
+      </div>
+      <div id="klistra-forhand" class="klistra-forhand">${klistraForhand(g)}</div>
+      <div class="guidenav"><button data-guide="avbryt">Avbryt</button><button class="primar" data-guide="anvand-klistrat">Använd och fortsätt ›</button></div></section>`;
+  }
+
+  // För över det inklistrade till guiden. Returnerar ett felmeddelande eller null.
+  function anvandKlistrat(g) {
+    const { p, b } = tolka(g);
+    if (!p.personer.length && !b.behov) return "Klistra in personal, behov eller båda först.";
+    if (p.personer.length) {
+      const dk = p.personer.filter(x => x.arbetar !== "natt"), n = p.personer.filter(x => x.arbetar === "natt");
+      g.antalDag = dk.length; g.antalNatt = n.length;
+      g.personer = p.personer.map(x => ({ id: x.id, grad: x.grad, arbetar: x.arbetar, helg: x.helg }));  // utan det inklistrade
+      const grader = new Set(g.personer.map(x => x.grad));
+      if (grader.size === 1) { g.gradSatt = "samma"; g.grad = g.personer[0].grad; } else g.gradSatt = "olika";
+      g.harUndantag = g.personer.some(x => x.helg !== "2/4" || (x.arbetar !== "natt" && x.arbetar !== "morgon,kvall"));
+    }
+    if (b.behov) {
+      const B = b.behov, lika = (x, y) => x.morgon === y.morgon && x.kvall === y.kvall && x.natt === y.natt;
+      const enkel = ["tis", "ons", "tor", "fre"].every(d => lika(B[d], B.mån)) && lika(B.lör, B.sön);
+      g.behov = { vardag: { ...B.mån }, helg: { ...B.lör } };
+      g.behovDag = enkel ? null : structuredClone(B);
+      Object.assign(g.tider, b.tider || {});
+    }
+    // det inklistrade finns kvar i minnet så att man kan gå tillbaka och rätta, men sparas aldrig
+    g.steg = 1;
+    return null;
+  }
+
+  // Behov per veckodag till vardag och helg: den tyngsta dagen i varje grupp.
+  function forenklaBehov(g) {
+    if (!g.behovDag) return;
+    const max = (dagar, k) => Math.max(...dagar.map(d => g.behovDag[d][k]));
+    g.behov = { vardag: { morgon: max(VECKODAGAR.slice(0, 5), "morgon"), kvall: max(VECKODAGAR.slice(0, 5), "kvall"), natt: max(VECKODAGAR.slice(0, 5), "natt") },
+      helg: { morgon: max(["lör", "sön"], "morgon"), kvall: max(["lör", "sön"], "kvall"), natt: max(["lör", "sön"], "natt") } };
+    g.behovDag = null;
   }
 
   function satt(g, falt, varde) { g[falt] = falt === "harUndantag" ? varde === "ja" : varde; }
@@ -188,6 +282,6 @@ const GUIDE = (() => {
     return null;
   }
 
-  return { ny, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
+  return { ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
 })();
 if (typeof module !== "undefined") module.exports = GUIDE;

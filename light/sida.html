@@ -232,6 +232,9 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 .guidetips { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-svag); font-size: 14px; }
 .guidetips.varn { background: var(--varn-bg); color: var(--varn); }
 .guidetabell input { width: 64px; text-align: center; } .guidetabell th { text-align: left; padding-right: 8px; }
+.klistra-rutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 10px; }
+.klistra-rutor textarea { width: 100%; box-sizing: border-box; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 12; resize: vertical; }
+.klistra-forhand { margin-top: 14px; } .klistra-forhand h3 { margin: 0 0 6px; font-size: 15px; } .klistra-forhand td { padding: 3px 8px; }
 .guidenav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--linje); }
 .guidefraga-nr { margin: 0; font-size: 12px; color: var(--dampad); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .guidefraga { font-size: 22px; margin: 4px 0 10px; }
@@ -259,6 +262,7 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 <script>__OB__</script>
 <script>__GRAFER__</script>
 <script>__BEMANNINGSBALANS__</script>
+<script>__INKLISTRING__</script>
 <script>__GUIDE__</script>
 <script>__ENHETSFIL__</script>
 <script>__ANALYS__</script>
@@ -1150,6 +1154,9 @@ document.addEventListener("click", async e => {
     case "exempel": return $("#exempel")?.scrollIntoView({ behavior: "smooth" });
     case "enheter": return $("#mina-enheter")?.scrollIntoView({ behavior: "smooth" });
     case "ai": await skapa("Ny enhet", GUIDE.tomIndata("Ny enhet")); chatt.oppen = true; ritaChatt(); $("#chatt-text").value = GUIDE.AI_START; $("#chatt-text").focus(); return;
+    case "klistra": st.guide = GUIDE.nyKlistra(); window.scrollTo(0, 0); return visaLista();
+    case "anvand-klistrat": { const fel = GUIDE.anvandKlistrat(g); if (fel) return meddela(fel); window.scrollTo(0, 0); return visaLista(); }
+    case "behov-forenkla": GUIDE.forenklaBehov(g); return visaLista();
     case "avbryt": st.guide = null; return visaLista();
     case "tillbaka": g.steg--; return visaLista();
     case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaLista(); }
