@@ -490,12 +490,17 @@ const MOTOR = (() => {
       }
       const ryms = t => t === M ? ms <= a0 && a1 <= kt : t === K ? kf <= a0 && a1 <= ks
         : (ns <= a0 && a1 <= ne) || (ns <= a0 + DYGN && a1 + DYGN <= ne);
-      const grupp = pers.map((p, pi) => pi).filter(pi => a.deltagare && a.deltagare.length ? a.deltagare.includes(pers[pi].id) : pers[pi].typer.some(ryms));
+      const grupp = pers.map((p, pi) => pi).filter(pi => a.deltagare && a.deltagare.length ? a.deltagare.includes(pers[pi].id) : pers[pi].typer.some(t => ryms(t, pers[pi])));
+      // dag- och kvällspersonal vars pass inte täcker aktivitetstiden kommer inte med; det visas i resultatet
+      const utanfor = a.deltagare && a.deltagare.length ? [] : pers.filter(p => !p.natt && !p.typer.some(t => ryms(t, p))).map(p => p.id);
       const G = grupp.length, T = dagar.size;
       const onskat = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && T ? Math.ceil(G * a.varje_person / T) : G;
       const antal = Math.min(onskat, G);
       const snitt = G ? antal * T / G : 0;
-      akt.push({ id, namn: a.namn || id, start: a.start, slut: a.slut, a0, a1, dagar: [...dagar].sort((x, y) => x - y), grupp, antal, onskat,
+      // behov per tillfälle; varje_person fördelas jämnt (13 personer, 2 tillfällen: 7 och 6), som i build.py
+      const tot = G * (a.varje_person || 0);
+      const mal = [...dagar].sort((x, y) => x - y).map((d, i) => a.varje_person && T && !a.antal && !a.andel ? Math.floor(tot / T) + (i < tot % T ? 1 : 0) : antal);
+      akt.push({ id, namn: a.namn || id, start: a.start, slut: a.slut, a0, a1, dagar: [...dagar].sort((x, y) => x - y), grupp, antal, onskat, mal, utanfor, varje: !!(a.varje_person && !a.antal && !a.andel),
         krav: !!a.krav, minst: a.minst_pa_golvet || 0, golv: a.fran_golvet !== false, lo: a.varje_person || Math.floor(snitt + 1e-9), hi: a.varje_person || Math.ceil(snitt - 1e-9) });
     });
 
@@ -699,12 +704,12 @@ const MOTOR = (() => {
       let k = 0;
       for (const a of pr.akt) {
         const mojlig = new Map();
-        for (const d of a.dagar) {
+        for (const [i, d] of a.dagar.entries()) {
           let n = 0;
-          for (const pi of a.grupp) if (forlangning(pi, X, d, a) <= Math.max(pers[pi].tol, 120)) { n++; mojlig.set(pi, (mojlig.get(pi) || 0) + 1); }
-          k += Math.max(0, a.antal - n) * (a.krav ? HW : WA);
+          for (const pi of a.grupp) if (forlangning(pi, X, d, a) <= Math.max(pers[pi].tol, 240)) { n++; mojlig.set(pi, (mojlig.get(pi) || 0) + 1); }
+          k += Math.max(0, a.mal[i] - n) * (a.krav ? HW : WA);
           // minsta bemanning på golvet: utöver deltagarna behövs så många som kan vara kvar (behov, som vakanser)
-          if (a.minst) k += (Math.max(0, a.antal + a.minst - n) - Math.max(0, a.antal - n)) * WV / 2;
+          if (a.minst) k += (Math.max(0, a.mal[i] + a.minst - n) - Math.max(0, a.mal[i] - n)) * WV / 2;
         }
         // rättvisa: var och en ska kunna delta minst så många gånger som fördelningen kräver
         if (a.lo) for (const pi of a.grupp) k += Math.max(0, a.lo - (mojlig.get(pi) || 0)) * WA / 4;
@@ -960,15 +965,17 @@ const MOTOR = (() => {
         const ordning = a.grupp.filter(pi => (n.get(pi) || 0) < varv)
           .sort((x, y) => kan.filter(k => k.has(x)).length - kan.filter(k => k.has(y)).length || x - y);
         for (const pi of ordning) {
-          const val = a.dagar.map((d, i) => i).filter(i => kan[i].has(pi) && delt[i].length < a.antal && !delt[i].includes(pers[pi].id))
+          const val = a.dagar.map((d, i) => i).filter(i => kan[i].has(pi) && delt[i].length < a.mal[i] && !delt[i].includes(pers[pi].id))
             .sort((i, j) => delt[i].length - delt[j].length || i - j);
           for (const i of val) if (tilldela(pi, i)) break;
         }
       }
       // fyll platser som är kvar med dem som har deltagit minst
       a.dagar.forEach((d, i) => {
-        const resten = [...kan[i]].filter(pi => !delt[i].includes(pers[pi].id)).sort((x, y) => (n.get(x) || 0) - (n.get(y) || 0) || x - y);
-        for (const pi of resten) { if (delt[i].length >= a.antal) break; tilldela(pi, i); }
+        // med "varje person N gånger" får ingen gå fler gånger än N; då är det bättre att platsen syns som saknad
+        const resten = [...kan[i]].filter(pi => !delt[i].includes(pers[pi].id) && !(a.varje && (n.get(pi) || 0) >= a.hi))
+          .sort((x, y) => (n.get(x) || 0) - (n.get(y) || 0) || x - y);
+        for (const pi of resten) { if (delt[i].length >= a.mal[i]) break; tilldela(pi, i); }
       });
       // minsta bemanning på golvet: förläng pass för dem som inte deltar tills nog många är kvar varje kvart
       if (a.minst) a.dagar.forEach((d, i) => {
@@ -995,11 +1002,11 @@ const MOTOR = (() => {
         }
       });
       a.dagar.forEach((d, i) => {
-        const saknas = a.onskat - delt[i].length;
+        const behov = a.varje ? a.mal[i] : a.onskat, saknas = behov - delt[i].length;
         const dt = `vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}`;
-        if (saknas > 0 && a.krav) brott.push({ regel: "AKTIVITET", niva: "verksamhet", person: null, text: `${dt}: ${delt[i].length} deltar i ${a.namn}, behov ${a.onskat}.` });
+        if (saknas > 0 && a.krav) brott.push({ regel: "AKTIVITET", niva: "verksamhet", person: null, text: `${dt}: ${delt[i].length} deltar i ${a.namn}, behov ${behov}.` });
         ut.push({ aktivitet: a.id, namn: a.namn, dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: a.start, slut: a.slut,
-          deltagare: delt[i], behov: a.onskat, saknas: Math.max(0, saknas), krav: a.krav });
+          deltagare: delt[i], behov, saknas: Math.max(0, saknas), krav: a.krav, utanfor: a.utanfor });
       });
     }
     return ut;
@@ -1303,8 +1310,11 @@ const GRANSKNING = (() => {
         grupp = (indata.personal || []).filter(q => (q.dygnsdelar || ["morgon", "kvall"]).some(ryms)).map(q => q.id);
       }
       const G = grupp.length;
-      const beh = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && dagar.length ? Math.ceil(G * a.varje_person / dagar.length) : G;
+      const fast = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && dagar.length ? null : G;
+      const tot = G * (a.varje_person || 0), sorterade = [...dagar].sort((x, y) => x - y);
       for (const d of dagar) {
+        // varje_person: platserna fördelas jämnt, de första tillfällena får en extra när det inte går jämnt ut
+        const i = sorterade.indexOf(d), beh = fast !== null ? fast : Math.floor(tot / dagar.length) + (i < tot % dagar.length ? 1 : 0);
         const n = (deltar.get(a.id + "|" + d) || []).length;
         if (n < beh) brott("AKTIVITET", null, `${dagText(d)} ${a.start}–${a.slut}: ${n} deltar i ${namn}, behov ${beh}.`, !!a.krav);
       }
@@ -1547,12 +1557,17 @@ const MOTOR = (() => {
       }
       const ryms = t => t === M ? ms <= a0 && a1 <= kt : t === K ? kf <= a0 && a1 <= ks
         : (ns <= a0 && a1 <= ne) || (ns <= a0 + DYGN && a1 + DYGN <= ne);
-      const grupp = pers.map((p, pi) => pi).filter(pi => a.deltagare && a.deltagare.length ? a.deltagare.includes(pers[pi].id) : pers[pi].typer.some(ryms));
+      const grupp = pers.map((p, pi) => pi).filter(pi => a.deltagare && a.deltagare.length ? a.deltagare.includes(pers[pi].id) : pers[pi].typer.some(t => ryms(t, pers[pi])));
+      // dag- och kvällspersonal vars pass inte täcker aktivitetstiden kommer inte med; det visas i resultatet
+      const utanfor = a.deltagare && a.deltagare.length ? [] : pers.filter(p => !p.natt && !p.typer.some(t => ryms(t, p))).map(p => p.id);
       const G = grupp.length, T = dagar.size;
       const onskat = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && T ? Math.ceil(G * a.varje_person / T) : G;
       const antal = Math.min(onskat, G);
       const snitt = G ? antal * T / G : 0;
-      akt.push({ id, namn: a.namn || id, start: a.start, slut: a.slut, a0, a1, dagar: [...dagar].sort((x, y) => x - y), grupp, antal, onskat,
+      // behov per tillfälle; varje_person fördelas jämnt (13 personer, 2 tillfällen: 7 och 6), som i build.py
+      const tot = G * (a.varje_person || 0);
+      const mal = [...dagar].sort((x, y) => x - y).map((d, i) => a.varje_person && T && !a.antal && !a.andel ? Math.floor(tot / T) + (i < tot % T ? 1 : 0) : antal);
+      akt.push({ id, namn: a.namn || id, start: a.start, slut: a.slut, a0, a1, dagar: [...dagar].sort((x, y) => x - y), grupp, antal, onskat, mal, utanfor, varje: !!(a.varje_person && !a.antal && !a.andel),
         krav: !!a.krav, minst: a.minst_pa_golvet || 0, golv: a.fran_golvet !== false, lo: a.varje_person || Math.floor(snitt + 1e-9), hi: a.varje_person || Math.ceil(snitt - 1e-9) });
     });
 
@@ -1756,12 +1771,12 @@ const MOTOR = (() => {
       let k = 0;
       for (const a of pr.akt) {
         const mojlig = new Map();
-        for (const d of a.dagar) {
+        for (const [i, d] of a.dagar.entries()) {
           let n = 0;
-          for (const pi of a.grupp) if (forlangning(pi, X, d, a) <= Math.max(pers[pi].tol, 120)) { n++; mojlig.set(pi, (mojlig.get(pi) || 0) + 1); }
-          k += Math.max(0, a.antal - n) * (a.krav ? HW : WA);
+          for (const pi of a.grupp) if (forlangning(pi, X, d, a) <= Math.max(pers[pi].tol, 240)) { n++; mojlig.set(pi, (mojlig.get(pi) || 0) + 1); }
+          k += Math.max(0, a.mal[i] - n) * (a.krav ? HW : WA);
           // minsta bemanning på golvet: utöver deltagarna behövs så många som kan vara kvar (behov, som vakanser)
-          if (a.minst) k += (Math.max(0, a.antal + a.minst - n) - Math.max(0, a.antal - n)) * WV / 2;
+          if (a.minst) k += (Math.max(0, a.mal[i] + a.minst - n) - Math.max(0, a.mal[i] - n)) * WV / 2;
         }
         // rättvisa: var och en ska kunna delta minst så många gånger som fördelningen kräver
         if (a.lo) for (const pi of a.grupp) k += Math.max(0, a.lo - (mojlig.get(pi) || 0)) * WA / 4;
@@ -2017,15 +2032,17 @@ const MOTOR = (() => {
         const ordning = a.grupp.filter(pi => (n.get(pi) || 0) < varv)
           .sort((x, y) => kan.filter(k => k.has(x)).length - kan.filter(k => k.has(y)).length || x - y);
         for (const pi of ordning) {
-          const val = a.dagar.map((d, i) => i).filter(i => kan[i].has(pi) && delt[i].length < a.antal && !delt[i].includes(pers[pi].id))
+          const val = a.dagar.map((d, i) => i).filter(i => kan[i].has(pi) && delt[i].length < a.mal[i] && !delt[i].includes(pers[pi].id))
             .sort((i, j) => delt[i].length - delt[j].length || i - j);
           for (const i of val) if (tilldela(pi, i)) break;
         }
       }
       // fyll platser som är kvar med dem som har deltagit minst
       a.dagar.forEach((d, i) => {
-        const resten = [...kan[i]].filter(pi => !delt[i].includes(pers[pi].id)).sort((x, y) => (n.get(x) || 0) - (n.get(y) || 0) || x - y);
-        for (const pi of resten) { if (delt[i].length >= a.antal) break; tilldela(pi, i); }
+        // med "varje person N gånger" får ingen gå fler gånger än N; då är det bättre att platsen syns som saknad
+        const resten = [...kan[i]].filter(pi => !delt[i].includes(pers[pi].id) && !(a.varje && (n.get(pi) || 0) >= a.hi))
+          .sort((x, y) => (n.get(x) || 0) - (n.get(y) || 0) || x - y);
+        for (const pi of resten) { if (delt[i].length >= a.mal[i]) break; tilldela(pi, i); }
       });
       // minsta bemanning på golvet: förläng pass för dem som inte deltar tills nog många är kvar varje kvart
       if (a.minst) a.dagar.forEach((d, i) => {
@@ -2052,11 +2069,11 @@ const MOTOR = (() => {
         }
       });
       a.dagar.forEach((d, i) => {
-        const saknas = a.onskat - delt[i].length;
+        const behov = a.varje ? a.mal[i] : a.onskat, saknas = behov - delt[i].length;
         const dt = `vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}`;
-        if (saknas > 0 && a.krav) brott.push({ regel: "AKTIVITET", niva: "verksamhet", person: null, text: `${dt}: ${delt[i].length} deltar i ${a.namn}, behov ${a.onskat}.` });
+        if (saknas > 0 && a.krav) brott.push({ regel: "AKTIVITET", niva: "verksamhet", person: null, text: `${dt}: ${delt[i].length} deltar i ${a.namn}, behov ${behov}.` });
         ut.push({ aktivitet: a.id, namn: a.namn, dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: a.start, slut: a.slut,
-          deltagare: delt[i], behov: a.onskat, saknas: Math.max(0, saknas), krav: a.krav });
+          deltagare: delt[i], behov, saknas: Math.max(0, saknas), krav: a.krav, utanfor: a.utanfor });
       });
     }
     return ut;
@@ -3183,7 +3200,11 @@ function aktivitetKort(res) {
     <div class="rull"><table class="lista"><thead><tr><th>Aktivitet</th><th>När</th><th>Deltar</th><th class="tal">Antal</th></tr></thead><tbody>
     ${l.map(t => `<tr><td><b>★ ${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
       <td>${esc(t.deltagare.join(", ")) || "–"}</td><td class="tal nw${t.saknas ? " fel" : ""}">${t.deltagare.length} av ${t.behov}${t.saknas ? ` · ${t.saknas} saknas` : ""}</td></tr>`).join("")}
-    </tbody></table></div></section>`;
+    </tbody></table></div>${(() => {
+      // dag- och kvällspersonal som inte kan delta alls, för att inget av deras pass kan täcka tiden
+      const ute = {}; l.forEach(t => (t.utanfor || []).forEach(q => { (ute[t.namn] = ute[t.namn] || new Set()).add(q); }));
+      return Object.entries(ute).map(([namn, s]) => `<p class="dampad liten" style="margin-top:8px">⚠ <b>${esc(namn)}:</b> ${esc([...s].join(", "))} kan inte delta, eftersom inget av deras pass kan täcka tiden. Flytta tiden, korta aktiviteten eller ange dem som deltagare så syns det som saknade platser.</p>`).join("");
+    })()}</section>`;
 }
 
 // ---------------------------------------------------------------- balansmall (beslut 26 i regelhierarki.md)
@@ -4442,7 +4463,7 @@ const ANALYS = (() => {
 })();
 if (typeof module !== "undefined") module.exports = ANALYS;
 </script>
-<script type="application/json" id="exempel">[{"namn": "Grundfall, sex veckor", "beskrivning": "Grundfall: 6 veckor, cykliskt, tio med dag/kväll och två nattpersoner. Halva gruppen har 28 pass och halva 29, som i ett 12-veckorsschema med två delperioder. Ska gå att lösa utan avtalsbrott.", "indata": {"enhet": "Test – sex veckor", "veckor": 6, "cykliskt": true, "behov": {"vardag": {"morgon": 3, "kvall": 3, "natt": 1}, "helg": {"morgon": 2, "kvall": 2, "natt": 1}}, "personal": [{"id": "A1", "grad": 1.0, "antal_pass": 28}, {"id": "A2", "grad": 1.0, "antal_pass": 29}, {"id": "A3", "grad": 1.0, "antal_pass": 28}, {"id": "A4", "grad": 1.0, "antal_pass": 29}, {"id": "A5", "grad": 1.0, "antal_pass": 28}, {"id": "A6", "grad": 1.0, "antal_pass": 29}, {"id": "B1", "grad": 0.8, "antal_pass": 28}, {"id": "B2", "grad": 0.8, "antal_pass": 29}, {"id": "C1", "grad": 0.75, "antal_pass": 28}, {"id": "C2", "grad": 0.75, "antal_pass": 29}, {"id": "N1", "grad": 1.0, "dygnsdelar": ["natt"]}, {"id": "N2", "grad": 1.0, "dygnsdelar": ["natt"]}]}}, {"namn": "Helgrotation med undantag", "beskrivning": "Helgrotation: åtta med dag/kväll på fyra veckor. Två har fast helggrupp (A och B), en arbetar tre helger av fyra, en arbetar inga helger, övriga varannan helg med grupp som väljs av lösaren. Ska gå att lösa, och granskningen ska visa att varje person följer sin helgfrekvens.", "indata": {"enhet": "Test – helgrotation", "veckor": 4, "cykliskt": true, "behov": {"vardag": {"morgon": 2, "kvall": 2}, "helg": {"morgon": 2, "kvall": 1}}, "personal": [{"id": "H1", "grad": 1.0, "helggrupp": "A"}, {"id": "H2", "grad": 1.0, "helggrupp": "B"}, {"id": "H3", "grad": 1.0}, {"id": "H4", "grad": 0.9}, {"id": "H5", "grad": 0.8}, {"id": "H6", "grad": 0.75, "helgfrekvens": "3/4"}, {"id": "H7", "grad": 1.0, "helgfrekvens": "ingen"}, {"id": "H8", "grad": 0.85}]}}, {"namn": "Fredagsregeln ger vakanser", "beskrivning": "Fredagsregeln: åtta med dag/kväll på fyra veckor, varannan helg, så fyra arbetar varje helg. Fredag kväll behövs tre, lördag morgon två. Den som är ledig helgen får inte arbeta fredag kväll, och den som arbetar fredag kväll kan inte ta morgon på lördagen. Fem behövs men fyra finns, så varje helg får en vakans. Balansen ska förutsäga fyra vakanta pass.", "indata": {"enhet": "Test – fredagsregeln", "veckor": 4, "cykliskt": true, "behov": {"vardag": {"morgon": 2, "kvall": 2}, "fre": {"morgon": 2, "kvall": 3}, "helg": {"morgon": 2, "kvall": 1}}, "personal": [{"id": "F1", "grad": 1.0}, {"id": "F2", "grad": 1.0}, {"id": "F3", "grad": 0.9}, {"id": "F4", "grad": 0.9}, {"id": "F5", "grad": 0.8}, {"id": "F6", "grad": 0.8}, {"id": "F7", "grad": 0.75}, {"id": "F8", "grad": 0.75}]}}]</script>
+<script type="application/json" id="exempel">[{"namn": "Grundfall, sex veckor", "beskrivning": "Grundfall: 6 veckor, cykliskt, tio med dag/kväll och två nattpersoner. Halva gruppen har 28 pass och halva 29, som i ett 12-veckorsschema med två delperioder. Ska gå att lösa utan avtalsbrott.", "indata": {"enhet": "Test – sex veckor", "veckor": 6, "cykliskt": true, "behov": {"vardag": {"morgon": 3, "kvall": 3, "natt": 1}, "helg": {"morgon": 2, "kvall": 2, "natt": 1}}, "personal": [{"id": "A1", "grad": 1.0, "antal_pass": 28}, {"id": "A2", "grad": 1.0, "antal_pass": 29}, {"id": "A3", "grad": 1.0, "antal_pass": 28}, {"id": "A4", "grad": 1.0, "antal_pass": 29}, {"id": "A5", "grad": 1.0, "antal_pass": 28}, {"id": "A6", "grad": 1.0, "antal_pass": 29}, {"id": "B1", "grad": 0.8, "antal_pass": 28}, {"id": "B2", "grad": 0.8, "antal_pass": 29}, {"id": "C1", "grad": 0.75, "antal_pass": 28}, {"id": "C2", "grad": 0.75, "antal_pass": 29}, {"id": "N1", "grad": 1.0, "dygnsdelar": ["natt"]}, {"id": "N2", "grad": 1.0, "dygnsdelar": ["natt"]}]}}, {"namn": "Helgrotation med undantag", "beskrivning": "Helgrotation: åtta med dag/kväll på fyra veckor. Två har fast helggrupp (A och B), en arbetar tre helger av fyra, en arbetar inga helger, övriga varannan helg med grupp som väljs av lösaren. Ska gå att lösa, och granskningen ska visa att varje person följer sin helgfrekvens.", "indata": {"enhet": "Test – helgrotation", "veckor": 4, "cykliskt": true, "behov": {"vardag": {"morgon": 2, "kvall": 2}, "helg": {"morgon": 2, "kvall": 1}}, "personal": [{"id": "H1", "grad": 1.0, "helggrupp": "A"}, {"id": "H2", "grad": 1.0, "helggrupp": "B"}, {"id": "H3", "grad": 1.0}, {"id": "H4", "grad": 0.9}, {"id": "H5", "grad": 0.8}, {"id": "H6", "grad": 0.75, "helgfrekvens": "3/4"}, {"id": "H7", "grad": 1.0, "helgfrekvens": "ingen"}, {"id": "H8", "grad": 0.85}]}}, {"namn": "Fredagsregeln ger vakanser", "beskrivning": "Fredagsregeln: åtta med dag/kväll på fyra veckor, varannan helg, så fyra arbetar varje helg. Fredag kväll behövs tre, lördag morgon två. Den som är ledig helgen får inte arbeta fredag kväll, och den som arbetar fredag kväll kan inte ta morgon på lördagen. Fem behövs men fyra finns, så varje helg får en vakans. Balansen ska förutsäga fyra vakanta pass.", "indata": {"enhet": "Test – fredagsregeln", "veckor": 4, "cykliskt": true, "behov": {"vardag": {"morgon": 2, "kvall": 2}, "fre": {"morgon": 2, "kvall": 3}, "helg": {"morgon": 2, "kvall": 1}}, "personal": [{"id": "F1", "grad": 1.0}, {"id": "F2", "grad": 1.0}, {"id": "F3", "grad": 0.9}, {"id": "F4", "grad": 0.9}, {"id": "F5", "grad": 0.8}, {"id": "F6", "grad": 0.8}, {"id": "F7", "grad": 0.75}, {"id": "F8", "grad": 0.75}]}}, {"namn": "Möte en gång per period", "beskrivning": "Möte en gång per period: tisdag 13:30–15:30 jämna veckor (vecka 2 och 4). Alla i dag- och kvällsgruppen deltar en gång, så ungefär hälften går varje tillfälle. Minst 2 ska vara kvar på golvet under mötet. Nattpersonalen deltar inte (deras pass täcker inte mötet). Ska gå att lösa utan avtalsbrott och utan saknade deltagare.", "indata": {"enhet": "Exempel – möte en gång per period", "veckor": 4, "cykliskt": true, "behov": {"vardag": {"morgon": 3, "kvall": 3, "natt": 1}, "helg": {"morgon": 3, "kvall": 2, "natt": 1}}, "personal": [{"id": "A1", "grad": 1}, {"id": "A2", "grad": 1}, {"id": "A3", "grad": 1}, {"id": "A4", "grad": 0.9}, {"id": "A5", "grad": 0.9}, {"id": "A6", "grad": 0.9}, {"id": "A7", "grad": 0.85}, {"id": "A8", "grad": 0.85}, {"id": "A9", "grad": 0.8}, {"id": "A10", "grad": 0.8}, {"id": "A11", "grad": 0.75}, {"id": "A12", "grad": 0.75}, {"id": "A13", "grad": 0.75}, {"id": "N1", "grad": 1, "dygnsdelar": ["natt"]}, {"id": "N2", "grad": 0.9, "dygnsdelar": ["natt"]}, {"id": "N3", "grad": 0.75, "dygnsdelar": ["natt"]}], "aktiviteter": [{"id": "MOTE", "namn": "Personalmöte", "typ": "mote", "dagar": ["tis"], "veckor": "jämna", "start": "13:30", "slut": "15:30", "varje_person": 1, "minst_pa_golvet": 2}], "onskemal": []}}]</script>
 <script>
 "use strict";
 const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];

@@ -9,7 +9,7 @@ from pathlib import Path
 HAR = Path(__file__).resolve().parent
 FALL = HAR.parent / "tests" / "fall"
 NAMN = {"six_week_basic": "Grundfall, sex veckor", "weekend_rotation": "Helgrotation med undantag",
-        "friday_rule_vacancy": "Fredagsregeln ger vakanser"}
+        "friday_rule_vacancy": "Fredagsregeln ger vakanser", "aktivitet_mote_jamna_veckor": "Möte en gång per period"}
 
 
 def skydda(text):

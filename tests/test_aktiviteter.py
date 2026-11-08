@@ -204,3 +204,38 @@ def test_veckovila_markeras_pa_lediga_dagar(losning, tmp_path):
         assert all(res["schema"][pid][d] is None for d, _ in lista)
         assert {x["vecka"] for _, x in lista} == {1, 2, 3, 4}
         assert all(x["timmar"] >= 36 and not x["under"] for _, x in lista)
+
+
+def test_alla_en_gang_per_period_aven_deltidare():
+    """Möte jämna veckor, alla en gång: 13 personer på 2 tillfällen blir 7 och 6. De med 75 % har kortare pass som
+    inte täcker mötet; de får ett längre pass just den dagen, och arbetstiden i perioden stämmer ändå."""
+    indata = json.loads((ROT / "tests" / "fall" / "aktivitet_mote_jamna_veckor.json").read_text(encoding="utf-8"))
+    res = los(forbered(copy.deepcopy(indata)), tid_per_steg=10, tyst=True)
+    assert res["status"] == "OK"
+    assert [t["behov"] for t in res["aktiviteter"]] == [7, 6]
+    assert [len(t["deltagare"]) for t in res["aktiviteter"]] == [7, 6]
+    dag_kvall = [p["id"] for p in indata["personal"] if "dygnsdelar" not in p]
+    alla = [q for t in res["aktiviteter"] for q in t["deltagare"]]
+    assert sorted(alla) == sorted(dag_kvall)  # alla en gång, ingen två gånger, ingen natt
+    for t in res["aktiviteter"]:
+        assert t["utanfor"] == []
+        for q in t["deltagare"]:
+            p = res["schema"][q][t["dag"]]
+            assert p["start"] <= "13:30" and p["slut"] >= "15:30"
+    for q in ("A11", "A12", "A13"):
+        k = res["personer"][q]
+        assert abs(k["minuter"] - k["mal_minuter"]) <= 60
+    g = kontrollera(copy.deepcopy(indata), res)
+    assert not g["brott"] and not [v for v in g["varningar"] if v["regel"] == "AKTIVITET"]
+
+
+def test_lattmotorn_fordelar_alla_en_gang(tmp_path):
+    if not shutil.which("node"):
+        pytest.skip("Node saknas")
+    kod = ("const M=require(process.argv[1]);const f=JSON.parse(require('fs').readFileSync(process.argv[2],'utf8'));"
+           "const r=M.los(f,{sekunder:4,seed:1});process.stdout.write(JSON.stringify(r.aktiviteter.map(t=>[t.behov,t.deltagare])))")
+    ut = json.loads(subprocess.run(["node", "-e", kod, str(ROT / "light" / "motor.js"), str(ROT / "tests" / "fall" / "aktivitet_mote_jamna_veckor.json")],
+                                   capture_output=True, text=True, timeout=120, check=True).stdout)
+    assert [b for b, _ in ut] == [7, 6]
+    alla = [q for _, d in ut for q in d]
+    assert len(alla) == 13 and len(set(alla)) == 13

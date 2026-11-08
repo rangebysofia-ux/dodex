@@ -65,7 +65,7 @@
 **aktiviteter** – aktiviteter under arbetstid, till exempel APT, handledning eller utbildning. Den som deltar arbetar hela aktivitetstiden: passet läggs så att det täcker tiden, och tiden räknas som arbetstid. Aktiviteten påverkar därför passlängd, vila, OB och bemanningen vid klockslag.
 - `id` (kort kod, till exempel `APT`), `namn`, `start` och `slut` (samma dag, till exempel "14:00" och "16:00").
 - Dagar som för önskemål: `dagar` med `veckor` (`alla`, `jämna`, `udda` eller lista med veckonummer), eller `dagindex`.
-- Hur många per tillfälle: `antal`, eller `andel` av deltagargruppen (0.5 = hälften, avrundat uppåt). Anges bara `varje_person` (till exempel 1) blir det så många per tillfälle att alla hinner delta så många gånger. Utan något av dem deltar alla.
+- Hur många per tillfälle: `antal`, eller `andel` av deltagargruppen (0.5 = hälften, avrundat uppåt). Anges bara `varje_person` (till exempel 1) fördelas gruppen × `varje_person` platser jämnt på tillfällena; de första tillfällena får en plats extra när det inte går jämnt ut (13 personer på 2 tillfällen: 7 och 6). Den vars vanliga pass inte täcker aktiviteten får ett längre pass just den dagen (arbetstiden i perioden stämmer ändå), och den som ändå inte kan delta visas i resultatet (`utanfor`). Utan något av dem deltar alla.
 - `deltagare` – lista med id-koder. Utan lista är gruppen alla som har pass som kan täcka tiden (för 14–16 är det dag- och kvällspersonal).
 - `typ` – `apt`, `utbildning`, `mote`, `studier`, `dokumentation`, `handledning` eller `annat`. Bara för visning och sortering; reglerna är desamma.
 - `fran_golvet` (standard sant) – deltagarna räknas inte som i tjänst vid `tidpunkter` under aktiviteten. Behovet per dygnsdel påverkas inte: passet finns ju kvar.

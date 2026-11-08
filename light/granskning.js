@@ -230,8 +230,11 @@ const GRANSKNING = (() => {
         grupp = (indata.personal || []).filter(q => (q.dygnsdelar || ["morgon", "kvall"]).some(ryms)).map(q => q.id);
       }
       const G = grupp.length;
-      const beh = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && dagar.length ? Math.ceil(G * a.varje_person / dagar.length) : G;
+      const fast = a.antal ? a.antal : a.andel ? Math.ceil(a.andel * G - 1e-9) : a.varje_person && dagar.length ? null : G;
+      const tot = G * (a.varje_person || 0), sorterade = [...dagar].sort((x, y) => x - y);
       for (const d of dagar) {
+        // varje_person: platserna fördelas jämnt, de första tillfällena får en extra när det inte går jämnt ut
+        const i = sorterade.indexOf(d), beh = fast !== null ? fast : Math.floor(tot / dagar.length) + (i < tot % dagar.length ? 1 : 0);
         const n = (deltar.get(a.id + "|" + d) || []).length;
         if (n < beh) brott("AKTIVITET", null, `${dagText(d)} ${a.start}–${a.slut}: ${n} deltar i ${namn}, behov ${beh}.`, !!a.krav);
       }

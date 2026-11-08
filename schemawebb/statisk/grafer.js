@@ -469,7 +469,11 @@ function aktivitetKort(res) {
     <div class="rull"><table class="lista"><thead><tr><th>Aktivitet</th><th>När</th><th>Deltar</th><th class="tal">Antal</th></tr></thead><tbody>
     ${l.map(t => `<tr><td><b>★ ${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
       <td>${esc(t.deltagare.join(", ")) || "–"}</td><td class="tal nw${t.saknas ? " fel" : ""}">${t.deltagare.length} av ${t.behov}${t.saknas ? ` · ${t.saknas} saknas` : ""}</td></tr>`).join("")}
-    </tbody></table></div></section>`;
+    </tbody></table></div>${(() => {
+      // dag- och kvällspersonal som inte kan delta alls, för att inget av deras pass kan täcka tiden
+      const ute = {}; l.forEach(t => (t.utanfor || []).forEach(q => { (ute[t.namn] = ute[t.namn] || new Set()).add(q); }));
+      return Object.entries(ute).map(([namn, s]) => `<p class="dampad liten" style="margin-top:8px">⚠ <b>${esc(namn)}:</b> ${esc([...s].join(", "))} kan inte delta, eftersom inget av deras pass kan täcka tiden. Flytta tiden, korta aktiviteten eller ange dem som deltagare så syns det som saknade platser.</p>`).join("");
+    })()}</section>`;
 }
 
 // ---------------------------------------------------------------- balansmall (beslut 26 i regelhierarki.md)

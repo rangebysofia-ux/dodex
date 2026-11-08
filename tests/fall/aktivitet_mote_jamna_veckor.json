@@ -1,0 +1,117 @@
+{
+ "beskrivning": "Möte en gång per period: tisdag 13:30–15:30 jämna veckor (vecka 2 och 4). Alla i dag- och kvällsgruppen deltar en gång, så ungefär hälften går varje tillfälle. Minst 2 ska vara kvar på golvet under mötet. Nattpersonalen deltar inte (deras pass täcker inte mötet). Ska gå att lösa utan avtalsbrott och utan saknade deltagare.",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true,
+  "aktivitet_saknas": 0
+ },
+ "enhet": "Exempel – möte en gång per period",
+ "veckor": 4,
+ "cykliskt": true,
+ "behov": {
+  "vardag": {
+   "morgon": 3,
+   "kvall": 3,
+   "natt": 1
+  },
+  "helg": {
+   "morgon": 3,
+   "kvall": 2,
+   "natt": 1
+  }
+ },
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 1
+  },
+  {
+   "id": "A2",
+   "grad": 1
+  },
+  {
+   "id": "A3",
+   "grad": 1
+  },
+  {
+   "id": "A4",
+   "grad": 0.9
+  },
+  {
+   "id": "A5",
+   "grad": 0.9
+  },
+  {
+   "id": "A6",
+   "grad": 0.9
+  },
+  {
+   "id": "A7",
+   "grad": 0.85
+  },
+  {
+   "id": "A8",
+   "grad": 0.85
+  },
+  {
+   "id": "A9",
+   "grad": 0.8
+  },
+  {
+   "id": "A10",
+   "grad": 0.8
+  },
+  {
+   "id": "A11",
+   "grad": 0.75
+  },
+  {
+   "id": "A12",
+   "grad": 0.75
+  },
+  {
+   "id": "A13",
+   "grad": 0.75
+  },
+  {
+   "id": "N1",
+   "grad": 1,
+   "dygnsdelar": [
+    "natt"
+   ]
+  },
+  {
+   "id": "N2",
+   "grad": 0.9,
+   "dygnsdelar": [
+    "natt"
+   ]
+  },
+  {
+   "id": "N3",
+   "grad": 0.75,
+   "dygnsdelar": [
+    "natt"
+   ]
+  }
+ ],
+ "aktiviteter": [
+  {
+   "id": "MOTE",
+   "namn": "Personalmöte",
+   "typ": "mote",
+   "dagar": [
+    "tis"
+   ],
+   "veckor": "jämna",
+   "start": "13:30",
+   "slut": "15:30",
+   "varje_person": 1,
+   "minst_pa_golvet": 2
+  }
+ ],
+ "onskemal": [],
+ "losare": {
+  "tid_per_steg_s": 15
+ }
+}

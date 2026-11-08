@@ -376,13 +376,16 @@ def kontrollera(indata, schema_dok):
         elif a.get("andel"):
             behovet = math.ceil(a["andel"] * G - 1e-9)
         elif a.get("varje_person") and dagar:
-            behovet = math.ceil(G * a["varje_person"] / len(dagar))
+            behovet = None  # per tillfälle nedan
         else:
             behovet = G
-        for d in dagar:
+        tot = G * (a.get("varje_person") or 0)
+        for i, d in enumerate(sorted(dagar)):
+            # varje_person: platserna fördelas jämnt, de första tillfällena får en extra när det inte går jämnt ut
+            beh = behovet if behovet is not None else tot // len(dagar) + (1 if i < tot % len(dagar) else 0)
             n = len(deltar.get((a["id"], d), []))
-            if n < behovet:
-                brott("AKTIVITET", None, f"{dag_text(d)} {a['start']}–{a['slut']}: {n} deltar i {namn}, behov {behovet}.",
+            if n < beh:
+                brott("AKTIVITET", None, f"{dag_text(d)} {a['start']}–{a['slut']}: {n} deltar i {namn}, behov {beh}.",
                       hard=bool(a.get("krav")))
         utanfor = sorted({q for (i, _), lista in deltar.items() if i == a["id"] for q in lista} - set(grupp))
         if a.get("deltagare") and utanfor:

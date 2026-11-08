@@ -307,7 +307,7 @@ def forbered(indata):
         if not tillatna:
             raise IndataFel(f"{pid}: inga passmallar passar (dygnsdelar {delar}, mållängd {mal_langd:.0f} min).")
         personer.append({
-            "id": pid, "grad": p["grad"], "dygnsdelar": delar, "natt": natt, "tillatna": tillatna,
+            "id": pid, "grad": p["grad"], "dygnsdelar": delar, "natt": natt, "tillatna": tillatna, "band": set(tillatna),
             "pass_delperioder": pass_lista, "mal_minuter": mal_min, "tolerans": tol, "mal_langd": mal_langd,
             "helgfrekvens": p.get("helgfrekvens", r["helgfrekvens"]), "helggrupp": p.get("helggrupp"),
         })
@@ -333,11 +333,33 @@ def forbered(indata):
         okanda = [q for q in a.get("deltagare") or [] if q not in sedda]
         if okanda:
             raise IndataFel(f"Aktiviteten {a['id']} har okända deltagare: {', '.join(okanda)}.")
+        # Den som deltar arbetar hela aktivitetstiden, så passet läggs om för att täcka den (beslut 15).
+        # Har personen inget pass i sitt vanliga längdband som täcker aktiviteten (till exempel kortare pass
+        # vid lägre sysselsättning) får hon det kortaste pass som täcker, men bara på aktivitetens dagar.
+        # Arbetstiden i perioden ligger kvar inom toleransen, så andra pass blir kortare.
+        valda = a.get("deltagare")
+        for p in personer:
+            if p["natt"] or (valda and p["id"] not in valda):
+                continue
+            if any(tacker(mallar[s], a["_start"], a["_slut"]) == 0 for s in p["tillatna"]):
+                continue
+            kort = {}
+            for i, mall in enumerate(mallar):
+                if mall["dygnsdel"] in p["dygnsdelar"] and tacker(mall, a["_start"], a["_slut"]) == 0:
+                    k = (mall["dygnsdel"], mall["start"])
+                    if k not in kort or mall["netto"] < mallar[kort[k]]["netto"]:
+                        kort[k] = i
+            for i in kort.values():
+                if i not in p["tillatna"]:
+                    p["tillatna"].append(i)
+                p.setdefault("aktivitetspass", {}).setdefault(i, set()).update(a["_dagar"])
         # deltagargruppen: angivna personer, annars alla som har ett pass som kan täcka aktivitetstiden
         def kan(p):
             return any(tacker(mallar[s], a["_start"], a["_slut"]) is not None for s in p["tillatna"])
-        valda = a.get("deltagare")
         a["_grupp"] = [pi for pi, p in enumerate(personer) if (p["id"] in valda if valda else kan(p))]
+        # dag- och kvällspersonal som inte kommer med för att inget av deras pass täcker aktivitetstiden
+        # (till exempel kortare pass vid lägre sysselsättning); visas i resultatet så att det inte sker tyst
+        a["_utanfor"] = [] if valda else [p["id"] for p in personer if not p["natt"] and not kan(p)]
         G, T = len(a["_grupp"]), len(a["_dagar"])
         if a.get("antal"):
             antal = a["antal"]
@@ -349,6 +371,15 @@ def forbered(indata):
             antal = G
         a["_antal"] = min(antal, G)
         a["_onskat"] = antal
+        # behov per tillfälle. Med varje_person fördelas G × varje_person platser så jämnt som möjligt:
+        # de första tillfällena får en plats extra när det inte går jämnt ut (13 personer, 2 tillfällen: 7 och 6).
+        if a.get("varje_person") and T and not a.get("antal") and not a.get("andel"):
+            tot = G * a["varje_person"]
+            a["_mal"] = {d: tot // T + (1 if i < tot % T else 0) for i, d in enumerate(a["_dagar"])}
+        else:
+            a["_mal"] = {d: a["_antal"] for d in a["_dagar"]}
+        # det som visas som behov per tillfälle (för antal och andel kan det vara fler än gruppen)
+        a["_behov"] = dict(a["_mal"]) if a.get("varje_person") and not a.get("antal") and not a.get("andel") else {d: antal for d in a["_dagar"]}
         if a.get("varje_person"):
             a["_per_person"] = (a["varje_person"], a["varje_person"])
         else:
@@ -404,6 +435,13 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 vs.append(x[pi, d, s])
             work[pi, d] = m.new_bool_var(f"w_{p['id']}_{d}")
             m.add(sum(vs) == work[pi, d])  # högst ett pass per dag
+        # längre pass som bara finns för att täcka en aktivitet får bara användas på aktivitetens dagar
+        for s, dagar in p.get("aktivitetspass", {}).items():
+            if s in p["band"]:
+                continue
+            for d in range(N):
+                if d not in dagar and (pi, d, s) in x:
+                    m.add(x[pi, d, s] == 0)
 
     hs = veckotid(r["helg_start"]) - 4 * DYGN   # minuter efter fredag 00:00
     he = veckotid(r["helg_slut"])                # minuter efter måndag 00:00
@@ -602,8 +640,8 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 m.add(v <= sum(tack))
                 y[ai, d, pi] = v
                 delt.append(v)
-            brist = m.new_int_var(0, a["_antal"], "")
-            m.add(sum(delt) + brist == a["_antal"])
+            brist = m.new_int_var(0, a["_mal"][d], "")
+            m.add(sum(delt) + brist == a["_mal"][d])
             if a["krav"]:
                 m.add(brist == 0).only_enforce_if(L)
             akt_brist.append(brist)
@@ -802,11 +840,12 @@ def monsterproblem(prob):
     for p in enkel["personer"]:
         val = set()
         for del_ in p["dygnsdelar"]:
-            kand = [s for s in p["tillatna"] if M[s]["dygnsdel"] == del_]
+            kand = [s for s in p["tillatna"] if M[s]["dygnsdel"] == del_ and s in p.get("band", p["tillatna"])]
             if kand:
                 val.add(min(kand, key=lambda s: M[s]["netto"]))
                 val.add(max(kand, key=lambda s: M[s]["netto"]))
                 val.add(min(kand, key=lambda s: abs(M[s]["netto"] - p["mal_langd"])))
+        val.update(p.get("aktivitetspass", {}))  # pass som täcker en aktivitet (bara på dess dagar)
         p["tillatna"] = sorted(val)
     return enkel
 
@@ -943,7 +982,8 @@ def tolka(prob, solver, var, steg, kpi_mal):
                 delt.append(p["id"])
             tillfallen.append({"aktivitet": a["id"], "namn": a.get("namn") or a["id"], "dag": d, "vecka": d // 7 + 1,
                                "veckodag": DAGNAMN[d % 7], "start": a["start"], "slut": a["slut"],
-                               "deltagare": delt, "behov": a["_onskat"], "saknas": a["_onskat"] - len(delt)})
+                               "deltagare": delt, "behov": a["_behov"][d], "saknas": a["_behov"][d] - len(delt),
+                               "utanfor": a["_utanfor"]})
     vakanser = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "tid": t,
                  "antal": solver.value(v)} for v, d, del_, t in var["vak"] if solver.value(v)]
     kpi = dict(kpi_mal)

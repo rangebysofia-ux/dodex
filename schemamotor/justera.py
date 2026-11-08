@@ -97,7 +97,7 @@ def justera(indata, schema, grund=None):
                     break
             tillfallen.append({"aktivitet": a["id"], "namn": a.get("namn") or a["id"], "dag": d, "vecka": d // 7 + 1,
                                "veckodag": DAGNAMN[d % 7], "start": a["start"], "slut": a["slut"], "deltagare": delt,
-                               "behov": a["_onskat"], "saknas": max(0, a["_onskat"] - len(delt))})
+                               "behov": a["_behov"][d], "saknas": max(0, a["_behov"][d] - len(delt))})
     L = N * DYGN
     intervall = []
     for rad in nytt.values():
