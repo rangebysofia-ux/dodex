@@ -49,7 +49,7 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 
 ## Fas 7 – Balans (beslut 26–28 i regelhierarki.md)
 
-- [ ] **19. Balansmall.** Ett balanskort för varje schemaalternativ med de fyra perspektiven: behov (vakanser, täckning), arbetsmiljö (vila, block, kvällar i rad, helger, nattvila), budget (timmar mot budget, OB, resurstid) och kvalitet (jämn bemanning, aktiviteter, rättvisa). Det ska framgå vilket schema som gör vad. Eventuellt ett fjärde alternativ, *balanserat*.
+- [x] **19. Balansmall.** *Byggd: översikten och Jämför, i webben och telefonen (docs/balansmall.md). Ett fjärde, balanserat alternativ återstår.* Ett balanskort för varje schemaalternativ med de fyra perspektiven: behov (vakanser, täckning), arbetsmiljö (vila, block, kvällar i rad, helger, nattvila), budget (timmar mot budget, OB, resurstid) och kvalitet (jämn bemanning, aktiviteter, rättvisa). Det ska framgå vilket schema som gör vad. Eventuellt ett fjärde alternativ, *balanserat*.
 - [ ] **20. Resurspass jämnt fördelade.** Uppföljning per veckodag och mellan dag och kväll, med varning när resurstiden samlas på samma dagar eller på en dygnsdel. Mjukt mål i motorn om det behövs utöver jämn bemanning (beslut 13).
 - [ ] **21. Ledigheter i resurstiden.** Visa per dag var det finns resurs, så att ledigheter (semester, kompledighet, utbildning) kan planeras där utan vikarie, och följ upp planerat mot utfall.
 

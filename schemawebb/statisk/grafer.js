@@ -472,6 +472,114 @@ function aktivitetKort(res) {
     </tbody></table></div></section>`;
 }
 
-return { veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+// ---------------------------------------------------------------- balansmall (beslut 26 i regelhierarki.md)
+// Ett schema i fyra perspektiv: behov, arbetsmiljö, budget och kvalitet. Räknas ur själva schemat (inte ur
+// motorns nyckeltal), så webbens och lättversionens scheman kan jämföras. Varje mått har en riktning:
+// "lag" = lägre är bättre, "hog" = högre är bättre, null = visas men jämförs inte. Inga egna gränsvärden:
+// rött bara för brott mot hårda regler, vakanser och tid över budget.
+const PERSPEKTIV = [["behov", "Behov", "◎"], ["arbetsmiljo", "Arbetsmiljö", "♥"], ["budget", "Budget", "kr"], ["kvalitet", "Kvalitet", "★"]];
+
+function iRad(rad, N, cyk, villkor) {
+  // längsta följd av dagar där villkor(pass) gäller, runt periodskiftet om schemat är cykliskt
+  let bast = 0, l = 0;
+  const varv = cyk ? 2 * N : N;
+  for (let i = 0; i < varv; i++) { const p = rad[i % N]; if (p && villkor(p)) { l++; bast = Math.max(bast, Math.min(l, N)); } else l = 0; }
+  return bast;
+}
+
+function balans(k) {
+  const res = k.resultat, ind = k.indata, g = k.granskning || { brott: [], varningar: [] };
+  const N = res.veckor * 7, W = res.veckor, cyk = res.cykliskt !== false, nk = nyckeltalFor(k);
+  const rader = Object.entries(res.schema);
+  // arbetsmiljö ur schemat
+  const block = Math.max(0, ...rader.map(([, r]) => iRad(r, N, cyk, () => true)));
+  const kvallar = Math.max(0, ...rader.map(([, r]) => iRad(r, N, cyk, p => p.dygnsdel === "kvall")));
+  const natter = Math.max(0, ...rader.map(([, r]) => iRad(r, N, cyk, p => p.dygnsdel === "natt")));
+  const rek = regelVarde(ind, "block_rekommenderat", 4);
+  const overRek = rader.reduce((s, [, r]) => {
+    let ut = 0, l = 0;
+    for (let i = 0; i < N; i++) { if (r[i]) l++; else { ut += Math.max(0, l - rek); l = 0; } }
+    return s + ut + Math.max(0, l - rek);
+  }, 0);
+  // kvalitet: resurstid per veckodag och dygnsdel, rättvisa i kvällar
+  const rs = resurs(res, ind), perDag = Array(7).fill(0), perDel = { morgon: 0, kvall: 0, natt: 0 };
+  for (const nyckel of rs) { const i = nyckel.lastIndexOf(":"), d = +nyckel.slice(i + 1), p = res.schema[nyckel.slice(0, i)][d]; perDag[d % 7]++; if (perDel[p.dygnsdel] !== undefined) perDel[p.dygnsdel]++; }
+  const perDagVecka = perDag.map(x => x / W);
+  const dk = perDel.morgon + perDel.kvall;
+  const andelar = rader.map(([pid, r]) => {
+    const l = r.filter(Boolean), m = l.filter(p => p.dygnsdel === "morgon").length, kv = l.filter(p => p.dygnsdel === "kvall").length;
+    return m && kv ? kv / (m + kv) * 100 : null;
+  }).filter(x => x !== null);
+  const budget = Number(ind.budget_timmar_vecka) || null;
+  const harOnsk = (ind.onskemal || []).length > 0, harAkt = (ind.aktiviteter || []).length > 0;
+  const m = (id, namn, varde, rikt, fmt, tips, rod = false) => ({ id, namn, varde, rikt, text: varde == null ? "–" : fmt(varde), tips, rod });
+  const st = v => sv(v, 1), hel = v => String(Math.round(v)), krf = v => Math.round(v).toLocaleString("sv-SE") + " kr";
+  const maatt = {
+    behov: [
+      m("tackning", "Täckning av behovet", nk.grad, "hog", v => sv(v, 1) + " %", "Andel av behovet (pass per dag och dygnsdel) som är bemannat."),
+      m("vakanser", "Vakanta pass", nk.vak, "lag", hel, "Pass där behovet inte är bemannat.", nk.vak > 0),
+      ...(ind.tidpunkter && Object.keys(ind.tidpunkter).length ? [m("tidpunkter", "Vakanser vid klockslag", res.kpi?.vakanta_tidpunkter ?? null, "lag", hel, "Saknad bemanning vid de klockslag som har eget behov.")] : []),
+    ],
+    arbetsmiljo: [
+      m("brott", "Brott mot hårda regler", g.brott.length, "lag", hel, "Avtal, lag och lokala hårda regler enligt den fristående granskningen.", g.brott.length > 0),
+      m("notera", "Att notera i granskningen", g.varningar.length, "lag", hel, "Mjuka regler som inte nås, till exempel kvällar i rad eller vila mellan nattblock."),
+      m("block", "Längsta arbetsblock, dagar", block, "lag", hel, "Flest arbetsdagar i följd för någon person."),
+      m("over_rek", `Dagar i följd över ${rek}`, overRek, "lag", hel, `Summan av arbetsdagar utöver ${rek} i följd, för alla.`),
+      ...(perDel.kvall !== undefined && rader.some(([, r]) => r.some(p => p && p.dygnsdel === "kvall")) ? [m("kvallar", "Flest kvällar i rad", kvallar, "lag", hel, "Flest kvällspass i följd för någon person.")] : []),
+      ...(rader.some(([, r]) => r.some(p => p && p.dygnsdel === "natt")) ? [m("natter", "Flest nätter i rad", natter, "lag", hel, "Flest nattpass i följd för någon person.")] : []),
+      ...(harOnsk ? [m("onskemal", "Brutna önskemål", res.kpi?.onskemal ?? null, "lag", hel, "Önskemål som inte uppfylls (vägda).")] : []),
+    ],
+    budget: [
+      m("timmar", "Planerade timmar per vecka", nk.timmarVecka, null, st, "Arbetstid i schemat per vecka."),
+      ...(budget ? [m("over_budget", "Över budget, h per vecka", Math.max(0, nk.timmarVecka - budget), "lag", st, `Planerat över budgeten ${sv(budget, 1)} h per vecka.`, nk.timmarVecka - budget > 0.05)] : []),
+      m("resurs", "Resurstid, h per vecka", nk.resursTimmarVecka, null, st, "Tid utöver behovet. Den ska planeras in, annars blir den en kostnad."),
+      m("ob", "OB per vecka (uppskattad)", nk.obVecka ?? res.kpi?.ob_kr_vecka ?? null, "lag", krf, "OB enligt AB 25 § 21 för schemats pass, per vecka."),
+      ...(nk.kostnadVecka ? [m("kostnad", "Personalkostnad per vecka", nk.kostnadVecka, "lag", krf, "Timmar gånger timkostnad plus OB.")] : []),
+    ],
+    kvalitet: [
+      m("resurs_dagar", "Resurspass, skillnad mellan veckodagar", rs.size ? Math.max(...perDagVecka) - Math.min(...perDagVecka) : 0, "lag", st,
+        `Resurspass per vecka på den dag som har flest minus den som har minst (${DAGAR.map((d, i) => `${d} ${sv(perDagVecka[i], 1)}`).join(", ")}). Lågt = jämnt spritt.`),
+      m("resurs_kvall", "Resurstid på kväll", dk ? perDel.kvall / dk * 100 : null, null, v => sv(v, 0) + " %", "Andel av dag- och kvällsresurstiden som ligger på kväll. Varken bara dag eller bara kväll."),
+      m("rattvisa", "Rättvisa: skillnad i andel kvällar", andelar.length > 1 ? Math.max(...andelar) - Math.min(...andelar) : null, "lag", v => sv(v, 0) + " %-enh.", "Största skillnaden i andel kvällspass mellan dem som arbetar både dag och kväll."),
+      ...(harAkt ? [m("aktiviteter", "Aktiviteter som saknar deltagare", res.kpi?.aktivitet_saknas ?? null, "lag", hel, "Platser i APT, utbildning och liknande som inte fylls.")] : []),
+    ],
+  };
+  return { maatt, perDagVecka, perDel };
+}
+
+// Balansmallen för ett eller flera scheman: lista = [{namn, k}]. Med flera markeras bäst per mått och perspektiv.
+function balansKort(lista) {
+  const B = lista.map(x => balans(x.k)), flera = lista.length > 1;
+  const bast = (pi, mi) => {
+    const mt = B[0].maatt[pi][mi]; if (!flera || !mt.rikt) return null;
+    const v = B.map(b => b.maatt[pi][mi]?.varde).filter(x => typeof x === "number");
+    if (v.length < 2) return null;
+    const ut = mt.rikt === "lag" ? Math.min(...v) : Math.max(...v);
+    return v.every(x => Math.abs(x - ut) < 1e-9) ? null : ut;
+  };
+  // vilket schema som gör vad: flest bästa mått per perspektiv
+  const vinnare = PERSPEKTIV.map(([pi, namn, ikon]) => {
+    const poang = B.map(() => 0);
+    B[0].maatt[pi].forEach((_, mi) => { const b = bast(pi, mi); if (b === null) return; B.forEach((x, j) => { if (Math.abs((x.maatt[pi][mi]?.varde ?? NaN) - b) < 1e-9) poang[j]++; }); });
+    const max = Math.max(...poang);
+    return { pi, namn, ikon, vem: max > 0 ? lista.filter((_, j) => poang[j] === max).map(x => x.namn) : [] };
+  });
+  let h = `<section class="kort balans"><h2>Balansmall</h2><p class="dampad liten" style="margin:0 0 10px">Schemat i fyra perspektiv: behov, arbetsmiljö, budget och kvalitet. Det ska vara en balans – inget perspektiv får styra ensamt.${flera ? " Grönt = bäst på raden." : ""}</p>`;
+  if (flera) h += `<div class="balans-vem">${vinnare.map(v => `<div><b><span class="balans-ikon">${v.ikon}</span>${v.namn}</b><span>${v.vem.length ? v.vem.map(esc).join(", ") : "Lika"}</span></div>`).join("")}</div>`;
+  h += `<div class="rull"><table class="jamfor balanstabell"><thead><tr><th></th>${lista.map(x => `<th class="tal">${esc(flera ? x.namn : "Schemat")}</th>`).join("")}</tr></thead><tbody>`;
+  for (const [pi, namn, ikon] of PERSPEKTIV) {
+    h += `<tr class="perspektiv"><th colspan="${lista.length + 1}"><span class="balans-ikon">${ikon}</span>${namn}</th></tr>`;
+    B[0].maatt[pi].forEach((mt, mi) => {
+      const b = bast(pi, mi);
+      h += `<tr><td data-tips="${esc(mt.tips)}">${esc(mt.namn)}</td>${B.map(x => { const v = x.maatt[pi][mi];
+        const gron = b !== null && v && Math.abs(v.varde - b) < 1e-9, rod = v && v.rod;
+        return `<td class="tal nw${gron ? " bast" : ""}${rod ? " rod" : ""}">${v ? esc(v.text) : "–"}</td>`; }).join("")}</tr>`;
+    });
+  }
+  h += `</tbody></table></div></section>`;
+  return h;
+}
+
+return { balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

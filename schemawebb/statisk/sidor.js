@@ -37,7 +37,7 @@ async function visaOversikt(id) {
       <div>${k ? `<a class="knapp liten" href="#/e/${id}/schema/${k.id}">${IKON.schema} Öppna schemat</a>` : ""}</div></div></section>
     ${nyckeltalskort(k, foregaende)}`;
   if (k && k.status === "klar" && k.resultat?.status === "OK") {
-    h += grafkort(k) + GRAF.resursKort(k, p => `<a href="#/e/${id}/personer/${k.id}?p=${encodeURIComponent(p)}">${esc(p)}</a>`);
+    h += grafkort(k) + GRAF.balansKort([{ namn: k.namn, k }]) + GRAF.resursKort(k, p => `<a href="#/e/${id}/personer/${k.id}?p=${encodeURIComponent(p)}">${esc(p)}</a>`);
     const g = k.granskning;
     h += `<div class="tva"><section class="kort"><h2>Regelkontroll</h2>${regellista(k)}<p style="margin-top:10px"><a href="#/e/${id}/regelkontroll/${k.id}">Visa detaljer</a></p></section>
       <section class="kort"><h2>Förslag</h2><p class="dampad">Jämför bemanningsalternativ inom budget och se konsekvenser för vakanser, kostnad, helger och kvällsfördelning.</p>

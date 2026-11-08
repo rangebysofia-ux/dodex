@@ -717,6 +717,7 @@ async function visaJamfor(ids) {
     ${nycklar.map(n => { const l = battre.has(n) ? lagst(n) : null; return `<tr><td>${n}</td>${rader.map(r => `<td class="nw"${l !== null && r[n] === l && rader.some(q => q[n] !== l) ? ` style="color:var(--bra);font-weight:800"` : ""}>${esc(typeof r[n] === "number" && n.startsWith("OB") ? r[n].toLocaleString("sv-SE") : r[n])}</td>`).join("")}</tr>`; }).join("")}
     <tr><td></td>${k.map(x => `<td>${x.resultat?.status === "OK" ? `<a class="knapp liten primar" href="#/e/${x.enhet_id}/schema/${x.id}">Öppna</a>` : ""}</td>`).join("")}</tr>
     </tbody></table></div></section>
+    ${k.every(x => x.resultat?.status === "OK") ? GRAF.balansKort(k.map(x => ({ namn: profil(x)?.[0] || x.namn, k: x }))) : ""}
     ${k.every(x => x.resultat?.status === "OK") ? `<section class="kort"><h2>Bemanning mot behov</h2><div class="tre">${k.map(x => `<div><h3>${esc(profil(x)?.[0] || x.namn)}</h3>${GRAF.varmekarta(GRAF.bemanning(x.resultat, x.indata), x.resultat.veckor)}</div>`).join("")}</div></section>` : ""}`;
   if (pagar) startaPollning(async () => { if (!location.hash.startsWith("#/jamfor/")) return false; await visaJamfor(ids); return false; }, 3000);
 }

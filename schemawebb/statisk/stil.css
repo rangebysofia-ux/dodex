@@ -460,3 +460,10 @@ i.vvlegend { display: inline-block; width: 14px; height: 14px; border-radius: 3p
 
 .tre { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
 table.jamfor th { vertical-align: top; min-width: 180px; }
+.balans-vem { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.balans-vem > div { border: 1px solid var(--linje); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.balans-vem span:last-child { color: var(--dampad); font-size: 13px; }
+.balans-ikon { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 6px; background: var(--accent-svag, #e6efe8); font-size: 11px; font-weight: 800; margin-right: 6px; padding: 0 4px; }
+table.balanstabell tr.perspektiv th { text-align: left; padding-top: 12px; font-size: 13.5px; color: var(--text); border-bottom: 2px solid var(--linje); }
+table.balanstabell td.bast { color: var(--bra); font-weight: 800; } table.balanstabell td.rod { color: var(--dalig, var(--kritisk, #b8432f)); font-weight: 800; }
+table.balanstabell td[data-tips] { cursor: help; }
