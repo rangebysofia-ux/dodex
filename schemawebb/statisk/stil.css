@@ -405,6 +405,14 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 
 /* ---------- Startguiden ---------- */
 .valkommen .logga svg { width: 54px; height: 54px; }
+/* stor logotyp: urtavlan med text, som i den grafiska profilen */
+.logga.stor { gap: 22px; }
+.logga.stor svg, .valkommen .logga.stor svg { width: 112px; height: 112px; filter: drop-shadow(0 4px 12px rgba(20, 19, 16, .25)); }
+.logga.stor b { font-size: 40px; letter-spacing: .12em; }
+.logga.stor small { font-size: 11px; letter-spacing: .5em; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+.logga.stor small::before { content: ""; width: 28px; height: 1px; background: currentColor; opacity: .7; }
+.logga.stor em { display: block; font: italic 12px/1 var(--sans); color: var(--dampad); margin-top: 10px; letter-spacing: .04em; }
+@media (max-width: 560px) { .logga.stor svg, .valkommen .logga.stor svg { width: 76px; height: 76px; } .logga.stor b { font-size: 28px; } }
 .valrutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
 .valruta { display: grid; gap: 10px; text-align: left; align-content: start; padding: 16px; border-radius: 18px; border: 1px solid var(--linje); background: var(--yta2); cursor: pointer; font: inherit; color: var(--text); min-height: 0; }
 .valruta:hover { border-color: var(--salvia); background: var(--accent-svag); }
