@@ -60,6 +60,12 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 25. **Helst högst tre kvällar i rad (lokal regel, mjuk).** `kvall_max_i_rad` (standard 3, 0 stänger av) för alla som arbetar kväll. Räknas med blocklängden i målordningen. Granskningen visar fler kvällar i rad som något att notera (KVALL_I_RAD). Beslutat av användaren 2026-11-07. **Tillägg:** `kvall_i_rad_typ` "mjuk" (standard) eller "hard". Som hård är regeln en lokal regel (aldrig fler kvällar i rad): motor (regelgrupp KVALL_I_RAD), granskning (brott), förklaring och lättversionen. Kan göra schemat olösbart; förklaringen visar då krocken. Beslutat av användaren 2026-11-07.
 
+26. **Balans mellan behov, arbetsmiljö, budget och kvalitet (princip).** Schemat styrs inte enbart av bemanningsbehovet eller bemanningskurvan, eftersom det inte går ihop. Det ska alltid vara en balans mellan de fyra. Behovet ligger kvar som högsta mjuka nivå (princip 2), och vakanser syns alltid. Men systemet ska visa vad varje schemaalternativ gör för var och en av de fyra (en *balansmall*), så att verksamheten väljer medvetet. Bemanningskurvan från mallen är ett underlag och styr inte schemat. Beslutat av användaren 2026-11-08.
+
+27. **Resurspassen sprids jämnt (princip, mjuk).** Resurstiden ska ligga relativt jämnt över veckans dagar, inte samma dagar varje vecka. Den ska inte heller hamna bara på dagtid, eller bara på kvällstid där den är svår att få ut och blir en kostnad. Det bygger vidare på jämn bemanning (beslut 13). Resurstiden ska planeras in och följas upp, till exempel för att lägga in ledigheter i verksamheten där det finns resurs. Beslutat av användaren 2026-11-08.
+
+28. **Inte medarbetarstyrda scheman fullt ut (princip).** Medarbetarnas önskemål väger in, men verksamheten lägger schemat. Önskemål ligger fortsatt efter behov, regler, block, passlängd och rättvisa (målordningen). Ett medarbetarstyrt alternativ kan jämföras men är inte grunden. Beslutat av användaren 2026-11-08.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

@@ -47,6 +47,12 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 - [ ] **17. Gemensamt gränssnitt.** En sida i taget flyttas till delade filer som både webben och lättversionen använder, med schemavyn först. Inga inställningar får försvinna på vägen.
 - [ ] **18. Två motorer i samma program.** Fullständiga motorn när servern finns, lättmotorn annars, märkt som snabbförslag.
 
+## Fas 7 – Balans (beslut 26–28 i regelhierarki.md)
+
+- [ ] **19. Balansmall.** Ett balanskort för varje schemaalternativ med de fyra perspektiven: behov (vakanser, täckning), arbetsmiljö (vila, block, kvällar i rad, helger, nattvila), budget (timmar mot budget, OB, resurstid) och kvalitet (jämn bemanning, aktiviteter, rättvisa). Det ska framgå vilket schema som gör vad. Eventuellt ett fjärde alternativ, *balanserat*.
+- [ ] **20. Resurspass jämnt fördelade.** Uppföljning per veckodag och mellan dag och kväll, med varning när resurstiden samlas på samma dagar eller på en dygnsdel. Mjukt mål i motorn om det behövs utöver jämn bemanning (beslut 13).
+- [ ] **21. Ledigheter i resurstiden.** Visa per dag var det finns resurs, så att ledigheter (semester, kompledighet, utbildning) kan planeras där utan vikarie, och följ upp planerat mot utfall.
+
 ## Senare
 
 Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr` och OB enligt AB 25 § 21 (docs/ob.md); löneskillnader per person och lokala OB-nivåer återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*
