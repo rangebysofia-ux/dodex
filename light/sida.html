@@ -34,7 +34,7 @@
   --bra: #8fcaa0; --bra-bg: #1c3326; --dalig: #ec8b78; --dalig-bg: #3b221d; --varn: #e8c47a; --varn-bg: #352c19; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--sans); }
-.sida { max-width: 820px; margin: 0 auto; padding-block: 14px 110px; display: grid; gap: 14px;
+.sida { max-width: 820px; margin: 0 auto; padding-block: 14px 140px; display: grid; gap: 14px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 h1 { font: 700 23px/1.2 var(--rubrik); margin: 0; text-wrap: balance; }
 .logga { display: flex; align-items: center; gap: 10px; } .logga svg { width: 42px; height: 42px; flex: none; }
@@ -126,9 +126,18 @@ tr.bem td.vakans { color: var(--dalig); font-weight: 700; background: var(--dali
 .mono { font-family: var(--mono); font-size: 13px; }
 .fot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--yta); border-top: 1px solid var(--linje);
   padding-block: 10px max(10px, env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.fot > div { max-width: 820px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
-.fot button.primar { flex: 1; padding: 11px; font-size: 16px; }
-.fot select { width: auto; }
+/* bottenraden: två lika höga knappar, söktiden som en liten rad under */
+.fot-knappar { max-width: 820px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.fot-knappar button { height: 50px; border-radius: 14px; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 18px; }
+.fot-knappar button:not(.primar) { background: transparent; border: 1px solid var(--linje); color: var(--text); font-weight: 600; }
+.fot-sok { max-width: 820px; margin: 8px auto 0; display: flex; justify-content: center; align-items: center; gap: 4px; font-size: 12.5px; color: var(--dampad); }
+.fot-sok span { margin-right: 4px; }
+.fot-sok button { border: 0; background: none; color: var(--dampad); padding: 3px 10px; border-radius: 999px; font: inherit; cursor: pointer; }
+.fot-sok button[aria-pressed="true"] { background: var(--accent-svag); color: var(--text); font-weight: 700; }
+/* assistentknappen ligger ovanför bottenraden, inte över innehållet */
+body:has(#fot:not([hidden])) .chatt-knapp { bottom: calc(118px + env(safe-area-inset-bottom, 0px)); }
+body:has(#fot:not([hidden])) .sida { padding-bottom: 210px; }
+body:not(:has(#fot:not([hidden]))) .chatt-knapp { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 .matare { height: 6px; background: var(--linje); border-radius: 3px; overflow: hidden; margin-top: 8px; }
 .matare div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
 .onsk { display: flex; gap: 10px; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--linje); }
@@ -543,10 +552,12 @@ async function oppna(e, opt = {}) {
 
 function ritaFot() {
   const f = $("#fot"); f.hidden = false;
-  f.innerHTML = `<div><select id="sek" aria-label="Söktid"><option value="5"${st.sekunder === 5 ? " selected" : ""}>Snabb</option><option value="8"${st.sekunder === 8 ? " selected" : ""}>Normal</option><option value="20"${st.sekunder === 20 ? " selected" : ""}>Noggrann</option></select>
-    <button data-g="lagg-manuellt" ${st.kor ? "disabled" : ""} aria-label="Lägg schemat själv">✋ Själv</button>
-    <button class="primar" data-g="lagg" ${st.kor ? "disabled" : ""}>${st.kor ? "Lägger schema …" : "🤖 Lägg schema"}</button></div>`;
-  $("#sek").onchange = ev => (st.sekunder = +ev.target.value);
+  const sok = [[5, "Snabb"], [8, "Normal"], [20, "Noggrann"]];
+  f.innerHTML = `<div class="fot-knappar">
+      <button class="primar" data-g="lagg" ${st.kor ? "disabled" : ""}><span aria-hidden="true">🤖</span>${st.kor ? "Lägger schema …" : "Lägg schema"}</button>
+      <button data-g="lagg-manuellt" ${st.kor ? "disabled" : ""} title="Lägg schemat själv"><span aria-hidden="true">✋</span>Själv</button></div>
+    <div class="fot-sok" role="group" aria-label="Söktid"><span>Söktid</span>${sok.map(([s, t]) => `<button data-sek="${s}" aria-pressed="${st.sekunder === s}">${t}</button>`).join("")}</div>`;
+  f.querySelectorAll("[data-sek]").forEach(b => (b.onclick = () => { st.sekunder = +b.dataset.sek; ritaFot(); }));
 }
 
 function ritaKontroll() {
