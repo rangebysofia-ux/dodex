@@ -6,7 +6,8 @@ Starta lokalt:
 Miljövariabler:
     SCHEMA_LOSENORD   gemensamt lösenord (roll schemaläggare). Utan värde och utan konton krävs ingen
                       inloggning (bara för egen dator). Konton med roller skapas i gränssnittet; det första
-                      kontot blir chef. Bara chef får godkänna och aktivera scheman (docs/godkant-schema.md).
+                      kontot blir chef. Chefen hanterar kontona (docs/godkant-schema.md).
+    SCHEMA_GODKANNARE "alla" (standard): alla inloggade får godkänna och aktivera scheman. "chef": bara chefer.
     SCHEMA_HEMLIGHET  nyckel för att signera inloggningen. Utan värde härleds den från lösenordet.
     SCHEMA_DATA       katalog för databasen (standard ./data).
     SCHEMA_MAX_TID    högsta antal sekunder per optimeringssteg (standard 60).
@@ -141,6 +142,11 @@ def inloggad(request: Request):
     return s
 
 
+def _far_godkanna(s) -> bool:
+    """Alla inloggade får godkänna (användarens beslut 2026-11-08), om inte SCHEMA_GODKANNARE=chef."""
+    return s is not None and (os.environ.get("SCHEMA_GODKANNARE", "alla") != "chef" or s["roll"] == "chef")
+
+
 def chef(request: Request):
     s = inloggad(request)
     if s["roll"] != "chef":
@@ -246,7 +252,7 @@ class Inloggning(BaseModel):
 def session(request: Request):
     s = _session(request)
     return {"kravs": _kravs(), "inloggad": s is not None, "anvandare": s and s["anvandare"], "roll": s and s["roll"],
-            "konton": db.antal_anvandare() > 0, "gemensamt": bool(_losenord())}
+            "konton": db.antal_anvandare() > 0, "gemensamt": bool(_losenord()), "far_godkanna": _far_godkanna(s)}
 
 
 @app.post("/api/logga-in")
@@ -340,6 +346,7 @@ def logga_ut(response: Response):
 class EnhetIn(BaseModel):
     namn: str
     indata: dict
+    org: Optional[str] = None  # plats i organisationsstrukturen; utelämnad = behåll vid ändring
 
 
 @app.get("/api/enheter", dependencies=[Depends(inloggad)])
@@ -349,7 +356,7 @@ def lista_enheter():
 
 @app.post("/api/enheter", dependencies=[Depends(inloggad)], status_code=201)
 def ny_enhet(e: EnhetIn):
-    return {"id": db.skapa_enhet(e.namn.strip() or "Ny enhet", e.indata)}
+    return {"id": db.skapa_enhet(e.namn.strip() or "Ny enhet", e.indata, e.org)}
 
 
 @app.get("/api/enheter/{eid}", dependencies=[Depends(inloggad)])
@@ -367,7 +374,56 @@ def hamta_enhet(eid: int):
 
 @app.put("/api/enheter/{eid}", dependencies=[Depends(inloggad)])
 def spara_enhet(eid: int, e: EnhetIn):
-    if not db.spara_enhet(eid, e.namn.strip() or "Namnlös enhet", e.indata):
+    if not db.spara_enhet(eid, e.namn.strip() or "Namnlös enhet", e.indata, *(() if "org" not in e.model_fields_set else (e.org,))):
+        raise HTTPException(404, "Enheten finns inte.")
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- organisationsstruktur (docs/organisation.md)
+
+class OrgNod(BaseModel):
+    id: str = Field(min_length=1, max_length=60, pattern=r"^[a-z0-9-]+$")
+    namn: str = Field(min_length=1, max_length=80)
+    forelder: Optional[str] = None
+
+
+class OrganisationIn(BaseModel):
+    noder: list[OrgNod] = Field(max_length=500)
+
+
+@app.get("/api/organisation", dependencies=[Depends(inloggad)])
+def hamta_organisation():
+    return {"noder": db.installning("organisation")}  # None = startstrukturen i organisation.js
+
+
+@app.put("/api/organisation", dependencies=[Depends(inloggad)])
+def spara_organisation(o: OrganisationIn):
+    ids = {n.id for n in o.noder}
+    if len(ids) != len(o.noder):
+        raise HTTPException(422, "Samma grupp finns två gånger.")
+    if any(n.forelder and n.forelder not in ids for n in o.noder):
+        raise HTTPException(422, "En grupp ligger under en grupp som inte finns.")
+    for n in o.noder:  # ingen grupp får ligga under sig själv
+        x, varv = n, 0
+        while x.forelder and varv < 50:
+            x = next(y for y in o.noder if y.id == x.forelder); varv += 1
+        if varv >= 50:
+            raise HTTPException(422, "Strukturen går i cirkel.")
+    gamla = {n["id"]: n for n in (db.installning("organisation") or [])}
+    for gid, n in gamla.items():  # borttagna grupper: enheterna flyttas upp ett steg
+        if gid not in ids:
+            db.flytta_alla(gid, n.get("forelder") if n.get("forelder") in ids else None)
+    db.satt_installning("organisation", [n.model_dump() for n in o.noder])
+    return {"ok": True}
+
+
+class FlyttaIn(BaseModel):
+    org: Optional[str] = None
+
+
+@app.post("/api/enheter/{eid}/flytta", dependencies=[Depends(inloggad)])
+def flytta_enhet(eid: int, f: FlyttaIn):
+    if not db.flytta_enhet(eid, f.org):
         raise HTTPException(404, "Enheten finns inte.")
     return {"ok": True}
 
@@ -467,8 +523,11 @@ class AktiveraIn(BaseModel):
 
 @app.post("/api/korningar/{kid}/aktivera", status_code=201)
 def aktivera_korning(kid: int, a: AktiveraIn, request: Request):
-    """Chefen godkänner ett schema och aktiverar det från en måndag. Schemat låses (docs/godkant-schema.md)."""
-    s = chef(request)
+    """Ett schema godkänns och aktiveras från en måndag och låses (docs/godkant-schema.md). Alla inloggade får
+    godkänna, om inte SCHEMA_GODKANNARE=chef."""
+    s = inloggad(request)
+    if not _far_godkanna(s):
+        raise HTTPException(403, "Bara en chef kan godkänna scheman här. Logga in med ett chefskonto.")
     k = db.korning(kid)
     if not k:
         raise HTTPException(404, "Körningen finns inte.")
@@ -481,7 +540,8 @@ def aktivera_korning(kid: int, a: AktiveraIn, request: Request):
         raise HTTPException(409, "Schemat är redan godkänt.")
     if a.fran_datum.weekday() != 0:
         raise HTTPException(422, "Schemat aktiveras från en måndag.")
-    db.aktivera(k["enhet_id"], kid, a.fran_datum.isoformat(), s["anvandare"] or "lokalt")
+    av = s["anvandare"] or ("gemensamt lösenord" if _kravs() else "lokalt")
+    db.aktivera(k["enhet_id"], kid, a.fran_datum.isoformat(), av)
     return db.aktivering_for(kid)
 
 

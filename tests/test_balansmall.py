@@ -93,3 +93,22 @@ def test_kalender_visar_godkanda_perioder(tmp_path):
     assert vecka[1] == ["S2", "V1/6"]                     # nästa godkända schema tar över från sin måndag
     assert 'class="kal-dag idag"' in k["html"] or 'class="kal-dag idag ' in k["html"] or "idag" in k["html"]
     assert kalender(tmp_path, [], "2026-12-15", "2026-11-01")["nu"] is None
+
+
+def test_arbetstiden_under_behov(tmp_path):
+    """Arbetstiden som behovet ger: 3 dag + 3 kväll (7,75 h arbetstid) + 1 natt (9 h) per vardag, 2 + 2 + 1 per helgdag."""
+    ind = {"behov": {"vardag": {"morgon": 3, "kvall": 3, "natt": 1}, "helg": {"morgon": 2, "kvall": 2, "natt": 1}}}
+    f = tmp_path / "i.json"
+    f.write_text(json.dumps(ind), encoding="utf-8")
+    kod = ("const G=require(process.argv[1]);const i=JSON.parse(require('fs').readFileSync(process.argv[2],'utf8'));"
+           "process.stdout.write(G.arbetstid(i))")
+    h = subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "grafer.js"), str(f)],
+                       capture_output=True, text=True, timeout=60, check=True).stdout
+    # 5 × 55,5 + 2 × 40 = 357,5 h
+    assert "<b>357,5 h</b>" in h and "Mån–fre (högst 6)" in h and "Lör–sön (högst 4)" in h
+    # med passen från mallen används de i stället
+    ind["bemanningsbalans"] = {"pass": [{"dagar": "mån-sön", "fran": "07:00", "till": "15:00", "rast_minuter": 30, "antal": 2}]}
+    f.write_text(json.dumps(ind), encoding="utf-8")
+    h = subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "grafer.js"), str(f)],
+                       capture_output=True, text=True, timeout=60, check=True).stdout
+    assert "<b>105 h</b>" in h and "Bygger på passen i bemanningsbalansen" in h and "Alla dagar (högst 2)" in h

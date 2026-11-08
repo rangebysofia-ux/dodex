@@ -75,12 +75,23 @@ def test_forsta_kontot_blir_chef_och_roller_galler(klient):
     assert logga_in(klient, "plan1", "nytt-losenord-1")["anvandare"] == "plan1"
 
 
-def test_bara_chef_godkanner_och_godkant_ar_last(klient, schema):
+def test_alla_far_godkanna_men_kan_begransas_till_chef(klient, schema, monkeypatch):
+    """Användarens beslut 2026-11-08: alla inloggade får godkänna. SCHEMA_GODKANNARE=chef begränsar till chefer."""
+    logga_in(klient)
+    eid, kid = enhet_med_schema(klient, schema)
+    assert klient.get("/api/session").json()["far_godkanna"] is True
+    a = klient.post(f"/api/korningar/{kid}/aktivera", json={"fran_datum": "2026-12-07"})
+    assert a.status_code == 201 and a.json()["godkand_av"] == "gemensamt lösenord"
+    monkeypatch.setenv("SCHEMA_GODKANNARE", "chef")
+    _, kid2 = enhet_med_schema(klient, schema)
+    assert klient.get("/api/session").json()["far_godkanna"] is False
+    assert klient.post(f"/api/korningar/{kid2}/aktivera", json={"fran_datum": "2026-12-07"}).status_code == 403
+
+
+def test_godkant_ar_last(klient, schema):
     logga_in(klient)
     klient.post("/api/anvandare", json={"namn": "chef1", "losenord": "langt-losenord-1"})
     eid, kid = enhet_med_schema(klient, schema)
-    # gemensamt lösenord = schemaläggare: får inte godkänna
-    assert klient.post(f"/api/korningar/{kid}/aktivera", json={"fran_datum": "2026-12-07"}).status_code == 403
     logga_in(klient, "chef1", "langt-losenord-1")
     assert klient.post(f"/api/korningar/{kid}/aktivera", json={"fran_datum": "2026-12-08"}).status_code == 422  # tisdag
     a = klient.post(f"/api/korningar/{kid}/aktivera", json={"fran_datum": "2026-12-07"})

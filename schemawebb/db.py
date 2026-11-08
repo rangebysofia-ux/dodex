@@ -54,6 +54,11 @@ create table if not exists aktiveringar (
     godkand_tid real not null
 );
 create index if not exists aktiveringar_enhet on aktiveringar(enhet_id);
+-- inställningar för hela tjänsten, till exempel organisationsstrukturen (JSON)
+create table if not exists installningar (
+    nyckel text primary key,
+    varde text not null
+);
 """
 
 JSONFALT = ("indata", "resultat", "granskning", "forklaring", "balans")
@@ -75,6 +80,9 @@ def anslut(fil=None):
         _conn.execute("pragma foreign_keys = on")
         _conn.execute("pragma journal_mode = wal")
         _conn.executescript(SCHEMA)
+        # enheten placeras i organisationsstrukturen (kolumnen läggs till i äldre databaser)
+        if "org" not in [r[1] for r in _conn.execute("pragma table_info(enheter)")]:
+            _conn.execute("alter table enheter add column org text")
         # körningar som var igång när servern stängdes blir aldrig klara
         _conn.execute("update korningar set status = 'fel', fel = 'Avbröts när servern startades om. Kör igen.' "
                       "where status in ('i kö', 'kör')")
@@ -114,7 +122,7 @@ def hamta(sql, *args):
 def enheter():
     with _las:
         rader = _db().execute(
-            "select e.id, e.namn, e.andrad, json_array_length(json_extract(e.indata, '$.personal')) as personer, "
+            "select e.id, e.namn, e.andrad, e.org, json_array_length(json_extract(e.indata, '$.personal')) as personer, "
             "(select count(*) from korningar k where k.enhet_id = e.id) as korningar "
             "from enheter e order by e.andrad desc").fetchall()
     return [dict(r) for r in rader]
@@ -125,15 +133,38 @@ def enhet(eid):
     return r[0] if r else None
 
 
-def skapa_enhet(namn, indata):
+def skapa_enhet(namn, indata, org=None):
     nu = time.time()
-    return kor("insert into enheter (namn, indata, skapad, andrad) values (?, ?, ?, ?)",
-               namn, json.dumps(indata, ensure_ascii=False), nu, nu).lastrowid
+    return kor("insert into enheter (namn, indata, skapad, andrad, org) values (?, ?, ?, ?, ?)",
+               namn, json.dumps(indata, ensure_ascii=False), nu, nu, org or None).lastrowid
 
 
-def spara_enhet(eid, namn, indata):
-    return kor("update enheter set namn = ?, indata = ?, andrad = ? where id = ?",
-               namn, json.dumps(indata, ensure_ascii=False), time.time(), eid).rowcount
+def spara_enhet(eid, namn, indata, org=...):
+    """org=... behåller placeringen; None eller "" tar bort den."""
+    if org is ...:
+        return kor("update enheter set namn = ?, indata = ?, andrad = ? where id = ?",
+                   namn, json.dumps(indata, ensure_ascii=False), time.time(), eid).rowcount
+    return kor("update enheter set namn = ?, indata = ?, andrad = ?, org = ? where id = ?",
+               namn, json.dumps(indata, ensure_ascii=False), time.time(), org or None, eid).rowcount
+
+
+def flytta_enhet(eid, org):
+    return kor("update enheter set org = ? where id = ?", org or None, eid).rowcount
+
+
+def flytta_alla(fran, till):
+    return kor("update enheter set org = ? where org = ?", till or None, fran).rowcount
+
+
+def installning(nyckel, standard=None):
+    with _las:
+        r = _db().execute("select varde from installningar where nyckel = ?", (nyckel,)).fetchone()
+    return json.loads(r[0]) if r else standard
+
+
+def satt_installning(nyckel, varde):
+    kor("insert into installningar (nyckel, varde) values (?, ?) on conflict(nyckel) do update set varde = excluded.varde",
+        nyckel, json.dumps(varde, ensure_ascii=False))
 
 
 def ta_bort_enhet(eid):

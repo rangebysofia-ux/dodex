@@ -163,7 +163,7 @@ function godkannandeRuta(k, brott) {
     <div class="chips"><label for="godkann-fran" class="liten">Gäller från (måndag)</label><input type="date" id="godkann-fran" value="${nastaMandag()}" required style="width:auto">
     <button class="guld" type="submit">✓ Godkänn</button><button type="button" class="liten" data-g="godkann-avbryt">Avbryt</button></div></form></section>`;
   if (brott) return "";
-  return `<div class="godkann-rad">${roll === "chef" ? `<button class="guld liten" data-g="godkann">✓ Godkänn och aktivera</button><span class="dampad liten">När schemat är valt godkänner du det, så låses det och gäller från ett datum.</span>`
+  return `<div class="godkann-rad">${st.session?.far_godkanna ?? roll === "chef" ? `<button class="guld liten" data-g="godkann">✓ Godkänn och aktivera</button><span class="dampad liten">När schemat är valt godkänner du det, så låses det och gäller från ett datum.</span>`
     : `<span class="dampad liten">✓ Bara en chef kan godkänna och aktivera schemat.</span>`}</div>`;
 }
 

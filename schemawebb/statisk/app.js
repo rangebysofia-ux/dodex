@@ -143,7 +143,7 @@ async function visaInloggning(s) {
     <p class="dampad">Smart schemaplanering för en hållbar verksamhet.</p>
     ${s.konton ? `<div><label for="anv">Användarnamn</label><input id="anv" autocomplete="username"${s.gemensamt ? "" : " required"}></div>` : ""}
     <div><label for="losen">Lösenord</label><input id="losen" type="password" autocomplete="current-password" required></div>
-    ${s.konton && s.gemensamt ? `<p class="dampad liten" style="margin:0">Lämna användarnamnet tomt om du loggar in med det gemensamma lösenordet. Bara chefer kan godkänna scheman.</p>` : ""}
+    ${s.konton && s.gemensamt ? `<p class="dampad liten" style="margin:0">Lämna användarnamnet tomt om du loggar in med det gemensamma lösenordet.</p>` : ""}
     <button class="primar" type="submit">Logga in</button>
     <p class="dampad liten" id="inlogg-fel" role="alert"></p></form>`;
   ($("#anv") || $("#losen")).focus();
@@ -157,19 +157,24 @@ async function visaInloggning(s) {
 // ---------------------------------------------------------------- vy: enheter
 async function visaEnheter() {
   st.vy = "hem"; st.enhet = null; st.korning = null;
+  if (!st.guide) st.nyOrg = null;  // gruppen gäller bara den enhet som skapas i guiden
   if (st.guide) { if (!$(".guide")) { ritaMeny(); sokvag([["Enheter", "#/"], ["Ny enhet"]]); } vy().innerHTML = GUIDE.html(st.guide); return; }
   try { st.enhetLista = await api("GET", "enheter"); } catch { /* behåll */ }
   ritaMeny();
   sokvag([["Enheter"]]);
-  const [enheter, exempel] = await Promise.all([api("GET", "enheter"), api("GET", "exempel")]);
-  st.exempel = exempel;
+  const [enheter, exempel, org] = await Promise.all([api("GET", "enheter"), api("GET", "exempel"), api("GET", "organisation").catch(() => ({}))]);
+  st.exempel = exempel; st.org = ORG.kopia(org.noder);
   vy().innerHTML = `
     <section class="kort valkommen"><div class="logga ljus">${loggaText()}</div>
       <p class="dampad" style="margin:8px 0 0">Planering som skapar balans – idag och imorgon. En enhet är en arbetsgrupp med medarbetare, behov, önskemål och regler; varje schema du lägger sparas som en körning.</p></section>
     ${GUIDE.val({ harEnheter: enheter.length > 0 })}
     <div class="rubrikrad" style="margin:6px 4px 0"><h2 id="mina-enheter" style="margin:0">Mina enheter</h2>
-      <label class="knapp liten" title="Öppna en enhet som har sparats som fil, i webben eller i telefonen">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div>
-    <section class="lista-enheter">${enheter.length ? enheter.map(e => `
+      <div class="chips"><button class="liten" data-g="org-red">${st.orgRed ? "✓ Klar med organisationen" : "Ändra organisation"}</button>
+      <label class="knapp liten" title="Öppna en enhet som har sparats som fil, i webben eller i telefonen">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div></div>
+    ${st.orgRed ? `<section class="kort"><h2>Organisation</h2><p class="dampad liten">Verksamheter och grupper som enheterna ordnas under. Påverkar inte schemaläggningen. En borttagen grupps enheter flyttas upp ett steg.</p>${ORG.redigera(st.org)}</section>` : ""}
+    <section class="org-trad">${ORG.trad(st.org, enheter, { stangda: st.orgStangda || new Set(),
+      nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}" title="Ny enhet i ${esc(ORG.sokvag(st.org, id))}">+ Ny enhet</button>`,
+      ritaEnhet: e => `
       <div class="kort enhet">
         <a class="namn" href="#/e/${e.id}/schema">${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
@@ -177,7 +182,9 @@ async function visaEnheter() {
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
           <button class="liten" data-g="spara-fil" data-id="${e.id}" title="Enheten med alla inställningar och scheman, att öppna i webben eller i telefonen">Spara som fil</button>
           <button class="liten fara" data-g="ta-bort-enhet" data-id="${e.id}" data-namn="${esc(e.namn)}">Ta bort</button></div>
-      </div>`).join("") : `<div class="kort tom">Inga enheter än. Skapa en ny eller börja från ett exempel nedan.</div>`}</section>
+        <label class="org-plats">Plats <select data-flytta="${e.id}" aria-label="Plats i organisationen för ${esc(e.namn)}">${ORG.alternativ(st.org, e.org)}</select></label>
+      </div>` })}</section>
+    ${enheter.length ? "" : `<div class="kort tom">Inga enheter än. Tryck <b>+ Ny enhet</b> vid en verksamhet, eller börja från ett exempel nedan.</div>`}
     <section class="kort" id="exempel">
       <h2>Börja från ett exempel</h2>
       <p class="dampad liten">Testfallen från projektet. De använder id-koder i stället för namn.</p>
@@ -287,6 +294,8 @@ function ritaFlik() {
       </tbody></table></div>
       <div class="chips" style="margin-top:10px"><select id="ny-behovsdag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select>
         <button data-g="ny-behovsrad">Lägg till rad</button></div>
+      <h3>Arbetstiden som behovet ger</h3>
+      <div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
       <h3>Täckning vid klockslag</h3>
       <p class="dampad liten">Minst så många i tjänst vid klockslaget, till exempel tidigt på morgonen eller mitt på dagen när dag och kväll överlappar. Passens längd anpassas efter det, och med rörlig starttid (Regler, Dagpass får också börja) även dagpassens start. Täckningsgraden syns i vyn Klockslag.</p>
       ${tp.length ? `<div class="rull"><table class="form"><thead><tr><th>Dagar</th><th>Klockslag</th><th>Antal</th><th></th></tr></thead><tbody>
@@ -597,6 +606,7 @@ function kontrollera() {
 
 function markeraAndrad(rita) {
   st.andrad = true;
+  const at = $("#arbetstid"); if (at && st.indata) at.innerHTML = GRAF.arbetstid(st.indata);
   uppdateraSparaknapp();
   if (rita && $("#flik")) { $("#flik").innerHTML = ritaFlik(); kopplaOnskForm(); kopplaAktForm(); uppdateraFlikrubriker(); }
   if (rita && st.vy === "installningar") ritaInstallningar();
@@ -704,7 +714,7 @@ async function oppnaEnhetsfil(fil) {
   let d;
   try { d = ENHETSFIL.las(await fil.text()); } catch (err) { meddela(err.message); return; }
   try {
-    const { id } = await api("POST", "enheter", { namn: d.namn, indata: d.indata });
+    const { id } = await api("POST", "enheter", { namn: d.namn, indata: d.indata, org: st.nyOrg || null });
     const fel = [...d.varningar];
     let brott = 0;
     for (const k of d.korningar.slice().reverse()) {
@@ -904,23 +914,24 @@ document.addEventListener("click", async e => {
   const g = st.guide, val = el.dataset.guide;
   try {
     switch (val) {
-      case "ny": st.guide = GUIDE.ny(); return visaEnheter();
+      case "ny": st.nyOrg = null; st.guide = GUIDE.ny(); return visaEnheter();
+      case "ny-i": e.preventDefault(); st.nyOrg = el.dataset.org; st.guide = GUIDE.ny(); window.scrollTo(0, 0); meddela(`Den nya enheten hamnar i ${ORG.sokvag(st.org, st.nyOrg)}.`); return visaEnheter();
       case "exempel": return $("#exempel")?.scrollIntoView({ behavior: "smooth" });
       case "enheter": return $("#mina-enheter")?.scrollIntoView({ behavior: "smooth" });
       case "ai": {
-        const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: GUIDE.tomIndata("Ny enhet") });
+        const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: GUIDE.tomIndata("Ny enhet"), org: st.nyOrg || null });
         st.enhet = null; st.enhetLista = null; st.oppnaAssistent = true; location.hash = `#/e/${id}/medarbetare`; return;
       }
-      case "klistra": st.guide = GUIDE.nyKlistra(); window.scrollTo(0, 0); return visaEnheter();
+      case "klistra": st.nyOrg = null; st.guide = GUIDE.nyKlistra(); window.scrollTo(0, 0); return visaEnheter();
       case "anvand-klistrat": { const fel = GUIDE.anvandKlistrat(g); if (fel) return meddela(fel); window.scrollTo(0, 0); return visaEnheter(); }
       case "behov-forenkla": GUIDE.forenklaBehov(g); return visaEnheter();
-      case "avbryt": st.guide = null; return visaEnheter();
+      case "avbryt": st.guide = null; st.nyOrg = null; return visaEnheter();
       case "tillbaka": g.steg--; return visaEnheter();
       case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaEnheter(); }
       case "satt": GUIDE.satt(g, el.dataset.falt, el.dataset.varde); return visaEnheter();
       case "minsta": { const r = GUIDE.berakna(g); g.antalDag = Math.max(g.antalDag, r.minDag); g.antalNatt = Math.max(g.antalNatt, r.minNatt); return visaEnheter(); }
       case "skapa": case "skapa-ai": case "skapa-manuellt": {
-        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: GUIDE.indata(g) });
+        const { id } = await api("POST", "enheter", { namn: g.namn || "Ny enhet", indata: GUIDE.indata(g), org: st.nyOrg || null });
         st.guide = null; st.enhet = null; st.enhetLista = null;
         if (val === "skapa-ai") { await laddaEnhet(id); await laggSchema(); }
         else if (val === "skapa-manuellt") { const k = await api("POST", `enheter/${id}/manuell`); st.startaRedigering = true; location.hash = `#/e/${id}/schema/${k.id}`; }
@@ -941,23 +952,24 @@ document.addEventListener("click", async e => {
     switch (g) {
       case "logga-ut": await api("POST", "logga-ut"); visaInloggning(); break;
       case "kal-flytta": st.kalForskj = +el.dataset.v ? (st.kalForskj || 0) + +el.dataset.v : 0; return visaKalender(st.enhet.id);
+      case "org-red": st.orgRed = !st.orgRed; return visaEnheter();
       case "konto-bort":
         if (el.dataset.ok !== "1") { el.dataset.ok = "1"; el.textContent = "Säker?"; setTimeout(() => { el.dataset.ok = ""; el.textContent = "Ta bort"; }, 4000); return; }
         await api("DELETE", "anvandare/" + encodeURIComponent(el.dataset.n)); meddela("Kontot är borttaget."); visaKonton(); break;
       case "ny-enhet": { st.guide = GUIDE.ny(); location.hash = "#/"; visaEnheter(); break; }
       case "ny-enhet-tom": {
-        const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: NY_INDATA() });
+        const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: NY_INDATA(), org: st.nyOrg || null });
         st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/medarbetare`; break;
       }
       case "fran-exempel": {
         const x = st.exempel[+el.dataset.i];
-        const { id } = await api("POST", "enheter", { namn: x.namn, indata: x.indata });
+        const { id } = await api("POST", "enheter", { namn: x.namn, indata: x.indata, org: st.nyOrg || null });
         st.enhet = null; st.enhetLista = null; location.hash = `#/e/${id}/oversikt`; break;
       }
       case "spara-fil": return sparaEnhetsfil(el.dataset.id);
       case "kopiera": {
         const e2 = await api("GET", "enheter/" + el.dataset.id);
-        await api("POST", "enheter", { namn: e2.namn + " (kopia)", indata: e2.indata });
+        await api("POST", "enheter", { namn: e2.namn + " (kopia)", indata: e2.indata, org: e2.org || null });
         meddela("Kopia skapad. Pröva ändringar i den och jämför sedan körningarna."); visaEnheter(); break;
       }
       case "ta-bort-enhet":
@@ -1057,6 +1069,37 @@ function startaPollning(steg) {
 }
 function stoppaPollning() { clearTimeout(st.pollning); st.pollning = null; }
 
+// ---------------------------------------------------------------- organisationsstruktur (organisation.js)
+async function sparaOrg(noder) {
+  try { await api("PUT", "organisation", { noder }); st.org = noder; visaEnheter(); }
+  catch (err) { meddela(err.message); }
+}
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-orgg]"); if (!el || !st.org) return;
+  const id = el.dataset.id, namn = ORG.sokvag(st.org, id);
+  try {
+    if (el.dataset.orgg === "byt") { const n = prompt("Nytt namn för " + namn, st.org.find(x => x.id === id).namn); if (n !== null) sparaOrg(ORG.bytNamn(st.org, id, n)); }
+    if (el.dataset.orgg === "under") { const n = prompt("Namn på den nya gruppen under " + namn); if (n) sparaOrg(ORG.lagg(st.org, n, id)); }
+    if (el.dataset.orgg === "bort" && confirm(`Ta bort ${namn}? Enheterna där flyttas upp ett steg.`)) sparaOrg(ORG.taBort(st.org, id).noder);
+  } catch (err) { meddela(err.message); }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "org-ny") return;
+  e.preventDefault();
+  try { sparaOrg(ORG.lagg(st.org, $("#org-ny-namn").value, null)); } catch (err) { meddela(err.message); }
+});
+document.addEventListener("change", async e => {
+  const id = e.target.dataset?.flytta; if (!id) return;
+  try { await api("POST", `enheter/${id}/flytta`, { org: e.target.value || null }); meddela("Enheten är flyttad."); visaEnheter(); }
+  catch (err) { meddela(err.message); }
+});
+// kom ihåg vilka grupper som är ihopfällda
+document.addEventListener("toggle", e => {
+  const d = e.target; if (!d.classList?.contains("org-grupp")) return;
+  st.orgStangda = st.orgStangda || new Set();
+  if (d.open) st.orgStangda.delete(d.dataset.org); else st.orgStangda.add(d.dataset.org);
+}, true);
+
 // ---------------------------------------------------------------- konton och roller
 async function visaKonton() {
   st.vy = "konton"; st.enhet = null; ritaMeny(); sokvag([["Enheter", "#/"], ["Konton"]]);
@@ -1064,8 +1107,8 @@ async function visaKonton() {
   let lista = [];
   try { lista = await api("GET", "anvandare"); } catch { lista = null; }
   const forsta = lista && !lista.length;
-  const ROLL = { chef: "Chef – godkänner och aktiverar scheman, hanterar konton", schemalaggare: "Schemaläggare – lägger och jämför scheman" };
-  let h = `<section class="kort"><h1>Konton och roller</h1><p class="dampad" style="margin-top:6px">Bara en <b>chef</b> kan godkänna och aktivera ett schema. Schemaläggare lägger, justerar och jämför scheman. Användarnamnet kan vara en id-kod i stället för ett namn.</p>
+  const ROLL = { chef: "Chef – hanterar konton och scheman", schemalaggare: "Schemaläggare – lägger, jämför och godkänner scheman" };
+  let h = `<section class="kort"><h1>Konton och roller</h1><p class="dampad" style="margin-top:6px">En <b>chef</b> skapar och tar bort konton. Alla som är inloggade kan lägga, jämföra, godkänna och aktivera scheman${s.far_godkanna === false ? " – men här är godkännandet begränsat till chefer" : ""}. Det sparas vem som godkände. Användarnamnet kan vara en id-kod i stället för ett namn.</p>
     ${s.anvandare ? `<p class="liten">Du är inloggad som <b>${esc(s.anvandare)}</b> (${s.roll === "chef" ? "chef" : "schemaläggare"}).</p>` : s.roll === "schemalaggare" ? `<p class="liten">Du är inloggad med det gemensamma lösenordet (schemaläggare).</p>` : ""}</section>`;
   if (lista && lista.length) h += `<section class="kort"><h2>Konton</h2><div class="rull"><table><thead><tr><th>Användarnamn</th><th>Roll</th><th>Skapat</th><th></th></tr></thead><tbody>
     ${lista.map(u => `<tr><td><b>${esc(u.namn)}</b></td><td>${u.roll === "chef" ? "Chef" : "Schemaläggare"}</td><td>${datum(u.skapad)}</td><td>${arChef && u.namn !== s.anvandare ? `<button class="liten fara" data-g="konto-bort" data-n="${esc(u.namn)}">Ta bort</button>` : ""}</td></tr>`).join("")}</tbody></table></div></section>`;

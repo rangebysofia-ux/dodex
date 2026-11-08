@@ -89,6 +89,7 @@ Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad
 - `docs/styrning/dodex-regelverk.md` och `.json` – alla hårda regler och mjuka mål med standardvärden, som styrdokument för andra system (genereras med `python -m schemamotor.regelverk`)
 - `docs/avtal-regler.md` – vila, rast och dygnsbryt
 - `docs/indata-schema.md` – format för indata och schema
+- `docs/organisation.md` – organisationsstrukturen: enheter under Äldreomsorg (SÄBO, Hemtjänst), LSS, Förskola och egna grupper
 - `docs/godkant-schema.md` – godkänt och aktiverat schema, konton och roller (chef, schemaläggare)
 - `docs/balansmall.md` – balansmallen: schemat i fyra perspektiv (behov, arbetsmiljö, budget, kvalitet)
 - `docs/inklistring.md` – vad som går att klistra in för personal och behov

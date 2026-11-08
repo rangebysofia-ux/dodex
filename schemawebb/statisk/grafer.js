@@ -584,6 +584,62 @@ function balansKort(lista) {
   return h;
 }
 
+// ---------------------------------------------------------------- arbetstiden som behovet ger (under Behov)
+// Hur många som ska vara i tjänst över dygnet och hur många timmar det blir per dag och vecka. Bygger på passen i
+// bemanningsbalansen när de finns (till exempel inklistrade från mallen), annars på behovet per dygnsdel med
+// enhetens passtider och ett heltidspass (8 h 15 min på plats, 30 min rast) – ett ungefär, inte schemat.
+const tidMin = t => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+const klk = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const PASSDAGAR = { "mån-sön": [0, 1, 2, 3, 4, 5, 6], alla: [0, 1, 2, 3, 4, 5, 6], vardag: [0, 1, 2, 3, 4], helg: [5, 6], "lör-sön": [5, 6] };
+function arbetsPass(ind) {
+  const bb = ind.bemanningsbalans && ind.bemanningsbalans.pass;
+  if (bb && bb.length) return { kalla: "pass", pass: bb.map(x => ({ dagar: PASSDAGAR[x.dagar] || [DAGAR.indexOf(x.dagar)], fran: tidMin(x.fran), till: tidMin(x.till), rast: x.rast_minuter || 0, antal: Number(x.antal) || 0, typ: x.typ })) };
+  const r = ind.regler || {}, np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "06:45", maltidsuppehall: true };
+  const ms = tidMin(r.morgon_start || "07:00"), ks = tidMin(r.kvall_slut || "22:00");
+  const tider = { morgon: [ms, ms + 495, 30], kvall: [ks - 495, ks, 30], natt: [tidMin(np.start), tidMin(np.slut), np.maltidsuppehall === false ? 30 : 0] };
+  const per = behovPerDag(ind), pass = [];
+  per.forEach((b, i) => ["morgon", "kvall", "natt"].forEach(d => { if (b[d]) pass.push({ dagar: [i], fran: tider[d][0] % 1440, till: tider[d][1] % 1440, rast: tider[d][2], antal: b[d], typ: d }); }));
+  return { kalla: "behov", pass, tider };
+}
+function arbetstid(ind) {
+  const { kalla, pass, tider } = arbetsPass(ind);
+  const kurva = Array.from({ length: 7 }, () => Array(96).fill(0)), timmar = Array(7).fill(0);
+  for (const x of pass) {
+    const L = (x.till - x.fran + 1440) % 1440 || 1440;
+    for (const i of x.dagar) {
+      if (i < 0) continue;
+      for (let k = 0; k < L; k += 15) kurva[i][Math.floor(((x.fran + k) % 1440) / 15)] += x.antal;
+      timmar[i] += x.antal * Math.max(0, L - (x.typ === "jour" ? 0 : x.rast)) / 60;
+    }
+  }
+  if (!pass.length) return `<p class="dampad liten">Ange behovet ovan, så visas arbetstiden här.</p>`;
+  // dagar med samma kurva slås ihop: Mån–fre, Lör–sön …
+  const grupper = [];
+  DAGAR.forEach((d, i) => { const g = grupper.find(x => kurva[x[0]].join() === kurva[i].join()); if (g) g.push(i); else grupper.push([i]); });
+  const namn = idx => idx.join() === "0,1,2,3,4" ? "Mån–fre" : idx.join() === "5,6" ? "Lör–sön" : idx.join() === "0,1,2,3,4,5,6" ? "Alla dagar" : idx.map(i => DAGAR[i]).join(", ");
+  const serier = grupper.filter(g => kurva[g[0]].some(v => v)).map(g => ({ namn: namn(g), data: kurva[g[0]] }));
+  const vecka = timmar.reduce((a, b) => a + b, 0), maxT = Math.max(1, ...timmar);
+  const B = 640, H = 220, V = 34, T = 12, U = 26, max = Math.max(1, ...serier.flatMap(x => x.data));
+  const x = i => V + i / 96 * (B - V - 8), y = v => T + (1 - v / max) * (H - T - U);
+  const steg = Math.max(1, Math.ceil(max / 5)), FARG = ["var(--skog, #193f38)", "var(--guld, #c9a03a)", "#4d6488", "#b8432f", "#3f7a63", "#8a6212", "#7085a3"];
+  let svg = `<svg class="graf" viewBox="0 0 ${B} ${H}" role="img" aria-label="Antal i tjänst över dygnet enligt behovet">`;
+  for (let v = 0; v <= max; v += steg) svg += `<line class="rutnat" x1="${V}" x2="${B - 8}" y1="${y(v)}" y2="${y(v)}"/><text x="${V - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  for (let h = 0; h <= 24; h += 3) svg += `<text x="${x(h * 4)}" y="${H - 8}" text-anchor="middle">${String(h % 24).padStart(2, "0")}</text>`;
+  serier.forEach((sr, j) => {
+    let d = `M${x(0)},${y(sr.data[0])}`;
+    for (let i = 0; i < 96; i++) d += `H${x(i + 1)}V${y(sr.data[i + 1] ?? sr.data[i])}`;
+    svg += `<path d="${d}" fill="none" stroke="${FARG[j % FARG.length]}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    for (let i = 0; i < 96; i++) if (sr.data[i] !== sr.data[i - 1]) svg += `<rect class="traff" x="${x(i)}" y="${y(sr.data[i]) - 8}" width="${Math.max(6, x(i + 1) - x(i))}" height="16" data-tips="${esc(`${sr.namn} ${klk(i * 15)}: ${sr.data[i]} i tjänst`)}"/>`;
+  });
+  svg += `</svg>`;
+  const stapel = `<div class="arbetstid-dagar">${DAGAR.map((d, i) => `<div data-tips="${esc(`${d}: ${sv(timmar[i], 1)} h arbetstid`)}"><i style="height:${Math.round(timmar[i] / maxT * 56)}px"></i><b>${sv(timmar[i], 0)}</b><span>${d}</span></div>`).join("")}</div>`;
+  const kallaText = kalla === "pass" ? "Bygger på passen i bemanningsbalansen."
+    : `Ungefärligt: bygger på behovet per dygnsdel och enhetens passtider (dag ${klk(tider.morgon[0])}–${klk(tider.morgon[1])}, kväll ${klk(tider.kvall[0])}–${klk(tider.kvall[1] % 1440)}, natt ${klk(tider.natt[0])}–${klk(tider.natt[1])}). I schemat anpassas passlängderna efter sysselsättningsgraden.`;
+  return `<div class="legend" style="margin-bottom:6px">${serier.map((sr, j) => `<span><i style="background:${FARG[j % FARG.length]}"></i>${esc(sr.namn)} (högst ${Math.max(...sr.data)})</span>`).join("")}</div>${svg}
+    <div class="arbetstid-summa"><div><span class="dampad liten">Arbetstid per vecka</span><b>${sv(vecka, 1)} h</b><span class="dampad liten">ungefär ${sv(vecka / 37, 1)} heltider à 37 h</span></div>${stapel}</div>
+    <p class="dampad liten" style="margin:6px 0 0">${kallaText}</p>`;
+}
+
 // ---------------------------------------------------------------- kalender över godkända scheman (färdplan 22–23)
 // perioder: [{id, namn, fran_datum ("ÅÅÅÅ-MM-DD", en måndag), veckor, lank}]. Ett godkänt schema gäller från sitt
 // datum tills nästa börjar, och rullar runt (vecka 1 igen efter sista veckan). Varje rad är en vecka.
@@ -632,6 +688,6 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

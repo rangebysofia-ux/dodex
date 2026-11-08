@@ -274,6 +274,39 @@ tr.kal-ingen td { background: transparent; }
   table.kalender td.kal-vecka { padding-left: 5px; font-size: 11px; } table.kalender th { padding: 4px 1px; font-size: 11px; }
   .kal-v { margin-left: 0; padding: 0 5px; }
 }
+/* arbetstiden under Behov */
+.arbetstid-summa { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: end; margin-top: 10px; }
+.arbetstid-summa > div:first-child { display: grid; gap: 2px; } .arbetstid-summa b { font-size: 22px; }
+.arbetstid-dagar { display: grid; grid-template-columns: repeat(7, minmax(30px, 1fr)); gap: 6px; flex: 1; min-width: 240px; }
+.arbetstid-dagar > div { display: grid; justify-items: center; align-content: end; gap: 2px; height: 96px; }
+.arbetstid-dagar i { width: 70%; max-width: 34px; border-radius: 5px 5px 2px 2px; background: var(--guld, #c9a03a); min-height: 2px; }
+.arbetstid-dagar b { font-size: 12.5px; } .arbetstid-dagar span { font-size: 11.5px; color: var(--dampad); }
+/* organisationsstruktur på startsidan */
+.org-trad { display: grid; gap: 8px; }
+.org-grupp { border: 1px solid var(--linje); border-radius: 12px; padding: 2px 10px; }
+.org-grupp .org-grupp { background: var(--yta2); margin: 6px 0; }
+.org-grupp > summary { display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; list-style: none; color: var(--text); }
+.org-grupp > summary::-webkit-details-marker { display: none; }
+.org-grupp > summary::before { content: "▸"; color: var(--dampad); transition: transform .15s; }
+.org-grupp[open] > summary::before { transform: rotate(90deg); }
+.org-namn { font-weight: 800; } .org-antal { color: var(--dampad); font-size: 12.5px; } .org-ny { margin-left: auto; }
+.org-innehall { padding: 0 0 6px; } .org-tom { margin: 0 0 6px; }
+.org-enhet { border-bottom: 1px solid var(--linje); } .org-enhet button.lank { text-align: left; }
+.org-plats { display: flex; gap: 6px; align-items: center; margin: 4px 0 0; font-size: 12px; color: var(--dampad); }
+.org-plats select { width: auto; max-width: 100%; font-size: 13px; padding: 2px 4px; }
+.org-red { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.org-red li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0 5px calc(var(--niva) * 18px); border-bottom: 1px solid var(--linje); }
+.org-red-namn { font-weight: 700; min-width: 110px; }
+/* åtgärder i schemavyn: tre lika stora knappar, en lugn rad för Ändra */
+.atgarder { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.atgard { display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 66px; padding: 10px 6px; border-radius: 12px; font-weight: 600; font-size: 13.5px; line-height: 1.2; text-align: center; }
+.atgard span { font-size: 20px; line-height: 1; }
+.atgard.huvud { background: var(--guld); border-color: var(--guld); color: #25332f; }
+.andra-rad { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--linje); }
+.andra-rad > span { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--dampad); margin-right: 2px; }
+.andra-rad button { padding: 4px 11px; font-size: 13px; border-radius: 999px; background: var(--yta2); }
+.godkann-knapp { display: grid; gap: 2px; width: 100%; margin-top: 10px; padding: 10px 14px; border: 2px dashed var(--guld); border-radius: 12px; background: none; text-align: left; }
+.godkann-knapp b { font-size: 15px; } .godkann-knapp span { font-size: 12.5px; color: var(--dampad); }
 /* godkänt och aktiverat grundschema: guldram och märke (färdplan 22) */
 .kort.godkand { border: 3px solid var(--guld); box-shadow: 0 0 0 4px rgba(213, 180, 106, .18); }
 .godkand-banner { display: flex; gap: 12px; align-items: center; border: 2px solid var(--guld); background: linear-gradient(135deg, rgba(213, 180, 106, .2), rgba(213, 180, 106, .06)); }
@@ -3315,6 +3348,62 @@ function balansKort(lista) {
   return h;
 }
 
+// ---------------------------------------------------------------- arbetstiden som behovet ger (under Behov)
+// Hur många som ska vara i tjänst över dygnet och hur många timmar det blir per dag och vecka. Bygger på passen i
+// bemanningsbalansen när de finns (till exempel inklistrade från mallen), annars på behovet per dygnsdel med
+// enhetens passtider och ett heltidspass (8 h 15 min på plats, 30 min rast) – ett ungefär, inte schemat.
+const tidMin = t => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+const klk = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const PASSDAGAR = { "mån-sön": [0, 1, 2, 3, 4, 5, 6], alla: [0, 1, 2, 3, 4, 5, 6], vardag: [0, 1, 2, 3, 4], helg: [5, 6], "lör-sön": [5, 6] };
+function arbetsPass(ind) {
+  const bb = ind.bemanningsbalans && ind.bemanningsbalans.pass;
+  if (bb && bb.length) return { kalla: "pass", pass: bb.map(x => ({ dagar: PASSDAGAR[x.dagar] || [DAGAR.indexOf(x.dagar)], fran: tidMin(x.fran), till: tidMin(x.till), rast: x.rast_minuter || 0, antal: Number(x.antal) || 0, typ: x.typ })) };
+  const r = ind.regler || {}, np = (ind.nattpass && ind.nattpass[0]) || { start: "21:45", slut: "06:45", maltidsuppehall: true };
+  const ms = tidMin(r.morgon_start || "07:00"), ks = tidMin(r.kvall_slut || "22:00");
+  const tider = { morgon: [ms, ms + 495, 30], kvall: [ks - 495, ks, 30], natt: [tidMin(np.start), tidMin(np.slut), np.maltidsuppehall === false ? 30 : 0] };
+  const per = behovPerDag(ind), pass = [];
+  per.forEach((b, i) => ["morgon", "kvall", "natt"].forEach(d => { if (b[d]) pass.push({ dagar: [i], fran: tider[d][0] % 1440, till: tider[d][1] % 1440, rast: tider[d][2], antal: b[d], typ: d }); }));
+  return { kalla: "behov", pass, tider };
+}
+function arbetstid(ind) {
+  const { kalla, pass, tider } = arbetsPass(ind);
+  const kurva = Array.from({ length: 7 }, () => Array(96).fill(0)), timmar = Array(7).fill(0);
+  for (const x of pass) {
+    const L = (x.till - x.fran + 1440) % 1440 || 1440;
+    for (const i of x.dagar) {
+      if (i < 0) continue;
+      for (let k = 0; k < L; k += 15) kurva[i][Math.floor(((x.fran + k) % 1440) / 15)] += x.antal;
+      timmar[i] += x.antal * Math.max(0, L - (x.typ === "jour" ? 0 : x.rast)) / 60;
+    }
+  }
+  if (!pass.length) return `<p class="dampad liten">Ange behovet ovan, så visas arbetstiden här.</p>`;
+  // dagar med samma kurva slås ihop: Mån–fre, Lör–sön …
+  const grupper = [];
+  DAGAR.forEach((d, i) => { const g = grupper.find(x => kurva[x[0]].join() === kurva[i].join()); if (g) g.push(i); else grupper.push([i]); });
+  const namn = idx => idx.join() === "0,1,2,3,4" ? "Mån–fre" : idx.join() === "5,6" ? "Lör–sön" : idx.join() === "0,1,2,3,4,5,6" ? "Alla dagar" : idx.map(i => DAGAR[i]).join(", ");
+  const serier = grupper.filter(g => kurva[g[0]].some(v => v)).map(g => ({ namn: namn(g), data: kurva[g[0]] }));
+  const vecka = timmar.reduce((a, b) => a + b, 0), maxT = Math.max(1, ...timmar);
+  const B = 640, H = 220, V = 34, T = 12, U = 26, max = Math.max(1, ...serier.flatMap(x => x.data));
+  const x = i => V + i / 96 * (B - V - 8), y = v => T + (1 - v / max) * (H - T - U);
+  const steg = Math.max(1, Math.ceil(max / 5)), FARG = ["var(--skog, #193f38)", "var(--guld, #c9a03a)", "#4d6488", "#b8432f", "#3f7a63", "#8a6212", "#7085a3"];
+  let svg = `<svg class="graf" viewBox="0 0 ${B} ${H}" role="img" aria-label="Antal i tjänst över dygnet enligt behovet">`;
+  for (let v = 0; v <= max; v += steg) svg += `<line class="rutnat" x1="${V}" x2="${B - 8}" y1="${y(v)}" y2="${y(v)}"/><text x="${V - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  for (let h = 0; h <= 24; h += 3) svg += `<text x="${x(h * 4)}" y="${H - 8}" text-anchor="middle">${String(h % 24).padStart(2, "0")}</text>`;
+  serier.forEach((sr, j) => {
+    let d = `M${x(0)},${y(sr.data[0])}`;
+    for (let i = 0; i < 96; i++) d += `H${x(i + 1)}V${y(sr.data[i + 1] ?? sr.data[i])}`;
+    svg += `<path d="${d}" fill="none" stroke="${FARG[j % FARG.length]}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    for (let i = 0; i < 96; i++) if (sr.data[i] !== sr.data[i - 1]) svg += `<rect class="traff" x="${x(i)}" y="${y(sr.data[i]) - 8}" width="${Math.max(6, x(i + 1) - x(i))}" height="16" data-tips="${esc(`${sr.namn} ${klk(i * 15)}: ${sr.data[i]} i tjänst`)}"/>`;
+  });
+  svg += `</svg>`;
+  const stapel = `<div class="arbetstid-dagar">${DAGAR.map((d, i) => `<div data-tips="${esc(`${d}: ${sv(timmar[i], 1)} h arbetstid`)}"><i style="height:${Math.round(timmar[i] / maxT * 56)}px"></i><b>${sv(timmar[i], 0)}</b><span>${d}</span></div>`).join("")}</div>`;
+  const kallaText = kalla === "pass" ? "Bygger på passen i bemanningsbalansen."
+    : `Ungefärligt: bygger på behovet per dygnsdel och enhetens passtider (dag ${klk(tider.morgon[0])}–${klk(tider.morgon[1])}, kväll ${klk(tider.kvall[0])}–${klk(tider.kvall[1] % 1440)}, natt ${klk(tider.natt[0])}–${klk(tider.natt[1])}). I schemat anpassas passlängderna efter sysselsättningsgraden.`;
+  return `<div class="legend" style="margin-bottom:6px">${serier.map((sr, j) => `<span><i style="background:${FARG[j % FARG.length]}"></i>${esc(sr.namn)} (högst ${Math.max(...sr.data)})</span>`).join("")}</div>${svg}
+    <div class="arbetstid-summa"><div><span class="dampad liten">Arbetstid per vecka</span><b>${sv(vecka, 1)} h</b><span class="dampad liten">ungefär ${sv(vecka / 37, 1)} heltider à 37 h</span></div>${stapel}</div>
+    <p class="dampad liten" style="margin:6px 0 0">${kallaText}</p>`;
+}
+
 // ---------------------------------------------------------------- kalender över godkända scheman (färdplan 22–23)
 // perioder: [{id, namn, fran_datum ("ÅÅÅÅ-MM-DD", en måndag), veckor, lank}]. Ett godkänt schema gäller från sitt
 // datum tills nästa börjar, och rullar runt (vecka 1 igen efter sista veckan). Varje rad är en vecka.
@@ -3363,7 +3452,7 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
 </script>
@@ -4259,6 +4348,104 @@ return { FORMAT, VERSION, skapa, text, las, filnamn };
 if (typeof module !== "undefined") module.exports = ENHETSFIL;
 </script>
 <script>"use strict";
+// Organisationsstruktur: enheter ordnas under verksamheter, till exempel Äldreomsorg → SÄBO och Hemtjänst,
+// LSS och Förskola. Fritt antal nivåer. Delas av webben (app.js) och lättversionen (light/sida.html).
+// Strukturen är bara ordning och rubriker – den påverkar inte schemaläggningen. Se docs/organisation.md.
+
+const ORG = (() => {
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// Startstrukturen (användarens önskemål 2026-11-08). Kan ändras fritt i gränssnittet.
+const STANDARD = [
+  { id: "aldreomsorg", namn: "Äldreomsorg", forelder: null },
+  { id: "sabo", namn: "SÄBO", forelder: "aldreomsorg" },
+  { id: "hemtjanst", namn: "Hemtjänst", forelder: "aldreomsorg" },
+  { id: "lss", namn: "LSS", forelder: null },
+  { id: "forskola", namn: "Förskola", forelder: null },
+];
+
+const kopia = n => (n && n.length ? n : STANDARD).map(x => ({ ...x }));
+const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || null));
+const finns = (noder, id) => noder.some(x => x.id === id);
+
+// "Äldreomsorg › SÄBO"
+function sokvag(noder, id) {
+  const ut = []; let x = noder.find(n => n.id === id), varv = 0;
+  while (x && varv++ < 20) { ut.unshift(x.namn); x = noder.find(n => n.id === x.forelder); }
+  return ut.join(" › ");
+}
+
+function nyttId(noder, namn) {
+  const bas = String(namn || "grupp").toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "grupp";
+  let id = bas, i = 2;
+  while (finns(noder, id)) id = `${bas}-${i++}`;
+  return id;
+}
+
+// Ändringar i strukturen. Returnerar ny lista eller kastar Error med svensk text.
+function lagg(noder, namn, forelder) {
+  namn = String(namn || "").trim();
+  if (!namn) throw new Error("Skriv ett namn.");
+  if (forelder && !finns(noder, forelder)) throw new Error("Den överordnade gruppen finns inte.");
+  if (barn(noder, forelder).some(x => x.namn.toLowerCase() === namn.toLowerCase())) throw new Error(`Det finns redan en grupp som heter ${namn} här.`);
+  return [...noder, { id: nyttId(noder, namn), namn, forelder: forelder || null }];
+}
+function bytNamn(noder, id, namn) {
+  namn = String(namn || "").trim();
+  if (!namn) throw new Error("Skriv ett namn.");
+  return noder.map(x => x.id === id ? { ...x, namn } : x);
+}
+// En grupp kan tas bort när den saknar undergrupper; dess enheter flyttas upp ett steg (eller blir utan placering).
+function taBort(noder, id) {
+  if (barn(noder, id).length) throw new Error("Ta bort eller flytta undergrupperna först.");
+  const x = noder.find(n => n.id === id);
+  return { noder: noder.filter(n => n.id !== id), flyttaTill: x ? x.forelder || null : null };
+}
+
+// <option>-lista med indrag, för att välja var en enhet ska ligga
+function alternativ(noder, valt, { tom = "Utan placering" } = {}) {
+  const ut = [`<option value=""${valt ? "" : " selected"}>${esc(tom)}</option>`];
+  const gå = (id, niva) => barn(noder, id).forEach(x => {
+    ut.push(`<option value="${esc(x.id)}"${x.id === valt ? " selected" : ""}>${"  ".repeat(niva)}${niva ? "› " : ""}${esc(x.namn)}</option>`);
+    gå(x.id, niva + 1);
+  });
+  gå(null, 0);
+  return ut.join("");
+}
+
+// Enheterna grupperade i strukturen. ritaEnhet(e) ger HTML för en enhet; nyKnapp(id) ger HTML för "ny enhet här".
+// Grupper utan enheter längre ned visas också, så att man kan lägga till där.
+function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", stangda = new Set() } = {}) {
+  const per = new Map();
+  for (const e of enheter) { const k = e.org && finns(noder, e.org) ? e.org : ""; if (!per.has(k)) per.set(k, []); per.get(k).push(e); }
+  const antal = id => (per.get(id) || []).length + barn(noder, id).reduce((s, x) => s + antal(x.id), 0);
+  const grupp = (x, niva) => {
+    const egna = per.get(x.id) || [], n = antal(x.id);
+    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}"${stangda.has(x.id) ? "" : " open"}>
+      <summary><span class="org-namn">${esc(x.namn)}</span><span class="org-antal">${n} ${n === 1 ? "enhet" : "enheter"}</span>${nyKnapp(x.id)}</summary>
+      <div class="org-innehall">${egna.map(ritaEnhet).join("")}${barn(noder, x.id).map(y => grupp(y, niva + 1)).join("")}
+      ${!egna.length && !barn(noder, x.id).length ? `<p class="dampad liten org-tom">Inga enheter här än.</p>` : ""}</div></details>`;
+  };
+  let h = barn(noder, null).map(x => grupp(x, 0)).join("");
+  const utan = per.get("") || [];
+  if (utan.length) h += `<details class="org-grupp niva0" data-org="" open><summary><span class="org-namn">Utan placering</span><span class="org-antal">${utan.length} ${utan.length === 1 ? "enhet" : "enheter"}</span></summary><div class="org-innehall">${utan.map(ritaEnhet).join("")}</div></details>`;
+  return h;
+}
+
+// Redigering av strukturen: en lista med namn, knappar för att byta namn, lägga till undergrupp och ta bort.
+function redigera(noder) {
+  const rad = (x, niva) => `<li style="--niva:${niva}"><span class="org-red-namn">${esc(x.namn)}</span>
+      <span class="chips"><button class="liten" data-orgg="byt" data-id="${esc(x.id)}">Byt namn</button><button class="liten" data-orgg="under" data-id="${esc(x.id)}">+ Undergrupp</button>${barn(noder, x.id).length ? "" : `<button class="liten fara" data-orgg="bort" data-id="${esc(x.id)}">Ta bort</button>`}</span></li>
+      ${barn(noder, x.id).map(y => rad(y, niva + 1)).join("")}`;
+  return `<ul class="org-red">${barn(noder, null).map(x => rad(x, 0)).join("")}</ul>
+    <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
+}
+
+return { STANDARD, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+})();
+if (typeof module !== "undefined") module.exports = ORG;
+</script>
+<script>"use strict";
 // Konsekvensanalys i lättversionen: en översättning av schemamotor/analys.py (underlag, förslag,
 // konsekvenser, rangordning). Schemat för varje förslag läggs av motor.js och granskas av granskning.js.
 // Ändras analys.py ska den här filen ändras på samma sätt; tests/js/analys_test.js jämför dem.
@@ -4508,8 +4695,17 @@ const lager = {
     }
     return Object.values(this.lokal().enheter).sort((a, b) => b.andrad - a.andrad);
   },
+  // organisationsstrukturen (organisation.js); null = startstrukturen
+  async org() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/org`).get()); return d.exists ? (d.data().noder || null) : null; } catch { return null; } }
+    return this.lokal().org || null;
+  },
+  async sparaOrg(noder) {
+    if (this.db) return this.db.doc(`${this.bas}/org`).set({ noder });
+    const d = this.lokal(); d.org = noder; this.lokalSpara(d);
+  },
   async sparaEnhet(e) {
-    const rad = { id: e.id, namn: e.namn, indata: e.indata, andrad: Date.now() };
+    const rad = { id: e.id, namn: e.namn, indata: e.indata, andrad: Date.now(), ...(e.org ? { org: e.org } : {}) };
     if (this.db) return this.db.doc(`${this.bas}/e_${e.id}`).set(rad);
     const d = this.lokal(); d.enheter[e.id] = rad; this.lokalSpara(d);
   },
@@ -4545,6 +4741,7 @@ const st = { vy: "lista", enheter: [], enhet: null, flik: "personal", korningar:
 let sparaTimer = null;
 function andrad(rita) {
   if (rita) ritaFlik();
+  else { const at = $("#arbetstid"); if (at && st.enhet) at.innerHTML = GRAF.arbetstid(st.enhet.indata); }
   ritaKontroll();
   clearTimeout(sparaTimer);
   sparaTimer = setTimeout(async () => { try { await lager.sparaEnhet(st.enhet); } catch (e) { meddela("Kunde inte spara: " + e.message); } }, 800);
@@ -4563,18 +4760,24 @@ const temaKnapp = () => `<button class="liten" data-g="tema" aria-label="Färgl�
 
 async function visaLista() {
   st.vy = "lista"; st.enhet = null; $("#fot").hidden = true;
+  if (!st.guide) st.nyOrg = null;  // gruppen gäller bara den enhet som skapas i guiden
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
+  try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   if (st.guide) { $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
       <div style="display:grid;justify-items:end;gap:4px">${temaKnapp()}<span class="dampad" style="font-size:11.5px">© Sofia Rångeby</span></div></div></header>
     ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
-    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><label class="knapp" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label><button class="primar" data-guide="ny">Ny enhet</button></div></div>
-      ${st.enheter.length ? st.enheter.map(e => `<div class="onsk"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${esc(e.namn)}</button>
-        <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div></div>
-        <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten" data-g="spara-fil" data-id="${e.id}">Spara som fil</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>`).join("")
-      : `<p class="tom">Inga enheter än. Skapa en ny eller börja från ett exempel.</p>`}</section>
+    <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><button class="liten" data-g="org-red">${st.orgRed ? "✓ Klar" : "Ändra organisation"}</button><label class="knapp liten" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div></div>
+      ${st.orgRed ? `<div class="formular" style="margin-top:10px"><b>Organisation</b><span class="dampad liten">Verksamheter och grupper som enheterna ordnas under. Påverkar inte schemaläggningen. En borttagen grupps enheter flyttas upp ett steg.</span>${ORG.redigera(st.org)}</div>` : ""}
+      <div class="org-trad" style="margin-top:10px">${ORG.trad(st.org, st.enheter, { stangda: st.orgStangda || new Set(),
+        nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}">+ Ny</button>`,
+        ritaEnhet: e => `<div class="onsk org-enhet"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${esc(e.namn)}</button>
+        <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div>
+        <label class="org-plats">Plats <select data-flytta="${e.id}" aria-label="Plats för ${esc(e.namn)}">${ORG.alternativ(st.org, e.org)}</select></label></div>
+        <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten" data-g="spara-fil" data-id="${e.id}">Spara som fil</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>` })}</div>
+      ${st.enheter.length ? "" : `<p class="tom">Inga enheter än. Tryck <b>+ Ny</b> vid en verksamhet, eller börja från ett exempel.</p>`}</section>
     <section class="kort" id="exempel"><h2>Exempel</h2><p class="dampad liten">Testfall från projektet, med id-koder i stället för namn.</p>
       ${EXEMPEL.map((x, i) => `<div class="onsk"><div><b>${esc(x.namn)}</b><div class="dampad liten">${esc(x.beskrivning)}</div></div><button class="liten" data-g="exempel" data-i="${i}">Använd</button></div>`).join("")}</section>`;
 }
@@ -4584,7 +4787,8 @@ const NY = () => ({ veckor: 4, cykliskt: true, behov: { vardag: { morgon: 2, kva
   onskemal: [] });
 
 async function skapa(namn, indata) {
-  const e = { id: nyttId(), namn, indata: structuredClone(indata) };
+  const e = { id: nyttId(), namn, indata: structuredClone(indata), org: st.nyOrg || null };
+  st.nyOrg = null;
   delete e.indata.losare; delete e.indata.tidpunkter; delete e.indata.delperioder;
   try { await lager.sparaEnhet(e); } catch (err) { meddela("Kunde inte spara: " + err.message); }
   oppna(e);
@@ -4665,7 +4869,8 @@ function ritaFlik() {
       ${Object.keys(b).map(k => `<tr><th>${DAGNYCKEL[k] || esc(k)}</th>${["morgon", "kvall", "natt"].map(d => `<td><input type="number" inputmode="numeric" min="0" data-b="${k}" data-d="${d}" value="${b[k][d] ?? 0}" style="width:64px" aria-label="${DAGNYCKEL[k]} ${DELAR[d]}"></td>`).join("")}
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
       <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
-      <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>`;
+      <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>
+      <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
   } else if (st.flik === "onskemal") {
     const l = i.onskemal || (i.onskemal = []);
     el.innerHTML = (st.onskForm ? onskForm() : `<p><button class="primar" data-g="nytt-onsk">+ Nytt önskemål</button></p>`) +
@@ -4886,7 +5091,7 @@ document.addEventListener("click", async ev => {
     case "exempel": { const x = EXEMPEL[+el.dataset.i]; return skapa(x.namn, x.indata); }
     case "oppna": return oppna(structuredClone(st.enheter.find(e => e.id === el.dataset.id)));
     case "spara-fil": return sparaEnhetsfil(st.enheter.find(x => x.id === el.dataset.id));
-    case "kopiera": { const e = st.enheter.find(x => x.id === el.dataset.id); await lager.sparaEnhet({ id: nyttId(), namn: e.namn + " (kopia)", indata: e.indata }); meddela("Kopia skapad."); return visaLista(); }
+    case "kopiera": { const e = st.enheter.find(x => x.id === el.dataset.id); await lager.sparaEnhet({ id: nyttId(), namn: e.namn + " (kopia)", indata: e.indata, org: e.org }); meddela("Kopia skapad."); return visaLista(); }
     case "ta-bort":
       if (el.dataset.ok !== "1") { el.dataset.ok = "1"; el.textContent = "Säker?"; setTimeout(() => { el.dataset.ok = ""; el.textContent = "Ta bort"; }, 4000); return; }
       await lager.taBortEnhet(el.dataset.id); meddela("Borttagen."); return visaLista();
@@ -4942,6 +5147,7 @@ document.addEventListener("click", async ev => {
     case "anvand-forslag": return anvandForslag(+el.dataset.n);
     case "visa-korning": return visaKorning(st.korningar.find(k => k.id === el.dataset.id));
     case "kalender": st.kalForskj = 0; return visaKalender();
+    case "org-red": st.orgRed = !st.orgRed; return visaLista();
     case "kal-flytta": st.kalForskj = +el.dataset.v ? (st.kalForskj || 0) + +el.dataset.v : 0; return visaKalender();
     case "godkann": st.godkannForm = st.korning.id; return ritaResultat();
     case "godkann-avbryt": st.godkannForm = null; return ritaResultat();
@@ -5060,6 +5266,40 @@ function visaKorning(k) {
   $("#fot").hidden = true; ritaResultat(); window.scrollTo(0, 0);
 }
 
+// ------------------------------------------------------------------ organisationsstruktur (organisation.js)
+async function sparaOrg(noder, flytta) {
+  try {
+    await lager.sparaOrg(noder);
+    if (flytta) for (const e of st.enheter.filter(x => x.org === flytta.fran)) await lager.sparaEnhet({ ...e, org: flytta.till });
+    st.org = noder; visaLista();
+  } catch (err) { meddela("Kunde inte spara: " + err.message); }
+}
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-orgg]"); if (!el || !st.org) return;
+  const id = el.dataset.id, namn = ORG.sokvag(st.org, id);
+  try {
+    if (el.dataset.orgg === "byt") { const n = prompt("Nytt namn för " + namn, st.org.find(x => x.id === id).namn); if (n !== null) sparaOrg(ORG.bytNamn(st.org, id, n)); }
+    if (el.dataset.orgg === "under") { const n = prompt("Namn på den nya gruppen under " + namn); if (n) sparaOrg(ORG.lagg(st.org, n, id)); }
+    if (el.dataset.orgg === "bort" && confirm(`Ta bort ${namn}? Enheterna där flyttas upp ett steg.`)) { const t = ORG.taBort(st.org, id); sparaOrg(t.noder, { fran: id, till: t.flyttaTill }); }
+  } catch (err) { meddela(err.message); }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "org-ny") return;
+  e.preventDefault();
+  try { sparaOrg(ORG.lagg(st.org, $("#org-ny-namn").value, null)); } catch (err) { meddela(err.message); }
+});
+document.addEventListener("change", async e => {
+  const id = e.target.dataset && e.target.dataset.flytta; if (!id) return;
+  const en = st.enheter.find(x => x.id === id); if (!en) return;
+  try { await lager.sparaEnhet({ ...en, org: e.target.value || null }); meddela("Enheten är flyttad."); visaLista(); }
+  catch (err) { meddela("Kunde inte flytta: " + err.message); }
+});
+document.addEventListener("toggle", e => {
+  const d = e.target; if (!d.classList || !d.classList.contains("org-grupp")) return;
+  st.orgStangda = st.orgStangda || new Set();
+  if (d.open) st.orgStangda.delete(d.dataset.org); else st.orgStangda.add(d.dataset.org);
+}, true);
+
 // Kalender över godkända scheman (samma som webben, GRAF.kalender i grafer.js).
 async function visaKalender() {
   st.vy = "kalender"; $("#fot").hidden = true;
@@ -5087,7 +5327,7 @@ function godkannandeRuta(k, brott) {
     <div class="chips" style="align-items:center"><label for="godkann-fran" class="liten" style="margin:0">Gäller från</label><input type="date" id="godkann-fran" value="${nastaMandag()}" style="width:auto">
     <button class="primar liten" data-g="godkann-ok">✓ Godkänn</button><button class="liten" data-g="godkann-avbryt">Avbryt</button></div></div>`;
   if (brott) return "";
-  return `<div class="chips" style="margin-top:10px;align-items:center"><button class="liten" data-g="godkann" style="border-color:var(--guld)">✓ Godkänn och aktivera</button><span class="dampad liten">Låser schemat när det är valt.</span></div>`;
+  return `<button class="godkann-knapp" data-g="godkann"><b>✓ Godkänn och aktivera</b><span>Låser schemat och gör det giltigt från en måndag</span></button>`;
 }
 async function godkannKorning() {
   const fran = $("#godkann-fran").value;
@@ -5109,8 +5349,8 @@ function ritaResultat() {
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer${typeof res.sekunder === "number" ? ` · ${sv(res.sekunder)} s` : ""}${typeof k.balans === "number" ? ` · bemanningsbalansen förutsåg ${vakText(k.balans)}` : ""}</span></div>
     ${st.red ? "" : godkannandeRuta(k, brott.length)}
-    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button><button data-g="tre-alternativ">⚖ Tre alternativ: medarbetare, verksamhet, ekonomi</button><button data-g="kalender">📅 Kalender – godkända scheman</button>
-      <div class="chips andra"><span class="dampad liten">Ändra:</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button class="liten" data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div></div>`}
+    ${st.red ? "" : `<div class="atgarder"><button class="atgard huvud" data-g="nytt-schema"><span aria-hidden="true">🤖</span>Lägg nytt schema</button><button class="atgard" data-g="tre-alternativ" title="Medarbetarstyrt, verksamhetsstyrt och ekonomistyrt"><span aria-hidden="true">⚖</span>Tre alternativ</button><button class="atgard" data-g="kalender" title="Godkända scheman vecka för vecka"><span aria-hidden="true">📅</span>Kalender</button></div>
+      <div class="andra-rad"><span>Ändra</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div>`}
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
   if (flik === "oversikt") h += ritaOversikt(k, brott);
   else if (flik === "regler") h += ritaRegelkontroll(k, brott);
@@ -5393,14 +5633,15 @@ document.addEventListener("click", async e => {
   const el = e.target.closest("[data-guide]"); if (!el) return;
   const g = st.guide, val = el.dataset.guide;
   switch (val) {
-    case "ny": st.guide = GUIDE.ny(); window.scrollTo(0, 0); return visaLista();
+    case "ny": st.nyOrg = null; st.guide = GUIDE.ny(); window.scrollTo(0, 0); return visaLista();
+    case "ny-i": e.preventDefault(); st.nyOrg = el.dataset.org; st.guide = GUIDE.ny(); window.scrollTo(0, 0); meddela(`Den nya enheten hamnar i ${ORG.sokvag(st.org, st.nyOrg)}.`); return visaLista();
     case "exempel": return $("#exempel")?.scrollIntoView({ behavior: "smooth" });
     case "enheter": return $("#mina-enheter")?.scrollIntoView({ behavior: "smooth" });
     case "ai": await skapa("Ny enhet", GUIDE.tomIndata("Ny enhet")); chatt.oppen = true; ritaChatt(); $("#chatt-text").value = GUIDE.AI_START; $("#chatt-text").focus(); return;
-    case "klistra": st.guide = GUIDE.nyKlistra(); window.scrollTo(0, 0); return visaLista();
+    case "klistra": st.nyOrg = null; st.guide = GUIDE.nyKlistra(); window.scrollTo(0, 0); return visaLista();
     case "anvand-klistrat": { const fel = GUIDE.anvandKlistrat(g); if (fel) return meddela(fel); window.scrollTo(0, 0); return visaLista(); }
     case "behov-forenkla": GUIDE.forenklaBehov(g); return visaLista();
-    case "avbryt": st.guide = null; return visaLista();
+    case "avbryt": st.guide = null; st.nyOrg = null; return visaLista();
     case "tillbaka": g.steg--; return visaLista();
     case "nasta": { const fel = GUIDE.kontrollera(g); if (fel) return meddela(fel); g.steg++; window.scrollTo(0, 0); return visaLista(); }
     case "satt": GUIDE.satt(g, el.dataset.falt, el.dataset.varde); return visaLista();
@@ -5561,7 +5802,7 @@ async function oppnaEnhetsfil(fil) {
   let d;
   try { d = ENHETSFIL.las(await fil.text()); } catch (err) { meddela(err.message); return; }
   // indata sparas precis som i filen – ingen inställning tas bort
-  const e = { id: nyttId(), namn: d.namn, indata: d.indata };
+  const e = { id: nyttId(), namn: d.namn, indata: d.indata, org: st.nyOrg || null };
   try { await lager.sparaEnhet(e); } catch (err) { meddela("Kunde inte spara: " + err.message); return; }
   const fel = [...d.varningar];
   let brott = 0, n = 0;

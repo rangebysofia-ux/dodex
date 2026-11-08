@@ -66,7 +66,7 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 28. **Inte medarbetarstyrda scheman fullt ut (princip).** Medarbetarnas önskemål väger in, men verksamheten lägger schemat. Önskemål ligger fortsatt efter behov, regler, block, passlängd och rättvisa (målordningen). Ett medarbetarstyrt alternativ kan jämföras men är inte grunden. Beslutat av användaren 2026-11-08.
 
-29. **Godkänt grundschema är låst, och bara chef godkänner.** Ett valt schema godkänns och aktiveras från en måndag. Därefter är det låst: ändringar görs som en ny version som godkänns och aktiveras från ett nytt datum, och tillfälliga ändringar görs i planeringen. I webbtjänsten kan bara en chef, inloggad med eget konto, godkänna. Ett schema med brott mot hårda regler kan inte godkännas. Det godkända schemat visas med guldram och märket ✓ Godkänt. Se `docs/godkant-schema.md`. Beslutat av användaren 2026-11-08.
+29. **Godkänt grundschema är låst.** Ett valt schema godkänns och aktiveras från en måndag. Därefter är det låst: ändringar görs som en ny version som godkänns och aktiveras från ett nytt datum, och tillfälliga ändringar görs i planeringen. I webbtjänsten kan bara en chef, inloggad med eget konto, godkänna. Ett schema med brott mot hårda regler kan inte godkännas. Det godkända schemat visas med guldram och märket ✓ Godkänt. Se `docs/godkant-schema.md`. Beslutat av användaren 2026-11-08. **Ändrat samma dag:** alla inloggade får godkänna och aktivera (chefen hanterar kontona). Det sparas vem som godkände. `SCHEMA_GODKANNARE=chef` begränsar godkännandet till chefer igen.
 
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.

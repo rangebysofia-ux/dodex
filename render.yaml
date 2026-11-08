@@ -7,6 +7,9 @@ services:
     plan: starter
     region: frankfurt
     healthCheckPath: /halsa
+    # uppdateras automatiskt varje gång en ändring pushas till main
+    branch: main
+    autoDeploy: true
     envVars:
       - key: SCHEMA_LOSENORD
         sync: false
