@@ -385,6 +385,7 @@ class OrgNod(BaseModel):
     id: str = Field(min_length=1, max_length=60, pattern=r"^[a-z0-9-]+$")
     namn: str = Field(min_length=1, max_length=80)
     forelder: Optional[str] = None
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")  # gruppens färg; enheterna under ärver den
 
 
 class OrganisationIn(BaseModel):

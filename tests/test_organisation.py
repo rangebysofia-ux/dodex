@@ -71,3 +71,34 @@ process.stdout.write(JSON.stringify(ut));"""
     assert ut["flytta"] == "sabo"
     assert ut["trad"].startswith("Äldreomsorg 1 enhet SÄBO 1 enhet Område norr 1 enhet [E1]")
     assert ut["trad"].endswith("Utan placering 1 enhet [E2]")  # okänd plats visas utan placering
+
+
+def test_farg_sparas_och_valideras(klient):
+    noder = [{"id": "lss", "namn": "LSS", "forelder": None, "farg": "#3f6bb0"}]
+    assert klient.put("/api/organisation", json={"noder": noder}).status_code == 200
+    assert klient.get("/api/organisation").json()["noder"][0]["farg"] == "#3f6bb0"
+    assert klient.put("/api/organisation", json={"noder": [{**noder[0], "farg": "red"}]}).status_code == 422
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="Node saknas")
+def test_farg_arvs_av_enheterna():
+    kod = r"""
+const O = require(process.argv[1]); let n = O.kopia(); const ut = {};
+n = O.lagg(n, "Område norr", "sabo");
+ut.arvd = O.farg(n, "omrade-norr"); ut.sabo = O.farg(n, "sabo"); ut.hem = O.farg(n, "hemtjanst");
+ut.utan = O.farg(n, null);
+// en sparad startstruktur utan färger får startfärgerna
+ut.gammal = O.farg(n.map(({ farg, ...x }) => x), "lss");
+n = O.sattFarg(n, "omrade-norr", "#123456"); ut.egen = O.farg(n, "omrade-norr");
+n = O.sattFarg(n, "omrade-norr", ""); ut.tillbaka = O.farg(n, "omrade-norr");
+try { O.sattFarg(n, "lss", "blå"); } catch (e) { ut.fel = e.message; }
+ut.ikon = O.ikon(n, "lss");
+process.stdout.write(JSON.stringify(ut));"""
+    ut = json.loads(subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "organisation.js")],
+                                   capture_output=True, text=True, timeout=60, check=True).stdout)
+    assert ut["arvd"] == ut["sabo"] != ut["hem"]  # olika verksamheter har olika färg
+    assert ut["utan"] == "#8b8f8a"
+    assert ut["gammal"] == "#3f6bb0"
+    assert ut["egen"] == "#123456" and ut["tillbaka"] == ut["sabo"]
+    assert "Ogiltig" in ut["fel"]
+    assert "--ef:#3f6bb0" in ut["ikon"] and "🏠" in ut["ikon"]

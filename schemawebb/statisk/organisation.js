@@ -8,12 +8,35 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 
 // Startstrukturen (användarens önskemål 2026-11-08). Kan ändras fritt i gränssnittet.
 const STANDARD = [
-  { id: "aldreomsorg", namn: "Äldreomsorg", forelder: null },
-  { id: "sabo", namn: "SÄBO", forelder: "aldreomsorg" },
-  { id: "hemtjanst", namn: "Hemtjänst", forelder: "aldreomsorg" },
-  { id: "lss", namn: "LSS", forelder: null },
-  { id: "forskola", namn: "Förskola", forelder: null },
+  { id: "aldreomsorg", namn: "Äldreomsorg", forelder: null, farg: "#b08a2e" },
+  { id: "sabo", namn: "SÄBO", forelder: "aldreomsorg", farg: "#c46a2b" },
+  { id: "hemtjanst", namn: "Hemtjänst", forelder: "aldreomsorg", farg: "#2f8a6f" },
+  { id: "lss", namn: "LSS", forelder: null, farg: "#3f6bb0" },
+  { id: "forskola", namn: "Förskola", forelder: null, farg: "#9a4fa8" },
 ];
+
+// Färger att välja bland för en verksamhet. Enheterna under ärver färgen från närmaste grupp som har en.
+const PALETT = ["#b08a2e", "#c46a2b", "#c0473f", "#b5487e", "#9a4fa8", "#5b5bb8", "#3f6bb0", "#2b8aa0", "#2f8a6f", "#5f8a2f", "#7a6a55", "#4a4a4a"];
+const GRA = "#8b8f8a";
+const giltigFarg = f => typeof f === "string" && /^#[0-9a-f]{6}$/i.test(f);
+
+// Gruppens färg: egen, annars ärvd uppåt. En sparad startstruktur utan färger får startfärgerna.
+function farg(noder, id) {
+  let x = noder.find(n => n.id === id), varv = 0;
+  while (x && varv++ < 20) {
+    if (giltigFarg(x.farg)) return x.farg;
+    const std = STANDARD.find(n => n.id === x.id);
+    if (std && x.farg === undefined) return std.farg;
+    x = noder.find(n => n.id === x.forelder);
+  }
+  return GRA;
+}
+function sattFarg(noder, id, f) {
+  if (f && !giltigFarg(f)) throw new Error("Ogiltig färg.");
+  return noder.map(x => x.id === id ? { ...x, farg: f || null } : x);
+}
+// Husmärket för en enhet, i gruppens färg.
+const ikon = (noder, orgId, hus = "🏠") => `<span class="enhet-ikon" style="--ef:${farg(noder, orgId)}" aria-hidden="true">${hus}</span>`;
 
 const kopia = n => (n && n.length ? n : STANDARD).map(x => ({ ...x }));
 const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || null));
@@ -72,8 +95,8 @@ function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", stangda = new Set
   const antal = id => (per.get(id) || []).length + barn(noder, id).reduce((s, x) => s + antal(x.id), 0);
   const grupp = (x, niva) => {
     const egna = per.get(x.id) || [], n = antal(x.id);
-    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}"${stangda.has(x.id) ? "" : " open"}>
-      <summary><span class="org-namn">${esc(x.namn)}</span><span class="org-antal">${n} ${n === 1 ? "enhet" : "enheter"}</span>${nyKnapp(x.id)}</summary>
+    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${stangda.has(x.id) ? "" : " open"}>
+      <summary><span class="org-prick" aria-hidden="true"></span><span class="org-namn">${esc(x.namn)}</span><span class="org-antal">${n} ${n === 1 ? "enhet" : "enheter"}</span>${nyKnapp(x.id)}</summary>
       <div class="org-innehall">${egna.map(ritaEnhet).join("")}${barn(noder, x.id).map(y => grupp(y, niva + 1)).join("")}
       ${!egna.length && !barn(noder, x.id).length ? `<p class="dampad liten org-tom">Inga enheter här än.</p>` : ""}</div></details>`;
   };
@@ -85,13 +108,13 @@ function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", stangda = new Set
 
 // Redigering av strukturen: en lista med namn, knappar för att byta namn, lägga till undergrupp och ta bort.
 function redigera(noder) {
-  const rad = (x, niva) => `<li style="--niva:${niva}"><span class="org-red-namn">${esc(x.namn)}</span>
+  const rad = (x, niva) => `<li style="--niva:${niva}"><input type="color" class="org-farg" list="org-palett" value="${farg(noder, x.id)}" data-orgfarg="${esc(x.id)}" title="Färg för ${esc(x.namn)}" aria-label="Färg för ${esc(x.namn)}"><span class="org-red-namn">${esc(x.namn)}</span>
       <span class="chips"><button class="liten" data-orgg="byt" data-id="${esc(x.id)}">Byt namn</button><button class="liten" data-orgg="under" data-id="${esc(x.id)}">+ Undergrupp</button>${barn(noder, x.id).length ? "" : `<button class="liten fara" data-orgg="bort" data-id="${esc(x.id)}">Ta bort</button>`}</span></li>
       ${barn(noder, x.id).map(y => rad(y, niva + 1)).join("")}`;
-  return `<ul class="org-red">${barn(noder, null).map(x => rad(x, 0)).join("")}</ul>
+  return `<datalist id="org-palett">${PALETT.map(f => `<option value="${f}">`).join("")}</datalist><ul class="org-red">${barn(noder, null).map(x => rad(x, 0)).join("")}</ul>
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { STANDARD, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { STANDARD, PALETT, farg, sattFarg, ikon, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;

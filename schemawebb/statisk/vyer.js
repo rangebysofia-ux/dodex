@@ -206,7 +206,7 @@ function kopplaKorningsval() {
 // ---------------------------------------------------------------- schema
 function ritaSchemavy() {
   const res = st.red?.res || st.korning.resultat, filter = st.sv.filter || "alla";
-  const F = [["alla", "Alla pass"], ["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"], ["tider", "Klockslag"]];
+  const F = [["alla", "Alla pass"], ["morgon", "☀️ Dag"], ["kvall", "🌙 Kväll"], ["natt", "🌃 Natt"], ["tider", "Klockslag"]];
   const godk = st.korning.godkand && !st.red;
   let h = `<section class="kort${st.red ? " redigerar" : ""}${godk ? " godkand" : ""}"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema${godk ? ' <span class="godkand-chip">✓ Godkänt</span>' : ""}</h2>
     ${st.red ? "" : `<button class="liten" data-g="redigera"${godk ? ' title="Det godkända schemat är låst. Ändringarna sparas som en ny version."' : ""}>${IKON.penna || "✎"} ${godk ? "Gör ny version" : "Redigera schemat"}</button>`}
@@ -218,7 +218,7 @@ function ritaSchemavy() {
   else {
     h += st.vecka === -1 ? schemaDagar(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), filter, true) : schemaVecka(res, Math.max(0, st.vecka), filter);
     h += `<p class="info" id="info">${cellInfo(res)}</p>
-      <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span>
+      <div class="legend"><span><i style="background:var(--morgon)"></i>☀️ Dag</span><span><i style="background:var(--kvall)"></i>🌙 Kväll</span><span><i style="background:var(--natt)"></i>🌃 Natt</span>
       <span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span><span><i style="background:var(--resurs)"></i>◼ R resurspass, utöver behovet</span><span class="minus">−1 vakans</span><span class="plus">+1 resurstid</span><span><i class="vvlegend"></i>VV veckovila: veckans längsta sammanhängande vila (minst 36 h). Håll muspekaren över för tider</span><span>Kolumnerna till höger: pass, D dag, K kväll, N natt, Hlg helgdagar, ◼R resurspass, ★ aktiviteter, arbetstid, kortaste vila mellan pass och kortaste veckovila för det som visas (rött = under gränsen)</span><span>Raden längst ned: i tjänst${filter !== "alla" ? (st.vecka === -1 ? "" : " / behov") : ""}${st.vecka === -1 ? ". Håll muspekaren över en ruta för detaljer" : ""}</span></div>`;
   }
   return h + `</section>`;
@@ -263,7 +263,7 @@ function schemaDagar(res, dagar, filter, period) {
       if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}${mal}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
       const resurs = rs.has(n);
       return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${resurs ? " resurs" : ""}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter || resurs ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${resurs ? "\n◼ Resurspass, utöver behovet" : ""}${esc(GRAF.aktText(p))}"` : ""}
-        aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}${resurs ? ", resurspass" : ""}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${resurs && !period ? GRAF.resursMarke : ""}${GRAF.aktMarke(p)}${harTeam && p.team && p.team !== hem[pid] ? `<i class="team-lan" title="Lånad till ${esc(TEAM.namn(ind.team, p.team))}">→${esc(TEAM.kort(ind.team, p.team))}</i>` : ""}</button></td>`;
+        aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}${resurs ? ", resurspass" : ""}"><b>${GRAF.passIkon(p.dygnsdel)}${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${resurs && !period ? GRAF.resursMarke : ""}${GRAF.aktMarke(p)}${harTeam && p.team && p.team !== hem[pid] ? `<i class="team-lan" title="Lånad till ${esc(TEAM.namn(ind.team, p.team))}">→${esc(TEAM.kort(ind.team, p.team))}</i>` : ""}</button></td>`;
     }).join("") + GRAF.summaCeller(GRAF.radSumma(res, ind, pid, dagar, rs), kol, ind) + `</tr>`;
   }
   // vakanta pass som egna rader med streckad kant
@@ -272,7 +272,7 @@ function schemaDagar(res, dagar, filter, period) {
   for (let r = 0; r < rader; r++) {
     h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
       const x = synliga(d)[r];
-      return `<td ${kl(d)}>${x ? `<span class="pass vakant ${x.dygnsdel}" data-tips="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${x.start}–${x.slut} (vanligaste tiden)" aria-label="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass ${DAGAR[d % 7]}"><b>${KOD[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</span>` : ""}</td>`;
+      return `<td ${kl(d)}>${x ? `<span class="pass vakant ${x.dygnsdel}" data-tips="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass, vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${x.start}–${x.slut} (vanligaste tiden)" aria-label="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass ${DAGAR[d % 7]}"><b>${GRAF.passIkon(x.dygnsdel)}${KOD[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</span>` : ""}</td>`;
     }).join("") + `<td colspan="${kol.length}" class="summa forsta"></td></tr>`;
   }
   h += `<tr class="bem"><td>${period ? "I tj." : "I tjänst"}</td>` + dagar.map(d => {
@@ -361,7 +361,7 @@ function ritaKlockslag(res) {
     ${tp.length ? (() => { const beh = tp.reduce((s, t) => s + t.antal, 0), tackt = tp.reduce((s, t) => s + Math.min(t.antal, steg[Math.floor(minut(t.tid) / 15)]), 0);
       return `<p class="liten"><b>Täckningsgrad vid klockslagen: ${beh ? Math.round(tackt / beh * 100) : 100} %</b> <span class="dampad">(${tackt} av ${beh}). Punkterna visar behovet; röd punkt = för få på golvet.${(st.korning.indata.regler?.morgon_starter || []).length ? " Dagpassens starttid anpassas efter behovet." : ""}</span></p>`; })() : ""}
     <h3>Vem arbetar när</h3>${alla.length ? gantt : `<p class="tom">Ingen arbetar den här dagen.</p>`}
-    <div class="legend"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:#f4c9b6;border:1px solid #5a1f0c"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
+    <div class="legend"><span><i style="background:var(--morgon)"></i>☀️ Dag</span><span><i style="background:var(--kvall)"></i>🌙 Kväll</span><span><i style="background:var(--natt)"></i>🌃 Natt</span><span><i style="background:var(--resurs)"></i>Resurspass, utöver behovet</span><span><i style="background:#f4c9b6;border:1px solid #5a1f0c"></i>Aktivitet</span>${vakanta.length ? `<span><i style="border:2px dashed var(--svag);background:none"></i>Vakant pass</span>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- personer
@@ -414,7 +414,7 @@ function fordelningKort(f) {
     const veckor = r.typ === "bada" ? `<div class="veckomix">${r.veckor.map((v, w) => `<span class="${v.k + v.m && (!v.k || !v.m) ? "ensidig" : ""}" data-tips="Vecka ${w + 1}: ${v.k} kvällar, ${v.m} morgnar">${v.k}/${v.m}</span>`).join("")}</div>` : "";
     h += `<div class="fordelningsrad"><span class="namn">${esc(r.pid)}</span><div><div class="${r.typ === "bada" ? "mal" : ""}" ${mal}><div class="fordelning">${seg}</div></div>${veckor}</div><span class="etikett liten">${etikett}</span></div>`;
   }
-  return h + `<div class="legend" style="margin-top:10px"><span><i style="background:var(--morgon)"></i>Dag</span><span><i style="background:var(--kvall)"></i>Kväll</span><span><i style="background:var(--natt)"></i>Natt</span><span><i style="background:var(--text);width:3px"></i>Jämn andel</span></div></section>`;
+  return h + `<div class="legend" style="margin-top:10px"><span><i style="background:var(--morgon)"></i>☀️ Dag</span><span><i style="background:var(--kvall)"></i>🌙 Kväll</span><span><i style="background:var(--natt)"></i>🌃 Natt</span><span><i style="background:var(--text);width:3px"></i>Jämn andel</span></div></section>`;
 }
 
 function personkort(pid) {
@@ -444,7 +444,7 @@ function personkort(pid) {
   <section class="kort"><h2>${esc(pid)}s schema</h2><div class="rull"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veckMin = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${rs.has(pid + ":" + (v * 7 + i)) ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}${rs.has(pid + ":" + (v * 7 + i)) ? " – resurspass" : ""}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${rs.has(pid + ":" + (v * 7 + i)) ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : vvP.has(v * 7 + i) ? GRAF.vvMarke(vvP.get(v * 7 + i), false) : ""}</td>`; }).join("")}
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i]; return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${rs.has(pid + ":" + (v * 7 + i)) ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}${rs.has(pid + ":" + (v * 7 + i)) ? " – resurspass" : ""}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${GRAF.passIkon(q.dygnsdel)}${KOD[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${rs.has(pid + ":" + (v * 7 + i)) ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : vvP.has(v * 7 + i) ? GRAF.vvMarke(vvP.get(v * 7 + i), false) : ""}</td>`; }).join("")}
       <td class="tal nw liten">${sv(veckMin / 60, 1)} h</td></tr>`;
   }
   return h + `</tbody></table></div></section>`;
@@ -460,7 +460,7 @@ function ritaBemanning() {
   for (const rad of Object.values(res.schema)) for (const q of rad) if (q) (passTid[q.dygnsdel] = passTid[q.dygnsdel] || []).push(q.netto);
   const snitt = d => passTid[d] && passTid[d].length ? passTid[d].reduce((a, b) => a + b, 0) / passTid[d].length : 480;
   bem.forEach(x => delar.forEach(d => { behovSum += x.b[d]; tackt += Math.min(x.n[d], x.b[d]); vakSum += x.vak[d]; over += Math.max(0, x.n[d] - x.b[d]); }));
-  const F = [["alla", "Alla"], ["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
+  const F = [["alla", "Alla"], ["morgon", "☀️ Dag"], ["kvall", "🌙 Kväll"], ["natt", "🌃 Natt"]];
   let h = `<section class="kort"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Bemanning och vakanser</h2>
     <div class="chips" role="group" aria-label="Dygnsdel">${F.map(([v, t]) => `<button class="chip" data-g="bfilter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
     <div class="kpi" style="margin-bottom:14px">

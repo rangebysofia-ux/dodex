@@ -184,6 +184,7 @@ table.schema thead th { padding-bottom: 6px; }
 .pass { border: 0; width: 100%; border-radius: 8px; padding: 5px 1px; line-height: 1.15; font: inherit; cursor: pointer; display: block; }
 .pass b { display: block; font-size: 12.5px; font-weight: 800; }
 .pass small { font: 10.5px var(--mono); }
+.passikon { font-size: 10.5px; margin-right: 2px; line-height: 1; }
 .pass.morgon { background: var(--morgon-bg); color: var(--morgon-text); box-shadow: inset 3px 0 0 var(--morgon-kant); }
 .pass.kvall { background: var(--kvall-bg); color: var(--kvall-text); box-shadow: inset 3px 0 0 var(--kvall-kant); }
 .pass.natt { background: var(--natt-bg); color: var(--natt-text); box-shadow: inset 3px 0 0 var(--natt-kant); }
@@ -544,4 +545,12 @@ tr.kal-ingen td { background: transparent; }
 .pass .team-lan { display: block; font: 800 9.5px/1.1 var(--mono, monospace); font-style: normal; color: #fff; background: #4d6488; border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
 
 /* enhet = hus */
-.enhet-ikon { margin-right: 6px; }
+
+/* enhetens färg = verksamhetens (organisation.js) */
+.enhet-ikon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; margin-right: 8px; vertical-align: -6px; font-size: 16px; line-height: 1; background: color-mix(in srgb, var(--ef, #8b8f8a) 22%, transparent); box-shadow: inset 0 0 0 2px var(--ef, #8b8f8a); }
+h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4px; }
+.kort.enhet, .org-enhet { border-left: 5px solid var(--ef, transparent); }
+.org-prick { width: 12px; height: 12px; border-radius: 50%; background: var(--ef); flex: none; }
+.org-etikett { display: inline-block; margin: 4px 0 0; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--text); background: color-mix(in srgb, var(--ef) 18%, transparent); border: 1px solid var(--ef); }
+.org-farg { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; vertical-align: middle; margin-right: 6px; }
+.org-farg::-webkit-color-swatch-wrapper { padding: 0; } .org-farg::-webkit-color-swatch { border: 1px solid var(--linje); border-radius: 50%; } .org-farg::-moz-color-swatch { border-radius: 50%; }

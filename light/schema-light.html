@@ -285,8 +285,8 @@ tr.kal-ingen td { background: transparent; }
 .team-hem { display: block; font-size: 10px; font-weight: 700; color: var(--dampad); }
 .pass .team-lan { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: #4d6488; border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
 .team-filter { align-items: center; }
+.passikon { font-size: 10.5px; margin-right: 2px; line-height: 1; }
 /* enhet = hus */
-.enhet-ikon { margin-right: 6px; }
 /* organisationsstruktur på startsidan */
 .org-trad { display: grid; gap: 8px; }
 .org-grupp { border: 1px solid var(--linje); border-radius: 12px; padding: 2px 10px; }
@@ -326,6 +326,15 @@ tr.kal-ingen td { background: transparent; }
 table.balanstabell tr.perspektiv th { text-align: left; padding-top: 12px; font-size: 13.5px; color: var(--text); border-bottom: 2px solid var(--linje); }
 table.balanstabell td.bast { color: var(--bra); font-weight: 800; } table.balanstabell td.rod { color: var(--dalig, var(--kritisk, #b8432f)); font-weight: 800; }
 table.balanstabell td[data-tips] { cursor: help; }
+
+/* enhetens färg = verksamhetens (organisation.js) */
+.enhet-ikon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; margin-right: 8px; vertical-align: -6px; font-size: 16px; line-height: 1; background: color-mix(in srgb, var(--ef, #8b8f8a) 22%, transparent); box-shadow: inset 0 0 0 2px var(--ef, #8b8f8a); }
+h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4px; }
+.kort.enhet, .org-enhet { border-left: 5px solid var(--ef, transparent); }
+.org-prick { width: 12px; height: 12px; border-radius: 50%; background: var(--ef); flex: none; }
+.org-etikett { display: inline-block; margin: 4px 0 0; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--text); background: color-mix(in srgb, var(--ef) 18%, transparent); border: 1px solid var(--ef); }
+.org-farg { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; vertical-align: middle; margin-right: 6px; }
+.org-farg::-webkit-color-swatch-wrapper { padding: 0; } .org-farg::-webkit-color-swatch { border: 1px solid var(--linje); border-radius: 50%; } .org-farg::-moz-color-swatch { border-radius: 50%; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -3395,6 +3404,9 @@ function resurs(res, indata) {
   }
   return ut;
 }
+// Symboler för passen (användarens önskemål): sol för dag, måne för kväll, natthimmel för natt.
+const PASSIKON = { morgon: "☀️", kvall: "🌙", natt: "🌃" };
+const passIkon = del => PASSIKON[del] ? `<span class="passikon" aria-hidden="true">${PASSIKON[del]}</span>` : "";
 const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
 
 // ---------------------------------------------------------------- aktiviteter
@@ -3636,7 +3648,7 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
 </script>
@@ -4568,12 +4580,35 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 
 // Startstrukturen (användarens önskemål 2026-11-08). Kan ändras fritt i gränssnittet.
 const STANDARD = [
-  { id: "aldreomsorg", namn: "Äldreomsorg", forelder: null },
-  { id: "sabo", namn: "SÄBO", forelder: "aldreomsorg" },
-  { id: "hemtjanst", namn: "Hemtjänst", forelder: "aldreomsorg" },
-  { id: "lss", namn: "LSS", forelder: null },
-  { id: "forskola", namn: "Förskola", forelder: null },
+  { id: "aldreomsorg", namn: "Äldreomsorg", forelder: null, farg: "#b08a2e" },
+  { id: "sabo", namn: "SÄBO", forelder: "aldreomsorg", farg: "#c46a2b" },
+  { id: "hemtjanst", namn: "Hemtjänst", forelder: "aldreomsorg", farg: "#2f8a6f" },
+  { id: "lss", namn: "LSS", forelder: null, farg: "#3f6bb0" },
+  { id: "forskola", namn: "Förskola", forelder: null, farg: "#9a4fa8" },
 ];
+
+// Färger att välja bland för en verksamhet. Enheterna under ärver färgen från närmaste grupp som har en.
+const PALETT = ["#b08a2e", "#c46a2b", "#c0473f", "#b5487e", "#9a4fa8", "#5b5bb8", "#3f6bb0", "#2b8aa0", "#2f8a6f", "#5f8a2f", "#7a6a55", "#4a4a4a"];
+const GRA = "#8b8f8a";
+const giltigFarg = f => typeof f === "string" && /^#[0-9a-f]{6}$/i.test(f);
+
+// Gruppens färg: egen, annars ärvd uppåt. En sparad startstruktur utan färger får startfärgerna.
+function farg(noder, id) {
+  let x = noder.find(n => n.id === id), varv = 0;
+  while (x && varv++ < 20) {
+    if (giltigFarg(x.farg)) return x.farg;
+    const std = STANDARD.find(n => n.id === x.id);
+    if (std && x.farg === undefined) return std.farg;
+    x = noder.find(n => n.id === x.forelder);
+  }
+  return GRA;
+}
+function sattFarg(noder, id, f) {
+  if (f && !giltigFarg(f)) throw new Error("Ogiltig färg.");
+  return noder.map(x => x.id === id ? { ...x, farg: f || null } : x);
+}
+// Husmärket för en enhet, i gruppens färg.
+const ikon = (noder, orgId, hus = "🏠") => `<span class="enhet-ikon" style="--ef:${farg(noder, orgId)}" aria-hidden="true">${hus}</span>`;
 
 const kopia = n => (n && n.length ? n : STANDARD).map(x => ({ ...x }));
 const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || null));
@@ -4632,8 +4667,8 @@ function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", stangda = new Set
   const antal = id => (per.get(id) || []).length + barn(noder, id).reduce((s, x) => s + antal(x.id), 0);
   const grupp = (x, niva) => {
     const egna = per.get(x.id) || [], n = antal(x.id);
-    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}"${stangda.has(x.id) ? "" : " open"}>
-      <summary><span class="org-namn">${esc(x.namn)}</span><span class="org-antal">${n} ${n === 1 ? "enhet" : "enheter"}</span>${nyKnapp(x.id)}</summary>
+    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${stangda.has(x.id) ? "" : " open"}>
+      <summary><span class="org-prick" aria-hidden="true"></span><span class="org-namn">${esc(x.namn)}</span><span class="org-antal">${n} ${n === 1 ? "enhet" : "enheter"}</span>${nyKnapp(x.id)}</summary>
       <div class="org-innehall">${egna.map(ritaEnhet).join("")}${barn(noder, x.id).map(y => grupp(y, niva + 1)).join("")}
       ${!egna.length && !barn(noder, x.id).length ? `<p class="dampad liten org-tom">Inga enheter här än.</p>` : ""}</div></details>`;
   };
@@ -4645,14 +4680,14 @@ function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", stangda = new Set
 
 // Redigering av strukturen: en lista med namn, knappar för att byta namn, lägga till undergrupp och ta bort.
 function redigera(noder) {
-  const rad = (x, niva) => `<li style="--niva:${niva}"><span class="org-red-namn">${esc(x.namn)}</span>
+  const rad = (x, niva) => `<li style="--niva:${niva}"><input type="color" class="org-farg" list="org-palett" value="${farg(noder, x.id)}" data-orgfarg="${esc(x.id)}" title="Färg för ${esc(x.namn)}" aria-label="Färg för ${esc(x.namn)}"><span class="org-red-namn">${esc(x.namn)}</span>
       <span class="chips"><button class="liten" data-orgg="byt" data-id="${esc(x.id)}">Byt namn</button><button class="liten" data-orgg="under" data-id="${esc(x.id)}">+ Undergrupp</button>${barn(noder, x.id).length ? "" : `<button class="liten fara" data-orgg="bort" data-id="${esc(x.id)}">Ta bort</button>`}</span></li>
       ${barn(noder, x.id).map(y => rad(y, niva + 1)).join("")}`;
-  return `<ul class="org-red">${barn(noder, null).map(x => rad(x, 0)).join("")}</ul>
+  return `<datalist id="org-palett">${PALETT.map(f => `<option value="${f}">`).join("")}</datalist><ul class="org-red">${barn(noder, null).map(x => rad(x, 0)).join("")}</ul>
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { STANDARD, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { STANDARD, PALETT, farg, sattFarg, ikon, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;
 </script>
@@ -5045,7 +5080,7 @@ async function visaLista() {
       ${st.orgRed ? `<div class="formular" style="margin-top:10px"><b>Organisation</b><span class="dampad liten">Verksamheter och grupper som enheterna ordnas under. Påverkar inte schemaläggningen. En borttagen grupps enheter flyttas upp ett steg.</span>${ORG.redigera(st.org)}</div>` : ""}
       <div class="org-trad" style="margin-top:10px">${ORG.trad(st.org, st.enheter, { stangda: st.orgStangda || new Set(),
         nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}">+ Ny</button>`,
-        ritaEnhet: e => `<div class="onsk org-enhet"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px"><span class="enhet-ikon" aria-hidden="true">${GUIDE.HUS}</span>${esc(e.namn)}</button>
+        ritaEnhet: e => `<div class="onsk org-enhet" style="--ef:${ORG.farg(st.org, e.org)}"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${ORG.ikon(st.org, e.org, GUIDE.HUS)}${esc(e.namn)}</button>
         <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div>
         <label class="org-plats">Plats <select data-flytta="${e.id}" aria-label="Plats för ${esc(e.namn)}">${ORG.alternativ(st.org, e.org)}</select></label></div>
         <div class="chips"><button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button><button class="liten" data-g="spara-fil" data-id="${e.id}">Spara som fil</button><button class="liten fara" data-g="ta-bort" data-id="${e.id}">Ta bort</button></div></div>` })}</div>
@@ -5078,7 +5113,7 @@ async function oppna(e, opt = {}) {
   st.vy = "enhet"; st.enhet = e; st.onskForm = null; st.aktForm = null; st.korning = null;
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button><span class="dampad liten">${lager.typ === "konto" ? "Sparas automatiskt" : "Sparas i webbläsaren"}</span></div>
-      <label for="namn" style="margin-top:6px">Enhet</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
+      <label for="namn" style="margin-top:6px">${st.org ? ORG.ikon(st.org, e.org, GUIDE.HUS) : ""}Enhet${st.org && e.org && ORG.finns(st.org, e.org) ? ` <span class="org-etikett" style="--ef:${ORG.farg(st.org, e.org)}">${esc(ORG.sokvag(st.org, e.org))}</span>` : ""}</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
       <div class="chips" style="margin-top:10px"><button class="primar" data-g="senaste" id="senaste-knapp" hidden>‹ Till schemat</button><button data-g="simulering">Simulering</button><button data-g="kalender">📅 Kalender</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
     <section class="kort" id="kontroll"></section>
     <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["team", "Team"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
@@ -5590,6 +5625,10 @@ document.addEventListener("submit", e => {
   e.preventDefault();
   try { sparaOrg(ORG.lagg(st.org, $("#org-ny-namn").value, null)); } catch (err) { meddela(err.message); }
 });
+document.addEventListener("change", e => {
+  const id = e.target.dataset && e.target.dataset.orgfarg; if (!id || !st.org) return;
+  try { sparaOrg(ORG.sattFarg(st.org, id, e.target.value)); } catch (err) { meddela(err.message); }
+});
 document.addEventListener("change", async e => {
   const id = e.target.dataset && e.target.dataset.flytta; if (!id) return;
   const en = st.enheter.find(x => x.id === id); if (!en) return;
@@ -5693,7 +5732,7 @@ function ritaPerson(pid, res, ind) {
     <div class="rull" style="margin-top:10px"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
   for (let v = 0; v < W; v++) {
     const veck = rad.slice(v * 7, v * 7 + 7).reduce((s, q) => s + (q ? q.netto : 0), 0);
-    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i], r = rs.has(pid + ":" + (v * 7 + i)); return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${r ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${r ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : vvP.has(v * 7 + i) ? GRAF.vvMarke(vvP.get(v * 7 + i), false) : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
+    h += `<tr><td>V${v + 1}</td>${DAGAR.map((_, i) => { const q = rad[v * 7 + i], r = rs.has(pid + ":" + (v * 7 + i)); return `<td class="${i > 4 ? "helg" : ""}">${q ? `<span class="pass ${q.dygnsdel}${r ? " resurs" : ""}" data-tips="${DELAR[q.dygnsdel]} ${q.start}–${q.slut}\nArbetstid ${timmar(q.netto)}, rast ${q.rast} min${esc(GRAF.aktText(q))}${GRAF.obPassText(pid, v * 7 + i, res, ind)}"><b>${GRAF.passIkon(q.dygnsdel)}${kod[q.dygnsdel]}</b><small>${q.start}–${q.slut}</small>${r ? GRAF.resursMarke : ""}${GRAF.aktMarke(q)}</span>` : vvP.has(v * 7 + i) ? GRAF.vvMarke(vvP.get(v * 7 + i), false) : ""}</td>`; }).join("")}<td class="tal nw liten">${sv(Math.round(veck / 6) / 10)} h</td></tr>`;
   }
   h += `</tbody></table></div><p class="dampad liten" style="margin-top:6px">Tryck på ett pass för datum och OB.</p></section>`;
   return h + `<div class="grafyta">${GRAF.vilaKort(pid, res, ind)}${GRAF.obKort(pid, res, ind, { installningar: "Period" })}</div>`;
@@ -6021,12 +6060,12 @@ function dagTabell(res, dagar, period) {
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
     const vv = !x && vvAlla[p].get(d);
-    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? `<i class="team-lan" title="Lånad till ${esc(TEAM.namn(ind.team, x.team))}">→${esc(TEAM.kort(ind.team, x.team))}</i>` : ""}</button>` : ""}</td>`;
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt">★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? `<i class="team-lan" title="Lånad till ${esc(TEAM.namn(ind.team, x.team))}">→${esc(TEAM.kort(ind.team, x.team))}</i>` : ""}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
     const x = vp[d][r];
-    return `<td ${kl(d)}>${x ? `<span class="pass vakant ${x.dygnsdel}" aria-label="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass ${x.start} till ${x.slut}"><b>${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</span>` : ""}</td>`;
+    return `<td ${kl(d)}>${x ? `<span class="pass vakant ${x.dygnsdel}" aria-label="Vakant ${DELAR[x.dygnsdel].toLowerCase()}pass ${x.start} till ${x.slut}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}</span>` : ""}</td>`;
   }).join("") + `</tr>`;
   const bd = behovDag(st.korning.indata || st.enhet.indata);
   h += `<tr class="bem"><td>I tj.</td>` + dagar.map(d => {
@@ -6036,7 +6075,7 @@ function dagTabell(res, dagar, period) {
     const marke = `${vak[d] ? `<span class="minus">−${vak[d]}</span>` : ""}${over ? `<span class="plus">+${over}</span>` : ""}`;
     return `<td ${kl(d).replace('class="', `class="${vak[d] ? "vakans " : over ? "over " : ""}`)}>${period ? (marke || "✓") : `D${c.morgon}<br>K${c.kvall}<br>N${c.natt}${marke ? "<br>" + marke : ""}`}</td>`;
   }).join("") + `</tr></tbody></table></div>`;
-  return h;
+  return h + `<p class="liten dampad" style="margin:6px 0 0">☀️ D dag · 🌙 K kväll · 🌃 N natt</p>`;
 }
 
 function cellInfo() {

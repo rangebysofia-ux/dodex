@@ -175,8 +175,8 @@ async function visaEnheter() {
     <section class="org-trad">${ORG.trad(st.org, enheter, { stangda: st.orgStangda || new Set(),
       nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}" title="Ny enhet i ${esc(ORG.sokvag(st.org, id))}">+ Ny enhet</button>`,
       ritaEnhet: e => `
-      <div class="kort enhet">
-        <a class="namn" href="#/e/${e.id}/schema"><span class="enhet-ikon" aria-hidden="true">${GUIDE.HUS}</span>${esc(e.namn)}</a>
+      <div class="kort enhet" style="--ef:${ORG.farg(st.org, e.org)}">
+        <a class="namn" href="#/e/${e.id}/schema">${ORG.ikon(st.org, e.org, GUIDE.HUS)}${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
         <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/schema">${IKON.schema} Schema</a><a class="knapp liten" href="#/e/${e.id}/oversikt">Översikt</a>
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
@@ -205,6 +205,7 @@ async function laddaEnhet(id) {
   if (!st.enhet || st.enhet.id !== id) {
     const e = await api("GET", "enheter/" + id);
     st.enhet = e; st.indata = e.indata; st.andrad = false; st.kontroll = null; st.valdaKorningar = new Set(); st.redigeraOnsk = null; st.korning = null;
+    if (!st.org) try { st.org = ORG.kopia((await api("GET", "organisation")).noder); } catch { st.org = ORG.kopia(); }
   }
   st.korningar = await api("GET", `enheter/${id}/korningar`);
 }
@@ -1121,6 +1122,10 @@ document.addEventListener("submit", e => {
   if (e.target.id !== "org-ny") return;
   e.preventDefault();
   try { sparaOrg(ORG.lagg(st.org, $("#org-ny-namn").value, null)); } catch (err) { meddela(err.message); }
+});
+document.addEventListener("change", e => {
+  const id = e.target.dataset?.orgfarg; if (!id || !st.org) return;
+  try { sparaOrg(ORG.sattFarg(st.org, id, e.target.value)); } catch (err) { meddela(err.message); }
 });
 document.addEventListener("change", async e => {
   const id = e.target.dataset?.flytta; if (!id) return;

@@ -30,6 +30,17 @@ Strukturen kan ändras fritt under **Ändra organisation**, med valfritt antal n
 
 DODEX är byggt för verksamhet dygnet runt. För förskolan anger man bara dagbehov. Regler som varannan helg kan behöva ändras för de enheterna under Regler, som en avvikelse som syns.
 
+## Färger
+
+Varje verksamhet och grupp har en färg, så att man ser direkt vilken sorts enhet det är. Enheterna under en grupp får gruppens färg: huset 🏠 framför enhetens namn, en kant på enhetskortet och en etikett med verksamheten (till exempel Äldreomsorg › SÄBO) överst på enhetens sida.
+
+- Startfärgerna: Äldreomsorg guld, SÄBO orange, Hemtjänst grön, LSS blå och Förskola lila.
+- En undergrupp utan egen färg ärver färgen från närmaste grupp ovanför.
+- Färgen ändras under **Ändra struktur**, med den runda färgrutan framför gruppens namn.
+- Enheter utan placering blir grå.
+
+Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
+
 ## Teknik
 
 - `schemawebb/statisk/organisation.js` (ORG) delas av webben och lättversionen och innehåller startstrukturen, ändringarna, valrutan och trädet.
@@ -39,4 +50,5 @@ DODEX är byggt för verksamhet dygnet runt. För förskolan anger man bara dagb
   - `POST /api/enheter/{id}/flytta`.
   - `org` på enheten, i tabellen `enheter` (kolumnen läggs till i äldre databaser).
 - **Lättversionen:** strukturen sparas i dokumentet `org` i användarens lagring, och `org` sparas på varje enhet.
+- `farg` på en grupp (`#rrggbb`, kan saknas). `ORG.farg` räknar fram den ärvda färgen och `ORG.ikon` ritar huset.
 - Tester: `tests/test_organisation.py`.
