@@ -370,9 +370,8 @@ async function visaLista() {
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
   if (st.guide) { $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
-    <header class="kort"><div class="rad" style="margin-bottom:10px"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>${temaKnapp()}</div>
-      <p class="dampad" style="margin:6px 0 0">Lägg cykliska grundscheman direkt i mobilen. Samma hårda regler som det fullständiga systemet: dygnsvila och veckovila (avtal), rast (lag), antal pass, varannan helg och block på 2–5 dagar.</p>
-      <p class="liten dampad" style="margin:6px 0 0">${lager.typ === "konto" ? "Sparas privat i ditt Claude-konto och syns i mobil och dator." : "Sparas bara i den här webbläsaren."}</p></header>
+    <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
+      <div style="display:grid;justify-items:end;gap:4px">${temaKnapp()}<span class="dampad" style="font-size:11.5px">© Sofia Rångeby</span></div></div></header>
     ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
     <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><label class="knapp" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label><button class="primar" data-guide="ny">Ny enhet</button></div></div>
       ${st.enheter.length ? st.enheter.map(e => `<div class="onsk"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${esc(e.namn)}</button>

@@ -2,7 +2,7 @@
 # Lösenordet anges i Render när tjänsten skapas (SCHEMA_LOSENORD).
 services:
   - type: web
-    name: schemasystem
+    name: dodex
     runtime: docker
     plan: starter
     region: frankfurt
