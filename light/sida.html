@@ -373,6 +373,9 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .os-typer { display: grid; gap: 8px; }
 .os-typ { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; max-width: 560px; }
 .os-typ select { width: auto; }
+
+.imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
+.imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -1078,7 +1081,36 @@ async function visaOrganisation() {
   const enh = st.enheter.map(e => ({ ...e, team: (e.indata && e.indata.team) || [] }));
   $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button>${temaKnapp()}</div>
       <h1 style="margin-top:4px">Organisation</h1><p class="dampad liten" style="margin:4px 0 0">Bygg upp verksamheter, enheter, områden och team, och aktivitetstyperna. Personal, behov och regler fyller du i sedan, i varje enhet.</p></header>
+    ${ORG.importKort(st.org, st.imp)}
     ${ORG.stod(st.org, enh, st.akttyper, { stangda: st.orgStangda || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
+}
+// Importen från Excel (organisation.js): läs filen, visa förhandsvisningen, och lägg in det valda.
+async function lasImport(fil) {
+  await laddaXlsx();
+  const wb = XLSX.read(new Uint8Array(await fil.arrayBuffer()), { type: "array" });
+  const plan = ORG.importPlan(ORG.bladUr(XLSX, wb));
+  if (!plan.poster.length) throw new Error("Hittade inga enheter i filen. Första raden ska vara rubriker, till exempel Förskola och Avdelning.");
+  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
+}
+document.addEventListener("change", async e => {
+  if (st.vy !== "organisation") return;
+  const el = e.target;
+  try {
+    if (el.id === "org-import" && el.files[0]) { st.imp = await lasImport(el.files[0]); return visaOrganisation(); }
+    if (el.id === "imp-plats") { st.imp.forelder = el.value || null; return; }
+    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda); }
+  } catch (err) { meddela(err.message); }
+});
+async function korImport() {
+  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enheter || []);
+  if (r.noder !== st.org) { await lager.sparaOrg(r.noder); st.org = r.noder; }
+  for (const x of r.nya) {
+    const ind = GUIDE.tomIndata(x.namn); x.team.forEach(t => TEAM.laggTill(ind, t));
+    await lager.sparaEnhet({ id: nyttId(), namn: x.namn, indata: ind, org: x.org });
+  }
+  for (const x of r.andrade) await andraEnhetL(x.id, e => { x.team.forEach(t => TEAM.laggTill(e.indata, t)); });
+  st.imp = null;
+  meddela(`Importen är klar: ${r.nya.length} nya enheter${r.andrade.length ? ` och nya avdelningar i ${r.andrade.length} enheter som fanns` : ""}.`);
 }
 async function andraEnhetL(id, andring) {
   const e = st.enheter.find(x => String(x.id) === String(id)); if (!e) return;
@@ -1103,6 +1135,8 @@ document.addEventListener("click", async e => {
       case "team-namn": { const n = prompt("Nytt namn"); if (!n || !n.trim()) return; await andraEnhetL(id, x => { TEAM.bytNamn(x.indata, t, n); }); break; }
       case "team-bort": await andraEnhetL(id, x => { const tt = (x.indata.team || []).find(y => y.id === t); if (!confirm(`Ta bort ${tt ? tt.namn : t}? Medarbetarna blir utan hemteam.`)) return false; TEAM.taBort(x.indata, t); }); break;
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
+      case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
+      case "import-avbryt": st.imp = null; break;
       default: return;
     }
     visaOrganisation();

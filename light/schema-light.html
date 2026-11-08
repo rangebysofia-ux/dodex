@@ -373,6 +373,9 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .os-typer { display: grid; gap: 8px; }
 .os-typ { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; max-width: 560px; }
 .os-typ select { width: auto; }
+
+.imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
+.imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -4863,6 +4866,121 @@ function stod(noder, enheter, typer, { lank = () => "", stangda = new Set() } = 
       <form class="chips" id="akt-ny" style="margin-top:10px"><input id="akt-ny-namn" placeholder="Ny typ, till exempel Brandövning" style="max-width:280px"><button type="submit" class="liten">+ Lägg till typ</button></form></section>`;
 }
 
+// ---------------------------------------------------------------- import från Excel
+// Läser en organisation ur kalkylblad (rader som listor av celler, första raden rubriker). Tre format:
+//   1. Hierarki: kolumnerna Område/Enhet, Typ, Under ("SÄBO / Furulund") och Avdelningar (kommaseparerade).
+//   2. Par: två kolumner, enhet och avdelning, en rad per avdelning (till exempel Förskola, Avdelning).
+//   3. Sammanställning: enhet och en kolumn Avdelningar med kommaseparerade namn.
+// Resultatet är en lista poster {nyckel, namn, foralder, typ: "grupp"|"enhet", team: [namn]} i ordning
+// (överordnade först) och ett förslag på verksamhet att lägga dem under. Bara namn läses, inga personuppgifter.
+function importPlan(blad) {
+  const ren = v => String(v ?? "").trim();
+  const rubrik = r => r.map(x => ren(x).toLowerCase());
+  const delaLista = v => ren(v).split(/\s*[,;]\s*/).map(ren).filter(Boolean);
+  const poster = new Map(), ordning = [];
+  const lagg = (namn, foralder, typ) => {
+    const nyckel = (foralder ? foralder + " / " : "") + namn;
+    if (!poster.has(nyckel)) { poster.set(nyckel, { nyckel, namn, foralder: foralder || null, typ, team: [] }); ordning.push(nyckel); }
+    const p = poster.get(nyckel); if (typ === "enhet") p.typ = p.typ === "grupp" ? "grupp" : "enhet";
+    return p;
+  };
+  const hierarki = blad.find(b => { const h = rubrik(b.rader[0] || []); return h.includes("under") && h.some(x => x.startsWith("avdelning")); });
+  const ord = blad.map(b => b.namn + " " + b.rader.slice(0, 60).map(r => r.slice(0, 3).map(ren).join(" ")).join(" ")).join(" ").toLowerCase();
+  if (hierarki) {
+    const h = rubrik(hierarki.rader[0]), iN = 0, iU = h.indexOf("under"), iA = h.findIndex(x => x.startsWith("avdelning"));
+    const rader = hierarki.rader.slice(1).filter(r => ren(r[iN])).map(r => ({ namn: ren(r[iN]), under: ren(r[iU]).split(/\s*\/\s*/).filter(Boolean), avd: delaLista(r[iA]) }));
+    const ar = n => rader.some(r => r.under.includes(n));  // har undergrupper
+    // vägen till en post: kedjan i Under, där varje led är en egen grupp
+    const nyckelFor = vag => vag.reduce((f, n) => { lagg(n, f, "grupp"); return (f ? f + " / " : "") + n; }, null);
+    // grupper utan Under först, sedan resten i ordning efter djup
+    rader.sort((a, b) => a.under.length - b.under.length);
+    for (const r of rader) {
+      const f = nyckelFor(r.under);
+      const p = lagg(r.namn, f, r.avd.length || !ar(r.namn) ? "enhet" : "grupp");
+      if (ar(r.namn)) p.typ = "grupp";
+      r.avd.forEach(a => { if (!p.team.includes(a)) p.team.push(a); });
+    }
+  } else {
+    for (const b of blad) {
+      const h = rubrik(b.rader[0] || []), iA = h.findIndex(x => x.startsWith("avdelning") || x === "team" || x.startsWith("område"));
+      if (iA < 0) continue;
+      const lista = h[iA] === "avdelningar";
+      for (const r of b.rader.slice(1)) {
+        const namn = ren(r[0]); if (!namn) continue;
+        const p = lagg(namn, null, "enhet");
+        (lista ? delaLista(r[iA]) : [ren(r[iA])]).filter(Boolean).forEach(a => { if (!p.team.includes(a)) p.team.push(a); });
+      }
+      if (ordning.length) break;  // ett blad räcker; paren och sammanställningen innehåller samma sak
+    }
+  }
+  const forslag = /förskol/.test(ord) ? "forskola" : /säbo|ordbo|hemtjänst|äldre/.test(ord) ? "aldreomsorg" : /lss|gruppbostad|daglig/.test(ord) ? "lss" : null;
+  return { poster: ordning.map(k => poster.get(k)), forslag };
+}
+
+// Förhandsvisning med kryssrutor; valda = Set av nycklar.
+function importForhand(plan, valda) {
+  const barnTill = f => plan.poster.filter(p => p.foralder === f);
+  const rad = (p, niva) => `<li style="--niva:${niva}"><label class="check"><input type="checkbox" data-imp="${esc(p.nyckel)}"${valda.has(p.nyckel) ? " checked" : ""}>
+      <b>${p.typ === "grupp" ? "▸ " : "🏠 "}${esc(p.namn)}</b></label>${p.team.length ? ` <span class="dampad liten">${p.team.length} ${p.team.length === 1 ? "avdelning" : "avdelningar"}: ${esc(p.team.join(", "))}</span>` : ""}</li>
+    ${barnTill(p.nyckel).map(b => rad(b, niva + 1)).join("")}`;
+  const n = plan.poster.filter(p => valda.has(p.nyckel)), e = n.filter(p => p.typ === "enhet");
+  return `<ul class="org-red imp-lista">${barnTill(null).map(p => rad(p, 0)).join("")}</ul>
+    <p class="liten">Valt: ${n.length - e.length} grupper, ${e.length} enheter och ${e.reduce((s, p) => s + p.team.length, 0)} avdelningar.</p>`;
+}
+// Kryssrutor: en bortvald grupp tar med sig allt under, en vald post tar med sig sina överordnade.
+function importVal(plan, valda, nyckel, pa) {
+  const ut = new Set(valda), under = k => plan.poster.filter(p => p.foralder === k).forEach(p => { ut.delete(p.nyckel); under(p.nyckel); });
+  if (pa) { let k = nyckel; while (k) { ut.add(k); k = (plan.poster.find(p => p.nyckel === k) || {}).foralder; } }
+  else { ut.delete(nyckel); under(nyckel); }
+  return ut;
+}
+
+// Lägger in de valda posterna under forelder. Grupper och enheter med samma namn på samma plats återanvänds,
+// och avdelningar som redan finns läggs inte till igen, så importen kan köras om. enheter = befintliga enheter
+// ({id, namn, org, indata}). Returnerar { noder, nya: [{namn, org, team}], andrade: [{id, team}] } – skapandet
+// och sparandet gör webben respektive lättversionen.
+function importera(noder, plan, valda, forelder, enheter) {
+  const idFor = new Map(); let n = noder;
+  const nya = [], andrade = [];
+  let fargNr = 0;
+  for (const p of plan.poster) {
+    if (!valda.has(p.nyckel)) continue;
+    const f = p.foralder ? idFor.get(p.foralder) : (forelder || null);
+    if (p.typ === "grupp") {
+      const g = grupp(n, p.namn, f); n = g.noder; idFor.set(p.nyckel, g.id);
+      // nya grupper direkt under verksamheten får en egen färg
+      const nod = n.find(x => x.id === g.id);
+      if (!p.foralder && nod && nod.farg === undefined && !STANDARD.some(s => s.id === nod.id)) {
+        const upptagna = new Set([...barn(n, f).map(x => farg_(x)), f ? farg(n, f) : null]);
+        let c = PALETT.find(x => !upptagna.has(x)) || PALETT[fargNr++ % PALETT.length];
+        n = sattFarg(n, g.id, c);
+      }
+      continue;
+    }
+    const finns = enheter.find(e => e.namn.toLowerCase() === p.namn.toLowerCase() && (e.org || null) === (f || null));
+    if (finns) {
+      const har = new Set(((finns.indata && finns.indata.team) || finns.team || []).map(t => String(t.namn || "").toLowerCase()));
+      const saknas = p.team.filter(t => !har.has(t.toLowerCase()));
+      if (saknas.length) andrade.push({ id: finns.id, team: saknas });
+    } else nya.push({ namn: p.namn, org: f, team: [...p.team] });
+  }
+  return { noder: n, nya, andrade };
+}
+// Kortet på sidan Organisation: välj fil, eller förhandsvisning med kryssrutor och var det ska läggas.
+function importKort(noder, imp) {
+  if (!imp) return `<section class="kort"><h2>Importera från Excel</h2>
+      <p class="dampad liten">En lista med enheter och avdelningar, till exempel en kolumn för förskolan och en för avdelningen, eller områden med kolumnerna Typ, Under och Avdelningar. Du ser allt och väljer vad som ska med innan något sparas. Bara namnen läses.</p>
+      <label class="knapp">Välj Excel-fil<input type="file" id="org-import" accept=".xlsx,.xls,.csv" hidden></label></section>`;
+  return `<section class="kort"><h2>Importera ${esc(imp.fil || "")}</h2>
+      <div class="falt" style="max-width:420px"><div><label for="imp-plats">Lägg under</label><select id="imp-plats">${alternativ(noder, imp.forelder, { tom: "Överst i organisationen" })}</select></div></div>
+      <p class="dampad liten">Bocka ur det som ska vänta. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas. Avdelningarna blir områden/team i enhetens gemensamma schema.</p>
+      <div id="imp-forhand">${importForhand(imp.plan, imp.valda)}</div>
+      <p class="chips"><button class="primar" data-os="import-kor">Importera</button><button data-os="import-avbryt">Avbryt</button></p></section>`;
+}
+// Kalkylbladen ur en fil som SheetJS har läst: [{namn, rader}].
+const bladUr = (XLSX, wb) => wb.SheetNames.map(n => ({ namn: n, rader: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, blankrows: false, defval: "" }) }));
+const farg_ = x => (giltigFarg(x.farg) ? x.farg : (STANDARD.find(s => s.id === x.id) || {}).farg);
+
 // <option>-lista med indrag, för att välja var en enhet ska ligga
 function alternativ(noder, valt, { tom = "Utan placering" } = {}) {
   const ut = [`<option value=""${valt ? "" : " selected"}>${esc(tom)}</option>`];
@@ -4902,7 +5020,7 @@ function redigera(noder) {
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { importKort, bladUr, importPlan, importForhand, importVal, importera, aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;
 </script>
@@ -5883,7 +6001,36 @@ async function visaOrganisation() {
   const enh = st.enheter.map(e => ({ ...e, team: (e.indata && e.indata.team) || [] }));
   $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button>${temaKnapp()}</div>
       <h1 style="margin-top:4px">Organisation</h1><p class="dampad liten" style="margin:4px 0 0">Bygg upp verksamheter, enheter, områden och team, och aktivitetstyperna. Personal, behov och regler fyller du i sedan, i varje enhet.</p></header>
+    ${ORG.importKort(st.org, st.imp)}
     ${ORG.stod(st.org, enh, st.akttyper, { stangda: st.orgStangda || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
+}
+// Importen från Excel (organisation.js): läs filen, visa förhandsvisningen, och lägg in det valda.
+async function lasImport(fil) {
+  await laddaXlsx();
+  const wb = XLSX.read(new Uint8Array(await fil.arrayBuffer()), { type: "array" });
+  const plan = ORG.importPlan(ORG.bladUr(XLSX, wb));
+  if (!plan.poster.length) throw new Error("Hittade inga enheter i filen. Första raden ska vara rubriker, till exempel Förskola och Avdelning.");
+  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
+}
+document.addEventListener("change", async e => {
+  if (st.vy !== "organisation") return;
+  const el = e.target;
+  try {
+    if (el.id === "org-import" && el.files[0]) { st.imp = await lasImport(el.files[0]); return visaOrganisation(); }
+    if (el.id === "imp-plats") { st.imp.forelder = el.value || null; return; }
+    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda); }
+  } catch (err) { meddela(err.message); }
+});
+async function korImport() {
+  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enheter || []);
+  if (r.noder !== st.org) { await lager.sparaOrg(r.noder); st.org = r.noder; }
+  for (const x of r.nya) {
+    const ind = GUIDE.tomIndata(x.namn); x.team.forEach(t => TEAM.laggTill(ind, t));
+    await lager.sparaEnhet({ id: nyttId(), namn: x.namn, indata: ind, org: x.org });
+  }
+  for (const x of r.andrade) await andraEnhetL(x.id, e => { x.team.forEach(t => TEAM.laggTill(e.indata, t)); });
+  st.imp = null;
+  meddela(`Importen är klar: ${r.nya.length} nya enheter${r.andrade.length ? ` och nya avdelningar i ${r.andrade.length} enheter som fanns` : ""}.`);
 }
 async function andraEnhetL(id, andring) {
   const e = st.enheter.find(x => String(x.id) === String(id)); if (!e) return;
@@ -5908,6 +6055,8 @@ document.addEventListener("click", async e => {
       case "team-namn": { const n = prompt("Nytt namn"); if (!n || !n.trim()) return; await andraEnhetL(id, x => { TEAM.bytNamn(x.indata, t, n); }); break; }
       case "team-bort": await andraEnhetL(id, x => { const tt = (x.indata.team || []).find(y => y.id === t); if (!confirm(`Ta bort ${tt ? tt.namn : t}? Medarbetarna blir utan hemteam.`)) return false; TEAM.taBort(x.indata, t); }); break;
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
+      case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
+      case "import-avbryt": st.imp = null; break;
       default: return;
     }
     visaOrganisation();

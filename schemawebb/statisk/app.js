@@ -1173,7 +1173,46 @@ async function visaOrganisation() {
   const [enheter, org, akt] = await Promise.all([api("GET", "enheter"), api("GET", "organisation").catch(() => ({})), api("GET", "aktivitetstyper").catch(() => ({}))]);
   st.org = ORG.kopia(org.noder); st.akttyper = ORG.aktKopia(akt.typer); st.enhetLista = enheter;
   vy().innerHTML = `<section class="kort"><h1>Organisation</h1><p class="dampad" style="margin-top:6px">Verksamheter, enheter, områden och team, och organisationens aktivitetstyper. Allt här går att bygga upp innan något schema läggs. Personal, behov och regler fyller du i sedan, i varje enhet.</p></section>
+    ${ORG.importKort(st.org, st.imp)}
     ${ORG.stod(st.org, enheter, st.akttyper, { stangda: st.orgStangda || new Set(), lank: e => `href="#/e/${e.id}/oversikt"` })}`;
+}
+// Excel-stöd (SheetJS) för importen, laddas först när det behövs.
+function laddaXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ja, nej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = ja; s.onerror = () => nej(new Error("Kunde inte ladda Excel-stödet."));
+    document.head.appendChild(s);
+  });
+}
+// Importen: läs filen, visa förhandsvisningen, och lägg in det valda.
+async function lasImport(fil) {
+  await laddaXlsx();
+  const wb = XLSX.read(new Uint8Array(await fil.arrayBuffer()), { type: "array" });
+  const plan = ORG.importPlan(ORG.bladUr(XLSX, wb));
+  if (!plan.poster.length) throw new Error("Hittade inga enheter i filen. Första raden ska vara rubriker, till exempel Förskola och Avdelning.");
+  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
+}
+document.addEventListener("change", async e => {
+  if (st.vy !== "organisation") return;
+  const el = e.target;
+  try {
+    if (el.id === "org-import" && el.files[0]) { st.imp = await lasImport(el.files[0]); return visaOrganisation(); }
+    if (el.id === "imp-plats") { st.imp.forelder = el.value || null; return; }
+    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda); }
+  } catch (err) { meddela(err.message); }
+});
+async function korImport() {
+  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enhetLista || []);
+  if (r.noder !== st.org) { await api("PUT", "organisation", { noder: r.noder }); st.org = r.noder; }
+  for (const x of r.nya) {
+    const ind = GUIDE.tomIndata(x.namn); x.team.forEach(t => TEAM.laggTill(ind, t));
+    await api("POST", "enheter", { namn: x.namn, indata: ind, org: x.org });
+  }
+  for (const x of r.andrade) await andraEnhet(x.id, e => { x.team.forEach(t => TEAM.laggTill(e.indata, t)); });
+  st.imp = null; st.enhetLista = null;
+  meddela(`Importen är klar: ${r.nya.length} nya enheter${r.andrade.length ? ` och nya avdelningar i ${r.andrade.length} enheter som fanns` : ""}.`);
 }
 async function andraEnhet(id, andring) {
   const e = await api("GET", "enheter/" + id);
@@ -1198,6 +1237,8 @@ document.addEventListener("click", async e => {
       case "team-namn": { const n = prompt("Nytt namn"); if (!n || !n.trim()) return; await andraEnhet(id, x => { TEAM.bytNamn(x.indata, t, n); }); break; }
       case "team-bort": await andraEnhet(id, x => { const tt = (x.indata.team || []).find(y => y.id === t); if (!confirm(`Ta bort ${tt ? tt.namn : t}? Medarbetarna blir utan hemteam.`)) return false; TEAM.taBort(x.indata, t); }); break;
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
+      case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
+      case "import-avbryt": st.imp = null; break;
       default: return;
     }
     visaOrganisation();

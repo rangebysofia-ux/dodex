@@ -113,3 +113,62 @@ def test_aktivitetens_farg_foljer_med_i_passen():
 def test_symbolerna_och_fargerna_anvands_i_telefonen():
     s = (ROT / "light" / "sida.html").read_text(encoding="utf-8")
     assert "ORG.stod(" in s and "lager.akttyper()" in s and "ORG.aktAlternativ(" in s
+
+
+IMPORT = r"""
+const O = require(process.argv[1] + "/organisation.js");
+const par = [{ namn: "Avdelningar", rader: [["Förskola", "Avdelning"], ["Ekbacken", "Röd"], ["Ekbacken", "Blå"], ["Lunden", "Sol"]] }];
+const lista = [{ namn: "Sammanställning", rader: [["Förskola", "Antal", "Avdelningar"], ["Ekbacken", 2, "Röd, Blå"], ["Lunden", 1, "Sol"]] }];
+const hier = [{ namn: "Områden", rader: [["Område", "Typ", "Under", "Antal", "Avdelningar"],
+  ["Norr", "Område", "Hemvård", 2, "Lag A, Lag B"], ["Hemvård", "Område", "", 0, ""], ["SÄBO", "Division", "", 0, ""],
+  ["Tallen", "Område", "SÄBO / Skogen", 2, "1A, 1B"], ["Skogen", "Område", "SÄBO", 0, ""], ["Skogen natt", "Område", "SÄBO / Skogen", 0, ""],
+  ["Väntar", "Område", "Hemvård", 1, "Lag C"]] }];
+"""
+
+
+@nod
+def test_import_fran_excel_tre_format():
+    ut = kor_js(IMPORT + r"""
+const r = {};
+for (const [k, b] of Object.entries({ par, lista, hier })) {
+  const p = O.importPlan(b);
+  r[k] = { forslag: p.forslag, poster: p.poster.map(x => [x.nyckel, x.typ, x.team.join("|")]) };
+}
+process.stdout.write(JSON.stringify(r));""")
+    assert ut["par"]["forslag"] == "forskola" and ut["par"]["poster"] == ut["lista"]["poster"] == [
+        ["Ekbacken", "enhet", "Röd|Blå"], ["Lunden", "enhet", "Sol"]]
+    h = {n: (t, a) for n, t, a in ut["hier"]["poster"]}
+    assert ut["hier"]["forslag"] == "aldreomsorg"
+    assert h["SÄBO"][0] == h["SÄBO / Skogen"][0] == h["Hemvård"][0] == "grupp"
+    assert h["SÄBO / Skogen / Tallen"] == ("enhet", "1A|1B")
+    assert h["SÄBO / Skogen / Skogen natt"] == ("enhet", "")  # utan avdelningar och utan undergrupper: en enhet
+    nycklar = [n for n, _, _ in ut["hier"]["poster"]]
+    assert nycklar.index("SÄBO / Skogen") < nycklar.index("SÄBO / Skogen / Tallen")  # överordnade först
+
+
+@nod
+def test_import_val_och_omkorning():
+    ut = kor_js(IMPORT + r"""
+const p = O.importPlan(hier), r = {};
+let v = new Set(p.poster.map(x => x.nyckel));
+v = O.importVal(p, v, "Hemvård / Väntar", false); r.utan = [...v].includes("Hemvård / Väntar");
+v = O.importVal(p, v, "SÄBO / Skogen", false); r.skogen = [...v].filter(k => k.startsWith("SÄBO / Skogen")).length;
+v = O.importVal(p, v, "SÄBO / Skogen / Tallen", true); r.tillbaka = ["SÄBO / Skogen", "SÄBO / Skogen / Tallen"].every(k => v.has(k));
+const a = O.importera(O.kopia(), p, v, "aldreomsorg", []);
+r.grupper = a.noder.filter(n => !O.STANDARD.some(s => s.id === n.id)).map(n => [n.namn, n.forelder]);
+r.sabo = a.noder.filter(n => n.namn === "SÄBO").length;
+r.nya = a.nya.map(x => [x.namn, x.org, x.team.join("|")]);
+// omkörning: allt finns, en avdelning saknas i en enhet
+const fanns = a.nya.map((x, i) => ({ id: i, namn: x.namn, org: x.org, team: x.team.slice(1).map(n => ({ namn: n })) }));
+const b = O.importera(a.noder, p, v, "aldreomsorg", fanns);
+r.om = { nya: b.nya.length, andrade: b.andrade, samma: b.noder.length === a.noder.length };
+r.html = O.importForhand(p, v).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+process.stdout.write(JSON.stringify(r));""")
+    assert ut["utan"] is False and ut["skogen"] == 0 and ut["tillbaka"]
+    assert ut["sabo"] == 1  # SÄBO finns redan under Äldreomsorg och återanvänds
+    assert ["Hemvård", "aldreomsorg"] in ut["grupper"] and ["Skogen", "sabo"] in ut["grupper"]
+    assert ["Tallen", "skogen", "1A|1B"] in ut["nya"] and ["Norr", "hemvard", "Lag A|Lag B"] in ut["nya"]
+    assert not any(n == "Väntar" for n, _, _ in ut["nya"])
+    assert ut["om"]["nya"] == 0 and ut["om"]["samma"]
+    assert sorted(x["team"][0] for x in ut["om"]["andrade"]) == ["1A", "Lag A"]
+    assert "Valt:" in ut["html"]

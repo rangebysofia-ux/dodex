@@ -54,6 +54,18 @@ Hela organisationen kan byggas upp innan något schema läggs (användarens öns
   - När en aktivitet läggs in i en enhet väljs typen. Aktiviteten får då typens namn, kategori och färg.
   - I schemat visas aktivitetens markering i dess färg, och i aktivitetslistan med en färgprick. En aktivitet utan färg får kategorins standardfärg.
 
+## Importera från Excel
+
+Överst på sidan Organisation finns **Importera från Excel**. Bara namn läses, inga personuppgifter. Filen kan se ut på tre sätt (första raden är rubriker):
+
+1. **Par:** en kolumn för enheten och en för avdelningen, en rad per avdelning (till exempel *Förskola* och *Avdelning*).
+2. **Sammanställning:** enheten och en kolumn *Avdelningar* med namnen åtskilda av komma.
+3. **Hierarki:** *Område*, *Typ*, *Under* och *Avdelningar*. *Under* anger vägen, till exempel "SÄBO / Furulund". En rad med avdelningar blir en enhet. En rad som andra ligger under blir en grupp. En rad utan avdelningar och utan något under blir en enhet utan team.
+
+Förhandsvisningen visar allt som ett träd med kryssrutor. Bocka ur det som ska vänta: en bortvald grupp tar med sig allt under. Välj också var det ska läggas. Förslaget är Förskola eller Äldreomsorg, efter vad filen innehåller.
+
+Avdelningarna blir områden/team i enhetens gemensamma schema. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas, så importen kan köras om. Excel-filen läses i webbläsaren med SheetJS, samma bibliotek som Excel-exporten i lättversionen (`ORG.importPlan`, `importVal`, `importera`).
+
 ## Teknik
 
 - `schemawebb/statisk/organisation.js` (ORG) delas av webben och lättversionen och innehåller startstrukturen, ändringarna, valrutan och trädet.

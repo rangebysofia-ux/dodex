@@ -591,3 +591,6 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .os-typer { display: grid; gap: 8px; }
 .os-typ { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; max-width: 560px; }
 .os-typ select { width: auto; }
+
+.imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
+.imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
