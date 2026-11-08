@@ -81,6 +81,7 @@ const GUIDE = (() => {
     if (g.startdatum) ut.startdatum = g.startdatum;
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);
+    if (g.passMall) ut.bemanningsbalans = { pass: structuredClone(g.passMall) };  // passen från mallen, påverkar inte schemat
     return ut;
   }
 
@@ -143,6 +144,7 @@ const GUIDE = (() => {
         `<div class="rull"><table class="guidetabell"><thead><tr><th></th><th>Dag</th><th>Kväll</th><th>Natt</th></tr></thead><tbody>
         ${(g.behovDag ? VECKODAGAR.map(d => [d, d[0].toUpperCase() + d.slice(1), g.behovDag[d]]) : [["vardag", "Vardag (mån–fre)", g.behov.vardag], ["helg", "Helg (lör–sön)", g.behov.helg]])
           .map(([d, t, b]) => `<tr><th>${t}</th>${["morgon", "kvall", "natt"].map(x => `<td><input type="number" min="0" max="30" inputmode="numeric" data-gb="${d}.${x}" value="${b[x]}" aria-label="${t} ${x}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+        (g.kurvMall ? `<details open style="margin-top:12px"><summary>Bemanningskurva från mallen</summary><div class="grafyta" style="margin-top:8px">${kurvaSvg(g.kurvMall)}</div></details>` : "") +
         (g.behovDag ? `<p class="liten dampad" style="margin:8px 0 0">Behovet skiljer sig mellan veckodagarna och läggs per dag. <button class="lank" data-guide="behov-forenkla">Förenkla till vardag och helg</button></p>` : "") +
         tips(`Det blir ${r.dagPass} dag- och kvällspass och ${r.natter} nätter per vecka, ungefär <b>${sv(r.behovTimmar)} h per vecka</b>. För helgerna behövs minst <b>${r.minDag} med dag och kväll</b> och <b>${r.minNatt} med natt</b>${r.fredagStyr ? " (fredagskvällen styr: den som arbetar fredag kväll arbetar helgen)" : ""}.`) +
         (g.antalDag < r.minDag || g.antalNatt < r.minNatt ? tips(`Ni är ${g.antalDag} med dag och kväll och ${g.antalNatt} med natt. Färre än minsta antal ger vakanser på helgerna. <button class="liten" data-guide="minsta">Ändra till ${r.minDag} och ${r.minNatt}</button>`, true) : "") +
@@ -200,6 +202,40 @@ const GUIDE = (() => {
     return { p: KL.personal(g.klistra.personal), b: KL.behov(g.klistra.behov) };
   }
 
+  // Bemanningskurva: hur många som är i tjänst över dygnet, en linje per dagtyp (vardag, helg …).
+  function kurvaSvg(serier) {
+    const alla = serier.flatMap(x => x.data), max = Math.max(1, ...alla);
+    const harTid = i => serier.some(x => x.data[i] > 0);
+    let a = 0, b = 96; while (a < 96 && !harTid(a)) a++; while (b > a && !harTid(b - 1)) b--;
+    a = Math.max(0, Math.floor(a / 4) * 4 - 4); b = Math.min(96, Math.ceil(b / 4) * 4 + 4);
+    const B = 640, H = 220, V = 34, T = 12, U = 26, x = i => V + (i - a) / (b - a) * (B - V - 8), y = v => T + (1 - v / max) * (H - T - U);
+    const steg = Math.max(1, Math.ceil(max / 5)), FARG = ["var(--accent, #193f38)", "var(--guld-djup, #a9863a)", "#7085a3", "#b8432f", "#5c8a76", "#8a6212", "#4d6488"];
+    let h = `<svg class="graf" viewBox="0 0 ${B} ${H}" role="img" aria-label="Bemanningskurva: antal i tjänst över dygnet">`;
+    for (let v = 0; v <= max; v += steg) h += `<line class="rutnat" x1="${V}" x2="${B - 8}" y1="${y(v)}" y2="${y(v)}"/><text x="${V - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    for (let i = a; i <= b; i += 4) if ((i - a) % (b - a > 64 ? 8 : 4) === 0) h += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${String(i / 4 % 24).padStart(2, "0")}</text>`;
+    serier.forEach((s2, j) => {
+      let d = `M${x(a)},${y(s2.data[a] || 0)}`;
+      for (let i = a; i < b; i++) d += `H${x(i + 1)}V${y(s2.data[i + 1] ?? 0)}`;
+      h += `<path d="${d}" fill="none" stroke="${FARG[j % FARG.length]}" stroke-width="2.5" stroke-linejoin="round"/>`;
+      for (let i = a; i < b; i++) if (s2.data[i] !== s2.data[i - 1]) h += `<rect class="traff" x="${x(i)}" y="${y(s2.data[i]) - 8}" width="${Math.max(6, x(i + 1) - x(i))}" height="16" data-tips="${esc(s2.namn)} ${String(Math.floor(i / 4)).padStart(2, "0")}:${String(i % 4 * 15).padStart(2, "0")}: ${s2.data[i]} i tjänst"/>`;
+    });
+    h += `</svg><div class="legend">${serier.map((s2, j) => `<span><i style="background:${FARG[j % FARG.length]}"></i>${esc(s2.namn)} (högst ${Math.max(...s2.data)})</span>`).join("")}</div>`;
+    return h;
+  }
+  // Dagtyper med samma kurva slås ihop: Mån–fre, Lör–sön, eller en per dag.
+  function kurvSerier(b) {
+    const k = VECKODAGAR.map((_, i) => KL.kurva(b.passDag, i)), lika = (i, j) => k[i].join() === k[j].join();
+    const grupper = [];
+    VECKODAGAR.forEach((d, i) => { const g = grupper.find(x => lika(x.idx[0], i)); if (g) g.idx.push(i); else grupper.push({ idx: [i] }); });
+    const namn = idx => idx.join() === "0,1,2,3,4" ? "Mån–fre" : idx.join() === "5,6" ? "Lör–sön" : idx.join() === "0,1,2,3,4,5,6" ? "Alla dagar" : idx.map(i => VECKODAGAR[i]).join(", ");
+    return grupper.filter(g => k[g.idx[0]].some(v => v > 0)).map(g => ({ namn: namn(g.idx), data: k[g.idx[0]] }));
+  }
+  const DAGTEXT = { "mån-sön": "Alla dagar", vardag: "Mån–fre", "lör-sön": "Lör–sön" };
+  function passTabell(pass) {
+    return `<div class="rull"><table class="guidetabell"><thead><tr><th>Dagar</th><th>Pass</th><th>Rast</th><th>Antal</th><th>Grupp</th></tr></thead><tbody>
+      ${pass.map(x => `<tr><td>${DAGTEXT[x.dagar] || x.dagar}</td><td class="mono">${x.fran}–${x.till}</td><td>${x.rast_minuter} min</td><td>${x.antal}</td><td class="dampad">${esc(x.grupp || "")}</td></tr>`).join("")}</tbody></table></div>`;
+  }
+
   function klistraForhand(g) {
     if (!KL) return "";
     const { p, b } = tolka(g), DEL = { "morgon,kvall": "Dag och kväll", morgon: "Bara dag", kvall: "Bara kväll", natt: "Natt" };
@@ -214,6 +250,9 @@ const GUIDE = (() => {
       h += `<h3 style="margin-top:14px">Behov per dag (dag/kväll/natt)</h3><div class="rull"><table class="guidetabell"><thead><tr><th></th>${VECKODAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
         ${[["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]].map(([k, t]) => `<tr><th>${t}</th>${VECKODAGAR.map(d => `<td>${b.behov[d][k]}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
         (b.grupper && b.grupper.length ? `<p class="liten dampad" style="margin:6px 0 0">Räknat med: ${b.grupper.map(esc).join(", ")}.</p>` : "") +
+        (b.pass && b.pass.length ? `<h3 style="margin-top:14px">Bemanningskurva – antal i tjänst över dygnet</h3><div class="grafyta">${kurvaSvg(kurvSerier(b))}</div>
+          <h3 style="margin-top:14px">Passen</h3>${passTabell(b.pass)}
+          <p class="liten dampad" style="margin:6px 0 0">Passen sparas i enhetens bemanningsbalans, där de kan ändras. Schemat läggs efter behovet per dag, kväll och natt ovan.</p>` : "") +
         (b.tider && Object.keys(b.tider).length ? `<p class="liten dampad" style="margin:6px 0 0">Tider från passen: ${[b.tider.morgon && `dag från ${b.tider.morgon}`, b.tider.kvall && `kväll till ${b.tider.kvall}`, b.tider.nattStart && `natt ${b.tider.nattStart}–${b.tider.nattSlut}`].filter(Boolean).join(", ")}.</p>` : "");
     }
     const varn = [...p.varningar, ...b.varningar];
@@ -254,6 +293,8 @@ const GUIDE = (() => {
       g.behov = { vardag: { ...B.mån }, helg: { ...B.lör } };
       g.behovDag = enkel ? null : structuredClone(B);
       Object.assign(g.tider, b.tider || {});
+      g.passMall = b.pass && b.pass.length ? b.pass.map(({ grupp, ...x }) => x) : null;
+      g.kurvMall = b.pass && b.pass.length ? kurvSerier(b) : null;
     }
     // det inklistrade finns kvar i minnet så att man kan gå tillbaka och rätta, men sparas aldrig
     g.steg = 1;

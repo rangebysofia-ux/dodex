@@ -74,6 +74,12 @@ function behov(text) {
     const langd = (p.slut - p.start + 1440) % 1440;
     if (p.del !== "natt" && langd > 10 * 60) langa.add(`${klock(p.start)}–${klock(p.slut)}`);
   };
+  // passen med tider, per veckodag, så att bemanningskurvan och bemanningsbalansen kan visas
+  const passDag = Array.from({ length: 7 }, () => []);
+  const sattPass = (dagLista, p, n, rast, grupp) => {
+    satt(dagLista, p.del, n, true);
+    dagLista.forEach(i => passDag[i].push({ fran: p.start, till: p.slut, rast, antal: n, del: p.del, grupp: grupp || "" }));
+  };
   let kolDagar = null, kolDelar = null, kanda = 0, blockDag = null, grupp = "";
   for (const r of R) {
     const celler = r.filter(c => c !== "");
@@ -90,7 +96,7 @@ function behov(text) {
       const n = celler.filter(arTal).map(tal), antal = n.length ? n[n.length - 1] : 0;
       if (klockor[0] === klockor[1] || !antal) continue;  // tomma rader (00:00–00:00) och pass utan personal
       const pp = pass(`${klockor[0]}-${klockor[1]}`), dl = blockDag || (celler.map(dagar).find(Boolean)) || GRUPPER.alla;
-      noteraTid(pp, antal); satt(dl, pp.del, antal, true); if (grupp) grupper.add(grupp); kanda++; continue;
+      noteraTid(pp, antal); sattPass(dl, pp, antal, klockor[2] ? minuter(klockor[2]) : null, grupp); if (grupp) grupper.add(grupp); kanda++; continue;
     }
     if (blockDag && !celler.some(c => !arTal(c) && !/^\d+[:.]\d{2}$/.test(c))) continue;  // summarader som "202:00  26"
     // rubrikrad med veckodagar: pass eller dygnsdelar står i raderna
@@ -114,15 +120,16 @@ function behov(text) {
       if (p) noteraTid(p, celler.filter(arTal).map(tal).reduce((a, b) => a + b, 0) || 1);
       const iTabb = r.length === kolDagar.length || r.length === kolDagar.length + 1;
       const kol = kolDagar.map((x, i) => [x, i]).filter(([x]) => x);
-      if (iTabb && r.length === kolDagar.length) kol.forEach(([x, i]) => { if (arTal(r[i])) satt(x, d, tal(r[i]), true); });
-      else { const n = celler.filter(arTal); kol.forEach(([x], j) => { if (j < n.length) satt(x, d, tal(n[j]), true); }); }
+      const lagg = (x, n) => { if (p) { if (n) sattPass(x, p, n, null, ""); } else satt(x, d, n, true); };
+      if (iTabb && r.length === kolDagar.length) kol.forEach(([x, i]) => { if (arTal(r[i])) lagg(x, tal(r[i])); });
+      else { const n = celler.filter(arTal); kol.forEach(([x], j) => { if (j < n.length) lagg(x, tal(n[j])); }); }
       kanda++; continue;
     }
     // en rad per veckodag, antal per dygnsdel
     if (forsta) {
       const tider2 = celler.map(pass).filter(Boolean);
       const n = celler.filter(arTal).map(tal);
-      if (tider2.length === 1 && n.length === 1) { noteraTid(tider2[0], n[0]); satt(forsta, tider2[0].del, n[0], true); kanda++; continue; }
+      if (tider2.length === 1 && n.length === 1) { noteraTid(tider2[0], n[0]); sattPass(forsta, tider2[0], n[0], null, ""); kanda++; continue; }
       const ordning = kolDelar ? kolDelar.filter(Boolean) : DELAR;
       if (kolDelar && r.length === kolDelar.length) kolDelar.forEach((x, i) => { if (x && arTal(r[i])) satt(forsta, x, tal(r[i])); });
       else ordning.forEach((x, j) => { if (j < n.length) satt(forsta, x, n[j]); });
@@ -132,7 +139,7 @@ function behov(text) {
     }
     // pass med tider utan rubrik, till exempel "07:00-15:30 2" (gäller alla dagar)
     const p = celler.map(pass).find(Boolean), n = celler.filter(arTal).map(tal);
-    if (p && n.length === 1) { noteraTid(p, n[0]); satt(GRUPPER.alla, p.del, n[0], true); kanda++; continue; }
+    if (p && n.length === 1) { noteraTid(p, n[0]); sattPass(GRUPPER.alla, p, n[0], null, ""); kanda++; continue; }
     if (celler.some(arTal)) varningar.push(`Raden ”${rad.slice(0, 40)}” gick inte att tolka och hoppades över.`);
   }
   if (!kanda) return { behov: null, tider: null, varningar: R.length ? [...varningar, "Hittade inget behov. Skriv till exempel ”Vardag 3 2 1” och ”Helg 3 2 1” (dag, kväll, natt), eller klistra in en tabell från Excel."] : [] };
@@ -150,7 +157,39 @@ function behov(text) {
   const andraStarter = [...new Set(tider.morgonStart.map(([v]) => v))].filter(v => t.morgon && v !== minuter(t.morgon));
   if (andraStarter.length) varningar.push(`Dagpass börjar också ${andraStarter.sort((a, b) => a - b).map(klock).join(", ")}. Enheten får starttiden ${t.morgon}; fler starttider kan läggas till under Regler (Fler starttider för dagpass).`);
   if (langa.size) varningar.push(`Långa pass (${[...langa].join(", ")}) räknas som dagpass. Motorn lägger dagpass inom 12–18 för passbyte, så kontrollera behovet på kvällen.`);
-  return { behov: ut, tider: t, varningar, grupper: [...grupper] };
+  return { behov: ut, tider: t, varningar, grupper: [...grupper], pass: passLista(passDag), passDag };
+}
+
+// Passen som bemanningsbalansens behov (BehovsPass i modell.py): ett pass med samma tider och antal
+// på flera dagar slås ihop till vardag, lör-sön eller mån-sön. Rast som inte angavs: 30 min över 5 h (lag).
+function passLista(passDag) {
+  const nycklar = new Map();
+  passDag.forEach((lista, i) => lista.forEach(x => {
+    const langd = (x.till - x.fran + 1440) % 1440 || 1440;
+    const rast = x.rast ?? (langd > 300 ? 30 : 0);
+    const k = [x.fran, x.till, rast, x.antal, x.del].join("|");
+    if (!nycklar.has(k)) nycklar.set(k, { fran: x.fran, till: x.till, rast, antal: x.antal, del: x.del, dagar: new Set(), grupp: new Set() });
+    nycklar.get(k).dagar.add(i); if (x.grupp) nycklar.get(k).grupp.add(x.grupp);
+  }));
+  const ut = [];
+  for (const x of nycklar.values()) {
+    const idx = [...x.dagar].sort((a, b) => a - b), d = idx.join();
+    const dagar = d === "0,1,2,3,4,5,6" ? ["mån-sön"] : d === "0,1,2,3,4" ? ["vardag"] : d === "5,6" ? ["lör-sön"] : idx.map(i => DAGAR[i]);
+    for (const k of dagar) ut.push({ dagar: k, fran: klock(x.fran), till: klock(x.till), rast_minuter: x.rast, antal: x.antal, ...(x.del === "natt" ? { typ: "natt" } : {}), grupp: [...x.grupp].join(", ") });
+  }
+  const ordning = k => ["mån-sön", "vardag", "lör-sön", ...DAGAR].indexOf(k);
+  return ut.sort((a, b) => ordning(a.dagar) - ordning(b.dagar) || a.fran.localeCompare(b.fran) || a.till.localeCompare(b.till));
+}
+
+// Bemanningskurva för en dag: hur många som är i tjänst varje kvart (96 värden). Nattpass räknas på
+// den dag de börjar, även timmarna efter midnatt. Rasten räknas inte bort.
+function kurva(passDag, i) {
+  const ut = Array(96).fill(0);
+  for (const x of passDag[i] || []) {
+    const L = (x.till - x.fran + 1440) % 1440 || 1440;
+    for (let k = 0; k < L; k += 15) ut[Math.floor(((x.fran + k) % 1440) / 15)] += x.antal;
+  }
+  return ut;
 }
 
 // ---------------------------------------------------------------- personal
@@ -207,6 +246,6 @@ function personal(text) {
   return { personer: ut, varningar, rubrik: !!rubrik };
 }
 
-return { personal, behov, dagar, DAGAR };
+return { personal, behov, dagar, kurva, DAGAR };
 })();
 if (typeof module !== "undefined") module.exports = KLISTRA;

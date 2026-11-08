@@ -116,3 +116,25 @@ def test_bemanningsmall_med_block_per_veckodag(tmp_path):
     ind = d["indata"]
     assert ind["behov"] == {"vardag": {"morgon": 14, "kvall": 12, "natt": 0}, "helg": {"morgon": 12, "kvall": 6, "natt": 0}}
     assert ind["regler"] == {"kvall_slut": "21:00"}
+    # passen följer med till bemanningsbalansen, med mallens rast och utan gruppnamn
+    pass_ = ind["bemanningsbalans"]["pass"]
+    assert {"dagar": "mån-sön", "fran": "12:00", "till": "21:00", "rast_minuter": 30, "antal": 6} in pass_
+    assert {"dagar": "lör-sön", "fran": "07:00", "till": "20:00", "rast_minuter": 180, "antal": 6} in pass_
+    assert {"dagar": "vardag", "fran": "06:30", "till": "15:00", "rast_minuter": 30, "antal": 2} in pass_
+    assert len(pass_) == 6
+    assert kontrollera_indata(ind) == []
+
+
+def test_bemanningskurva(tmp_path):
+    """Kurvan: antal i tjänst varje kvart. Vardag 26 när dag- och kvällspass överlappar, helg 18."""
+    mall = (ROT / "tests" / "data" / "bemanningsmall_veckodagar.txt").read_text(encoding="utf-8")
+    f = tmp_path / "m.txt"
+    f.write_text(mall, encoding="utf-8")
+    kod = ("const K=require(process.argv[1]);const b=K.behov(require('fs').readFileSync(process.argv[2],'utf8'));"
+           "process.stdout.write(JSON.stringify([K.kurva(b.passDag,0),K.kurva(b.passDag,5)]))")
+    vardag, helg = json.loads(subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "inklistring.js"), str(f)],
+                                             capture_output=True, text=True, timeout=60, check=True).stdout)
+    kl = lambda h, m=0: (h * 60 + m) // 15
+    assert vardag[kl(6)] == 0 and vardag[kl(6, 30)] == 2 and vardag[kl(7)] == 14 and vardag[kl(12)] == 26
+    assert vardag[kl(15)] == 12 and vardag[kl(20)] == 6 and vardag[kl(21)] == 0
+    assert helg[kl(7)] == 12 and helg[kl(12)] == 18 and helg[kl(16)] == 12 and helg[kl(20)] == 6

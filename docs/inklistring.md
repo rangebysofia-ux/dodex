@@ -54,6 +54,8 @@ Tisdag        …
 
 Grupperna (Avdelningar, Löpare, Förstärkning …) räknas ihop per dygnsdel, och förhandsvisningen visar vilka som räknats med. Tomma rader (00:00–00:00), pass med antal 0 och summarader hoppas över. Rasten och arbetstiden i mallen används inte, eftersom motorn räknar rast och passlängd själv efter reglerna. Testfallet finns i `tests/data/bemanningsmall_veckodagar.txt`.
 
+När behovet klistras in med pass och tider visar förhandsvisningen en **bemanningskurva**. Den visar antal i tjänst varje kvart, med en linje per dagtyp (till exempel Mån–fre och Lör–sön), och en tabell över passen. Kurvan syns också i guidens fråga om behovet. Passen sparas i enhetens bemanningsbalans (`bemanningsbalans.pass`), där tider, rast och antal kan ändras och där timmar och pass per dag räknas som i mallen. Gruppnamnen sparas inte. Passen påverkar inte schemaläggningen: schemat läggs efter behovet per dag, kväll och natt.
+
 - Ett pass räknas som natt om det går över midnatt eller börjar efter kl. 20. Det räknas som dag om det börjar före kl. 11, och annars som kväll. Flera pass i samma dygnsdel läggs ihop.
 - Passens tider föreslås som enhetens tider: den starttid för dagpass och den sluttid för kvällspass som flest pass har, och nattpassets tider. Andra starttider för dagpass (till exempel löpare 06:30) nämns i en varning. De kan läggas till under Regler (`morgon_starter`) men läggs aldrig till automatiskt.
 - Pass som är längre än 10 timmar (till exempel 07:00–20:00 med lång rast) räknas som dagpass, med en varning.
