@@ -242,6 +242,44 @@ table.schema.period .tomruta { min-height: 22px; font-size: 12px; }
 .guideprickar i.klar { background: var(--accent-svag); } .guideprickar i.aktiv { background: var(--accent); }
 .valknappar { display: flex; flex-wrap: wrap; gap: 8px; } .valknapp { border-radius: 999px; padding: 9px 14px; }
 .valknapp[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+/* kalender över godkända scheman */
+table.kalender { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-variant-numeric: tabular-nums; }
+table.kalender th { font-size: 12px; color: var(--dampad); text-align: center; padding: 4px; }
+table.kalender th:nth-child(-n+2) { text-align: left; }
+table.kalender tr.kal-manad th { text-align: left; font-size: 14px; color: var(--text); padding: 12px 4px 4px; text-transform: capitalize; }
+table.kalender td { padding: 6px 4px; text-align: center; border: 0; }
+table.kalender td.kal-vecka { text-align: left; font-size: 12px; color: var(--dampad); white-space: nowrap; border-radius: 8px 0 0 8px; padding-left: 8px; }
+table.kalender td.kal-schema { text-align: left; font-size: 13px; white-space: nowrap; }
+table.kalender td:last-child { border-radius: 0 8px 8px 0; }
+table.kalender td.kal-dag { min-width: 30px; font-size: 13px; }
+table.kalender td.helg { font-weight: 700; }
+table.kalender td.utanfor { opacity: .35; }
+table.kalender td.idag { outline: 2px solid var(--text); outline-offset: -3px; border-radius: 8px; font-weight: 800; }
+table.kalender tr.kal-start td { box-shadow: inset 0 3px 0 var(--guld, #c9a03a); }
+.kal-v { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 0 7px; background: rgba(255, 255, 255, .6); color: #25332f; margin-left: 4px; }
+tr.kal-p0 td, .kal-lista li.kal-p0 i { background: rgba(213, 180, 106, .32); }
+tr.kal-p1 td, .kal-lista li.kal-p1 i { background: rgba(63, 122, 99, .24); }
+tr.kal-p2 td, .kal-lista li.kal-p2 i { background: rgba(77, 100, 136, .24); }
+tr.kal-p3 td, .kal-lista li.kal-p3 i { background: rgba(184, 67, 47, .18); }
+tr.kal-p4 td, .kal-lista li.kal-p4 i { background: rgba(138, 98, 18, .22); }
+tr.kal-ingen td { background: transparent; }
+.kal-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.kal-lista li { display: grid; grid-template-columns: 14px auto 1fr; gap: 10px; align-items: center; }
+.kal-lista i { width: 14px; height: 14px; border-radius: 4px; }
+.kal-nu { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 12px; padding: 10px 12px; border: 2px solid var(--guld, #c9a03a); border-radius: 12px; }
+.kal-kort { display: none; }
+@media (max-width: 560px) {
+  table.kalender .kal-namn { display: none; } table.kalender .kal-kort { display: inline; }
+  table.kalender td { padding: 6px 1px; } table.kalender td.kal-dag { min-width: 0; font-size: 12.5px; }
+  table.kalender td.kal-vecka { padding-left: 5px; font-size: 11px; } table.kalender th { padding: 4px 1px; font-size: 11px; }
+  .kal-v { margin-left: 0; padding: 0 5px; }
+}
+/* godkänt och aktiverat grundschema: guldram och märke (färdplan 22) */
+.kort.godkand { border: 3px solid var(--guld); box-shadow: 0 0 0 4px rgba(213, 180, 106, .18); }
+.godkand-banner { display: flex; gap: 12px; align-items: center; border: 2px solid var(--guld); background: linear-gradient(135deg, rgba(213, 180, 106, .2), rgba(213, 180, 106, .06)); }
+.godkand-banner strong { display: block; font-size: 15px; } .godkand-banner .liten { display: block; color: var(--dampad); }
+.godkand-marke { flex: none; background: var(--guld); color: #25332f; font-weight: 800; border-radius: 999px; padding: 5px 12px; white-space: nowrap; font-size: 13px; }
+.godkand-chip { display: inline-block; vertical-align: middle; margin-left: 6px; font-size: 11.5px; font-weight: 800; background: var(--guld); color: #25332f; border-radius: 999px; padding: 1px 9px; }
 .balans-vem { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .balans-vem > div { border: 1px solid var(--linje); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
 .balans-vem span:last-child { color: var(--dampad); font-size: 13px; }
@@ -3256,7 +3294,55 @@ function balansKort(lista) {
   return h;
 }
 
-return { balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+// ---------------------------------------------------------------- kalender över godkända scheman (färdplan 22–23)
+// perioder: [{id, namn, fran_datum ("ÅÅÅÅ-MM-DD", en måndag), veckor, lank}]. Ett godkänt schema gäller från sitt
+// datum tills nästa börjar, och rullar runt (vecka 1 igen efter sista veckan). Varje rad är en vecka.
+const MANAD = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const dagstr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const ttDatum = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d, 12); };
+function isoVecka(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dag = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - dag);
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+}
+function periodFor(perioder, dag) {
+  let p = null;
+  for (const x of perioder) if (x.fran_datum <= dag && (!p || x.fran_datum >= p.fran_datum)) p = x;
+  return p;
+}
+function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date()) } = {}) {
+  const sorterade = [...perioder].sort((a, b) => a.fran_datum.localeCompare(b.fran_datum));
+  const farg = new Map(sorterade.map((p, i) => [p.id, i % 5]));
+  const s0 = start ? ttDatum(start) : (() => { const t = ttDatum(idag); return new Date(t.getFullYear(), t.getMonth(), 1, 12); })();
+  const slut = new Date(s0.getFullYear(), s0.getMonth() + manader, 1, 12);
+  const d = new Date(s0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));  // måndagen i första veckan
+  let h = `<div class="rull"><table class="kalender"><thead><tr><th>Vecka</th><th>Schema</th>${DAGAR.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`;
+  let manad = -1;
+  while (d < slut) {
+    const mandag = new Date(d), sondag = new Date(d); sondag.setDate(sondag.getDate() + 6);
+    const nyManad = [mandag, sondag].find(x => x.getMonth() !== manad && x >= s0 && x < slut && (x.getDate() <= 7 || manad === -1));
+    if (nyManad && nyManad.getMonth() !== manad) { manad = nyManad.getMonth(); h += `<tr class="kal-manad"><th colspan="9">${MANAD[manad]} ${nyManad.getFullYear()}</th></tr>`; }
+    const ms = dagstr(mandag), p = periodFor(sorterade, ms);
+    const vecka = p ? Math.floor((ttDatum(ms) - ttDatum(p.fran_datum)) / (7 * 864e5)) % p.veckor + 1 : null;
+    const borjar = p && p.fran_datum === ms;
+    h += `<tr class="${p ? `kal-p${farg.get(p.id)}` : "kal-ingen"}${borjar ? " kal-start" : ""}"><td class="kal-vecka">v.${isoVecka(mandag)}</td>
+      <td class="kal-schema">${p ? `${borjar ? "▶ " : ""}<span class="kal-namn">${p.lank ? `<a href="${p.lank}">${esc(p.namn)}</a>` : esc(p.namn)} </span><span class="kal-v">V${vecka}/${p.veckor}</span>` : `<span class="dampad"><span class="kal-namn">Inget godkänt schema</span><span class="kal-kort">–</span></span>`}</td>`;
+    for (let i = 0; i < 7; i++) {
+      const x = new Date(mandag); x.setDate(x.getDate() + i);
+      const ds = dagstr(x), utanfor = x < s0 || x >= slut;
+      h += `<td class="kal-dag${i > 4 ? " helg" : ""}${ds === idag ? " idag" : ""}${utanfor ? " utanfor" : ""}"${p ? ` data-tips="${esc(`${ds}: ${p.namn}, vecka ${vecka} av ${p.veckor}`)}"` : ""}>${x.getDate()}</td>`;
+    }
+    h += `</tr>`;
+    d.setDate(d.getDate() + 7);
+  }
+  h += `</tbody></table></div>`;
+  const nu = periodFor(sorterade, idag), kommande = sorterade.filter(p => p.fran_datum > idag);
+  const lista = sorterade.length ? `<ul class="kal-lista">${[...sorterade].reverse().map(p => `<li class="kal-p${farg.get(p.id)}"><i></i><span>${p.lank ? `<a href="${p.lank}">${esc(p.namn)}</a>` : esc(p.namn)}</span>
+      <span class="dampad">från ${esc(p.fran_datum)} · ${p.veckor} veckor${p === nu ? " · <b>gäller nu</b>" : p.fran_datum > idag ? " · kommande" : " · har ersatts"}</span></li>`).join("")}</ul>` : "";
+  return { html: h, lista, nu, kommande };
+}
+
+return { kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
 </script>
@@ -4496,7 +4582,7 @@ async function oppna(e, opt = {}) {
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button><span class="dampad liten">${lager.typ === "konto" ? "Sparas automatiskt" : "Sparas i webbläsaren"}</span></div>
       <label for="namn" style="margin-top:6px">Enhet</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
-      <div class="chips" style="margin-top:10px"><button class="primar" data-g="senaste" id="senaste-knapp" hidden>‹ Till schemat</button><button data-g="simulering">Simulering</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
+      <div class="chips" style="margin-top:10px"><button class="primar" data-g="senaste" id="senaste-knapp" hidden>‹ Till schemat</button><button data-g="simulering">Simulering</button><button data-g="kalender">📅 Kalender</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
     <section class="kort" id="kontroll"></section>
     <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
       `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
@@ -4735,8 +4821,8 @@ function ritaKorningar() {
   const el = $("#korningar"); if (!el) return;
   el.innerHTML = `<h2>Körningar</h2>` + (st.korningar.length ? st.korningar.map(k => {
     const s = k.status === "OK" ? (k.vakanta ? ["varn", vakText(k.vakanta)] : ["ok", "Klart"]) : ["dalig", "Regler bryts"];
-    return `<div class="onsk"><div><button class="lank" data-g="visa-korning" data-id="${k.id}">${esc(k.namn)}</button><br><span class="status ${s[0]}">${s[1]}</span> <span class="dampad liten">${datum(k.skapad)}</span></div>
-      <button class="liten fara" data-g="ta-bort-korning" data-id="${k.id}" aria-label="Ta bort">×</button></div>`;
+    return `<div class="onsk"><div><button class="lank" data-g="visa-korning" data-id="${k.id}">${esc(k.namn)}</button><br>${k.godkand ? `<span class="godkand-chip" style="margin:0 4px 0 0">✓ Godkänt från ${esc(k.godkand.fran_datum)}</span>` : `<span class="status ${s[0]}">${s[1]}</span>`} <span class="dampad liten">${datum(k.skapad)}</span></div>
+      ${k.godkand ? `<span class="dampad liten" title="Ett godkänt schema är låst">🔒</span>` : `<button class="liten fara" data-g="ta-bort-korning" data-id="${k.id}" aria-label="Ta bort">×</button>`}</div>`;
   }).join("") : `<p class="dampad liten">Inga körningar än. Tryck på Lägg schema.</p>`);
 }
 
@@ -4834,7 +4920,12 @@ document.addEventListener("click", async ev => {
     case "simulera": return simulera();
     case "anvand-forslag": return anvandForslag(+el.dataset.n);
     case "visa-korning": return visaKorning(st.korningar.find(k => k.id === el.dataset.id));
-    case "ta-bort-korning": { const k = st.korningar.find(x => x.id === el.dataset.id); await lager.taBortKorning(k); st.korningar = st.korningar.filter(x => x !== k); return ritaKorningar(); }
+    case "kalender": st.kalForskj = 0; return visaKalender();
+    case "kal-flytta": st.kalForskj = +el.dataset.v ? (st.kalForskj || 0) + +el.dataset.v : 0; return visaKalender();
+    case "godkann": st.godkannForm = st.korning.id; return ritaResultat();
+    case "godkann-avbryt": st.godkannForm = null; return ritaResultat();
+    case "godkann-ok": return godkannKorning();
+    case "ta-bort-korning": { const k = st.korningar.find(x => x.id === el.dataset.id); if (k.godkand) return meddela("Ett godkänt schema är låst och kan inte tas bort."); await lager.taBortKorning(k); st.korningar = st.korningar.filter(x => x !== k); return ritaKorningar(); }
     case "till-enhet": return oppna(st.enhet, { installningar: true });
     case "vecka": st.vecka = +el.dataset.v; st.cell = null; return ritaResultat();
     case "cell": {
@@ -4948,6 +5039,45 @@ function visaKorning(k) {
   $("#fot").hidden = true; ritaResultat(); window.scrollTo(0, 0);
 }
 
+// Kalender över godkända scheman (samma som webben, GRAF.kalender i grafer.js).
+async function visaKalender() {
+  st.vy = "kalender"; $("#fot").hidden = true;
+  try { st.korningar = await lager.korningar(st.enhet.id); } catch { /* behåll */ }
+  const perioder = (st.korningar || []).filter(k => k.godkand).map(k => ({ id: k.id, namn: k.namn, fran_datum: k.godkand.fran_datum, veckor: JSON.parse(k.data).resultat.veckor }));
+  const idag = new Date(), s = new Date(idag.getFullYear(), idag.getMonth() + (st.kalForskj || 0), 1);
+  const k = GRAF.kalender(perioder, { start: `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, "0")}-01`, manader: 6 });
+  const nu = k.nu ? `<b>${esc(k.nu.namn)}</b>, vecka ${Math.floor((idag - new Date(k.nu.fran_datum + "T00:00:00")) / (7 * 864e5)) % k.nu.veckor + 1} av ${k.nu.veckor}` : "Inget godkänt schema gäller i dag";
+  $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="till-enhet">‹ ${esc(st.enhet.namn)}</button>${temaKnapp()}</div><h1 style="margin-top:4px">Kalender</h1>
+    <p class="dampad liten">Vilket godkänt schema som gäller vecka för vecka. Perioden börjar om (V1) efter sista veckan.</p>
+    <div class="kal-nu"><div><span class="dampad liten">Gäller i dag</span><div>${nu}</div></div>${k.kommande.length ? `<div><span class="dampad liten">Kommande</span><div>${k.kommande.map(p => `<b>${esc(p.namn)}</b> från ${esc(p.fran_datum)}`).join(", ")}</div></div>` : ""}</div>
+    <div class="chips" style="margin-top:10px"><button class="liten" data-g="kal-flytta" data-v="-3">‹ Tidigare</button><button class="liten" data-g="kal-flytta" data-v="0">I dag</button><button class="liten" data-g="kal-flytta" data-v="3">Senare ›</button></div></header>
+    ${perioder.length ? `<section class="kort"><h2>Godkända scheman</h2>${k.lista.replace(/<span>([^<]*)<\/span>/, "<span>$1</span>")}</section>` : `<section class="kort"><div class="banner info"><strong>Inget schema är godkänt än</strong><span class="liten">Öppna ett schema och tryck ✓ Godkänn och aktivera.</span></div></section>`}
+    <section class="kort">${k.html}</section>`;
+  window.scrollTo(0, 0);
+}
+
+// Godkänt och aktiverat grundschema (färdplan 22). I lättversionen är du ensam användare och godkänner själv;
+// i webbtjänsten kan bara en chef göra det. Ett godkänt schema är låst: ändringar blir en ny version.
+const nastaMandag = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return d.toISOString().slice(0, 10); };
+function godkannandeRuta(k, brott) {
+  const a = k.godkand;
+  if (a) return `<div class="godkand-banner banner" style="margin-top:10px"><span class="godkand-marke">✓ Godkänt</span><div><strong>Aktivt från ${esc(a.fran_datum)}</strong><span class="liten">Godkänt ${datum(a.godkand_tid)}. Schemat är låst; ändringar blir en ny version.</span></div></div>`;
+  if (st.godkannForm === k.id) return `<div class="godkand-banner banner" style="margin-top:10px;display:grid"><div><strong>Godkänn och aktivera schemat</strong><span class="liten">Schemat låses och gäller från en måndag.</span></div>
+    <div class="chips" style="align-items:center"><label for="godkann-fran" class="liten" style="margin:0">Gäller från</label><input type="date" id="godkann-fran" value="${nastaMandag()}" style="width:auto">
+    <button class="primar liten" data-g="godkann-ok">✓ Godkänn</button><button class="liten" data-g="godkann-avbryt">Avbryt</button></div></div>`;
+  if (brott) return "";
+  return `<div class="chips" style="margin-top:10px;align-items:center"><button class="liten" data-g="godkann" style="border-color:var(--guld)">✓ Godkänn och aktivera</button><span class="dampad liten">Låser schemat när det är valt.</span></div>`;
+}
+async function godkannKorning() {
+  const fran = $("#godkann-fran").value;
+  if (!fran || new Date(fran + "T12:00:00").getDay() !== 1) return meddela("Välj en måndag.");
+  const orig = st.korningar.find(x => x.id === st.korning.id);
+  if (!orig) return;
+  orig.godkand = { fran_datum: fran, godkand_tid: Date.now() };
+  try { await lager.sparaKorning(orig); } catch (e) { delete orig.godkand; return meddela("Kunde inte spara: " + e.message); }
+  st.korning.godkand = orig.godkand; st.godkannForm = null; ritaResultat(); meddela(`Schemat är godkänt och aktivt från ${fran}.`);
+}
+
 function ritaResultat() {
   const k = st.korning, res = st.red?.res || k.resultat, g = st.red?.g || k.granskning;
   const brott = (res.brott || []).concat(g.brott);
@@ -4957,7 +5087,8 @@ function ritaResultat() {
     <h1 style="margin-top:4px">${esc(k.namn)}</h1>
     <div class="banner ${!ok ? "dalig" : res.kpi.vakanta_pass ? "varn" : "ok"}" style="margin-top:10px"><strong>${!ok ? `${brott.length} hårda regler bryts` : res.kpi.vakanta_pass ? `Schema klart, med ${vakText(res.kpi.vakanta_pass)}` : "Schema klart, utan vakanser och avtalsbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer${typeof res.sekunder === "number" ? ` · ${sv(res.sekunder)} s` : ""}${typeof k.balans === "number" ? ` · bemanningsbalansen förutsåg ${vakText(k.balans)}` : ""}</span></div>
-    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button><button data-g="tre-alternativ">⚖ Tre alternativ: medarbetare, verksamhet, ekonomi</button>
+    ${st.red ? "" : godkannandeRuta(k, brott.length)}
+    ${st.red ? "" : `<div class="styrrad"><button class="primar" data-g="nytt-schema">🤖 Lägg nytt schema</button><button data-g="tre-alternativ">⚖ Tre alternativ: medarbetare, verksamhet, ekonomi</button><button data-g="kalender">📅 Kalender – godkända scheman</button>
       <div class="chips andra"><span class="dampad liten">Ändra:</span>${[["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "★ Aktiviteter"], ["regler", "Regler"], ["period", "Period"], ["balans", "Balans"]].map(([f, t]) => `<button class="liten" data-g="andra-inst" data-f="${f}">${t}</button>`).join("")}</div></div>`}
     <div class="flikrad" role="group" aria-label="Visa">${F.map(([f, t]) => `<button data-g="rflik" data-f="${f}" aria-pressed="${flik === f}">${t}</button>`).join("")}</div></header>`;
   if (flik === "oversikt") h += ritaOversikt(k, brott);
@@ -4971,7 +5102,8 @@ function ritaResultat() {
   }
   else {
     if (st.red) h += redigeringsrad();
-    h += `<section class="kort"><div class="rad"><h2 style="margin:0">Schema</h2><div class="chips">${st.red ? "" : `<button class="liten" data-g="redigera">Justera schemat</button><button class="liten" data-g="excel">Excel</button><button class="liten" data-g="kopiera-tabell">Kopiera</button>`}</div></div><div class="veckor" style="margin-top:8px">` +
+    const godk = k.godkand && !st.red;
+    h += `<section class="kort${godk ? " godkand" : ""}"><div class="rad"><h2 style="margin:0">Schema${godk ? ' <span class="godkand-chip">✓ Godkänt</span>' : ""}</h2><div class="chips">${st.red ? "" : `<button class="liten" data-g="redigera"${godk ? ' title="Det godkända schemat är låst. Ändringarna sparas som en ny version."' : ""}>${godk ? "Gör ny version" : "Justera schemat"}</button><button class="liten" data-g="excel">Excel</button><button class="liten" data-g="kopiera-tabell">Kopiera</button>`}</div></div><div class="veckor" style="margin-top:8px">` +
       Array.from({ length: res.veckor }, (_, v) => `<button data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">V${v + 1}</button>`).join("") +
       `<button data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button></div>` +
       (st.vecka === -1 ? dagTabell(res, Array.from({ length: res.veckor * 7 }, (_, d) => d), true) : vecka(res, st.vecka)) +

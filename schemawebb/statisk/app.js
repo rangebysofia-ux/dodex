@@ -20,6 +20,7 @@ const LOGGA = () => { const id = "guld" + (++loggaNr); return `<svg viewBox="0 0
 const loggaText = () => `${LOGGA()}<span><b>DODEX</b><small>Scheduler</small></span>`;
 
 const IKON = {
+  kalender: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg>',
   oversikt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>',
   behov: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M17 8v6M14 11h6"/></svg>',
   stjarna: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>',
@@ -110,6 +111,7 @@ function ritaMeny() {
   $("#meny").innerHTML = `<a class="logga" href="#/" aria-label="DODEX Scheduler, till enheterna">${loggaText()}</a>
     <div class="enhetsval"><label for="enhetsval">Enhet</label><select id="enhetsval"><option value="">Alla enheter …</option>${lista.map(x => `<option value="${x.id}"${e && x.id === e.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div>
     ${lank(["schema"], "schema", "Schemaplanering", `${bas}/schema${kk}`, !e)}
+    ${lank(["kalender"], "kalender", "Kalender", `${bas}/kalender`, !e)}
     ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
     ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
     ${lank(["bemanningsbalans"], "kostnad", "Bemanningsbalans", `${bas}/bemanningsbalans`, !e)}
@@ -121,6 +123,8 @@ function ritaMeny() {
     ${lank(["rapporter"], "rapport", "Rapporter", `${bas}/rapporter`, !e)}
     ${lank(["installningar"], "installning", "Inställningar", `${bas}/installningar`, !e)}
     <div class="fyll"></div>
+    ${lank(["konton"], "grupp", "Konton", "#/konton")}
+    ${st.session?.anvandare ? `<div class="inloggad-som">${esc(st.session.anvandare)} · ${st.session.roll === "chef" ? "chef" : "schemaläggare"}</div>` : ""}
     ${kravsInloggning ? `<button class="post ut" data-g="logga-ut" aria-label="Logga ut">${IKON.ut}<span>Logga ut</span></button>` : ""}
     <div class="fot"><em>Planering som skapar balans – idag och imorgon.</em>© Sofia Rångeby</div>`;
   $("#mobillogga").innerHTML = loggaText();
@@ -130,19 +134,22 @@ function ritaMeny() {
 }
 
 // ---------------------------------------------------------------- inloggning
-function visaInloggning() {
-  stoppaPollning(); st.vy = "hem"; st.enhet = null; ritaMeny(); sokvag([]);
+async function visaInloggning(s) {
+  stoppaPollning(); st.vy = "hem"; st.enhet = null; st.session = null; ritaMeny(); sokvag([]);
+  if (!s) { try { s = await api("GET", "session"); } catch { s = { konton: false, gemensamt: true }; } }
   vy().innerHTML = `<form class="kort inloggning" id="inlogg">
     <div class="logga ljus" style="margin-bottom:6px">${loggaText()}</div>
     <h1>Välkommen till DODEX Scheduler</h1>
     <p class="dampad">Smart schemaplanering för en hållbar verksamhet.</p>
+    ${s.konton ? `<div><label for="anv">Användarnamn</label><input id="anv" autocomplete="username"${s.gemensamt ? "" : " required"}></div>` : ""}
     <div><label for="losen">Lösenord</label><input id="losen" type="password" autocomplete="current-password" required></div>
+    ${s.konton && s.gemensamt ? `<p class="dampad liten" style="margin:0">Lämna användarnamnet tomt om du loggar in med det gemensamma lösenordet. Bara chefer kan godkänna scheman.</p>` : ""}
     <button class="primar" type="submit">Logga in</button>
     <p class="dampad liten" id="inlogg-fel" role="alert"></p></form>`;
-  $("#losen").focus();
+  ($("#anv") || $("#losen")).focus();
   $("#inlogg").onsubmit = async e => {
     e.preventDefault();
-    try { await api("POST", "logga-in", { losenord: $("#losen").value }); route(); }
+    try { await api("POST", "logga-in", { losenord: $("#losen").value, anvandare: $("#anv")?.value || null }); route(); }
     catch (err) { $("#inlogg-fel").textContent = err.message; }
   };
 }
@@ -933,6 +940,10 @@ document.addEventListener("click", async e => {
   try {
     switch (g) {
       case "logga-ut": await api("POST", "logga-ut"); visaInloggning(); break;
+      case "kal-flytta": st.kalForskj = +el.dataset.v ? (st.kalForskj || 0) + +el.dataset.v : 0; return visaKalender(st.enhet.id);
+      case "konto-bort":
+        if (el.dataset.ok !== "1") { el.dataset.ok = "1"; el.textContent = "Säker?"; setTimeout(() => { el.dataset.ok = ""; el.textContent = "Ta bort"; }, 4000); return; }
+        await api("DELETE", "anvandare/" + encodeURIComponent(el.dataset.n)); meddela("Kontot är borttaget."); visaKonton(); break;
       case "ny-enhet": { st.guide = GUIDE.ny(); location.hash = "#/"; visaEnheter(); break; }
       case "ny-enhet-tom": {
         const { id } = await api("POST", "enheter", { namn: "Ny enhet", indata: NY_INDATA() });
@@ -1046,6 +1057,49 @@ function startaPollning(steg) {
 }
 function stoppaPollning() { clearTimeout(st.pollning); st.pollning = null; }
 
+// ---------------------------------------------------------------- konton och roller
+async function visaKonton() {
+  st.vy = "konton"; st.enhet = null; ritaMeny(); sokvag([["Enheter", "#/"], ["Konton"]]);
+  const s = st.session || {}, arChef = s.roll === "chef";
+  let lista = [];
+  try { lista = await api("GET", "anvandare"); } catch { lista = null; }
+  const forsta = lista && !lista.length;
+  const ROLL = { chef: "Chef – godkänner och aktiverar scheman, hanterar konton", schemalaggare: "Schemaläggare – lägger och jämför scheman" };
+  let h = `<section class="kort"><h1>Konton och roller</h1><p class="dampad" style="margin-top:6px">Bara en <b>chef</b> kan godkänna och aktivera ett schema. Schemaläggare lägger, justerar och jämför scheman. Användarnamnet kan vara en id-kod i stället för ett namn.</p>
+    ${s.anvandare ? `<p class="liten">Du är inloggad som <b>${esc(s.anvandare)}</b> (${s.roll === "chef" ? "chef" : "schemaläggare"}).</p>` : s.roll === "schemalaggare" ? `<p class="liten">Du är inloggad med det gemensamma lösenordet (schemaläggare).</p>` : ""}</section>`;
+  if (lista && lista.length) h += `<section class="kort"><h2>Konton</h2><div class="rull"><table><thead><tr><th>Användarnamn</th><th>Roll</th><th>Skapat</th><th></th></tr></thead><tbody>
+    ${lista.map(u => `<tr><td><b>${esc(u.namn)}</b></td><td>${u.roll === "chef" ? "Chef" : "Schemaläggare"}</td><td>${datum(u.skapad)}</td><td>${arChef && u.namn !== s.anvandare ? `<button class="liten fara" data-g="konto-bort" data-n="${esc(u.namn)}">Ta bort</button>` : ""}</td></tr>`).join("")}</tbody></table></div></section>`;
+  if (forsta || arChef) h += `<section class="kort"><h2>${forsta ? "Skapa det första kontot – det blir chef" : "Nytt konto"}</h2>
+    <form id="konto-ny" class="falt" style="align-items:end">
+      <div><label for="k-namn">Användarnamn</label><input id="k-namn" required minlength="2" maxlength="40" pattern="[A-Za-z0-9_.@\-]+" autocomplete="off"></div>
+      ${forsta ? "" : `<div><label for="k-roll">Roll</label><select id="k-roll">${Object.entries(ROLL).map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></div>`}
+      <div><label for="k-losen">Lösenord (minst 10 tecken)</label><input id="k-losen" type="password" minlength="10" required autocomplete="new-password"></div>
+      <div><button class="primar" type="submit">Skapa konto</button></div></form>
+    <p class="dampad liten" style="margin-top:8px">${forsta ? "När kontot är skapat loggar man in med användarnamn och lösenord. Det gemensamma lösenordet fungerar fortfarande och ger rollen schemaläggare." : "Ge personen lösenordet på ett säkert sätt och be dem byta det."}</p></section>`;
+  if (s.anvandare) h += `<section class="kort"><h2>Byt ditt lösenord</h2><form id="konto-byt" class="falt" style="align-items:end">
+      <div><label for="b-gammalt">Nuvarande lösenord</label><input id="b-gammalt" type="password" required autocomplete="current-password"></div>
+      <div><label for="b-nytt">Nytt lösenord (minst 10 tecken)</label><input id="b-nytt" type="password" minlength="10" required autocomplete="new-password"></div>
+      <div><button type="submit">Byt lösenord</button></div></form></section>`;
+  if (lista === null) h += `<section class="kort"><p class="dampad">Bara en chef kan se och skapa konton.</p></section>`;
+  vy().innerHTML = h;
+  const ny = $("#konto-ny");
+  if (ny) ny.onsubmit = async e => {
+    e.preventDefault();
+    try {
+      const r = await api("POST", "anvandare", { namn: $("#k-namn").value.trim(), losenord: $("#k-losen").value, roll: $("#k-roll")?.value || "chef" });
+      meddela(forsta ? "Chefskontot är skapat. Logga in med det." : `Kontot är skapat (${r.roll === "chef" ? "chef" : "schemaläggare"}).`);
+      if (forsta) { await api("POST", "logga-ut").catch(() => {}); return visaInloggning(); }
+      visaKonton();
+    } catch (err) { meddela(err.message); }
+  };
+  const byt = $("#konto-byt");
+  if (byt) byt.onsubmit = async e => {
+    e.preventDefault();
+    try { await api("POST", "anvandare/losenord", { gammalt: $("#b-gammalt").value, nytt: $("#b-nytt").value }); meddela("Lösenordet är bytt."); byt.reset(); }
+    catch (err) { meddela(err.message); }
+  };
+}
+
 async function route() {
   stoppaPollning();
   stangLada();
@@ -1054,8 +1108,8 @@ async function route() {
   const d = sokv.split("/").filter(Boolean), q = new URLSearchParams(fraga);
   try {
     const s = await api("GET", "session");
-    if (!s.inloggad) return visaInloggning();
-    kravsInloggning = s.kravs;
+    if (!s.inloggad) return visaInloggning(s);
+    kravsInloggning = s.kravs; st.session = s;
     if (st.enhet && st.andrad && !(d[0] === "e" && +d[1] === st.enhet.id)) await spara();
     if (!st.enhetLista) { try { st.enhetLista = await api("GET", "enheter"); } catch { st.enhetLista = []; } }
     if (d[0] === "e") {
@@ -1064,6 +1118,7 @@ async function route() {
       else if (vyn === "installningar") await visaInstallningar(id);
       else if (vyn === "analys") await visaAnalys(id);
       else if (vyn === "oversikt") await visaOversikt(id);
+      else if (vyn === "kalender") await visaKalender(id);
       else if (vyn === "behov") await visaBehov(id);
       else if (vyn === "bemanningsbalans") await visaBemanningsbalans(id);
       else if (vyn === "medarbetare") await visaMedarbetare(id, kid, q);
@@ -1073,6 +1128,7 @@ async function route() {
       else if (vyn === "rapporter") await visaRapporter(id);
       else await visaKorningsvy(id, vyn, kid, q);
     } else if (d[0] === "jamfor") await visaJamfor(d[1].split(",").map(Number));
+    else if (d[0] === "konton") await visaKonton();
     else await visaEnheter();
     vy().focus({ preventScroll: true });
     if (st.oppnaAssistent && st.enhet && typeof oppnaAssistent === "function") { st.oppnaAssistent = false; oppnaAssistent(GUIDE.AI_START); }

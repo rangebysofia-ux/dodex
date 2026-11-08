@@ -15,7 +15,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemamotor/export.py` – Excel och PDF.
 - `schemamotor/justera.py` – räknar om ett schema som användaren har justerat för hand (rast, arbetstid, vakanser). Om reglerna följs avgör validate.py.
 - `schemamotor/analys.py` – underlag, bemanningsförslag inom budget och konsekvenser av lagda scheman. Se `docs/analys.md`.
-- `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg).
+- `schemawebb/` – webbtjänst (FastAPI, SQLite) och gränssnitt i `statisk/` (vanlig JavaScript, inget byggsteg). Konton med roller (chef, schemaläggare); bara chef godkänner och aktiverar scheman, och ett godkänt schema är låst (`docs/godkant-schema.md`).
 - `light/` – lättversion som körs helt i webbläsaren: `motor.js` (heuristisk schemaläggning, samma hårda regler), `granskning.js` (fristående översättning av validate.py, får inte dela kod med motor.js), `sida.html` (gränssnitt), `analys.js` (översättning av analys.py för Simulering, jämförs med `tests/test_analys_light.py`). `python light/bygg.py` bygger `light/schema-light.html`. Ändras en regel i Python ska den ändras här också.
 - `schemawebb/statisk/ob.js` – OB enligt AB 25 § 21, kalenderstyrt med daterade beloppsnivåer. Delas av webben och lättversionen. Se `docs/ob.md`. Kontrollerade belopp läggs bara till efter kontroll mot primärkälla. Efter sista kontrollerade nivån räknas en prognos (standard 3 % per år, användarens beslut), alltid märkt som prognos och aldrig kallad avtal.
 - `schemawebb/statisk/guide.js` – startsidan (Vad vill du göra?) och guiden för en ny enhet. Delas av webben och lättversionen. Räknar bara förslag; reglerna ligger i motorn och granskningen.

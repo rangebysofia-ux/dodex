@@ -8,6 +8,7 @@ Tjänsten är en Docker-container (`Dockerfile`) med en SQLite-databas på en di
 2. Skapa ett konto på render.com och koppla det till GitHub.
 3. Välj **New → Blueprint**, välj repot och godkänn. Render läser `render.yaml`.
 4. Fyll i **SCHEMA_LOSENORD** när Render frågar. Välj ett långt lösenord (minst 16 tecken) och dela det bara med dem som ska använda systemet.
+   Logga sedan in och skapa chefskontot under **Konton**: det första kontot blir chef, och bara chefer kan godkänna och aktivera scheman.
 5. Vänta tills bygget är klart (några minuter första gången). Adressen visas överst, till exempel `https://dodex.onrender.com` (är namnet upptaget lägger Render till ett kort tillägg, som `dodex-a1b2.onrender.com`). Egen domän, till exempel `dodex.rangeby.se`, kopplas under Settings → Custom Domains med en CNAME-post hos domänleverantören som pekar på Render-adressen.
 6. Öppna adressen i mobilen och logga in. Lägg gärna sidan på hemskärmen.
 
@@ -17,7 +18,7 @@ Planen `starter` behövs eftersom gratisplanen saknar disk: utan disk försvinne
 
 | Variabel | Betydelse |
 |---|---|
-| `SCHEMA_LOSENORD` | Lösenord för inloggning. Tomt = ingen inloggning (bara för egen dator). |
+| `SCHEMA_LOSENORD` | Gemensamt lösenord (rollen schemaläggare). Tomt och inga konton = ingen inloggning (bara för egen dator). Konton med roller skapas under Konton; det första blir chef (docs/godkant-schema.md). |
 | `SCHEMA_HEMLIGHET` | Nyckel som signerar inloggningen. Render skapar en slumpad. Byts den loggas alla ut. |
 | `SCHEMA_DATA` | Katalog för databasen, `/var/data` på disken. |
 | `SCHEMA_MAX_TID` | Högsta antal sekunder per optimeringssteg (standard 60). |

@@ -4,7 +4,9 @@ Starta lokalt:
     uvicorn schemawebb.app:app --port 8000
 
 Miljövariabler:
-    SCHEMA_LOSENORD   lösenord för inloggning. Utan värde krävs ingen inloggning (bara för egen dator).
+    SCHEMA_LOSENORD   gemensamt lösenord (roll schemaläggare). Utan värde och utan konton krävs ingen
+                      inloggning (bara för egen dator). Konton med roller skapas i gränssnittet; det första
+                      kontot blir chef. Bara chef får godkänna och aktivera scheman (docs/godkant-schema.md).
     SCHEMA_HEMLIGHET  nyckel för att signera inloggningen. Utan värde härleds den från lösenordet.
     SCHEMA_DATA       katalog för databasen (standard ./data).
     SCHEMA_MAX_TID    högsta antal sekunder per optimeringssteg (standard 60).
@@ -23,6 +25,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
+from datetime import date
 from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -58,31 +61,91 @@ def _losenord():
 
 
 def _nyckel():
-    h = os.environ.get("SCHEMA_HEMLIGHET") or ("schemasystem:" + _losenord())
+    h = os.environ.get("SCHEMA_HEMLIGHET")
+    if not h and _losenord():
+        h = "schemasystem:" + _losenord()
+    if not h:
+        # konton utan gemensamt lösenord och utan SCHEMA_HEMLIGHET: en slumpad nyckel som sparas bredvid databasen
+        fil = db.sokvag().parent / "hemlighet"
+        fil.parent.mkdir(parents=True, exist_ok=True)
+        if not fil.exists():
+            fil.write_text(os.urandom(32).hex())
+        h = fil.read_text().strip()
     return hashlib.sha256(h.encode()).digest()
 
 
-def _signera(utgang: int) -> str:
-    data = str(utgang).encode()
+def _signera(utgang: int, namn: str = "", roll: str = "") -> str:
+    data = (f"{utgang}|{namn}|{roll}" if namn else str(utgang)).encode()
     sig = hmac.new(_nyckel(), data, hashlib.sha256).digest()
     return base64.urlsafe_b64encode(data + b"." + sig).decode()
 
 
-def _giltig(token: Optional[str]) -> bool:
+def _token(token: Optional[str]):
+    """(namn eller None) för en giltig inloggning, annars False."""
     if not token:
         return False
     try:
         ra = base64.urlsafe_b64decode(token.encode())
-        data, sig = ra.split(b".", 1)
-        return (hmac.compare_digest(sig, hmac.new(_nyckel(), data, hashlib.sha256).digest())
-                and int(data) > time.time())
+        data, punkt, sig = ra[:-33], ra[-33:-32], ra[-32:]  # signaturen är 32 byte
+        if punkt != b".":
+            return False
+        if not hmac.compare_digest(sig, hmac.new(_nyckel(), data, hashlib.sha256).digest()):
+            return False
+        delar = data.decode().split("|")
+        if int(delar[0]) <= time.time():
+            return False
+        return delar[1] if len(delar) > 1 and delar[1] else None
     except Exception:
         return False
 
 
+def _giltig(token: Optional[str]) -> bool:
+    return _token(token) is not False
+
+
+# Lösenord för konton: PBKDF2-SHA256 med salt (standardbiblioteket, inget nytt beroende).
+def _hasha(losenord: str, salt: Optional[bytes] = None, varv: int = 200_000) -> str:
+    salt = salt or os.urandom(16)
+    return f"pbkdf2${varv}${salt.hex()}${hashlib.pbkdf2_hmac('sha256', losenord.encode(), salt, varv).hex()}"
+
+
+def _stammer(losenord: str, lagrat: str) -> bool:
+    try:
+        _, varv, salt, h = lagrat.split("$")
+        return hmac.compare_digest(hashlib.pbkdf2_hmac("sha256", losenord.encode(), bytes.fromhex(salt), int(varv)).hex(), h)
+    except Exception:
+        return False
+
+
+def _kravs() -> bool:
+    return bool(_losenord()) or db.antal_anvandare() > 0
+
+
+def _session(request: Request):
+    """Vem som är inloggad: {"anvandare", "roll"} eller None."""
+    if not _kravs():
+        return {"anvandare": None, "roll": "chef"}  # egen dator utan lösenord och utan konton
+    t = _token(request.cookies.get(KAKA))
+    if t is False:
+        return None
+    if t is None:  # gemensamt lösenord
+        return {"anvandare": None, "roll": "schemalaggare"} if _losenord() else None
+    u = db.anvandare(t)
+    return {"anvandare": u["namn"], "roll": u["roll"]} if u else None
+
+
 def inloggad(request: Request):
-    if _losenord() and not _giltig(request.cookies.get(KAKA)):
+    s = _session(request)
+    if s is None:
         raise HTTPException(401, "Logga in först.")
+    return s
+
+
+def chef(request: Request):
+    s = inloggad(request)
+    if s["roll"] != "chef":
+        raise HTTPException(403, "Bara en chef kan göra det här. Logga in med ett chefskonto.")
+    return s
 
 
 # ---------------------------------------------------------------- körning
@@ -176,23 +239,95 @@ async def sakerhet(request: Request, call_next):
 
 class Inloggning(BaseModel):
     losenord: str
+    anvandare: Optional[str] = None
 
 
 @app.get("/api/session")
 def session(request: Request):
-    return {"kravs": bool(_losenord()), "inloggad": not _losenord() or _giltig(request.cookies.get(KAKA))}
+    s = _session(request)
+    return {"kravs": _kravs(), "inloggad": s is not None, "anvandare": s and s["anvandare"], "roll": s and s["roll"],
+            "konton": db.antal_anvandare() > 0, "gemensamt": bool(_losenord())}
 
 
 @app.post("/api/logga-in")
 def logga_in(data: Inloggning, request: Request, response: Response):
-    if not _losenord():
-        return {"ok": True}
-    if not hmac.compare_digest(data.losenord.encode(), _losenord().encode()):
-        time.sleep(1)
-        raise HTTPException(401, "Fel lösenord.")
-    response.set_cookie(KAKA, _signera(int(time.time()) + GILTIG_S), max_age=GILTIG_S, httponly=True,
+    namn = (data.anvandare or "").strip()
+    if namn:
+        u = db.anvandare(namn)
+        if not u or not _stammer(data.losenord, u["losenord"]):
+            time.sleep(1)
+            raise HTTPException(401, "Fel användarnamn eller lösenord.")
+        token = _signera(int(time.time()) + GILTIG_S, u["namn"], u["roll"])
+    else:
+        if not _kravs():
+            return {"ok": True}
+        if not _losenord():
+            raise HTTPException(401, "Ange ditt användarnamn.")
+        if not hmac.compare_digest(data.losenord.encode(), _losenord().encode()):
+            time.sleep(1)
+            raise HTTPException(401, "Fel lösenord.")
+        token = _signera(int(time.time()) + GILTIG_S)
+    response.set_cookie(KAKA, token, max_age=GILTIG_S, httponly=True,
                         samesite="strict", secure=request.url.scheme == "https"
                         or request.headers.get("x-forwarded-proto") == "https")
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- konton och roller
+
+class KontoIn(BaseModel):
+    namn: str = Field(min_length=2, max_length=40, pattern=r"^[\w.@-]+$")
+    losenord: str = Field(min_length=10, max_length=200)
+    roll: Literal["chef", "schemalaggare"] = "schemalaggare"
+
+
+@app.get("/api/anvandare")
+def lista_anvandare(request: Request):
+    s = inloggad(request)
+    if db.antal_anvandare() and s["roll"] != "chef":
+        raise HTTPException(403, "Bara en chef kan se kontona.")
+    return db.anvandare_lista()
+
+
+@app.post("/api/anvandare", status_code=201)
+def skapa_anvandare(k: KontoIn, request: Request):
+    s = inloggad(request)
+    forsta = db.antal_anvandare() == 0
+    if not forsta and s["roll"] != "chef":
+        raise HTTPException(403, "Bara en chef kan skapa konton.")
+    if db.anvandare(k.namn):
+        raise HTTPException(409, "Det finns redan ett konto med det namnet.")
+    db.skapa_anvandare(k.namn, _hasha(k.losenord), "chef" if forsta else k.roll)  # det första kontot blir chef
+    return {"ok": True, "roll": "chef" if forsta else k.roll}
+
+
+@app.delete("/api/anvandare/{namn}")
+def ta_bort_anvandare(namn: str, request: Request):
+    chef(request)
+    u = db.anvandare(namn)
+    if not u:
+        raise HTTPException(404, "Kontot finns inte.")
+    if u["roll"] == "chef" and db.antal_anvandare("chef") == 1:
+        raise HTTPException(409, "Det sista chefskontot kan inte tas bort.")
+    db.ta_bort_anvandare(namn)
+    return {"ok": True}
+
+
+class BytLosenord(BaseModel):
+    gammalt: str
+    nytt: str = Field(min_length=10, max_length=200)
+
+
+@app.post("/api/anvandare/losenord")
+def byt_losenord(b: BytLosenord, request: Request):
+    s = inloggad(request)
+    u = s["anvandare"] and db.anvandare(s["anvandare"])
+    if not u:
+        raise HTTPException(409, "Logga in med ditt eget konto för att byta lösenord.")
+    if not _stammer(b.gammalt, u["losenord"]):
+        time.sleep(1)
+        raise HTTPException(401, "Det nuvarande lösenordet stämmer inte.")
+    db.byt_losenord(u["namn"], _hasha(b.nytt))
     return {"ok": True}
 
 
@@ -222,6 +357,11 @@ def hamta_enhet(eid: int):
     e = db.enhet(eid)
     if not e:
         raise HTTPException(404, "Enheten finns inte.")
+    # det godkända schema som gäller i dag, och ett som börjar gälla senare
+    idag = date.today().isoformat()
+    akt = db.aktiveringar(eid)
+    e["aktivt"] = next((a for a in akt if a["fran_datum"] <= idag), None)
+    e["kommande"] = next((a for a in reversed(akt) if a["fran_datum"] > idag), None)
     return e
 
 
@@ -306,14 +446,48 @@ def hamta_korning(kid: int):
     k = db.korning(kid)
     if not k:
         raise HTTPException(404, "Körningen finns inte.")
+    k["godkand"] = db.aktivering_for(kid)
     return k
 
 
 @app.delete("/api/korningar/{kid}", dependencies=[Depends(inloggad)])
 def radera_korning(kid: int):
+    if db.aktivering_for(kid):
+        raise HTTPException(409, "Ett godkänt schema är låst och kan inte tas bort.")
     if not db.ta_bort_korning(kid):
         raise HTTPException(404, "Körningen finns inte.")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- godkänt och aktiverat schema
+
+class AktiveraIn(BaseModel):
+    fran_datum: date
+
+
+@app.post("/api/korningar/{kid}/aktivera", status_code=201)
+def aktivera_korning(kid: int, a: AktiveraIn, request: Request):
+    """Chefen godkänner ett schema och aktiverar det från en måndag. Schemat låses (docs/godkant-schema.md)."""
+    s = chef(request)
+    k = db.korning(kid)
+    if not k:
+        raise HTTPException(404, "Körningen finns inte.")
+    if k["status"] != "klar" or (k.get("resultat") or {}).get("status") != "OK":
+        raise HTTPException(409, "Bara ett färdigt schema kan godkännas.")
+    brott = len((k.get("granskning") or {}).get("brott", []))
+    if brott:
+        raise HTTPException(409, f"Schemat har {brott} brott mot hårda regler och kan inte godkännas. Rätta dem först.")
+    if db.aktivering_for(kid):
+        raise HTTPException(409, "Schemat är redan godkänt.")
+    if a.fran_datum.weekday() != 0:
+        raise HTTPException(422, "Schemat aktiveras från en måndag.")
+    db.aktivera(k["enhet_id"], kid, a.fran_datum.isoformat(), s["anvandare"] or "lokalt")
+    return db.aktivering_for(kid)
+
+
+@app.get("/api/enheter/{eid}/aktiveringar", dependencies=[Depends(inloggad)])
+def lista_aktiveringar(eid: int):
+    return db.aktiveringar(eid)
 
 
 def _filnamn(k, slut):

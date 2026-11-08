@@ -57,7 +57,7 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 
 Grundschemat (det som läggs, jämförs och justeras) och den löpande planeringen hålls isär. När ett schema är godkänt och aktiverat blir det underlaget för planeringen, där frånvaro och vikarier hanteras per datum.
 
-- [ ] **22. Godkänt och aktiverat schema.** Ett valt schema godkänns och aktiveras från ett datum. Det får en egen färg och låses: ändringar görs sedan som avvikelser i planeringen, inte i grundschemat. Ett nytt grundschema kan tas fram och aktiveras senare utan att det gamla försvinner.
+- [x] **22. Godkänt och aktiverat schema.** *Byggt med konton och roller (chef, schemaläggare) i webbtjänsten (docs/godkant-schema.md).* Ett valt schema godkänns och aktiveras från ett datum. Det får en egen färg och låses: ändringar görs sedan som avvikelser i planeringen, inte i grundschemat. Ett nytt grundschema kan tas fram och aktiveras senare utan att det gamla försvinner.
 - [ ] **23. Planeringsdelen.** Det aktiverade schemat rullas ut på riktiga datum (kalender). Där registreras frånvaro per pass (sjuk, semester, vård av barn, utbildning, annan ledighet), och då blir passet vakant. Resurspass och resurstid visas, så att frånvaro kan täckas inom gruppen först (kopplas till punkt 21).
 - [ ] **24. Boka vikarier.** Vakanta pass i planeringen kan bokas med vikarie ur en vikarielista (id-koder, tillgänglighet), och reglerna för vila gäller också vikarien. Bokade, obokade och övertid syns per dag.
 - [ ] **25. Faktiska löner och kostnader.** Lön per person (månadslön eller timlön) i stället för en schablon, plus OB, övertid och vikariekostnad. Kostnaden räknas för grundschemat och för planeringen.

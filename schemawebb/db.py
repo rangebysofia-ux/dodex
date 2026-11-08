@@ -36,6 +36,24 @@ create table if not exists korningar (
     sekunder real
 );
 create index if not exists korningar_enhet on korningar(enhet_id);
+-- konton med roller: chef (får godkänna och aktivera scheman, hanterar konton) eller schemaläggare
+create table if not exists anvandare (
+    id integer primary key autoincrement,
+    namn text not null unique collate nocase,
+    losenord text not null,
+    roll text not null check (roll in ('chef', 'schemalaggare')),
+    skapad real not null
+);
+-- godkända och aktiverade grundscheman: körningen är låst och gäller för enheten från datumet
+create table if not exists aktiveringar (
+    id integer primary key autoincrement,
+    enhet_id integer not null references enheter(id) on delete cascade,
+    korning_id integer not null unique references korningar(id) on delete cascade,  -- appen hindrar att ett godkänt schema tas bort
+    fran_datum text not null,
+    godkand_av text not null,
+    godkand_tid real not null
+);
+create index if not exists aktiveringar_enhet on aktiveringar(enhet_id);
 """
 
 JSONFALT = ("indata", "resultat", "granskning", "forklaring", "balans")
@@ -150,7 +168,8 @@ def korningar(enhet_id):
         rader = _db().execute(
             "select id, enhet_id, namn, status, steg, fel, skapad, sekunder, "
             "json_extract(resultat, '$.status') as losning, json_extract(resultat, '$.kpi') as kpi, "
-            "json_array_length(json_extract(granskning, '$.brott')) as brott "
+            "json_array_length(json_extract(granskning, '$.brott')) as brott, "
+            "(select a.fran_datum from aktiveringar a where a.korning_id = korningar.id) as godkand_fran "
             "from korningar where enhet_id = ? order by id desc", (enhet_id,)).fetchall()
     ut = []
     for r in rader:
@@ -162,3 +181,60 @@ def korningar(enhet_id):
 
 def ta_bort_korning(kid):
     return kor("delete from korningar where id = ?", kid).rowcount
+
+
+# ---------------------------------------------------------------- konton
+
+def anvandare_lista():
+    with _las:
+        return [dict(r) for r in _db().execute("select id, namn, roll, skapad from anvandare order by namn").fetchall()]
+
+
+def anvandare(namn):
+    with _las:
+        r = _db().execute("select * from anvandare where namn = ?", (namn,)).fetchone()
+    return dict(r) if r else None
+
+
+def antal_anvandare(roll=None):
+    with _las:
+        if roll:
+            return _db().execute("select count(*) from anvandare where roll = ?", (roll,)).fetchone()[0]
+        return _db().execute("select count(*) from anvandare").fetchone()[0]
+
+
+def skapa_anvandare(namn, losenord_hash, roll):
+    return kor("insert into anvandare (namn, losenord, roll, skapad) values (?, ?, ?, ?)",
+               namn, losenord_hash, roll, time.time()).lastrowid
+
+
+def byt_losenord(namn, losenord_hash):
+    return kor("update anvandare set losenord = ? where namn = ?", losenord_hash, namn).rowcount
+
+
+def ta_bort_anvandare(namn):
+    return kor("delete from anvandare where namn = ?", namn).rowcount
+
+
+# ---------------------------------------------------------------- godkända scheman
+
+def aktivera(enhet_id, korning_id, fran_datum, godkand_av):
+    return kor("insert into aktiveringar (enhet_id, korning_id, fran_datum, godkand_av, godkand_tid) values (?, ?, ?, ?, ?)",
+               enhet_id, korning_id, fran_datum, godkand_av, time.time()).lastrowid
+
+
+def aktiveringar(enhet_id):
+    """Alla godkända scheman för enheten, nyast först (efter datum de gäller från)."""
+    with _las:
+        rader = _db().execute(
+            "select a.*, k.namn as korning_namn, json_extract(k.resultat, '$.veckor') as veckor "
+            "from aktiveringar a join korningar k on k.id = a.korning_id "
+            "where a.enhet_id = ? order by a.fran_datum desc, a.id desc", (enhet_id,)).fetchall()
+    return [dict(r) for r in rader]
+
+
+def aktivering_for(korning_id):
+    with _las:
+        r = _db().execute("select * from aktiveringar where korning_id = ?", (korning_id,)).fetchone()
+    return dict(r) if r else None
+

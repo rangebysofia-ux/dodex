@@ -1,5 +1,6 @@
 """Balansmallen (GRAF.balans i schemawebb/statisk/grafer.js): ett schema i fyra perspektiv, räknat ur schemat."""
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -66,3 +67,29 @@ def test_jamforelse_visar_vilket_schema_som_gor_vad(tmp_path):
     assert "Balansmall" in html and "Alt 1" in html and "Alt 2" in html
     assert 'class="tal nw bast"' in html          # bäst på raden markeras
     assert "balans-vem" in html                    # vilket schema som gör vad
+
+
+def kalender(tmp_path, perioder, idag, start, manader=3):
+    f = tmp_path / "k.json"
+    f.write_text(json.dumps({"perioder": perioder, "idag": idag, "start": start, "manader": manader}), encoding="utf-8")
+    kod = ("const G=require(process.argv[1]);const d=JSON.parse(require('fs').readFileSync(process.argv[2],'utf8'));"
+           "const k=G.kalender(d.perioder,{idag:d.idag,start:d.start,manader:d.manader});"
+           "process.stdout.write(JSON.stringify({html:k.html,nu:k.nu&&k.nu.id,kommande:k.kommande.map(p=>p.id)}))")
+    return json.loads(subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "grafer.js"), str(f)],
+                                     capture_output=True, text=True, timeout=60, check=True).stdout)
+
+
+def test_kalender_visar_godkanda_perioder(tmp_path):
+    """Kalendern: ett godkänt schema gäller från sin måndag tills nästa börjar och rullar runt (V1 efter sista veckan)."""
+    p = [{"id": 1, "namn": "S1", "fran_datum": "2026-11-09", "veckor": 4},
+         {"id": 2, "namn": "S2", "fran_datum": "2027-01-04", "veckor": 6}]
+    k = kalender(tmp_path, p, "2026-12-15", "2026-11-01")
+    assert k["nu"] == 1 and k["kommande"] == [2]
+    rader = re.findall(r'<td class="kal-vecka">v\.(\d+)</td>\s*<td class="kal-schema">(.*?)</td>', k["html"], re.S)
+    vecka = {int(v): re.sub(r"<[^>]+>", "", s).replace("▶", "").split() for v, s in rader}
+    assert vecka[45] == ["Inget", "godkänt", "schema–"]
+    assert vecka[46] == ["S1", "V1/4"] and vecka[49] == ["S1", "V4/4"] and vecka[50] == ["S1", "V1/4"]
+    assert vecka[53] == ["S1", "V4/4"]                   # 2026 har vecka 53
+    assert vecka[1] == ["S2", "V1/6"]                     # nästa godkända schema tar över från sin måndag
+    assert 'class="kal-dag idag"' in k["html"] or 'class="kal-dag idag ' in k["html"] or "idag" in k["html"]
+    assert kalender(tmp_path, [], "2026-12-15", "2026-11-01")["nu"] is None

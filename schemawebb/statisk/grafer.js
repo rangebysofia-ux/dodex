@@ -580,6 +580,54 @@ function balansKort(lista) {
   return h;
 }
 
-return { balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+// ---------------------------------------------------------------- kalender över godkända scheman (färdplan 22–23)
+// perioder: [{id, namn, fran_datum ("ÅÅÅÅ-MM-DD", en måndag), veckor, lank}]. Ett godkänt schema gäller från sitt
+// datum tills nästa börjar, och rullar runt (vecka 1 igen efter sista veckan). Varje rad är en vecka.
+const MANAD = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const dagstr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const ttDatum = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d, 12); };
+function isoVecka(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dag = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - dag);
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+}
+function periodFor(perioder, dag) {
+  let p = null;
+  for (const x of perioder) if (x.fran_datum <= dag && (!p || x.fran_datum >= p.fran_datum)) p = x;
+  return p;
+}
+function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date()) } = {}) {
+  const sorterade = [...perioder].sort((a, b) => a.fran_datum.localeCompare(b.fran_datum));
+  const farg = new Map(sorterade.map((p, i) => [p.id, i % 5]));
+  const s0 = start ? ttDatum(start) : (() => { const t = ttDatum(idag); return new Date(t.getFullYear(), t.getMonth(), 1, 12); })();
+  const slut = new Date(s0.getFullYear(), s0.getMonth() + manader, 1, 12);
+  const d = new Date(s0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));  // måndagen i första veckan
+  let h = `<div class="rull"><table class="kalender"><thead><tr><th>Vecka</th><th>Schema</th>${DAGAR.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>`;
+  let manad = -1;
+  while (d < slut) {
+    const mandag = new Date(d), sondag = new Date(d); sondag.setDate(sondag.getDate() + 6);
+    const nyManad = [mandag, sondag].find(x => x.getMonth() !== manad && x >= s0 && x < slut && (x.getDate() <= 7 || manad === -1));
+    if (nyManad && nyManad.getMonth() !== manad) { manad = nyManad.getMonth(); h += `<tr class="kal-manad"><th colspan="9">${MANAD[manad]} ${nyManad.getFullYear()}</th></tr>`; }
+    const ms = dagstr(mandag), p = periodFor(sorterade, ms);
+    const vecka = p ? Math.floor((ttDatum(ms) - ttDatum(p.fran_datum)) / (7 * 864e5)) % p.veckor + 1 : null;
+    const borjar = p && p.fran_datum === ms;
+    h += `<tr class="${p ? `kal-p${farg.get(p.id)}` : "kal-ingen"}${borjar ? " kal-start" : ""}"><td class="kal-vecka">v.${isoVecka(mandag)}</td>
+      <td class="kal-schema">${p ? `${borjar ? "▶ " : ""}<span class="kal-namn">${p.lank ? `<a href="${p.lank}">${esc(p.namn)}</a>` : esc(p.namn)} </span><span class="kal-v">V${vecka}/${p.veckor}</span>` : `<span class="dampad"><span class="kal-namn">Inget godkänt schema</span><span class="kal-kort">–</span></span>`}</td>`;
+    for (let i = 0; i < 7; i++) {
+      const x = new Date(mandag); x.setDate(x.getDate() + i);
+      const ds = dagstr(x), utanfor = x < s0 || x >= slut;
+      h += `<td class="kal-dag${i > 4 ? " helg" : ""}${ds === idag ? " idag" : ""}${utanfor ? " utanfor" : ""}"${p ? ` data-tips="${esc(`${ds}: ${p.namn}, vecka ${vecka} av ${p.veckor}`)}"` : ""}>${x.getDate()}</td>`;
+    }
+    h += `</tr>`;
+    d.setDate(d.getDate() + 7);
+  }
+  h += `</tbody></table></div>`;
+  const nu = periodFor(sorterade, idag), kommande = sorterade.filter(p => p.fran_datum > idag);
+  const lista = sorterade.length ? `<ul class="kal-lista">${[...sorterade].reverse().map(p => `<li class="kal-p${farg.get(p.id)}"><i></i><span>${p.lank ? `<a href="${p.lank}">${esc(p.namn)}</a>` : esc(p.namn)}</span>
+      <span class="dampad">från ${esc(p.fran_datum)} · ${p.veckor} veckor${p === nu ? " · <b>gäller nu</b>" : p.fran_datum > idag ? " · kommande" : " · har ersatts"}</span></li>`).join("")}</ul>` : "";
+  return { html: h, lista, nu, kommande };
+}
+
+return { kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

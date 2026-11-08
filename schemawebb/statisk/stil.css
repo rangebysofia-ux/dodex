@@ -467,3 +467,46 @@ table.jamfor th { vertical-align: top; min-width: 180px; }
 table.balanstabell tr.perspektiv th { text-align: left; padding-top: 12px; font-size: 13.5px; color: var(--text); border-bottom: 2px solid var(--linje); }
 table.balanstabell td.bast { color: var(--bra); font-weight: 800; } table.balanstabell td.rod { color: var(--dalig, var(--kritisk, #b8432f)); font-weight: 800; }
 table.balanstabell td[data-tips] { cursor: help; }
+
+/* godkänt och aktiverat grundschema: guldram och märke (färdplan 22) */
+.kort.godkand { border: 3px solid var(--guld, #c9a03a); box-shadow: 0 0 0 4px rgba(213, 180, 106, .18); }
+.godkand-banner { display: flex; gap: 14px; align-items: center; border: 2px solid var(--guld, #c9a03a); background: linear-gradient(135deg, rgba(213, 180, 106, .18), rgba(213, 180, 106, .06)); }
+.godkand-banner strong { display: block; } .godkand-banner .liten { display: block; color: var(--dampad); }
+.godkand-marke { flex: none; background: var(--guld, #c9a03a); color: #25332f; font-weight: 800; border-radius: 999px; padding: 6px 14px; white-space: nowrap; }
+.godkand-chip { display: inline-block; vertical-align: middle; margin-left: 8px; font-size: 12px; font-weight: 800; background: var(--guld, #c9a03a); color: #25332f; border-radius: 999px; padding: 2px 10px; }
+.godkann-rad { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 2px; }
+.godkann-form { display: grid; gap: 10px; flex: 1; } .godkann-form .chips { align-items: center; }
+.inloggad-som { font-size: 12px; color: #d9e6df; padding: 4px 14px; }
+
+/* kalender över godkända scheman */
+table.kalender { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-variant-numeric: tabular-nums; }
+table.kalender th { font-size: 12px; color: var(--dampad); text-align: center; padding: 4px; }
+table.kalender th:nth-child(-n+2) { text-align: left; }
+table.kalender tr.kal-manad th { text-align: left; font-size: 14px; color: var(--text); padding: 12px 4px 4px; text-transform: capitalize; }
+table.kalender td { padding: 6px 4px; text-align: center; border: 0; }
+table.kalender td.kal-vecka { text-align: left; font-size: 12px; color: var(--dampad); white-space: nowrap; border-radius: 8px 0 0 8px; padding-left: 8px; }
+table.kalender td.kal-schema { text-align: left; font-size: 13px; white-space: nowrap; }
+table.kalender td:last-child { border-radius: 0 8px 8px 0; }
+table.kalender td.kal-dag { min-width: 30px; font-size: 13px; }
+table.kalender td.helg { font-weight: 700; }
+table.kalender td.utanfor { opacity: .35; }
+table.kalender td.idag { outline: 2px solid var(--text); outline-offset: -3px; border-radius: 8px; font-weight: 800; }
+table.kalender tr.kal-start td { box-shadow: inset 0 3px 0 var(--guld, #c9a03a); }
+.kal-v { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 0 7px; background: rgba(255, 255, 255, .6); color: #25332f; margin-left: 4px; }
+tr.kal-p0 td, .kal-lista li.kal-p0 i { background: rgba(213, 180, 106, .32); }
+tr.kal-p1 td, .kal-lista li.kal-p1 i { background: rgba(63, 122, 99, .24); }
+tr.kal-p2 td, .kal-lista li.kal-p2 i { background: rgba(77, 100, 136, .24); }
+tr.kal-p3 td, .kal-lista li.kal-p3 i { background: rgba(184, 67, 47, .18); }
+tr.kal-p4 td, .kal-lista li.kal-p4 i { background: rgba(138, 98, 18, .22); }
+tr.kal-ingen td { background: transparent; }
+.kal-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.kal-lista li { display: grid; grid-template-columns: 14px auto 1fr; gap: 10px; align-items: center; }
+.kal-lista i { width: 14px; height: 14px; border-radius: 4px; }
+.kal-nu { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 12px; padding: 10px 12px; border: 2px solid var(--guld, #c9a03a); border-radius: 12px; }
+.kal-kort { display: none; }
+@media (max-width: 560px) {
+  table.kalender .kal-namn { display: none; } table.kalender .kal-kort { display: inline; }
+  table.kalender td { padding: 6px 1px; } table.kalender td.kal-dag { min-width: 0; font-size: 12.5px; }
+  table.kalender td.kal-vecka { padding-left: 5px; font-size: 11px; } table.kalender th { padding: 4px 1px; font-size: 11px; }
+  .kal-v { margin-left: 0; padding: 0 5px; }
+}

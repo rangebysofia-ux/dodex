@@ -117,7 +117,7 @@ function bemanningsgrafer(res, ind) {
 
 function huvud() {
   const k = st.korning, res = k.resultat;
-  const val = st.korningar.map(x => `<option value="${x.id}"${x.id === k.id ? " selected" : ""}>${esc(x.namn)} · ${datum(x.skapad)}</option>`).join("");
+  const val = st.korningar.map(x => `<option value="${x.id}"${x.id === k.id ? " selected" : ""}>${x.godkand_fran ? "✓ " : ""}${esc(x.namn)} · ${datum(x.skapad)}${x.godkand_fran ? ` · godkänt från ${x.godkand_fran}` : ""}</option>`).join("");
   return `<section class="kort"><div class="rubrikrad">
     <div style="display:block;min-width:220px;flex:1"><label for="korningsval">Körning</label><select id="korningsval" style="max-width:420px">${val}</select></div>
     <div>${res?.status === "OK" ? `<a class="knapp liten" href="api/korningar/${k.id}/excel">${IKON.ladda} Excel</a><a class="knapp liten" href="api/korningar/${k.id}/pdf">${IKON.ladda} PDF</a>` : ""}
@@ -136,7 +136,7 @@ function sammanfattning() {
   const avv = ind.avvikelser || [];
   const andradeAvv = avv.filter(a => ind.regler && ind.regler[a] !== undefined);
   const ok = !brott && !res.kpi.vakanser;
-  return `<section class="kort">
+  return `${godkannandeRuta(k, brott)}<section class="kort">
     <div class="banner ${brott ? "dalig" : res.kpi.vakanser ? "varn" : "ok"}">${brott ? IKON.stopp : res.kpi.vakanser ? IKON.varning : IKON.ok}<div><strong>${
       brott ? `${brott} brott mot hårda regler` : res.kpi.vakanser ? `Schema klart, med ${vakText(res.kpi.vakanser)}` : "Schema klart, utan vakanser och regelbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · beräknat på ${sv(k.sekunder || 0, 1)} s${k.balans ? ` · bemanningsbalansen förutsåg ${vakText(k.balans.forvantade_vakanser)}` : ""}</span></div></div>
@@ -149,6 +149,22 @@ function sammanfattning() {
       <div><b>${sv(aa)}</b><span>årsarbetare${ind.budget_timmar_vecka ? ` · budget ${sv(ind.budget_timmar_vecka, 1)} h` : ""}</span></div>
       <div class="${f.antalBada && !f.jamn ? "fel" : "bra"}"><b>${f.antalBada ? (f.jamn ? "Jämnt" : "Ojämnt") : "–"}</b><span>dag och kväll${f.antalBada ? `, störst skillnad ${sv(f.storst, 1)} pass` : ""}</span></div>
     </div></section>`;
+}
+
+// Godkänt och aktiverat schema (färdplan 22): guldram och banner, eller knappen för chefen.
+const nastaMandag = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return d.toISOString().slice(0, 10); };
+function godkannandeRuta(k, brott) {
+  const a = k.godkand;
+  if (a) return `<section class="kort godkand-banner"><div class="godkand-marke">✓ Godkänt</div><div><strong>Godkänt grundschema – aktivt från ${esc(a.fran_datum)}</strong>
+    <span class="liten">Godkänt av ${esc(a.godkand_av)} ${datum(a.godkand_tid)}. Schemat är låst. Vill du ändra något blir det en ny version som godkänns och aktiveras från ett nytt datum.</span></div></section>`;
+  const roll = st.session?.roll;
+  if (st.godkannForm === k.id) return `<section class="kort godkand-banner"><div class="godkand-marke">✓</div><form class="godkann-form" id="godkann-form">
+    <div><strong>Godkänn och aktivera schemat</strong><span class="liten">Schemat låses och gäller från en måndag. Det tidigare godkända schemat gäller fram till dess.</span></div>
+    <div class="chips"><label for="godkann-fran" class="liten">Gäller från (måndag)</label><input type="date" id="godkann-fran" value="${nastaMandag()}" required style="width:auto">
+    <button class="guld" type="submit">✓ Godkänn</button><button type="button" class="liten" data-g="godkann-avbryt">Avbryt</button></div></form></section>`;
+  if (brott) return "";
+  return `<div class="godkann-rad">${roll === "chef" ? `<button class="guld liten" data-g="godkann">✓ Godkänn och aktivera</button><span class="dampad liten">När schemat är valt godkänner du det, så låses det och gäller från ett datum.</span>`
+    : `<span class="dampad liten">✓ Bara en chef kan godkänna och aktivera schemat.</span>`}</div>`;
 }
 
 function ritaKorningsvy() {
@@ -179,7 +195,7 @@ function ritaKorningsvy() {
   else if (st.vy === "bemanning") h += ritaBemanning();
   else h += ritaSchemavy() + (st.red ? "" : bemanningsgrafer(res, k.indata) + GRAF.aktivitetKort(res));
   vy().innerHTML = h;
-  kopplaKorningsval();
+  kopplaKorningsval(); kopplaGodkann();
 }
 
 function kopplaKorningsval() {
@@ -191,8 +207,9 @@ function kopplaKorningsval() {
 function ritaSchemavy() {
   const res = st.red?.res || st.korning.resultat, filter = st.sv.filter || "alla";
   const F = [["alla", "Alla pass"], ["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"], ["tider", "Klockslag"]];
-  let h = `<section class="kort${st.red ? " redigerar" : ""}"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema</h2>
-    ${st.red ? "" : `<button class="liten" data-g="redigera">${IKON.penna || "✎"} Redigera schemat</button>`}
+  const godk = st.korning.godkand && !st.red;
+  let h = `<section class="kort${st.red ? " redigerar" : ""}${godk ? " godkand" : ""}"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema${godk ? ' <span class="godkand-chip">✓ Godkänt</span>' : ""}</h2>
+    ${st.red ? "" : `<button class="liten" data-g="redigera"${godk ? ' title="Det godkända schemat är låst. Ändringarna sparas som en ny version."' : ""}>${IKON.penna || "✎"} ${godk ? "Gör ny version" : "Redigera schemat"}</button>`}
     <div class="chips" role="group" aria-label="Visa" style="margin-left:auto">${F.map(([v, t]) => `<button class="chip" data-g="filter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
     <div class="chips" role="group" aria-label="Vecka" style="margin-bottom:12px">${Array.from({ length: res.veckor }, (_, v) => `<button class="chip" data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">Vecka ${v + 1}</button>`).join("")}
       ${filter !== "tider" ? `<button class="chip" data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button>` : ""}</div>`;
@@ -668,6 +685,8 @@ async function vyKlick(g, el) {
   if (g === "lagg-manuellt") { if (!(await spara())) return; const k = await api("POST", `enheter/${st.enhet.id}/manuell`); st.startaRedigering = true; st.korning = null; location.hash = `#/e/${st.enhet.id}/schema/${k.id}`; return; }
   if (["redigera", "avsluta-red", "angra", "andra-pass", "ny-pass", "stang-panel", "ta-bort-pass", "spara-pass", "spara-red"].includes(g)) return redigeringsKlick(g, el);
   switch (g) {
+    case "godkann": st.godkannForm = st.korning.id; ritaKorningsvy(); $("#godkann-fran")?.focus(); kopplaGodkann(); return;
+    case "godkann-avbryt": st.godkannForm = null; return ritaKorningsvy();
     case "anvand-forslag": {
       const { id } = await api("POST", `analys/${st.analys.id}/anvand`, { index: +el.dataset.n });
       meddela("Förslaget är sparat som en ny enhet."); st.enhet = null; location.hash = `#/e/${id}/schema`; return;
@@ -685,6 +704,21 @@ async function vyKlick(g, el) {
       if (st.valdCell) el.classList.add("vald");
       $("#info").innerHTML = cellInfo(st.korning.resultat); return;
   }
+}
+
+function kopplaGodkann() {
+  const f = $("#godkann-form"); if (!f) return;
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const fran = $("#godkann-fran").value;
+    if (new Date(fran + "T12:00:00").getDay() !== 1) return meddela("Välj en måndag.");
+    try {
+      await api("POST", `korningar/${st.korning.id}/aktivera`, { fran_datum: fran });
+      st.godkannForm = null; st.korning = await api("GET", "korningar/" + st.korning.id);
+      st.korningar = await api("GET", `enheter/${st.enhet.id}/korningar`);
+      ritaKorningsvy(); meddela(`Schemat är godkänt och aktivt från ${fran}.`);
+    } catch (err) { meddela(err.message); }
+  };
 }
 
 // ---------------------------------------------------------------- jämför

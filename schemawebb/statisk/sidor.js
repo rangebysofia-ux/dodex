@@ -85,6 +85,29 @@ async function visaBehov(id) {
 }
 
 // ---------------------------------------------------------------- Bemanningsbalans (som verksamhetens Excel-mall)
+// ---------------------------------------------------------------- kalender över godkända scheman
+async function visaKalender(id) {
+  st.vy = "kalender";
+  await laddaEnhet(id);
+  ritaMeny();
+  sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/schema`], ["Kalender"]]);
+  const akt = await api("GET", `enheter/${id}/aktiveringar`);
+  const perioder = akt.map(a => ({ id: a.korning_id, namn: a.korning_namn, fran_datum: a.fran_datum, veckor: a.veckor || 1, lank: `#/e/${id}/schema/${a.korning_id}` }));
+  const idag = new Date(), forskj = st.kalForskj || 0;
+  const start = new Date(idag.getFullYear(), idag.getMonth() + forskj, 1);
+  const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
+  const k = GRAF.kalender(perioder, { start: startStr, manader: 6 });
+  const nuText = k.nu ? (() => { const v = Math.floor((new Date() - new Date(k.nu.fran_datum + "T00:00:00")) / (7 * 864e5)) % k.nu.veckor + 1; return `<b>${esc(k.nu.namn)}</b>, vecka ${v} av ${k.nu.veckor}`; })() : "Inget godkänt schema gäller i dag";
+  vy().innerHTML = `<section class="kort"><div class="rubrikrad"><h1 style="margin:0">Kalender</h1>
+      <div class="chips"><button class="liten" data-g="kal-flytta" data-v="-3">‹ Tidigare</button><button class="liten" data-g="kal-flytta" data-v="0">I dag</button><button class="liten" data-g="kal-flytta" data-v="3">Senare ›</button></div></div>
+      <p class="dampad" style="margin:6px 0 0">Vilket godkänt grundschema som gäller vecka för vecka. Ett schema gäller från sitt datum tills nästa börjar, och perioden börjar om (V1) efter sista veckan.</p>
+      <div class="kal-nu"><div><span class="dampad liten">Gäller i dag</span><div>${nuText}</div></div>
+        ${k.kommande.length ? `<div><span class="dampad liten">Kommande</span><div>${k.kommande.map(p => `<b>${esc(p.namn)}</b> från ${esc(p.fran_datum)}`).join(", ")}</div></div>` : ""}</div>
+      ${perioder.length ? "" : `<div class="banner info" style="margin-top:12px">${IKON.kalender}<div><strong>Inget schema är godkänt än</strong>Öppna ett schema och tryck ✓ Godkänn och aktivera. Bara en chef kan göra det.</div></div>`}</section>
+    ${perioder.length ? `<section class="kort"><h2>Godkända scheman</h2>${k.lista}</section>` : ""}
+    <section class="kort">${k.html}</section>`;
+}
+
 async function visaBemanningsbalans(id) {
   st.vy = "bemanningsbalans";
   await laddaEnhet(id);
