@@ -53,6 +53,11 @@ Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterier
 - [ ] **20. Resurspass jämnt fördelade.** Uppföljning per veckodag och mellan dag och kväll, med varning när resurstiden samlas på samma dagar eller på en dygnsdel. Mjukt mål i motorn om det behövs utöver jämn bemanning (beslut 13).
 - [ ] **21. Ledigheter i resurstiden.** Visa per dag var det finns resurs, så att ledigheter (semester, kompledighet, utbildning) kan planeras där utan vikarie, och följ upp planerat mot utfall.
 
+## Fas 7b – Arbetsgrupper
+
+- [x] **27. Team med eget behov och gemensam personal.** Hemteam, lån mellan team, teamfilter och teamkort, inklistring av team (docs/team.md).
+- [x] **28. Organisationsstruktur.** Enheter under Äldreomsorg (SÄBO, Hemtjänst), LSS, Förskola och egna grupper (docs/organisation.md).
+
 ## Fas 8 – Från grundschema till drift
 
 Grundschemat (det som läggs, jämförs och justeras) och den löpande planeringen hålls isär. När ett schema är godkänt och aktiverat blir det underlaget för planeringen, där frånvaro och vikarier hanteras per datum.

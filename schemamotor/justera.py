@@ -6,7 +6,7 @@ schemat följer reglerna avgör den fristående granskningen (validate.py), inte
 """
 import re
 
-from .build import DAGNAMN, DYGN, IndataFel, forbered, klocka, netto_for, tid
+from .build import DAGNAMN, DYGN, IndataFel, forbered, fordela_team, klocka, netto_for, tid
 
 KLOCKA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 DELAR = ("morgon", "kvall", "natt")
@@ -141,6 +141,17 @@ def justera(indata, schema, grund=None):
            "manuella_pass": sum(1 for rad in nytt.values() for p in rad if p and p.get("manuell"))}
     kpi["vakanser"] = kpi["vakanta_pass"] + kpi["vakanta_tidpunkter"]
     kpi["aktivitet_saknas"] = sum(t["saknas"] for t in tillfallen)
+    # team: vem som arbetar i vilket team räknas om efter justeringen (samma fördelning som motorn)
+    extra = {}
+    if prob.get("team"):
+        hem = {p["id"]: p.get("team") for p in prob["personer"]}
+        tack = fordela_team(nytt, prob["team"], hem, W * 7)
+        kpi["team_lan"] = sum(x["inlanade"] for x in tack)
+        kpi["team_saknas"] = sum(x["saknas"] for x in tack)
+        for pid, k in personer.items():
+            k["team"] = hem.get(pid)
+            k["utlanad"] = sum(1 for x in nytt[pid] if x and hem.get(pid) and x.get("team") not in (None, hem[pid]))
+        extra = {"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": tack}
     return {"status": "OK", "enhet": prob["enhet"], "veckor": W, "cykliskt": prob["cykliskt"],
             "steg": (grund or {}).get("steg", []), "kpi": kpi, "personer": personer, "vakanser": vakanser,
-            "aktiviteter": tillfallen, "schema": nytt, "justerat": True}
+            "aktiviteter": tillfallen, "schema": nytt, "justerat": True, **extra}

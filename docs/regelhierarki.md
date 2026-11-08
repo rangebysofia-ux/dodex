@@ -68,6 +68,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 29. **Godkänt grundschema är låst.** Ett valt schema godkänns och aktiveras från en måndag. Därefter är det låst: ändringar görs som en ny version som godkänns och aktiveras från ett nytt datum, och tillfälliga ändringar görs i planeringen. I webbtjänsten kan bara en chef, inloggad med eget konto, godkänna. Ett schema med brott mot hårda regler kan inte godkännas. Det godkända schemat visas med guldram och märket ✓ Godkänt. Se `docs/godkant-schema.md`. Beslutat av användaren 2026-11-08. **Ändrat samma dag:** alla inloggade får godkänna och aktivera (chefen hanterar kontona). Det sparas vem som godkände. `SCHEMA_GODKANNARE=chef` begränsar godkännandet till chefer igen.
 
+30. **Team med eget behov och gemensam personal.** En arbetsgrupp kan ha flera team. Varje team har ett eget behov, och varje medarbetare ett hemteam. Personalen är gemensam: där ett team har för få lånas personal in från ett team som har fler. Enhetens behov är summan av teamens. Behovet (vakanser) går först. Därefter, direkt efter aktiviteter och vila mellan nattblock, kommer det mjuka målet att varje team täcks av sin egen personal (`hemteam`). Lån syns i schemat (→T2) och i teamkortet. Se `docs/team.md`. Beslutat av användaren 2026-11-08.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

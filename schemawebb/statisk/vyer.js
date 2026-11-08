@@ -193,7 +193,7 @@ function ritaKorningsvy() {
   h += st.red ? redigeringsrad() : sammanfattning();
   if (st.vy === "personer") h += ritaPersoner();
   else if (st.vy === "bemanning") h += ritaBemanning();
-  else h += ritaSchemavy() + (st.red ? "" : bemanningsgrafer(res, k.indata) + GRAF.aktivitetKort(res));
+  else h += ritaSchemavy() + (st.red ? "" : TEAM.tackningKort(res) + bemanningsgrafer(res, k.indata) + GRAF.aktivitetKort(res));
   vy().innerHTML = h;
   kopplaKorningsval(); kopplaGodkann();
 }
@@ -211,6 +211,7 @@ function ritaSchemavy() {
   let h = `<section class="kort${st.red ? " redigerar" : ""}${godk ? " godkand" : ""}"><div class="rubrikrad" style="margin-bottom:12px"><h2 style="margin:0">Schema${godk ? ' <span class="godkand-chip">✓ Godkänt</span>' : ""}</h2>
     ${st.red ? "" : `<button class="liten" data-g="redigera"${godk ? ' title="Det godkända schemat är låst. Ändringarna sparas som en ny version."' : ""}>${IKON.penna || "✎"} ${godk ? "Gör ny version" : "Redigera schemat"}</button>`}
     <div class="chips" role="group" aria-label="Visa" style="margin-left:auto">${F.map(([v, t]) => `<button class="chip" data-g="filter" data-v="${v}" aria-pressed="${filter === v}">${FARG[v] ? `<i class="prick" style="background:${FARG[v]}"></i>` : ""}${t}</button>`).join("")}</div></div>
+    ${(st.korning.indata.team || []).length ? `<div class="chips" role="group" aria-label="Team" style="margin-bottom:8px"><span class="dampad liten">Team:</span><button class="chip" data-g="team-filter" data-v="" aria-pressed="${!st.teamFilter}">Alla</button>${st.korning.indata.team.map(t => `<button class="chip" data-g="team-filter" data-v="${esc(t.id)}" aria-pressed="${st.teamFilter === t.id}">${esc(t.namn || t.id)}</button>`).join("")}</div>` : ""}
     <div class="chips" role="group" aria-label="Vecka" style="margin-bottom:12px">${Array.from({ length: res.veckor }, (_, v) => `<button class="chip" data-g="vecka" data-v="${v}" aria-pressed="${v === st.vecka}">Vecka ${v + 1}</button>`).join("")}
       ${filter !== "tider" ? `<button class="chip" data-g="vecka" data-v="-1" aria-pressed="${st.vecka === -1}">${res.veckor === 6 ? "Sexveckorsperiod" : "Hela perioden"}</button>` : ""}</div>`;
   if (filter === "tider") h += ritaKlockslag(res);
@@ -245,22 +246,24 @@ function vakansPass(res, indata) {
 function schemaVecka(res, v, filter) { return schemaDagar(res, Array.from({ length: 7 }, (_, i) => v * 7 + i), filter, false); }
 
 function schemaDagar(res, dagar, filter, period) {
-  const pers = Object.keys(res.schema), bem = bemanning(res, st.korning.indata), vp = vakansPass(res, st.korning.indata);
-  const rs = GRAF.resurs(res, st.korning.indata), ind = st.korning.indata, kol = GRAF.summaKol(res);
+  const ind = st.korning.indata, hem = Object.fromEntries((ind.personal || []).map(q => [q.id, q.team || null])), harTeam = (ind.team || []).length > 0;
+  const pers = Object.keys(res.schema).filter(q => !harTeam || !st.teamFilter || hem[q] === st.teamFilter);
+  const bem = bemanning(res, st.korning.indata), vp = vakansPass(res, st.korning.indata);
+  const rs = GRAF.resurs(res, st.korning.indata), kol = GRAF.summaKol(res);
   const kl = (d, extra = "") => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}${extra}"`;
   let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${60 + dagar.length * 34 + kol.length * 46}px"` : ""}><thead>`;
   if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">Vecka ${Math.floor(dagar[0] / 7) + w + 1}</th>`).join("")}<th colspan="${kol.length}" class="summa forsta" style="text-align:left">Hela perioden</th></tr>`;
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>` + dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7].slice(0, 2) : DAGAR[d % 7]}</th>`).join("") + GRAF.summaHuvud(kol) + `</tr></thead><tbody>`;
   for (const pid of pers) {
     const red = !!st.red, vv = GRAF.veckovilaDagar(res, ind, pid);
-    h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a></td>` + dagar.map(d => {
+    h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a>${harTeam && hem[pid] ? `<small class="team-hem">${esc(TEAM.kort(ind.team, hem[pid]))}</small>` : ""}</td>` + dagar.map(d => {
       const p = res.schema[pid][d], n = pid + ":" + d;
       const mal = red ? ` data-mal="${esc(n)}"` : "";
       if (!p) return `<td ${kl(d, vv.has(d) ? " vvdag" : "")}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : vv.has(d) ? GRAF.vvMarke(vv.get(d), period) : ""}</td>`;
       if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}${mal}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
       const resurs = rs.has(n);
       return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${resurs ? " resurs" : ""}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter || resurs ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${resurs ? "\n◼ Resurspass, utöver behovet" : ""}${esc(GRAF.aktText(p))}"` : ""}
-        aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}${resurs ? ", resurspass" : ""}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${resurs && !period ? GRAF.resursMarke : ""}${GRAF.aktMarke(p)}</button></td>`;
+        aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}${resurs ? ", resurspass" : ""}"><b>${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${resurs && !period ? GRAF.resursMarke : ""}${GRAF.aktMarke(p)}${harTeam && p.team && p.team !== hem[pid] ? `<i class="team-lan" title="Lånad till ${esc(TEAM.namn(ind.team, p.team))}">→${esc(TEAM.kort(ind.team, p.team))}</i>` : ""}</button></td>`;
     }).join("") + GRAF.summaCeller(GRAF.radSumma(res, ind, pid, dagar, rs), kol, ind) + `</tr>`;
   }
   // vakanta pass som egna rader med streckad kant
@@ -691,6 +694,7 @@ async function vyKlick(g, el) {
       const { id } = await api("POST", `analys/${st.analys.id}/anvand`, { index: +el.dataset.n });
       meddela("Förslaget är sparat som en ny enhet."); st.enhet = null; location.hash = `#/e/${id}/schema`; return;
     }
+    case "team-filter": st.teamFilter = el.dataset.v || null; return ritaKorningsvy();
     case "filter": st.sv.filter = el.dataset.v; if (st.sv.filter === "tider" && st.vecka < 0) st.vecka = 0; st.valdCell = null; return ritaKorningsvy();
     case "bfilter": st.sv.bfilter = el.dataset.v; return ritaKorningsvy();
     case "vecka": st.vecka = +el.dataset.v; st.valdCell = null; return ritaKorningsvy();

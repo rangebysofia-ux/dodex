@@ -1,0 +1,150 @@
+{
+ "beskrivning": "Team: arbetsgruppen har tre team med eget behov och gemensam personal. Var och en har ett hemteam. Team 3 har för få egna för sitt behov, så personal lånas in från de andra teamen. Enhetens behov är summan av teamens. Ska gå att lösa utan avtalsbrott och utan vakanser.",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true
+ },
+ "enhet": "Test – team",
+ "veckor": 4,
+ "cykliskt": true,
+ "behov": {
+  "vardag": {
+   "morgon": 6,
+   "kvall": 4
+  },
+  "helg": {
+   "morgon": 4,
+   "kvall": 3
+  }
+ },
+ "team": [
+  {
+   "id": "T1",
+   "namn": "Team 1",
+   "behov": {
+    "vardag": {
+     "morgon": 2,
+     "kvall": 2
+    },
+    "helg": {
+     "morgon": 2,
+     "kvall": 1
+    }
+   }
+  },
+  {
+   "id": "T2",
+   "namn": "Team 2",
+   "behov": {
+    "vardag": {
+     "morgon": 2,
+     "kvall": 1
+    },
+    "helg": {
+     "morgon": 1,
+     "kvall": 1
+    }
+   }
+  },
+  {
+   "id": "T3",
+   "namn": "Team 3",
+   "behov": {
+    "vardag": {
+     "morgon": 2,
+     "kvall": 1
+    },
+    "helg": {
+     "morgon": 1,
+     "kvall": 1
+    }
+   }
+  }
+ ],
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 1,
+   "team": "T1"
+  },
+  {
+   "id": "A2",
+   "grad": 1,
+   "team": "T1"
+  },
+  {
+   "id": "A3",
+   "grad": 0.5,
+   "team": "T1"
+  },
+  {
+   "id": "A4",
+   "grad": 1,
+   "team": "T1"
+  },
+  {
+   "id": "A5",
+   "grad": 1,
+   "team": "T1"
+  },
+  {
+   "id": "A6",
+   "grad": 0.9,
+   "team": "T1"
+  },
+  {
+   "id": "A7",
+   "grad": 1,
+   "team": "T2"
+  },
+  {
+   "id": "A8",
+   "grad": 0.8,
+   "team": "T2"
+  },
+  {
+   "id": "A9",
+   "grad": 1,
+   "team": "T2"
+  },
+  {
+   "id": "A10",
+   "grad": 1,
+   "team": "T2"
+  },
+  {
+   "id": "A11",
+   "grad": 1,
+   "team": "T2"
+  },
+  {
+   "id": "A12",
+   "grad": 1,
+   "team": "T2"
+  },
+  {
+   "id": "A13",
+   "grad": 1,
+   "team": "T3"
+  },
+  {
+   "id": "A14",
+   "grad": 1,
+   "team": "T3"
+  },
+  {
+   "id": "A15",
+   "grad": 1,
+   "team": "T3"
+  },
+  {
+   "id": "A16",
+   "grad": 0.75,
+   "team": "T3"
+  }
+ ],
+ "onskemal": [],
+ "losare": {
+  "tid_per_steg_s": 15
+ }
+}

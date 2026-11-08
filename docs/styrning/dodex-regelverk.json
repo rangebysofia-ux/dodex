@@ -525,6 +525,17 @@
     },
     {
       "ordning": 4,
+      "id": "hemteam",
+      "namn": "Team: täckning med egen personal",
+      "niva": "verksamhet",
+      "typ": "mjuk",
+      "styrs_av": null,
+      "standard": null,
+      "beskrivning": "När arbetsgruppen har team med eget behov: antal pass där ett team inte täcks av sin egen personal, så att någon måste lånas in från ett annat team. Lån är tillåtet; behovet går före. Verksamhetens beslut 2026-11-08.",
+      "granskningskod": "TEAM"
+    },
+    {
+      "ordning": 5,
       "id": "blocklangd",
       "namn": "Dagar i följd över rekommenderat",
       "niva": "princip",
@@ -535,7 +546,7 @@
       "granskningskod": "BLOCK_REKOMMENDERAT"
     },
     {
-      "ordning": 5,
+      "ordning": 6,
       "id": "passlangd",
       "namn": "Passlängd",
       "niva": "princip",
@@ -546,7 +557,7 @@
       "granskningskod": "TID"
     },
     {
-      "ordning": 6,
+      "ordning": 7,
       "id": "rattvisa_jamn",
       "namn": "Rättvisa och jämn bemanning",
       "niva": "princip",
@@ -557,7 +568,7 @@
       "granskningskod": "JAMN_BEMANNING"
     },
     {
-      "ordning": 7,
+      "ordning": 8,
       "id": "spridning",
       "namn": "Blandning av morgon och kväll varje vecka",
       "niva": "princip",
@@ -568,7 +579,7 @@
       "granskningskod": "SPRIDNING"
     },
     {
-      "ordning": 8,
+      "ordning": 9,
       "id": "onskemal",
       "namn": "Önskemål",
       "niva": "önskemål",

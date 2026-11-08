@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
 DAGNYCKLAR = ["vardag", "helg", "alla"] + DAGNAMN
 DYGNSDELAR = ["morgon", "kvall", "natt"]
+DELNAMN_TEXT = {"morgon": "dag", "kvall": "kväll", "natt": "natt"}
 HELGFREKVENSER = ["1/4", "2/4", "3/4", "alla", "ingen"]
 ONSKEMALSTYPER = ["ledig", "arbetar", "tidigast_start", "senast_slut", "endast_dygnsdel"]
 STANDARD_PASS_PER_VECKA = 4.75
@@ -96,6 +97,8 @@ class Person(Strikt):
     tolerans_minuter: Optional[int] = Field(default=None, ge=0)
     heltid_minuter_per_vecka: Optional[int] = Field(default=None, gt=0)
     dygnsbryt: Optional[Klocka] = None
+    # hemteam (id i indata.team); personen kan ändå lånas ut till ett annat team när det behövs
+    team: Optional[str] = Field(default=None, min_length=1, max_length=40)
 
     @field_validator("dygnsdelar")
     @classmethod
@@ -105,6 +108,26 @@ class Person(Strikt):
                 raise ValueError("ange minst en dygnsdel")
             if "natt" in v and len(v) > 1:
                 raise ValueError("nattpersonal kan bara ha dygnsdelen natt")
+        return v
+
+
+class Team(Strikt):
+    """Ett team i arbetsgruppen med eget behov. Personalen är gemensam men har ett hemteam (se docs/team.md)."""
+    id: str = Field(min_length=1, max_length=40)
+    namn: str = Field(default="", max_length=80)
+    behov: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+    @field_validator("behov")
+    @classmethod
+    def dagnycklar(cls, v):
+        for nyckel, varde in v.items():
+            if nyckel not in DAGNYCKLAR:
+                raise ValueError(f"okänd dag: {nyckel} (använd vardag, helg, alla eller {', '.join(DAGNAMN)})")
+            for del_, antal in varde.items():
+                if del_ not in DYGNSDELAR:
+                    raise ValueError(f"okänd dygnsdel: {del_} (använd morgon, kvall eller natt)")
+                if antal < 0:
+                    raise ValueError(f"behovet för {nyckel} {del_} kan inte vara negativt")
         return v
 
 
@@ -218,6 +241,7 @@ class Indata(BaseModel):
     personal: list[Person] = Field(min_length=1)
     onskemal: list[Onskemal] = Field(default_factory=list)
     aktiviteter: list[Aktivitet] = Field(default_factory=list)
+    team: list[Team] = Field(default_factory=list)
     bemanningsbalans: Optional[Bemanningsbalans] = None
     losare: dict = Field(default_factory=dict)
     # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
@@ -268,6 +292,33 @@ def _helhet(d: dict) -> list[str]:
     dubbla = sorted({i for i in ids if ids.count(i) > 1})
     if dubbla:
         fel.append(f"Samma id finns flera gånger: {', '.join(dubbla)}.")
+    # team: unika id, personernas hemteam finns, och teamens behov ryms i enhetens behov
+    team = [t for t in d.get("team") or [] if isinstance(t, dict)]
+    tid_ = [str(t.get("id")) for t in team]
+    if len(set(tid_)) != len(tid_):
+        fel.append("Samma team finns flera gånger.")
+    okanda_team = sorted({str(p["team"]) for p in personal if p.get("team") and str(p["team"]) not in tid_})
+    if okanda_team:
+        fel.append(f"Medarbetare har ett team som inte finns: {', '.join(okanda_team)}.")
+    if team and isinstance(d.get("behov"), dict):
+        def per_dag(spec):
+            ut = [{} for _ in range(7)]
+            for k, v in (spec or {}).items():
+                idx = {"vardag": range(5), "helg": range(5, 7), "alla": range(7)}.get(k, [DAGNAMN.index(k)] if k in DAGNAMN else [])
+                for i in idx:
+                    if isinstance(v, dict):
+                        ut[i] = v
+            return ut
+        enhet = per_dag(d.get("behov"))
+        summa = [{x: sum(int((per_dag(t.get("behov"))[i] or {}).get(x, 0) or 0) for t in team) for x in DYGNSDELAR} for i in range(7)]
+        for i in range(7):
+            for x in DYGNSDELAR:
+                if summa[i][x] > int(enhet[i].get(x, 0) or 0):
+                    fel.append(f"Teamens behov {DAGNAMN[i]} {DELNAMN_TEXT[x]} ({summa[i][x]}) är större än enhetens behov ({int(enhet[i].get(x, 0) or 0)}).")
+                    break
+            else:
+                continue
+            break
     regler = d.get("regler") if isinstance(d.get("regler"), dict) else {}
     okanda = sorted(set(regler) - set(STANDARDREGLER))
     if okanda:

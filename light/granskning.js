@@ -12,7 +12,7 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { TEAM: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
@@ -246,6 +246,34 @@ const GRANSKNING = (() => {
       if (a.varje_person) for (const q of grupp) {
         let n = 0; deltar.forEach((l, k) => { if (k.startsWith(a.id + "|") && l.includes(q)) n++; });
         if (n !== a.varje_person) brott("AKTIVITET", q, `Deltar ${n} gånger i ${namn}, ska vara ${a.varje_person}.`, false);
+      }
+    }
+
+    // team (docs/team.md): varje pass hör till ett team som finns, och teamens behov täcks. Lån mellan team är
+    // tillåtet; ett team som saknar personal när ett annat har fler än sitt behov samma pass noteras.
+    const team = indata.team || [];
+    if (team.length) {
+      const tids = team.map(t => t.id), namnT = Object.fromEntries(team.map(t => [t.id, t.namn || t.id]));
+      const DELT = { morgon: "dag", kvall: "kväll", natt: "natt" };
+      const tbehov = (t, wd, del) => {
+        let v = 0;
+        for (const [k, x] of Object.entries(t.behov || {})) {
+          if (k === DAGNAMN[wd]) return Number(x[del] || 0);
+          if (k === "alla" || (k === "vardag" && wd < 5) || (k === "helg" && wd >= 5)) v = Number(x[del] || 0);
+        }
+        return v;
+      };
+      for (const [pid, rad] of Object.entries(schema)) rad.slice(0, N).forEach((x, d) => {
+        if (x && x.team != null && !tids.includes(x.team)) brott("TEAM", pid, `${dagText(d)}: passet hör till teamet ${x.team}, som inte finns.`);
+      });
+      for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+        const antal = {};
+        for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === del) antal[x.team] = (antal[x.team] || 0) + 1; }
+        const brist = Object.fromEntries(team.map(t => [t.id, tbehov(t, d % 7, del) - (antal[t.id] || 0)]));
+        for (const [t, b] of Object.entries(brist)) if (b > 0) {
+          const over = Object.entries(brist).filter(([, bu]) => bu < 0).map(([u]) => namnT[u]);
+          brott("TEAM", null, `${dagText(d)} ${DELT[del]}: ${namnT[t]} har ${antal[t] || 0} av ${b + (antal[t] || 0)}${over.length ? `, fast ${over.join(", ")} har fler än sitt behov.` : "."}`, false);
+        }
       }
     }
 

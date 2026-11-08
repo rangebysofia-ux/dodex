@@ -72,6 +72,7 @@ const GUIDE = (() => {
       const arb = g.harUndantag || p.id[0] === "N" ? p.arbetar : p.id[0] === "N" ? "natt" : "morgon,kvall";
       if (arb !== "morgon,kvall") ut.dygnsdelar = arb.split(",");
       if (g.harUndantag && p.helg !== "2/4") ut.helgfrekvens = p.helg;
+      if (p.team) ut.team = p.team;
       return ut;
     });
     const ut = { enhet: g.namn || "Ny enhet", veckor: Number(g.veckor) || 4, cykliskt: true, behov: structuredClone(g.behovDag || g.behov), personal, onskemal: [] };
@@ -83,7 +84,8 @@ const GUIDE = (() => {
     if (g.startdatum) ut.startdatum = g.startdatum;
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);
-    if (g.passMall) ut.bemanningsbalans = { pass: structuredClone(g.passMall) };  // passen från mallen, påverkar inte schemat
+    if (g.passMall) ut.bemanningsbalans = { pass: structuredClone(g.passMall) };
+    if (g.team && g.team.length) ut.team = structuredClone(g.team);  // behovet per team anges under fliken Team  // passen från mallen, påverkar inte schemat
     return ut;
   }
 
@@ -95,15 +97,20 @@ const GUIDE = (() => {
   function tomtSchema(ind) { const N = (ind.veckor || 4) * 7; return Object.fromEntries(ind.personal.map(p => [p.id, Array(N).fill(null)])); }
 
   // ---------------------------------------------------------------- startsidan
+  // Symboler på startsidan (emojis, användarens val). Enhet = hus.
+  const IKONER = { ny: "✚", klistra: "📋", ai: "🤖", exempel: "◎", enheter: "🏠" };
+  const HUS = "🏠";
+
   function val({ harEnheter = false } = {}) {
-    const ruta = (g, ikon, rubrik, text, extra = "") => `<button class="valruta${extra}" data-guide="${g}"><span class="valikon" aria-hidden="true">${ikon}</span><b>${rubrik}</b><span>${text}</span></button>`;
+    // Rutorna visar ikon och rubrik; förklaringen syns när man håller över (title) och läses upp av skärmläsare.
+    const ruta = (g, ikon, rubrik, text, extra = "") => `<button class="valruta${extra}" data-guide="${g}" title="${esc(text)}" aria-label="${esc(rubrik + ". " + text)}"><span class="valikon" aria-hidden="true">${IKONER[ikon]}</span><b>${rubrik}</b></button>`;
     return `<section class="kort"><h1>Vad vill du göra?</h1><p class="dampad" style="margin:6px 0 14px">Välj en väg. Allt går att ändra efteråt.</p>
       <div class="valrutor">
-        ${ruta("ny", "✚", "Skapa ny enhet", "Svara på några frågor om gruppen, behovet och tiderna. Välj sedan om 🤖 lägger schemat eller om du gör det själv.", " huvud")}
-        ${ruta("klistra", "📋", "Klistra in från Excel", "Klistra in personal och behov från en lista eller ett Excel-blad. Namn blir id-koder.")}
-        ${ruta("ai", "🤖", "Berätta för AI-assistenten", "Börja med en tom enhet och beskriv med egna ord. Assistenten föreslår, du godkänner.")}
-        ${ruta("exempel", "◎", "Börja från ett exempel", "Färdiga testfall att pröva systemet med.")}
-        ${harEnheter ? ruta("enheter", "▤", "Fortsätt med en enhet", "Öppna en enhet du redan har.") : ""}
+        ${ruta("ny", "ny", "Skapa ny enhet", "Svara på några frågor om gruppen, behovet och tiderna. Välj sedan om AI lägger schemat eller om du gör det själv.", " huvud")}
+        ${ruta("klistra", "klistra", "Klistra in från Excel", "Klistra in personal och behov från en lista eller ett Excel-blad. Namn blir id-koder.")}
+        ${ruta("ai", "ai", "Berätta för AI-assistenten", "Börja med en tom enhet och beskriv med egna ord. Assistenten föreslår, du godkänner.")}
+        ${ruta("exempel", "exempel", "Börja från ett exempel", "Färdiga testfall att pröva systemet med.")}
+        ${harEnheter ? ruta("enheter", "enheter", "Fortsätt med en enhet", "Öppna en enhet du redan har.") : ""}
       </div>
       <details class="nyttigt"><summary>Bra att veta</summary><ul class="punkter liten">
         <li>Reglerna (dygnsvila 11 h, veckovila 36 h, rast, varannan helg) gäller från start. Ändra under Inställningar eller Regler.</li>
@@ -244,8 +251,10 @@ const GUIDE = (() => {
     let h = "";
     if (p.personer.length) {
       const dk = p.personer.filter(x => x.arbetar !== "natt").length, n = p.personer.length - dk;
-      h += `<h3>Medarbetare: ${p.personer.length} (${dk} dag och kväll, ${n} natt)</h3><div class="rull"><table class="guidetabell"><thead><tr><th>Id</th><th>Från inklistringen</th><th>Grad</th><th>Arbetar</th><th>Helger</th></tr></thead><tbody>
-        ${p.personer.map(x => `<tr><th>${x.id}</th><td class="dampad">${esc(x.rad)}</td><td>${x.grad} %</td><td>${DEL[x.arbetar]}</td><td>${HELGER[x.helg]}</td></tr>`).join("")}</tbody></table></div>
+      const medTeam = (p.team || []).length > 0;
+      h += `<h3>Medarbetare: ${p.personer.length} (${dk} dag och kväll, ${n} natt)${medTeam ? ` i ${p.team.length} team` : ""}</h3><div class="rull"><table class="guidetabell"><thead><tr><th>Id</th><th>Från inklistringen</th><th>Grad</th><th>Arbetar</th><th>Helger</th>${medTeam ? "<th>Team</th>" : ""}</tr></thead><tbody>
+        ${p.personer.map(x => `<tr><th>${x.id}</th><td class="dampad">${esc(x.rad)}</td><td>${x.grad} %</td><td>${DEL[x.arbetar]}</td><td>${HELGER[x.helg]}</td>${medTeam ? `<td>${esc(x.team || "–")}</td>` : ""}</tr>`).join("")}</tbody></table></div>
+        ${medTeam ? `<p class="liten dampad" style="margin:6px 0 0">Teamen följer med till enheten. Ange behovet per team under fliken Team efteråt.</p>` : ""}
         <p class="liten dampad" style="margin:6px 0 0">Kolumnen ”Från inklistringen” visas bara här och sparas inte. Enheten får id-koderna. Spara gärna en egen nyckel.</p>`;
     }
     if (b.behov) {
@@ -284,7 +293,10 @@ const GUIDE = (() => {
     if (p.personer.length) {
       const dk = p.personer.filter(x => x.arbetar !== "natt"), n = p.personer.filter(x => x.arbetar === "natt");
       g.antalDag = dk.length; g.antalNatt = n.length;
-      g.personer = p.personer.map(x => ({ id: x.id, grad: x.grad, arbetar: x.arbetar, helg: x.helg }));  // utan det inklistrade
+      // team från rubrikrader i listan ("team 1" …): id T1, T2 … och personernas hemteam
+      g.team = (p.team || []).map((n, i) => ({ id: `T${i + 1}`, namn: n, behov: {} }));
+      const tid = Object.fromEntries(g.team.map(t => [t.namn, t.id]));
+      g.personer = p.personer.map(x => ({ id: x.id, grad: x.grad, arbetar: x.arbetar, helg: x.helg, ...(x.team ? { team: tid[x.team] } : {}) }));  // utan det inklistrade
       const grader = new Set(g.personer.map(x => x.grad));
       if (grader.size === 1) { g.gradSatt = "samma"; g.grad = g.personer[0].grad; } else g.gradSatt = "olika";
       g.harUndantag = g.personer.some(x => x.helg !== "2/4" || (x.arbetar !== "natt" && x.arbetar !== "morgon,kvall"));
@@ -332,6 +344,6 @@ const GUIDE = (() => {
     return null;
   }
 
-  return { ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
+  return { HUS, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
 })();
 if (typeof module !== "undefined") module.exports = GUIDE;

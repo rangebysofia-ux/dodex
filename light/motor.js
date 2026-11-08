@@ -23,6 +23,7 @@ const MOTOR = (() => {
   const WJ = 40;       // jämn bemanning: över- och underbemanning lika mellan dag och kväll
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
+  const WH = 500;      // team: pass där ett team inte täcks av sin egen personal (efter nattvilan, före block)
 
   // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
   // Samma förenkling som ob_kategori i schemamotor/build.py.
@@ -116,7 +117,7 @@ const MOTOR = (() => {
       }
       const frek = p.helgfrekvens || r.helgfrekvens;
       const tol = p.tolerans_minuter ?? (natt ? Math.max(r.tolerans_minuter, Math.ceil(nnet / 2)) : r.tolerans_minuter);
-      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad });
+      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null });
     }
     if (!pers.length) fel.push("Lägg till minst en person.");
 
@@ -217,7 +218,58 @@ const MOTOR = (() => {
     // fast dygnsbryt när verksamheten har bestämt sig (annars förslaget ovan)
     if (r.dygnsbryt && r.dygnsbryt !== "auto") db = tid(r.dygnsbryt);
     const nattDb = r.dygnsbryt_natt && r.dygnsbryt_natt !== "auto" ? tid(r.dygnsbryt_natt) : ne % DYGN;
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, enhet: ind.enhet || "" };
+    // team med eget behov (docs/team.md): personalen är gemensam men har ett hemteam
+    const team = teamFor(ind);
+    for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, enhet: ind.enhet || "" };
+  }
+
+  // teamens behov per veckodag: [0, dag, kväll, natt] som behovet ovan
+  function teamFor(ind) {
+    return (ind.team || []).map(t => {
+      const b = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+      for (const [nyckel, v] of Object.entries(t.behov || {})) {
+        const idx = nyckel === "vardag" ? [0, 1, 2, 3, 4] : nyckel === "helg" ? [5, 6] : nyckel === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(nyckel)];
+        for (const i of idx) if (i >= 0) b[i] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
+      }
+      return { id: t.id, namn: t.namn || t.id, behov: b };
+    });
+  }
+
+  // Vilket team varje pass arbetar i (samma fördelning som fordela_team i build.py): var och en i sitt hemteam;
+  // där ett team har färre än sitt behov lånas först de utan hemteam, sedan från team med fler än sitt behov –
+  // den som har lånats ut minst först. Sätter team på passen och returnerar täckningen per dag, dygnsdel och team.
+  function fordelaTeam(schema, team, hem, N) {
+    const tids = team.map(t => t.id), lan = {}, rader = [];
+    Object.keys(schema).forEach(q => (lan[q] = 0));
+    for (let d = 0; d < N; d++) for (const [ti, del] of [[1, "morgon"], [2, "kvall"], [3, "natt"]]) {
+      const arbetar = Object.keys(schema).filter(q => schema[q][d] && schema[q][d].dygnsdel === del);
+      const behov = Object.fromEntries(team.map(t => [t.id, t.behov[d % 7][ti] || 0]));
+      if (!arbetar.length && !Object.values(behov).some(Boolean)) continue;
+      const plats = Object.fromEntries(tids.map(t => [t, arbetar.filter(q => hem[q] === t)]));
+      const fria = arbetar.filter(q => !tids.includes(hem[q])), in_ = Object.fromEntries(tids.map(t => [t, 0]));
+      const minst = l => l.reduce((a, q) => (a === null || lan[q] < lan[a] ? q : a), null);
+      for (const t of tids) {
+        while (plats[t].length < behov[t]) {
+          let g = null;
+          if (fria.length) { g = minst(fria); fria.splice(fria.indexOf(g), 1); }
+          else {
+            const over = tids.filter(u => plats[u].length > behov[u]);
+            if (over.length) {
+              const u = over.reduce((a, b) => (plats[b].length - behov[b] > plats[a].length - behov[a] ? b : a));
+              const kand = plats[u].filter(q => hem[q] === u); g = minst(kand.length ? kand : plats[u]); plats[u].splice(plats[u].indexOf(g), 1);
+            }
+          }
+          if (g === null) break;
+          plats[t].push(g); lan[g]++; in_[t]++;
+        }
+      }
+      for (const t of tids) for (const q of plats[t]) schema[q][d] = { ...schema[q][d], team: t };
+      for (const q of fria) { const { team: _, ...v } = schema[q][d]; schema[q][d] = v; }
+      for (const t of tids) if (behov[t] || plats[t].length) rader.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: del, team: t,
+        behov: behov[t], i_tjanst: plats[t].length, inlanade: in_[t], saknas: Math.max(0, behov[t] - plats[t].length) });
+    }
+    return rader;
   }
 
   function tillatna(p, d, r, W) {
@@ -436,6 +488,16 @@ const MOTOR = (() => {
       return (k + 2 * Math.abs(toM - toK) + 2 * Math.abs(tvM - tvK)) * WJ * prof.j;
     }
 
+    // team: pass där ett team inte täcks av sina egna (behov minus egna i tjänst), per dag
+    const harTeam = pr.team && pr.team.length > 0;
+    const teamPers = harTeam ? pr.team.map(t => pers.map((p, pi) => p.team === t.id ? pi : -1).filter(pi => pi >= 0)) : [];
+    function hemDag(X, d) {
+      if (!harTeam) return 0;
+      let k = 0;
+      pr.team.forEach((t, ti) => { for (let del = 1; del <= 3; del++) { const b = t.behov[d % 7][del]; if (!b) continue; let n = 0; for (const pi of teamPers[ti]) if (X[pi][d] === del) n++; if (n < b) k += b - n; } });
+      return k;
+    }
+
     let bastX = null, bastKost = Infinity;
     const start = Date.now();
     const omstarter = opt.omstarter ?? 3;
@@ -447,7 +509,8 @@ const MOTOR = (() => {
       let vak = 0;
       for (let d = 0; d < N; d++) for (let t = 1; t <= 3; t++) vak += vakans(cnt, d, t);
       let jk = jamnKost(cnt), ak = aktKost(X);
-      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak;
+      const hemC = Array.from({ length: N }, (_, d) => hemDag(X, d));
+      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH;
       let lokalBast = kost, lokalX = X.map(x => x.slice());
       const budget = tidsgrans * 1000 / omstarter;
       const t0 = Date.now();
@@ -504,10 +567,13 @@ const MOTOR = (() => {
         for (const n in vakFore) delta += (vakans(cnt, Math.floor(n / 4), n % 4) - vakFore[n]) * WV;
         const jkNy = medJamn ? jamnKost(cnt) : 0; delta += jkNy - jk;
         const akNy = aktiv ? aktKost(X) : 0; delta += akNy - ak;
+        const hemNy = {};
+        if (harTeam) for (const [, d] of andrade) if (!(d in hemNy)) { hemNy[d] = hemDag(X, d); delta += (hemNy[d] - hemC[d]) * WH; }
         const nya = {};
         for (const q of berorda) { nya[q] = personKost(q, X[q]); delta += nya[q].summa - pk[q].summa; }
         if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
           kost += delta; jk = jkNy; ak = akNy;
+          for (const d in hemNy) hemC[d] = hemNy[d];
           for (const q of berorda) pk[q] = nya[q];
           if (kost < lokalBast - 1e-9) { lokalBast = kost; lokalX = X.map(x => x.slice()); }
         } else {
@@ -582,12 +648,21 @@ const MOTOR = (() => {
     }
     vakanser.push(...golvVak);
     const golv = golvVak.reduce((s, v) => s + v.antal, 0);
+    let teamDel = {};
+    if (pr.team && pr.team.length) {
+      const hem = Object.fromEntries(pers.map(p => [p.id, p.team]));
+      const tack = fordelaTeam(schema, pr.team, hem, N);
+      for (const p of pers) { personer[p.id].team = p.team; personer[p.id].utlanad = schema[p.id].filter(v => v && p.team && v.team && v.team !== p.team).length; }
+      teamDel = { team: pr.team.map(t => ({ id: t.id, namn: t.namn })), team_tackning: tack,
+        _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
+    }
+    const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
-        aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott,
+        aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt,
     };
   }
 
@@ -763,7 +838,7 @@ const MOTOR = (() => {
     return { forvantade_vakanser: vakHelg + vakVDK + vakVN, behovDK, tillDK, behovN, tillN, helger, atgarder };
   }
 
-  return { los, balans, forbered, DAGAR };
+  return { los, balans, forbered, teamFor, fordelaTeam, DAGAR };
 })();
 
 if (typeof module !== "undefined") module.exports = MOTOR;

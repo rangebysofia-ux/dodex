@@ -176,7 +176,7 @@ async function visaEnheter() {
       nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}" title="Ny enhet i ${esc(ORG.sokvag(st.org, id))}">+ Ny enhet</button>`,
       ritaEnhet: e => `
       <div class="kort enhet">
-        <a class="namn" href="#/e/${e.id}/schema">${esc(e.namn)}</a>
+        <a class="namn" href="#/e/${e.id}/schema"><span class="enhet-ikon" aria-hidden="true">${GUIDE.HUS}</span>${esc(e.namn)}</a>
         <div class="dampad liten">${e.personer ?? 0} personer · ${e.korningar} körningar · ändrad ${datum(e.andrad)}</div>
         <div class="chips"><a class="knapp liten primar" href="#/e/${e.id}/schema">${IKON.schema} Schema</a><a class="knapp liten" href="#/e/${e.id}/oversikt">Översikt</a>
           <button class="liten" data-g="kopiera" data-id="${e.id}">Kopiera</button>
@@ -236,7 +236,7 @@ async function visaEnhet(id, flik) {
 }
 
 function ritaEnhet() {
-  const F = [["personal", "Personal"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["period", "Period"], ["json", "Avancerat"]];
+  const F = [["personal", "Personal"], ["team", "Team"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["period", "Period"], ["json", "Avancerat"]];
   vy().innerHTML = `
     <section class="kort">
       <div class="rubrikrad">
@@ -266,7 +266,7 @@ function ritaFlik() {
   switch (st.flik) {
     case "personal": return `
       <p class="dampad liten">Använd id-koder, inte namn. Antal pass räknas ut från perioden om fältet är tomt. Alla arbetar varannan helg om inget undantag anges.</p>
-      <div class="rull"><table class="form personal"><thead><tr><th>Id</th><th>Grad %</th><th>Arbetar</th><th>Helger</th><th>Grupp</th><th title="Antal pass under perioden">Pass</th><th></th></tr></thead><tbody>
+      <div class="rull"><table class="form personal"><thead><tr><th>Id</th><th>Grad %</th><th>Arbetar</th><th>Helger</th><th>Grupp</th><th title="Antal pass under perioden">Pass</th>${(i.team || []).length ? "<th>Team</th>" : ""}<th></th></tr></thead><tbody>
       ${i.personal.map((p, n) => {
         const del = (p.dygnsdelar || ["morgon", "kvall"]).join(",");
         return `<tr>
@@ -276,12 +276,29 @@ function ritaFlik() {
           <td data-l="Helger"><select data-s="personal.${n}.helgfrekvens" data-t="valfri" aria-label="Helger"${p.helgfrekvens && p.helgfrekvens !== "2/4" ? ' class="undantag"' : ""}><option value="">Varannan</option>${Object.entries(HELGER).filter(([v]) => v !== "2/4").map(([v, t]) => `<option value="${v}"${v === p.helgfrekvens ? " selected" : ""}>Undantag: ${t.toLowerCase()}</option>`).join("")}</select></td>
           <td data-l="Helggrupp"><select data-s="personal.${n}.helggrupp" data-t="valfri" aria-label="Helggrupp"><option value="">Auto</option><option${p.helggrupp === "A" ? " selected" : ""}>A</option><option${p.helggrupp === "B" ? " selected" : ""}>B</option></select></td>
           <td data-l="Antal pass"><input data-s="personal.${n}.antal_pass" data-t="pass" value="${esc(Array.isArray(p.antal_pass) ? p.antal_pass.join(", ") : p.antal_pass ?? "")}" placeholder="auto" style="width:70px" aria-label="Antal pass"></td>
+          ${(i.team || []).length ? `<td data-l="Team"><select data-s="personal.${n}.team" data-t="valfri" aria-label="Hemteam"><option value="">Inget</option>${i.team.map(t => `<option value="${esc(t.id)}"${t.id === p.team ? " selected" : ""}>${esc(t.namn || t.id)}</option>`).join("")}</select></td>` : ""}
           <td class="bort"><button class="liten fara" data-g="ta-bort-person" data-n="${n}" aria-label="Ta bort ${esc(p.id)}">×</button></td></tr>`;
       }).join("")}</tbody></table></div>
       <p style="margin-top:12px" class="chips"><button data-g="ny-person">+ Person</button> <button data-g="ny-person" data-natt="1">+ Nattperson</button></p>
       <p class="dampad liten">Gult betyder undantag: från varannan helg, eller från jämn fördelning mellan morgon och kväll. Helggrupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
 
+    case "team": {
+      const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
+      return `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Medarbetare). Personalen är gemensam – där ett team har för få lånas personal in från ett team som har fler. Enhetens behov blir summan av teamens. Se docs/team.md.</p>
+        ${T.map((t, n) => { const b = TEAM.perDag(t.behov), ant = i.personal.filter(q => q.team === t.id).length;
+          return `<div class="kort" style="box-shadow:none;margin:10px 0"><div class="rubrikrad"><input data-s="team.${n}.namn" value="${esc(t.namn || "")}" placeholder="Teamets namn" style="font-weight:700;max-width:260px" aria-label="Teamets namn">
+            <span class="dampad liten">${ant} medarbetare</span><button class="liten fara" data-g="ta-bort-team" data-n="${n}">Ta bort</button></div>
+            <div class="rull"><table class="form"><thead><tr><th></th>${DL.map(([, x]) => `<th>${x}</th>`).join("")}</tr></thead><tbody>
+            ${[["vardag", "Vardag (mån–fre)", 0], ["helg", "Helg (lör–sön)", 5]].map(([k, txt, di]) => `<tr><th>${txt}</th>${DL.map(([d]) => `<td><input type="number" min="0" inputmode="numeric" data-s="team.${n}.behov.${k}.${d}" data-t="heltal" value="${b[di][d] || ""}" placeholder="0" style="width:74px" aria-label="${esc(t.namn)} ${txt} ${d}"></td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`; }).join("")}
+        <p class="chips"><button data-g="ny-team">+ Team</button></p>
+        ${T.length ? `<p class="dampad liten">Enhetens behov (summan): ${(() => { const s = TEAM.summaBehov(T); return `vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt)`; })()}. Utan hemteam räknas man som gemensam och kan arbeta i alla team.</p>` : ""}`;
+    }
     case "behov": {
+      if ((i.team || []).length) {
+        const s = TEAM.summaBehov(i.team);
+        return `<div class="banner info">${IKON.grupp}<div><strong>Behovet anges per team</strong>Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under Medarbetare → Team.</div></div>
+          <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
+      }
       const b = i.behov || {};
       const tp = [];
       Object.entries(i.tidpunkter || {}).forEach(([k, l]) => l.forEach(t => tp.push({ k, ...t })));
@@ -681,6 +698,7 @@ document.addEventListener("input", e => {
   if (!el.closest("#flik")) return;
   if (el.dataset.s) {
     sattVarde(el.dataset.s, tolka(el));
+    if (el.dataset.s.startsWith("team.")) st.indata.behov = TEAM.summaBehov(st.indata.team);  // enhetens behov = summan
     markeraAndrad(/\.(helgfrekvens|dygnsdelar)$/.test(el.dataset.s));
   } else if (el.dataset.tp !== undefined) {
     const tp = tidpunktLista(), t = tp[+el.dataset.tp];
@@ -989,6 +1007,18 @@ document.addEventListener("click", async e => {
         document.querySelectorAll("[data-g=flik]").forEach(b => b.setAttribute("aria-selected", b === el));
         $("#flik").innerHTML = ritaFlik(); history.replaceState(null, "", `#/e/${st.enhet.id}/indata?flik=${st.flik}`); break;
       case "lagg-schema": await laggSchema(); break;
+      case "ny-team": {
+        const T = st.indata.team || (st.indata.team = []);
+        T.push({ id: TEAM.nyttId(T), namn: `Team ${T.length + 1}`, behov: { vardag: { morgon: 0, kvall: 0, natt: 0 }, helg: { morgon: 0, kvall: 0, natt: 0 } } });
+        st.indata.behov = TEAM.summaBehov(T); markeraAndrad(true); break;
+      }
+      case "ta-bort-team": {
+        const i = st.indata, t = i.team[+el.dataset.n];
+        if (!confirm(`Ta bort ${t.namn || t.id}? Medarbetarna blir utan hemteam.`)) return;
+        i.team.splice(+el.dataset.n, 1); i.personal.forEach(q => { if (q.team === t.id) delete q.team; });
+        if (i.team.length) i.behov = TEAM.summaBehov(i.team); else delete i.team;
+        markeraAndrad(true); break;
+      }
       case "ny-person": {
         const natt = el.dataset.natt === "1", ids = new Set(st.indata.personal.map(p => p.id));
         let n = st.indata.personal.length + 1; const pre = natt ? "N" : "P"; while (ids.has(pre + n)) n++;

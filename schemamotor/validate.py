@@ -27,10 +27,12 @@ STANDARD = {
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
     "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1, "jamn_bemanning": "mjuk",
 }
+DELTEXT = {"morgon": "dag", "kvall": "kväll", "natt": "natt"}
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
-        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel"}
+        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel",
+        "TEAM": "verksamhet"}
 
 
 def tid(s):
@@ -395,6 +397,35 @@ def kontrollera(indata, schema_dok):
                 n = sum(q in lista for (i, _), lista in deltar.items() if i == a["id"])
                 if n != a["varje_person"]:
                     brott("AKTIVITET", q, f"Deltar {n} gånger i {namn}, ska vara {a['varje_person']}.", hard=False)
+
+    # team (docs/team.md): varje pass hör till ett team som finns, och teamens behov täcks. Lån mellan team är
+    # tillåtet; ett team som saknar personal när ett annat har fler än sitt behov samma pass noteras.
+    team = indata.get("team") or []
+    if team:
+        tids = [t["id"] for t in team]
+        namn_t = {t["id"]: t.get("namn") or t["id"] for t in team}
+
+        def tbehov(t, wd, del_):
+            v = 0
+            for k, x in (t.get("behov") or {}).items():
+                if k == "alla" or (k == "vardag" and wd < 5) or (k == "helg" and wd >= 5) or k == DAGNAMN[wd]:
+                    if k in DAGNAMN:
+                        return int(x.get(del_, 0) or 0)
+                    v = int(x.get(del_, 0) or 0)
+            return v
+        for pid, rad in schema.items():
+            for d, x in enumerate(rad[:N]):
+                if x and x.get("team") is not None and x["team"] not in tids:
+                    brott("TEAM", pid, f"{dag_text(d)}: passet hör till teamet {x['team']}, som inte finns.")
+        for d in range(N):
+            for del_ in ("morgon", "kvall", "natt"):
+                antal = Counter(x.get("team") for rad in schema.values() if d < len(rad) and (x := rad[d]) and x["dygnsdel"] == del_)
+                brist = {t: tbehov(tt, d % 7, del_) - antal.get(t, 0) for tt in team for t in [tt["id"]]}
+                for t, b in brist.items():
+                    if b > 0:
+                        over = [u for u, bu in brist.items() if bu < 0]
+                        brott("TEAM", None, f"{dag_text(d)} {DELTEXT.get(del_, del_)}: {namn_t[t]} har {antal.get(t, 0)} av {b + antal.get(t, 0)}"
+                              + (f", fast {', '.join(namn_t[u] for u in over)} har fler än sitt behov." if over else "."), hard=False)
 
     # behov
     behov = [{} for _ in range(7)]

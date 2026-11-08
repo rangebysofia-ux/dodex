@@ -115,6 +115,9 @@ MJUKA = {
     "natt_vila": ("Nattpersonal: vila mellan nattblock", "lokal regel", "natt_vila_mellan_block_minuter",
                   "Antal gånger vilan mellan två nattblock är kortare än gränsen (2880 = 48 h, minst två lediga nätter). Mjuk: "
                   "bryts bara när schemat annars inte går ihop. Verksamhetens beslut 2026-11-07.", "NATT_VILA"),
+    "hemteam": ("Team: täckning med egen personal", "verksamhet", None,
+                "När arbetsgruppen har team med eget behov: antal pass där ett team inte täcks av sin egen personal, så att "
+                "någon måste lånas in från ett annat team. Lån är tillåtet; behovet går före. Verksamhetens beslut 2026-11-08.", "TEAM"),
     "blocklangd": ("Dagar i följd över rekommenderat", "princip", "block_rekommenderat", "Antal tillfällen med fler arbetsdagar i följd än rekommenderat.", "BLOCK_REKOMMENDERAT"),
     "passlangd": ("Passlängd", "princip", None, "Minuter från personens snittlängd per pass och från kontrakterad tid.", "TID"),
     "rattvisa_jamn": ("Rättvisa och jämn bemanning", "princip", "jamn_bemanning",

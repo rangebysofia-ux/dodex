@@ -404,12 +404,12 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 /* ---------- Startguiden ---------- */
 .valkommen .logga svg { width: 54px; height: 54px; }
 .valrutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
-.valruta { display: grid; gap: 6px; text-align: left; align-content: start; padding: 18px; border-radius: 18px; border: 1px solid var(--linje); background: var(--yta2); cursor: pointer; font: inherit; color: var(--text); min-height: 150px; }
+.valruta { display: grid; gap: 10px; text-align: left; align-content: start; padding: 16px; border-radius: 18px; border: 1px solid var(--linje); background: var(--yta2); cursor: pointer; font: inherit; color: var(--text); min-height: 0; }
 .valruta:hover { border-color: var(--salvia); background: var(--accent-svag); }
 .valruta.huvud { background: var(--accent-svag); border-color: var(--salvia); }
-.valruta b { font-size: 17px; } .valruta > span:last-child { color: var(--dampad); font-size: 13.5px; line-height: 1.45; }
 .valikon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--yta); font-size: 22px; color: var(--skog); }
 .valruta.huvud .valikon { background: var(--guld); color: var(--text); }
+.valruta b { font-size: 17px; } .valruta > span:last-child { color: var(--dampad); font-size: 13.5px; line-height: 1.45; }
 .nyttigt { margin-top: 14px; } .nyttigt summary { cursor: pointer; font-weight: 700; color: var(--skog); }
 .guide h2 { margin-top: 6px; }
 .guidesteg { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--dampad); }
@@ -538,3 +538,10 @@ tr.kal-ingen td { background: transparent; }
 .arbetstid-dagar > div { display: grid; justify-items: center; align-content: end; gap: 2px; height: 96px; }
 .arbetstid-dagar i { width: 70%; max-width: 34px; border-radius: 5px 5px 2px 2px; background: var(--guld, #c9a03a); min-height: 2px; }
 .arbetstid-dagar b { font-size: 12.5px; } .arbetstid-dagar span { font-size: 11.5px; color: var(--dampad); }
+
+/* team */
+.team-hem { display: block; font-size: 10.5px; font-weight: 700; color: var(--dampad); }
+.pass .team-lan { display: block; font: 800 9.5px/1.1 var(--mono, monospace); font-style: normal; color: #fff; background: #4d6488; border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
+
+/* enhet = hus */
+.enhet-ikon { margin-right: 6px; }
