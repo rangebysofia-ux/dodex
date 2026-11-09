@@ -106,31 +106,69 @@ function sokvag(delar) {
 // ---------------------------------------------------------------- meny
 let kravsInloggning = false;
 function ritaMeny() {
-  const e = st.enhet, k = st.korning && st.enhet && st.korning.enhet_id === st.enhet.id ? st.korning.id : "";
-  const KORT = { Schemaplanering: "Schema", Bemanningsbehov: "Behov", Bemanningsbalans: "Balans", "Analys och nyckeltal": "Nyckeltal", Regelkontroll: "Regler", Inställningar: "Inställn." };
-  const lank = (vyer, ikon, text, href, av) => `<a class="post" href="${href}" aria-label="${text}"${vyer.includes(st.vy) ? ' aria-current="page"' : ""}${av ? ' aria-disabled="true" tabindex="-1"' : ""}>${IKON[ikon]}<span class="lang">${text}</span><span class="kortnamn">${KORT[text] || text}</span></a>`;
-  const bas = e ? `#/e/${e.id}` : "#/", kk = k ? "/" + k : "";
+  // Samma DODEX-identitet, men tydliga arbetsområden. Alla tidigare sidor finns kvar.
+  const e = st.enhet;
+  const k = st.korning && e && st.korning.enhet_id === e.id ? st.korning.id : "";
+  const till = sida => e ? `#/e/${e.id}/${sida}` : "#/";
+  const kk = k ? "/" + k : "";
+  const kortnamn = { Schemaplanering: "Schema", Bemanningsbalans: "Balans", "Analys och nyckeltal": "Analys" };
+  const poster = {
+    oversikt: { namn: "Översikt", ikon: "oversikt", vyer: ["hem", "oversikt"], href: e ? till("oversikt") : "#/", krav: false },
+    schema: { namn: "Schemaplanering", ikon: "schema", vyer: ["schema"], href: till("schema" + kk), krav: true },
+    kalender: { namn: "Kalender", ikon: "kalender", vyer: ["kalender"], href: till("kalender"), krav: true },
+    behov: { namn: "Bemanningsbehov", ikon: "behov", vyer: ["behov"], href: till("behov"), krav: true },
+    medarbetare: { namn: "Medarbetare", ikon: "grupp", vyer: ["medarbetare", "personer", "indata"], href: till("medarbetare"), krav: true },
+    aktiviteter: { namn: "Aktiviteter", ikon: "stjarna", vyer: ["aktiviteter"], href: till("aktiviteter"), krav: true },
+    regelkontroll: { namn: "Regelkontroll", ikon: "kontroll", vyer: ["regelkontroll"], href: till("regelkontroll" + kk), krav: true },
+    balans: { namn: "Bemanningsbalans", ikon: "kostnad", vyer: ["bemanningsbalans"], href: till("bemanningsbalans"), krav: true },
+    analys: { namn: "Simulering", ikon: "simulering", vyer: ["analys"], href: till("analys"), krav: true },
+    nyckeltal: { namn: "Analys och nyckeltal", ikon: "graf", vyer: ["nyckeltal", "bemanning"], href: till("nyckeltal" + kk), krav: true },
+    rapporter: { namn: "Rapporter", ikon: "rapport", vyer: ["rapporter"], href: till("rapporter"), krav: true },
+    installningar: { namn: "Inställningar", ikon: "installning", vyer: ["installningar"], href: till("installningar"), krav: true },
+    organisation: { namn: "Organisation", ikon: "installning", vyer: ["organisation"], href: "#/organisation", krav: false },
+    konton: { namn: "Konton", ikon: "grupp", vyer: ["konton"], href: "#/konton", krav: false },
+  };
+  const grupper = [
+    { namn: "Schema och planering", poster: ["schema", "behov", "medarbetare", "aktiviteter", "regelkontroll"] },
+    { namn: "Daglig bemanning", poster: ["kalender"], notis: "Frånvaro, resurser och vikariebokningar byggs i nästa etapp." },
+    { namn: "Ekonomi och uppföljning", poster: ["balans", "analys", "nyckeltal", "rapporter"] },
+    { namn: "Administration", poster: ["installningar", "organisation", "konton"] },
+  ];
+  const aktiv = p => p.vyer.includes(st.vy);
+  const lank = (nyckel, mobil = false) => {
+    const p = poster[nyckel];
+    const av = p.krav && !e;
+    return `<a class="post${mobil ? " mobil-post" : ""}" href="${p.href}" aria-label="${p.namn}"${aktiv(p) ? ' aria-current="page"' : ""}${av ? ' aria-disabled="true" tabindex="-1"' : ""}>${IKON[p.ikon]}<span class="lang">${p.namn}</span><span class="kortnamn">${kortnamn[p.namn] || p.namn}</span></a>`;
+  };
+  const grupp = g => {
+    const oppen = g.poster.some(n => aktiv(poster[n]));
+    return `<details class="meny-grupp"${oppen ? " open" : ""}><summary>${g.namn}<span class="meny-pil" aria-hidden="true">⌄</span></summary>
+      <div class="meny-grupp-innehall">${g.poster.map(n => lank(n)).join("")}${g.notis ? `<p class="meny-notis">${g.notis}</p>` : ""}</div></details>`;
+  };
   const lista = st.enhetLista || [];
-  $("#meny").innerHTML = `<a class="logga" href="#/" aria-label="DODEX Scheduler, till enheterna">${loggaText()}</a>
+  const desktop = `<div class="meny-dator">
+    <a class="logga" href="#/" aria-label="DODEX Scheduler, till enheterna">${loggaText()}</a>
     <div class="enhetsval"><label for="enhetsval">Enhet</label><select id="enhetsval"><option value="">Alla enheter …</option>${lista.map(x => `<option value="${x.id}"${e && x.id === e.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div>
-    ${lank(["schema"], "schema", "Schemaplanering", `${bas}/schema${kk}`, !e)}
-    ${lank(["kalender"], "kalender", "Kalender", `${bas}/kalender`, !e)}
-    ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
-    ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
-    ${lank(["bemanningsbalans"], "kostnad", "Bemanningsbalans", `${bas}/bemanningsbalans`, !e)}
-    ${lank(["medarbetare", "personer", "indata"], "grupp", "Medarbetare", `${bas}/medarbetare`, !e)}
-    ${lank(["aktiviteter"], "stjarna", "Aktiviteter", `${bas}/aktiviteter`, !e)}
-    ${lank(["nyckeltal", "bemanning"], "graf", "Analys och nyckeltal", `${bas}/nyckeltal${kk}`, !e)}
-    ${lank(["analys"], "simulering", "Simulering", `${bas}/analys`, !e)}
-    ${lank(["regelkontroll"], "kontroll", "Regelkontroll", `${bas}/regelkontroll${kk}`, !e)}
-    ${lank(["rapporter"], "rapport", "Rapporter", `${bas}/rapporter`, !e)}
-    ${lank(["installningar"], "installning", "Inställningar", `${bas}/installningar`, !e)}
+    ${lank("oversikt")}
+    ${grupper.map(grupp).join("")}
     <div class="fyll"></div>
-    ${lank(["organisation"], "installning", "Organisation", "#/organisation")}
-    ${lank(["konton"], "grupp", "Konton", "#/konton")}
     ${st.session?.anvandare ? `<div class="inloggad-som">${esc(st.session.anvandare)} · ${st.session.roll === "chef" ? "chef" : "schemaläggare"}</div>` : ""}
     ${kravsInloggning ? `<button class="post ut" data-g="logga-ut" aria-label="Logga ut">${IKON.ut}<span>Logga ut</span></button>` : ""}
-    <div class="fot"><em>Planering som skapar balans – idag och imorgon.</em>© Sofia Rångeby</div>`;
+    <div class="fot"><em>Planering som skapar balans – idag och imorgon.</em>© Sofia Rångeby</div>
+  </div>`;
+  const snabbval = ["oversikt", "schema", "kalender", "balans"];
+  const aktivImer = !snabbval.some(n => aktiv(poster[n]));
+  const mobil = `<div class="meny-mobil">
+    ${snabbval.map(n => lank(n, true)).join("")}
+    <details class="mobil-mer"><summary class="post${aktivImer ? " mobil-mer-aktiv" : ""}" aria-label="Fler funktioner">${IKON.installning}<span>Mer</span></summary>
+      <div class="mobil-fler-panel">
+        <h2>Alla funktioner</h2>
+        ${grupper.map(g => `<section class="mobil-menygrupp"><h3>${g.namn}</h3>${g.poster.map(n => lank(n, true)).join("")}${g.notis ? `<p class="meny-notis">${g.notis}</p>` : ""}</section>`).join("")}
+        ${kravsInloggning ? `<button class="post mobil-post" data-g="logga-ut">${IKON.ut}<span>Logga ut</span></button>` : ""}
+      </div>
+    </details>
+  </div>`;
+  $("#meny").innerHTML = desktop + mobil;
   $("#mobillogga").innerHTML = loggaText();
   const v = $("#enhetsval");
   if (v) v.onchange = () => { location.hash = v.value ? `#/e/${v.value}/schema` : "#/"; };
