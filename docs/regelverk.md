@@ -33,7 +33,7 @@ Användarens beslut 2026-11-09: jouren läggs som ett **jourpass över dygnet**,
 - **Arbetstid:** arbetet 15–24 (med rast) och 06–08, plus hälften av jourtiden (användarens beslut, ändras under Behov). Exemplet ger 8,5 + 2 + 3 = 13,5 timmar. De andra passen blir kortare så att kontraktet stämmer.
 - **Behovet:** jourpasset räknas in i kvällens bemanning samma dag och morgonens bemanning dagen efter (användarens beslut). Jourbehovet är mjukt, på samma nivå som behovet. En natt utan jourpass syns som *vakant jourpass* (`jourvakanser`, `jour_saknas`).
 - **Vila:** hela passet är högst 20 timmar. Vilan efteråt ska vara minst lika lång som passet. Undantaget från dygnsvilan gäller bara inom jourpasset. Jourtiden är inte vila, så den räknas som upptagen tid för veckovilan.
-- **I schemat** står passets första halva (🛏️ J 15:00–00:00) och andra halva (00:00–08:00) som ett sammanhängande pass över båda dagarna. Jourtiden ligger lägre i andra halvan.
+- **I schemat** hänger passet ihop över båda dagarna: kvällsdelen (🌙 J 15:00–24:00) och morgondelen (☀️ 06:00–08:00) visas i full storlek med sina tider, och jourtiden däremellan som ett kort band med halva tjockleken (🛏️), utan tid. Morgondelen tar drygt halva rutan så att tiden får plats. Hela passet med jourtiden visas när man håller över eller trycker på passet.
 - En medarbetare kan undantas från jourpass med `personal[].jour: false`. Jourpass går bara till dem som arbetar kväll.
 
 ### Hur många jourpass det blir

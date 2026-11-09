@@ -20,7 +20,7 @@ nod = pytest.mark.skipif(not shutil.which("node"), reason="Node saknas")
 
 @pytest.fixture(scope="module")
 def res():
-    return los(forbered(FALL), tid_per_steg=10, arbetare=4, tyst=True)
+    return los(forbered(FALL), tid_per_steg=20, arbetare=4, tyst=True)  # 10 s gav ibland en vakans
 
 
 def jourpass(schema):

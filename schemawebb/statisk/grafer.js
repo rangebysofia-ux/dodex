@@ -454,7 +454,13 @@ const PASSIKON = { morgon: "☀️", kvall: "🌙", natt: "🌃", jour: "🛏️
 const passIkon = del => PASSIKON[del] ? `<span class="passikon" aria-hidden="true">${PASSIKON[del]}</span>` : "";
 // Jour efter passet (Bilaga J): ett J med tiderna som verktygstips.
 // Jourpassets andra halva: jourtiden som en lägre del av passet (docs/regelverk.md).
-const jourMarke = p => (p && p.jour ? `<i class="jour-marke" title="Jour ${p.jour.start}–${p.jour.slut}" aria-label="Jour ${p.jour.start} till ${p.jour.slut}">jour ${p.jour.start}–${p.jour.slut}</i>` : "");
+// Jourpasset i schemat: tiderna visas bara som verktygstips (docs/regelverk.md); jourtiden är ett tunnare band.
+const jourMarke = () => "";
+// Rutans innehåll: kvällsdelen (dag 1) och jourbandet + morgondelen (dag 2).
+const jourInnehall = p => (p.jourdel === 1
+  ? `<b>${PASSIKON.kvall}J</b><small>${p.start}–24:00</small>`
+  : `<span class="jour-band" aria-hidden="true">${PASSIKON.jour}</span><span class="jour-morgon"><b>${PASSIKON.morgon}</b><small>${p.jour ? p.jour.slut : ""}–${p.slut}</small></span>`);
+const jourTitel = p => (p.jourdel === 1 ? `Jourpass, arbete ${p.start}–24:00` : `Jourpass: jour ${p.jour ? p.jour.start + "–" + p.jour.slut : ""}, arbete till ${p.slut}`);
 const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
 
 // ---------------------------------------------------------------- aktiviteter
@@ -699,6 +705,6 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { behovsdel, jourMarke, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { behovsdel, jourMarke, jourTitel, jourInnehall, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

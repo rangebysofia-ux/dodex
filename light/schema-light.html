@@ -405,12 +405,14 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 /* jour (Bilaga J) */
 .jour-red { margin-top: 4px; }
 
-/* jourpasset över dygnet: två halvor som hänger ihop, jourtiden lägre */
+/* jourpasset över dygnet: kvällsdel och morgondel i full storlek, jourtiden däremellan som ett smalare band */
 td:has(> .pass.jourdel-1) { padding-right: 0 !important; }
 td:has(> .pass.jourdel-2) { padding-left: 0 !important; }
-.pass.jourdel-1 { border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: inset 3px 0 0 var(--jour-kant, #a98bd6); }
-.pass.jourdel-2 { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: none; background: linear-gradient(to bottom, transparent 0 38%, var(--jour-bg, #ece2f6) 38%); padding-top: 14px; }
-.pass.jourdel-2 .jour-marke { display: block; font: 700 9px/1.1 var(--mono, monospace); font-style: normal; color: var(--jour-text, #4b2f7a); opacity: .85; }
+.pass.jourdel-1 { border-top-right-radius: 0; border-bottom-right-radius: 0; min-height: 40px; background: var(--kvall-bg, #d9e6df); color: var(--kvall-text, #173f30); box-shadow: inset 3px 0 0 var(--jour-kant, #a98bd6); }
+.pass.jourdel-2 { border-radius: 0 8px 8px 0; box-shadow: none; padding: 0; min-height: 40px; background: transparent; display: flex; align-items: stretch; overflow: hidden; }
+.pass.jourdel-2 .jour-band { flex: 4; align-self: center; height: 50%; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--jour-kant, #a98bd6) 35%, var(--jour-bg, #ece2f6)); font-size: 11px; line-height: 1; }
+.pass.jourdel-2 .jour-morgon { flex: 5; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--morgon-bg, #f6eac8); box-shadow: inset 0 0 0 1px var(--morgon-kant, #d5b46a); border-radius: 0 8px 8px 0; color: var(--morgon-text, #5e4710); }
+.pass.jourdel-2 .jour-morgon small { font-size: 10px; letter-spacing: -.02em; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -3925,7 +3927,13 @@ const PASSIKON = { morgon: "☀️", kvall: "🌙", natt: "🌃", jour: "🛏️
 const passIkon = del => PASSIKON[del] ? `<span class="passikon" aria-hidden="true">${PASSIKON[del]}</span>` : "";
 // Jour efter passet (Bilaga J): ett J med tiderna som verktygstips.
 // Jourpassets andra halva: jourtiden som en lägre del av passet (docs/regelverk.md).
-const jourMarke = p => (p && p.jour ? `<i class="jour-marke" title="Jour ${p.jour.start}–${p.jour.slut}" aria-label="Jour ${p.jour.start} till ${p.jour.slut}">jour ${p.jour.start}–${p.jour.slut}</i>` : "");
+// Jourpasset i schemat: tiderna visas bara som verktygstips (docs/regelverk.md); jourtiden är ett tunnare band.
+const jourMarke = () => "";
+// Rutans innehåll: kvällsdelen (dag 1) och jourbandet + morgondelen (dag 2).
+const jourInnehall = p => (p.jourdel === 1
+  ? `<b>${PASSIKON.kvall}J</b><small>${p.start}–24:00</small>`
+  : `<span class="jour-band" aria-hidden="true">${PASSIKON.jour}</span><span class="jour-morgon"><b>${PASSIKON.morgon}</b><small>${p.jour ? p.jour.slut : ""}–${p.slut}</small></span>`);
+const jourTitel = p => (p.jourdel === 1 ? `Jourpass, arbete ${p.start}–24:00` : `Jourpass: jour ${p.jour ? p.jour.start + "–" + p.jour.slut : ""}, arbete till ${p.slut}`);
 const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
 
 // ---------------------------------------------------------------- aktiviteter
@@ -4170,7 +4178,7 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { behovsdel, jourMarke, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { behovsdel, jourMarke, jourTitel, jourInnehall, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
 </script>
@@ -7873,7 +7881,7 @@ function dagTabell(res, dagar, period) {
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
     const vv = !x && vvAlla[p].get(d);
-    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${GRAF.jourMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}"${x.jourdel ? ` title="${esc(GRAF.jourTitel(x))}"` : ""} data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}">${x.jourdel ? GRAF.jourInnehall(x) : `<b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>`}${period || x.jourdel ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
