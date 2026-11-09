@@ -12,7 +12,7 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { TEAM: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
@@ -274,6 +274,29 @@ const GRANSKNING = (() => {
           const over = Object.entries(brist).filter(([, bu]) => bu < 0).map(([u]) => namnT[u]);
           brott("TEAM", null, `${dagText(d)} ${DELT[del]}: ${namnT[t]} har ${antal[t] || 0} av ${b + (antal[t] || 0)}${over.length ? `, fast ${over.join(", ")} har fler än sitt behov.` : "."}`, false);
         }
+      }
+    }
+
+    // kompetens (docs/kompetens.md): minst så många med kompetensen i tjänst per dag och dygnsdel. Mjukt: det som
+    // fattas är en varning (kompetensvakans), aldrig ett brott.
+    const krav = indata.kompetenskrav || [];
+    if (krav.length) {
+      const knamn = Object.fromEntries((indata.kompetenser || []).map(k => [k.id, k.namn || k.id]));
+      const har = Object.fromEntries((indata.personal || []).map(p => [p.id, p.kompetenser || []]));
+      const DELK = { morgon: "dag", kvall: "kväll", natt: "natt" };
+      const kbehov = (k, wd, del) => {
+        let v = 0;
+        for (const [nyckel, x] of Object.entries(k.behov || {})) {
+          if (nyckel === DAGNAMN[wd]) return Number(x[del] || 0);
+          if (nyckel === "alla" || (nyckel === "vardag" && wd < 5) || (nyckel === "helg" && wd >= 5)) v = Number(x[del] || 0);
+        }
+        return v;
+      };
+      for (const k of krav) for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+        const b = kbehov(k, d % 7, del); if (!b) continue;
+        let n = 0;
+        for (const [pid, rad] of Object.entries(schema)) { const x = rad[d]; if (x && x.dygnsdel === del && (har[pid] || []).includes(k.kompetens)) n++; }
+        if (n < b) brott("KOMPETENS", null, `${dagText(d)} ${DELK[del]}: ${n} av ${b} med ${knamn[k.kompetens] || k.kompetens} i tjänst.`, false);
       }
     }
 

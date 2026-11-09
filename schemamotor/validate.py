@@ -32,7 +32,7 @@ NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS":
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
         "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel",
-        "TEAM": "verksamhet"}
+        "TEAM": "verksamhet", "KOMPETENS": "verksamhet"}
 
 
 def tid(s):
@@ -426,6 +426,33 @@ def kontrollera(indata, schema_dok):
                         over = [u for u, bu in brist.items() if bu < 0]
                         brott("TEAM", None, f"{dag_text(d)} {DELTEXT.get(del_, del_)}: {namn_t[t]} har {antal.get(t, 0)} av {b + antal.get(t, 0)}"
                               + (f", fast {', '.join(namn_t[u] for u in over)} har fler än sitt behov." if over else "."), hard=False)
+
+    # kompetens (docs/kompetens.md): minst så många med kompetensen i tjänst per dag och dygnsdel. Mjukt: det som
+    # fattas är en varning (kompetensvakans), aldrig ett brott. En medarbetare med en okänd kompetens är ett indatafel.
+    krav = indata.get("kompetenskrav") or []
+    if krav:
+        knamn = {k.get("id"): k.get("namn") or k.get("id") for k in indata.get("kompetenser") or []}
+        har = {p["id"]: set(p.get("kompetenser") or []) for p in indata.get("personal", [])}
+
+        def kbehov(k, wd, del_):
+            v = 0
+            for nyckel, x in (k.get("behov") or {}).items():
+                if nyckel == "alla" or (nyckel == "vardag" and wd < 5) or (nyckel == "helg" and wd >= 5) or nyckel == DAGNAMN[wd]:
+                    if nyckel in DAGNAMN:
+                        return int(x.get(del_, 0) or 0)
+                    v = int(x.get(del_, 0) or 0)
+            return v
+        for k in krav:
+            namn_k = knamn.get(k.get("kompetens"), k.get("kompetens"))
+            for d in range(N):
+                for del_ in ("morgon", "kvall", "natt"):
+                    b = kbehov(k, d % 7, del_)
+                    if not b:
+                        continue
+                    n = sum(1 for pid, rad in schema.items() if d < len(rad) and (x := rad[d]) and x.get("dygnsdel") == del_
+                            and k.get("kompetens") in har.get(pid, ()))
+                    if n < b:
+                        brott("KOMPETENS", None, f"{dag_text(d)} {DELTEXT.get(del_, del_)}: {n} av {b} med {namn_k} i tjänst.", hard=False)
 
     # behov
     behov = [{} for _ in range(7)]

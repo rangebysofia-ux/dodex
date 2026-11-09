@@ -72,4 +72,4 @@ Att tänka på: lön och frånvaro (särskilt sjukfrånvaro) är känsliga perso
 
 ## Senare
 
-Kompetenskrav, samplanering mellan enheter, omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr` och OB enligt AB 25 § 21 (docs/ob.md); löneskillnader per person och lokala OB-nivåer återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*
+Samplanering mellan enheter (kompetenskrav finns sedan 2026-11-09, `docs/kompetens.md`), omplanering med minimal avvikelse från grundschemat. *Kostnader i kronor finns som en uppskattning med `timkostnad_kr` och OB enligt AB 25 § 21 (docs/ob.md); löneskillnader per person och lokala OB-nivåer återstår. Handjustering av scheman finns (Redigera schemat), men utan att lösaren föreslår hur ett regelbrott ska lösas.*

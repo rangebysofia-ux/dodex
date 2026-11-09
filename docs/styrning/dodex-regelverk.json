@@ -503,6 +503,17 @@
     },
     {
       "ordning": 2,
+      "id": "kompetens",
+      "namn": "Kompetens i tjänst",
+      "niva": "verksamhet",
+      "typ": "mjuk",
+      "styrs_av": null,
+      "standard": null,
+      "beskrivning": "Antal gånger det saknas någon med en kompetens som krävs, till exempel läkemedelsdelegering på kvällen. Direkt efter behovet: motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass för det och gör aldrig en vakans för det. Det som fattas syns som kompetensvakans. Verksamhetens beslut 2026-11-09.",
+      "granskningskod": "KOMPETENS"
+    },
+    {
+      "ordning": 3,
       "id": "aktiviteter",
       "namn": "Aktiviteter under arbetstid",
       "niva": "verksamhet",
@@ -513,7 +524,7 @@
       "granskningskod": "AKTIVITET"
     },
     {
-      "ordning": 3,
+      "ordning": 4,
       "id": "natt_vila",
       "namn": "Nattpersonal: vila mellan nattblock",
       "niva": "lokal regel",
@@ -524,7 +535,7 @@
       "granskningskod": "NATT_VILA"
     },
     {
-      "ordning": 4,
+      "ordning": 5,
       "id": "hemteam",
       "namn": "Team: täckning med egen personal",
       "niva": "verksamhet",
@@ -535,7 +546,7 @@
       "granskningskod": "TEAM"
     },
     {
-      "ordning": 5,
+      "ordning": 6,
       "id": "blocklangd",
       "namn": "Dagar i följd över rekommenderat",
       "niva": "princip",
@@ -546,7 +557,7 @@
       "granskningskod": "BLOCK_REKOMMENDERAT"
     },
     {
-      "ordning": 6,
+      "ordning": 7,
       "id": "passlangd",
       "namn": "Passlängd",
       "niva": "princip",
@@ -557,7 +568,7 @@
       "granskningskod": "TID"
     },
     {
-      "ordning": 7,
+      "ordning": 8,
       "id": "rattvisa_jamn",
       "namn": "Rättvisa och jämn bemanning",
       "niva": "princip",
@@ -568,7 +579,7 @@
       "granskningskod": "JAMN_BEMANNING"
     },
     {
-      "ordning": 8,
+      "ordning": 9,
       "id": "spridning",
       "namn": "Blandning av morgon och kväll varje vecka",
       "niva": "princip",
@@ -579,7 +590,7 @@
       "granskningskod": "SPRIDNING"
     },
     {
-      "ordning": 9,
+      "ordning": 10,
       "id": "onskemal",
       "namn": "Önskemål",
       "niva": "önskemål",

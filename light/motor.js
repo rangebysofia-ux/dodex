@@ -24,6 +24,7 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
   const WH = 500;      // team: pass där ett team inte täcks av sin egen personal (efter nattvilan, före block)
+  const WK = 8e4;      // kompetens: saknas någon med en kompetens som krävs (direkt efter vakanser, före aktiviteter)
 
   // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
   // Samma förenkling som ob_kategori i schemamotor/build.py.
@@ -117,7 +118,7 @@ const MOTOR = (() => {
       }
       const frek = p.helgfrekvens || r.helgfrekvens;
       const tol = p.tolerans_minuter ?? (natt ? Math.max(r.tolerans_minuter, Math.ceil(nnet / 2)) : r.tolerans_minuter);
-      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null });
+      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []) });
     }
     if (!pers.length) fel.push("Lägg till minst en person.");
 
@@ -221,7 +222,34 @@ const MOTOR = (() => {
     // team med eget behov (docs/team.md): personalen är gemensam men har ett hemteam
     const team = teamFor(ind);
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, enhet: ind.enhet || "" };
+    // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
+    const kompetens = kompFor(ind);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, enhet: ind.enhet || "" };
+  }
+
+  // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
+  function kompFor(ind) {
+    const namn = Object.fromEntries((ind.kompetenser || []).map(k => [k.id, k.namn || k.id]));
+    return (ind.kompetenskrav || []).map((k, i) => {
+      const b = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+      for (const [nyckel, v] of Object.entries(k.behov || {})) {
+        const idx = nyckel === "vardag" ? [0, 1, 2, 3, 4] : nyckel === "helg" ? [5, 6] : nyckel === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(nyckel)];
+        for (const j of idx) if (j >= 0) b[j] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
+      }
+      return { id: k.id || `K${i + 1}`, kompetens: k.kompetens, namn: namn[k.kompetens] || k.kompetens, behov: b };
+    });
+  }
+
+  // Hur många med kompetensen som arbetar varje dag och dygnsdel med ett krav (samma som kompetens_tackning i build.py).
+  function kompetensTackning(schema, krav, komp, N) {
+    const rader = [];
+    for (const k of krav) for (let d = 0; d < N; d++) for (const [ti, del] of [[1, "morgon"], [2, "kvall"], [3, "natt"]]) {
+      const b = k.behov[d % 7][ti]; if (!b) continue;
+      const med = Object.keys(schema).filter(pid => schema[pid][d] && schema[pid][d].dygnsdel === del && (komp[pid] || new Set()).has(k.kompetens));
+      rader.push({ krav: k.id, kompetens: k.kompetens, namn: k.namn, dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: del,
+        behov: b, i_tjanst: med.length, med, saknas: Math.max(0, b - med.length) });
+    }
+    return rader;
   }
 
   // teamens behov per veckodag: [0, dag, kväll, natt] som behovet ovan
@@ -498,6 +526,16 @@ const MOTOR = (() => {
       return k;
     }
 
+    // kompetens: saknade med kompetensen per dag (krav minus de med kompetensen som arbetar dygnsdelen)
+    const harKomp = pr.kompetens && pr.kompetens.length > 0;
+    const kompPers = harKomp ? pr.kompetens.map(k => pers.map((p, pi) => p.komp && p.komp.has(k.kompetens) ? pi : -1).filter(pi => pi >= 0)) : [];
+    function kompDag(X, d) {
+      if (!harKomp) return 0;
+      let k = 0;
+      pr.kompetens.forEach((kr, ki) => { for (let del = 1; del <= 3; del++) { const b = kr.behov[d % 7][del]; if (!b) continue; let n = 0; for (const pi of kompPers[ki]) if (X[pi][d] === del) n++; if (n < b) k += b - n; } });
+      return k;
+    }
+
     let bastX = null, bastKost = Infinity;
     const start = Date.now();
     const omstarter = opt.omstarter ?? 3;
@@ -510,7 +548,8 @@ const MOTOR = (() => {
       for (let d = 0; d < N; d++) for (let t = 1; t <= 3; t++) vak += vakans(cnt, d, t);
       let jk = jamnKost(cnt), ak = aktKost(X);
       const hemC = Array.from({ length: N }, (_, d) => hemDag(X, d));
-      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH;
+      const kompC = Array.from({ length: N }, (_, d) => kompDag(X, d));
+      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH + kompC.reduce((a, b) => a + b, 0) * WK;
       let lokalBast = kost, lokalX = X.map(x => x.slice());
       const budget = tidsgrans * 1000 / omstarter;
       const t0 = Date.now();
@@ -569,11 +608,14 @@ const MOTOR = (() => {
         const akNy = aktiv ? aktKost(X) : 0; delta += akNy - ak;
         const hemNy = {};
         if (harTeam) for (const [, d] of andrade) if (!(d in hemNy)) { hemNy[d] = hemDag(X, d); delta += (hemNy[d] - hemC[d]) * WH; }
+        const kompNy = {};
+        if (harKomp) for (const [, d] of andrade) if (!(d in kompNy)) { kompNy[d] = kompDag(X, d); delta += (kompNy[d] - kompC[d]) * WK; }
         const nya = {};
         for (const q of berorda) { nya[q] = personKost(q, X[q]); delta += nya[q].summa - pk[q].summa; }
         if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
           kost += delta; jk = jkNy; ak = akNy;
           for (const d in hemNy) hemC[d] = hemNy[d];
+          for (const d in kompNy) kompC[d] = kompNy[d];
           for (const q of berorda) pk[q] = nya[q];
           if (kost < lokalBast - 1e-9) { lokalBast = kost; lokalX = X.map(x => x.slice()); }
         } else {
@@ -657,12 +699,18 @@ const MOTOR = (() => {
         _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
+    let kompDel = {};
+    if (pr.kompetens && pr.kompetens.length) {
+      const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
+      kompDel = { kompetenskrav: pr.kompetens.map(k => ({ id: k.id, kompetens: k.kompetens, namn: k.namn })), kompetens_tackning: tack };
+      teamKpi.kompetensvakanser = tack.reduce((s, x) => s + x.saknas, 0);
+    }
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt,
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel,
     };
   }
 
@@ -838,7 +886,7 @@ const MOTOR = (() => {
     return { forvantade_vakanser: vakHelg + vakVDK + vakVN, behovDK, tillDK, behovN, tillN, helger, atgarder };
   }
 
-  return { los, balans, forbered, teamFor, fordelaTeam, DAGAR };
+  return { los, balans, forbered, teamFor, fordelaTeam, kompFor, kompetensTackning, DAGAR };
 })();
 
 if (typeof module !== "undefined") module.exports = MOTOR;

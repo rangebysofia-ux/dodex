@@ -113,14 +113,15 @@ Optimeras i den här ordningen. Ett lägre mål kan aldrig försämra ett högre
 | Ordning | Mål | Nivå | Styrs av | Standard | Hur det räknas |
 |---|---|---|---|---|---|
 | 1 | Vakanser | verksamhet | – | – | Antal pass och klockslag där behovet inte täcks. Högsta mjuka nivå: behovet görs aldrig hårt. |
-| 2 | Aktiviteter under arbetstid | verksamhet | – | – | Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela aktivitetstiden. Aktiviteter markerade som krav är hårda. |
-| 3 | Nattpersonal: vila mellan nattblock | lokal regel | `natt_vila_mellan_block_minuter` | 2880 | Antal gånger vilan mellan två nattblock är kortare än gränsen (2880 = 48 h, minst två lediga nätter). Mjuk: bryts bara när schemat annars inte går ihop. Verksamhetens beslut 2026-11-07. |
-| 4 | Team: täckning med egen personal | verksamhet | – | – | När arbetsgruppen har team med eget behov: antal pass där ett team inte täcks av sin egen personal, så att någon måste lånas in från ett annat team. Lån är tillåtet; behovet går före. Verksamhetens beslut 2026-11-08. |
-| 5 | Dagar i följd över rekommenderat | princip | `block_rekommenderat` | 4 | Antal tillfällen med fler arbetsdagar i följd än rekommenderat. |
-| 6 | Passlängd | princip | – | – | Minuter från personens snittlängd per pass och från kontrakterad tid. |
-| 7 | Rättvisa och jämn bemanning | princip | `jamn_bemanning` | mjuk | 2 × rättvisa (skillnad i antal kvälls- och morgonpass mellan personer som arbetar båda) + jämn bemanning (över- och underbemanning lika mellan dag och kväll per vecka och för perioden, och ett växande straff för överskott på ett enskilt pass, ungefär kvadratiskt). |
-| 8 | Blandning av morgon och kväll varje vecka | princip | `spridning_kvallar` | mjuk | Veckor med bara morgnar eller bara kvällar för den som arbetar båda. 'stark' flyttar målet direkt efter vakanserna; spridning_tolerans 0 = dessutom högst en kvälls skillnad mot morgnarna. |
-| 9 | Önskemål | önskemål | – | – | Viktade brutna önskemål (vikt 1–10). Önskemål markerade som krav är hårda. |
+| 2 | Kompetens i tjänst | verksamhet | – | – | Antal gånger det saknas någon med en kompetens som krävs, till exempel läkemedelsdelegering på kvällen. Direkt efter behovet: motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass för det och gör aldrig en vakans för det. Det som fattas syns som kompetensvakans. Verksamhetens beslut 2026-11-09. |
+| 3 | Aktiviteter under arbetstid | verksamhet | – | – | Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela aktivitetstiden. Aktiviteter markerade som krav är hårda. |
+| 4 | Nattpersonal: vila mellan nattblock | lokal regel | `natt_vila_mellan_block_minuter` | 2880 | Antal gånger vilan mellan två nattblock är kortare än gränsen (2880 = 48 h, minst två lediga nätter). Mjuk: bryts bara när schemat annars inte går ihop. Verksamhetens beslut 2026-11-07. |
+| 5 | Team: täckning med egen personal | verksamhet | – | – | När arbetsgruppen har team med eget behov: antal pass där ett team inte täcks av sin egen personal, så att någon måste lånas in från ett annat team. Lån är tillåtet; behovet går före. Verksamhetens beslut 2026-11-08. |
+| 6 | Dagar i följd över rekommenderat | princip | `block_rekommenderat` | 4 | Antal tillfällen med fler arbetsdagar i följd än rekommenderat. |
+| 7 | Passlängd | princip | – | – | Minuter från personens snittlängd per pass och från kontrakterad tid. |
+| 8 | Rättvisa och jämn bemanning | princip | `jamn_bemanning` | mjuk | 2 × rättvisa (skillnad i antal kvälls- och morgonpass mellan personer som arbetar båda) + jämn bemanning (över- och underbemanning lika mellan dag och kväll per vecka och för perioden, och ett växande straff för överskott på ett enskilt pass, ungefär kvadratiskt). |
+| 9 | Blandning av morgon och kväll varje vecka | princip | `spridning_kvallar` | mjuk | Veckor med bara morgnar eller bara kvällar för den som arbetar båda. 'stark' flyttar målet direkt efter vakanserna; spridning_tolerans 0 = dessutom högst en kvälls skillnad mot morgnarna. |
+| 10 | Önskemål | önskemål | – | – | Viktade brutna önskemål (vikt 1–10). Önskemål markerade som krav är hårda. |
 
 ### Inställningar för de mjuka målen
 

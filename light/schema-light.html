@@ -379,6 +379,19 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
 .imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
 .imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }
+
+/* kompetens (kompetens.js) */
+.komp-chip { display: inline-block; font: 800 9.5px/1.3 var(--sans); letter-spacing: .02em; color: #fff; background: var(--kf, #7a6a55); border-radius: 4px; padding: 0 4px; margin: 1px 2px 0 0; }
+.komp-marke { display: block; line-height: 1.2; }
+.komp-matris th, .komp-matris td { text-align: center; padding: 4px 6px; }
+.komp-matris tbody th { text-align: left; }
+.komp-matris tr.summa td, .komp-matris tr.summa th { font-weight: 700; color: var(--dampad); }
+.komp-krav select { width: auto; min-width: 150px; }
+.komp-balans { display: grid; gap: 8px; }
+.komp-rad { border: 1px solid var(--linje); border-left: 5px solid var(--bra, #2f8a6f); border-radius: 10px; padding: 8px 10px; }
+.komp-rad.brist { border-left-color: var(--dalig, #c0473f); }
+.komp-rad.knappt { border-left-color: var(--guld, #c9a03a); }
+.os-komp .os-typ { grid-template-columns: auto 1fr auto auto; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -418,6 +431,7 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
   const WH = 500;      // team: pass där ett team inte täcks av sin egen personal (efter nattvilan, före block)
+  const WK = 8e4;      // kompetens: saknas någon med en kompetens som krävs (direkt efter vakanser, före aktiviteter)
 
   // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
   // Samma förenkling som ob_kategori i schemamotor/build.py.
@@ -511,7 +525,7 @@ const MOTOR = (() => {
       }
       const frek = p.helgfrekvens || r.helgfrekvens;
       const tol = p.tolerans_minuter ?? (natt ? Math.max(r.tolerans_minuter, Math.ceil(nnet / 2)) : r.tolerans_minuter);
-      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null });
+      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []) });
     }
     if (!pers.length) fel.push("Lägg till minst en person.");
 
@@ -615,7 +629,34 @@ const MOTOR = (() => {
     // team med eget behov (docs/team.md): personalen är gemensam men har ett hemteam
     const team = teamFor(ind);
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, enhet: ind.enhet || "" };
+    // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
+    const kompetens = kompFor(ind);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, enhet: ind.enhet || "" };
+  }
+
+  // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
+  function kompFor(ind) {
+    const namn = Object.fromEntries((ind.kompetenser || []).map(k => [k.id, k.namn || k.id]));
+    return (ind.kompetenskrav || []).map((k, i) => {
+      const b = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+      for (const [nyckel, v] of Object.entries(k.behov || {})) {
+        const idx = nyckel === "vardag" ? [0, 1, 2, 3, 4] : nyckel === "helg" ? [5, 6] : nyckel === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(nyckel)];
+        for (const j of idx) if (j >= 0) b[j] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
+      }
+      return { id: k.id || `K${i + 1}`, kompetens: k.kompetens, namn: namn[k.kompetens] || k.kompetens, behov: b };
+    });
+  }
+
+  // Hur många med kompetensen som arbetar varje dag och dygnsdel med ett krav (samma som kompetens_tackning i build.py).
+  function kompetensTackning(schema, krav, komp, N) {
+    const rader = [];
+    for (const k of krav) for (let d = 0; d < N; d++) for (const [ti, del] of [[1, "morgon"], [2, "kvall"], [3, "natt"]]) {
+      const b = k.behov[d % 7][ti]; if (!b) continue;
+      const med = Object.keys(schema).filter(pid => schema[pid][d] && schema[pid][d].dygnsdel === del && (komp[pid] || new Set()).has(k.kompetens));
+      rader.push({ krav: k.id, kompetens: k.kompetens, namn: k.namn, dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: del,
+        behov: b, i_tjanst: med.length, med, saknas: Math.max(0, b - med.length) });
+    }
+    return rader;
   }
 
   // teamens behov per veckodag: [0, dag, kväll, natt] som behovet ovan
@@ -892,6 +933,16 @@ const MOTOR = (() => {
       return k;
     }
 
+    // kompetens: saknade med kompetensen per dag (krav minus de med kompetensen som arbetar dygnsdelen)
+    const harKomp = pr.kompetens && pr.kompetens.length > 0;
+    const kompPers = harKomp ? pr.kompetens.map(k => pers.map((p, pi) => p.komp && p.komp.has(k.kompetens) ? pi : -1).filter(pi => pi >= 0)) : [];
+    function kompDag(X, d) {
+      if (!harKomp) return 0;
+      let k = 0;
+      pr.kompetens.forEach((kr, ki) => { for (let del = 1; del <= 3; del++) { const b = kr.behov[d % 7][del]; if (!b) continue; let n = 0; for (const pi of kompPers[ki]) if (X[pi][d] === del) n++; if (n < b) k += b - n; } });
+      return k;
+    }
+
     let bastX = null, bastKost = Infinity;
     const start = Date.now();
     const omstarter = opt.omstarter ?? 3;
@@ -904,7 +955,8 @@ const MOTOR = (() => {
       for (let d = 0; d < N; d++) for (let t = 1; t <= 3; t++) vak += vakans(cnt, d, t);
       let jk = jamnKost(cnt), ak = aktKost(X);
       const hemC = Array.from({ length: N }, (_, d) => hemDag(X, d));
-      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH;
+      const kompC = Array.from({ length: N }, (_, d) => kompDag(X, d));
+      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH + kompC.reduce((a, b) => a + b, 0) * WK;
       let lokalBast = kost, lokalX = X.map(x => x.slice());
       const budget = tidsgrans * 1000 / omstarter;
       const t0 = Date.now();
@@ -963,11 +1015,14 @@ const MOTOR = (() => {
         const akNy = aktiv ? aktKost(X) : 0; delta += akNy - ak;
         const hemNy = {};
         if (harTeam) for (const [, d] of andrade) if (!(d in hemNy)) { hemNy[d] = hemDag(X, d); delta += (hemNy[d] - hemC[d]) * WH; }
+        const kompNy = {};
+        if (harKomp) for (const [, d] of andrade) if (!(d in kompNy)) { kompNy[d] = kompDag(X, d); delta += (kompNy[d] - kompC[d]) * WK; }
         const nya = {};
         for (const q of berorda) { nya[q] = personKost(q, X[q]); delta += nya[q].summa - pk[q].summa; }
         if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
           kost += delta; jk = jkNy; ak = akNy;
           for (const d in hemNy) hemC[d] = hemNy[d];
+          for (const d in kompNy) kompC[d] = kompNy[d];
           for (const q of berorda) pk[q] = nya[q];
           if (kost < lokalBast - 1e-9) { lokalBast = kost; lokalX = X.map(x => x.slice()); }
         } else {
@@ -1051,12 +1106,18 @@ const MOTOR = (() => {
         _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
+    let kompDel = {};
+    if (pr.kompetens && pr.kompetens.length) {
+      const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
+      kompDel = { kompetenskrav: pr.kompetens.map(k => ({ id: k.id, kompetens: k.kompetens, namn: k.namn })), kompetens_tackning: tack };
+      teamKpi.kompetensvakanser = tack.reduce((s, x) => s + x.saknas, 0);
+    }
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt,
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel,
     };
   }
 
@@ -1232,7 +1293,7 @@ const MOTOR = (() => {
     return { forvantade_vakanser: vakHelg + vakVDK + vakVN, behovDK, tillDK, behovN, tillN, helger, atgarder };
   }
 
-  return { los, balans, forbered, teamFor, fordelaTeam, DAGAR };
+  return { los, balans, forbered, teamFor, fordelaTeam, kompFor, kompetensTackning, DAGAR };
 })();
 
 if (typeof module !== "undefined") module.exports = MOTOR;
@@ -1259,7 +1320,7 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { TEAM: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
@@ -1524,6 +1585,29 @@ const GRANSKNING = (() => {
       }
     }
 
+    // kompetens (docs/kompetens.md): minst så många med kompetensen i tjänst per dag och dygnsdel. Mjukt: det som
+    // fattas är en varning (kompetensvakans), aldrig ett brott.
+    const krav = indata.kompetenskrav || [];
+    if (krav.length) {
+      const knamn = Object.fromEntries((indata.kompetenser || []).map(k => [k.id, k.namn || k.id]));
+      const har = Object.fromEntries((indata.personal || []).map(p => [p.id, p.kompetenser || []]));
+      const DELK = { morgon: "dag", kvall: "kväll", natt: "natt" };
+      const kbehov = (k, wd, del) => {
+        let v = 0;
+        for (const [nyckel, x] of Object.entries(k.behov || {})) {
+          if (nyckel === DAGNAMN[wd]) return Number(x[del] || 0);
+          if (nyckel === "alla" || (nyckel === "vardag" && wd < 5) || (nyckel === "helg" && wd >= 5)) v = Number(x[del] || 0);
+        }
+        return v;
+      };
+      for (const k of krav) for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+        const b = kbehov(k, d % 7, del); if (!b) continue;
+        let n = 0;
+        for (const [pid, rad] of Object.entries(schema)) { const x = rad[d]; if (x && x.dygnsdel === del && (har[pid] || []).includes(k.kompetens)) n++; }
+        if (n < b) brott("KOMPETENS", null, `${dagText(d)} ${DELK[del]}: ${n} av ${b} med ${knamn[k.kompetens] || k.kompetens} i tjänst.`, false);
+      }
+    }
+
     const behov = Array.from({ length: 7 }, () => ({}));
     for (const [k, v] of Object.entries(indata.behov || {})) {
       const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGNAMN.indexOf(k)];
@@ -1588,6 +1672,7 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
   const WH = 500;      // team: pass där ett team inte täcks av sin egen personal (efter nattvilan, före block)
+  const WK = 8e4;      // kompetens: saknas någon med en kompetens som krävs (direkt efter vakanser, före aktiviteter)
 
   // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
   // Samma förenkling som ob_kategori i schemamotor/build.py.
@@ -1681,7 +1766,7 @@ const MOTOR = (() => {
       }
       const frek = p.helgfrekvens || r.helgfrekvens;
       const tol = p.tolerans_minuter ?? (natt ? Math.max(r.tolerans_minuter, Math.ceil(nnet / 2)) : r.tolerans_minuter);
-      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null });
+      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []) });
     }
     if (!pers.length) fel.push("Lägg till minst en person.");
 
@@ -1785,7 +1870,34 @@ const MOTOR = (() => {
     // team med eget behov (docs/team.md): personalen är gemensam men har ett hemteam
     const team = teamFor(ind);
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, enhet: ind.enhet || "" };
+    // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
+    const kompetens = kompFor(ind);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, enhet: ind.enhet || "" };
+  }
+
+  // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
+  function kompFor(ind) {
+    const namn = Object.fromEntries((ind.kompetenser || []).map(k => [k.id, k.namn || k.id]));
+    return (ind.kompetenskrav || []).map((k, i) => {
+      const b = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+      for (const [nyckel, v] of Object.entries(k.behov || {})) {
+        const idx = nyckel === "vardag" ? [0, 1, 2, 3, 4] : nyckel === "helg" ? [5, 6] : nyckel === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(nyckel)];
+        for (const j of idx) if (j >= 0) b[j] = [0, v.morgon || 0, v.kvall || 0, v.natt || 0];
+      }
+      return { id: k.id || `K${i + 1}`, kompetens: k.kompetens, namn: namn[k.kompetens] || k.kompetens, behov: b };
+    });
+  }
+
+  // Hur många med kompetensen som arbetar varje dag och dygnsdel med ett krav (samma som kompetens_tackning i build.py).
+  function kompetensTackning(schema, krav, komp, N) {
+    const rader = [];
+    for (const k of krav) for (let d = 0; d < N; d++) for (const [ti, del] of [[1, "morgon"], [2, "kvall"], [3, "natt"]]) {
+      const b = k.behov[d % 7][ti]; if (!b) continue;
+      const med = Object.keys(schema).filter(pid => schema[pid][d] && schema[pid][d].dygnsdel === del && (komp[pid] || new Set()).has(k.kompetens));
+      rader.push({ krav: k.id, kompetens: k.kompetens, namn: k.namn, dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], dygnsdel: del,
+        behov: b, i_tjanst: med.length, med, saknas: Math.max(0, b - med.length) });
+    }
+    return rader;
   }
 
   // teamens behov per veckodag: [0, dag, kväll, natt] som behovet ovan
@@ -2062,6 +2174,16 @@ const MOTOR = (() => {
       return k;
     }
 
+    // kompetens: saknade med kompetensen per dag (krav minus de med kompetensen som arbetar dygnsdelen)
+    const harKomp = pr.kompetens && pr.kompetens.length > 0;
+    const kompPers = harKomp ? pr.kompetens.map(k => pers.map((p, pi) => p.komp && p.komp.has(k.kompetens) ? pi : -1).filter(pi => pi >= 0)) : [];
+    function kompDag(X, d) {
+      if (!harKomp) return 0;
+      let k = 0;
+      pr.kompetens.forEach((kr, ki) => { for (let del = 1; del <= 3; del++) { const b = kr.behov[d % 7][del]; if (!b) continue; let n = 0; for (const pi of kompPers[ki]) if (X[pi][d] === del) n++; if (n < b) k += b - n; } });
+      return k;
+    }
+
     let bastX = null, bastKost = Infinity;
     const start = Date.now();
     const omstarter = opt.omstarter ?? 3;
@@ -2074,7 +2196,8 @@ const MOTOR = (() => {
       for (let d = 0; d < N; d++) for (let t = 1; t <= 3; t++) vak += vakans(cnt, d, t);
       let jk = jamnKost(cnt), ak = aktKost(X);
       const hemC = Array.from({ length: N }, (_, d) => hemDag(X, d));
-      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH;
+      const kompC = Array.from({ length: N }, (_, d) => kompDag(X, d));
+      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH + kompC.reduce((a, b) => a + b, 0) * WK;
       let lokalBast = kost, lokalX = X.map(x => x.slice());
       const budget = tidsgrans * 1000 / omstarter;
       const t0 = Date.now();
@@ -2133,11 +2256,14 @@ const MOTOR = (() => {
         const akNy = aktiv ? aktKost(X) : 0; delta += akNy - ak;
         const hemNy = {};
         if (harTeam) for (const [, d] of andrade) if (!(d in hemNy)) { hemNy[d] = hemDag(X, d); delta += (hemNy[d] - hemC[d]) * WH; }
+        const kompNy = {};
+        if (harKomp) for (const [, d] of andrade) if (!(d in kompNy)) { kompNy[d] = kompDag(X, d); delta += (kompNy[d] - kompC[d]) * WK; }
         const nya = {};
         for (const q of berorda) { nya[q] = personKost(q, X[q]); delta += nya[q].summa - pk[q].summa; }
         if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
           kost += delta; jk = jkNy; ak = akNy;
           for (const d in hemNy) hemC[d] = hemNy[d];
+          for (const d in kompNy) kompC[d] = kompNy[d];
           for (const q of berorda) pk[q] = nya[q];
           if (kost < lokalBast - 1e-9) { lokalBast = kost; lokalX = X.map(x => x.slice()); }
         } else {
@@ -2221,12 +2347,18 @@ const MOTOR = (() => {
         _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
+    let kompDel = {};
+    if (pr.kompetens && pr.kompetens.length) {
+      const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
+      kompDel = { kompetenskrav: pr.kompetens.map(k => ({ id: k.id, kompetens: k.kompetens, namn: k.namn })), kompetens_tackning: tack };
+      teamKpi.kompetensvakanser = tack.reduce((s, x) => s + x.saknas, 0);
+    }
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt,
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel,
     };
   }
 
@@ -2402,7 +2534,7 @@ const MOTOR = (() => {
     return { forvantade_vakanser: vakHelg + vakVDK + vakVN, behovDK, tillDK, behovN, tillN, helger, atgarder };
   }
 
-  return { los, balans, forbered, teamFor, fordelaTeam, DAGAR };
+  return { los, balans, forbered, teamFor, fordelaTeam, kompFor, kompetensTackning, DAGAR };
 })();
 
 if (typeof module !== "undefined") module.exports = MOTOR;
@@ -5396,6 +5528,243 @@ return { laggTill, bytNamn, taBort, FARGER, farg, nyFarg, hemMarke, lanMarke, pr
 if (typeof module !== "undefined") module.exports = TEAM;
 </script>
 <script>"use strict";
+// Kompetensbaserade behov och planering (docs/kompetens.md). Delas av webben och lättversionen.
+//  - organisationens kompetenslista (sidan Organisation), med namn, kort märkning och färg
+//  - fliken Kompetens i en enhet: medarbetarnas kompetenser och kraven (minst så många med kompetensen per pass)
+//  - kompetensbalans före schemat: kraven mot vad de med kompetensen hinner arbeta
+//  - täckningskort och utbildningsförslag efter schemat
+// Fristående: inga regler. Motorn (build.py, motor.js) lägger schemat efter kraven och granskningen kontrollerar dem.
+
+const KOMP = (() => {
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
+const DELAR = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
+const giltig = f => typeof f === "string" && /^#[0-9a-f]{6}$/i.test(f);
+const PASS_PER_VECKA = 4.75;
+
+// Startlistan (användarens önskemål 2026-11-09). Ändras på sidan Organisation.
+const STANDARD = [
+  { id: "usk", namn: "Undersköterska", kort: "USK", farg: "#2f8a6f" },
+  { id: "vb", namn: "Vårdbiträde", kort: "VB", farg: "#7a6a55" },
+  { id: "ssk", namn: "Sjuksköterska", kort: "SSK", farg: "#3f6bb0" },
+  { id: "del", namn: "Läkemedelsdelegering", kort: "DEL", farg: "#c0473f" },
+  { id: "korkort", namn: "Körkort", kort: "KK", farg: "#b08a2e" },
+  { id: "fl", namn: "Förskollärare", kort: "FL", farg: "#9a4fa8" },
+  { id: "bsk", namn: "Barnskötare", kort: "BSK", farg: "#2b8aa0" },
+];
+const PALETT = ["#2f8a6f", "#3f6bb0", "#c0473f", "#b08a2e", "#9a4fa8", "#2b8aa0", "#c46a2b", "#5f8a2f", "#b5487e", "#5b5bb8"];
+const kopia = l => (l && l.length ? l : STANDARD).map(x => ({ ...x }));
+
+function nyttId(l, namn) {
+  const bas = String(namn || "k").toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "k";
+  let id = bas, i = 2;
+  while (l.some(x => x.id === id)) id = `${bas}-${i++}`;
+  return id;
+}
+const kortFor = namn => String(namn || "").split(/[\s-]+/).filter(Boolean).map(w => w[0]).join("").toUpperCase().slice(0, 4) || "K";
+
+// ---------------------------------------------------------------- organisationens lista
+function lagg(l, namn) {
+  namn = String(namn || "").trim();
+  if (!namn) throw new Error("Skriv ett namn på kompetensen.");
+  if (l.some(x => x.namn.toLowerCase() === namn.toLowerCase())) throw new Error(`Det finns redan en kompetens som heter ${namn}.`);
+  return [...l, { id: nyttId(l, namn), namn, kort: kortFor(namn), farg: PALETT[l.length % PALETT.length] }];
+}
+function andra(l, id, falt, varde) {
+  if (falt === "farg" && !giltig(varde)) throw new Error("Ogiltig färg.");
+  if (falt === "namn" && !String(varde || "").trim()) throw new Error("Skriv ett namn.");
+  if (falt === "kort") varde = String(varde || "").trim().toUpperCase().slice(0, 6);
+  return l.map(x => x.id === id ? { ...x, [falt]: falt === "namn" ? String(varde).trim() : varde } : x);
+}
+const taBort = (l, id) => l.filter(x => x.id !== id);
+
+// Kortet på sidan Organisation.
+function orgKort(l) {
+  const rad = k => `<div class="os-typ"><input type="color" class="org-farg" data-kom="${esc(k.id)}" data-falt="farg" value="${giltig(k.farg) ? k.farg : "#7a6a55"}" aria-label="Färg för ${esc(k.namn)}" title="Färg">
+      <input data-kom="${esc(k.id)}" data-falt="namn" value="${esc(k.namn)}" aria-label="Namn"><input data-kom="${esc(k.id)}" data-falt="kort" value="${esc(k.kort || "")}" maxlength="6" style="width:76px" aria-label="Kort märkning för ${esc(k.namn)}" title="Kort märkning i schemat">
+      <button class="liten fara" data-os="kom-bort" data-id="${esc(k.id)}" aria-label="Ta bort ${esc(k.namn)}">×</button></div>`;
+  return `<section class="kort"><h2>Kompetenser</h2>
+      <p class="dampad liten">Kompetenser som medarbetarna kan ha och som kan krävas på ett pass, till exempel läkemedelsdelegering på kvällen. Namn, kort märkning i schemat och färg. Vilka som har vad och vad som krävs anges i varje enhet, under fliken Kompetens.</p>
+      <div class="os-typer os-komp">${l.map(rad).join("")}</div>
+      <form class="chips" id="kom-ny" style="margin-top:10px"><input id="kom-ny-namn" placeholder="Ny kompetens, till exempel Insulindelegering" style="max-width:280px"><button type="submit" class="liten">+ Lägg till kompetens</button></form></section>`;
+}
+
+// ---------------------------------------------------------------- en enhets kompetenser
+// Enhetens lista: de kompetenser som används (av någon medarbetare eller ett krav), med namn från organisationen.
+function enhetsLista(ind, org) {
+  const anv = new Set([...(ind.personal || []).flatMap(p => p.kompetenser || []), ...(ind.kompetenskrav || []).map(k => k.kompetens)]);
+  const kanda = new Map([...kopia(org), ...(ind.kompetenser || [])].map(k => [k.id, k]));
+  return [...anv].filter(id => kanda.has(id)).map(id => { const k = kanda.get(id); return { id, namn: k.namn || id, ...(k.kort ? { kort: k.kort } : {}), ...(giltig(k.farg) ? { farg: k.farg } : {}) }; });
+}
+// Skriv enhetens lista efter en ändring (eller ta bort den när inget används).
+function synka(ind, org) {
+  const l = enhetsLista(ind, org);
+  if (l.length) ind.kompetenser = l; else delete ind.kompetenser;
+  if (ind.kompetenskrav && !ind.kompetenskrav.length) delete ind.kompetenskrav;
+}
+function sattPerson(ind, org, pid, id, pa) {
+  const p = (ind.personal || []).find(x => x.id === pid); if (!p) return;
+  const s = new Set(p.kompetenser || []);
+  if (pa) s.add(id); else s.delete(id);
+  if (s.size) p.kompetenser = [...s]; else delete p.kompetenser;
+  synka(ind, org);
+}
+function nyttKrav(ind, org) {
+  const l = ind.kompetenskrav || (ind.kompetenskrav = []);
+  const forsta = (ind.kompetenser && ind.kompetenser[0]) || kopia(org).find(k => k.id === "del") || kopia(org)[0];
+  let i = l.length + 1; while (l.some(k => k.id === `K${i}`)) i++;
+  l.push({ id: `K${i}`, kompetens: forsta.id, behov: { alla: { kvall: 1 } } });
+  synka(ind, org);
+}
+function taBortKrav(ind, org, n) { (ind.kompetenskrav || []).splice(n, 1); synka(ind, org); }
+// falt: "kompetens", eller "vardag.kvall" osv. (antal per pass)
+function andraKrav(ind, org, n, falt, varde) {
+  const k = (ind.kompetenskrav || [])[n]; if (!k) return;
+  if (falt === "kompetens") k.kompetens = varde;
+  else {
+    const [dag, del] = falt.split(".");
+    const per = perDag(k.behov);
+    const idx = dag === "vardag" ? [0, 1, 2, 3, 4] : [5, 6];
+    idx.forEach(i => (per[i][del] = Math.max(0, parseInt(varde) || 0)));
+    k.behov = komprimera(per);
+  }
+  synka(ind, org);
+}
+function perDag(spec) {
+  const ut = Array.from({ length: 7 }, () => ({ morgon: 0, kvall: 0, natt: 0 }));
+  for (const [k, v] of Object.entries(spec || {})) {
+    const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(k)];
+    for (const i of idx) if (i >= 0) ut[i] = { morgon: +v.morgon || 0, kvall: +v.kvall || 0, natt: +v.natt || 0 };
+  }
+  return ut;
+}
+function komprimera(per) {
+  const lika = (a, b) => DELAR.every(([x]) => a[x] === b[x]), utan0 = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v));
+  if (per.every(d => lika(d, per[0]))) return { alla: utan0(per[0]) };
+  const ut = { vardag: utan0(per[0]), helg: utan0(per[5]) };
+  per.forEach((d, i) => { if (!lika(d, i < 5 ? per[0] : per[5])) ut[DAGAR[i]] = utan0(d); });
+  return ut;
+}
+const namnFor = (l, id) => (l.find(k => k.id === id) || {}).namn || id;
+const kortNamn = (l, id) => { const k = l.find(x => x.id === id) || {}; return k.kort || kortFor(k.namn || id); };
+const fargFor = (l, id) => { const k = l.find(x => x.id === id) || {}; return giltig(k.farg) ? k.farg : "#7a6a55"; };
+
+// ---------------------------------------------------------------- kompetensbalans (före schemat)
+// Per krav: hur många pass per vecka som kräver kompetensen, och hur många pass de med kompetensen hinner arbeta
+// i de dygnsdelar kravet gäller. Helgerna räknas för sig: med varannan helg behövs minst dubbelt så många med
+// kompetensen som helgkravet. En uppskattning, inte en garanti: motorn avgör.
+function balans(ind, org) {
+  const l = [...kopia(org), ...(ind.kompetenser || [])];
+  const P = p => (p.grad || 1) * PASS_PER_VECKA;
+  return (ind.kompetenskrav || []).map(k => {
+    const per = perDag(k.behov), delar = DELAR.map(([d]) => d).filter(d => per.some(x => x[d]));
+    const kravVecka = per.reduce((s, x) => s + delar.reduce((t, d) => t + x[d], 0), 0);
+    const med = (ind.personal || []).filter(p => (p.kompetenser || []).includes(k.kompetens));
+    const kan = med.filter(p => (p.dygnsdelar || ["morgon", "kvall"]).some(d => delar.includes(d)));
+    const passVecka = kan.reduce((s, p) => s + P(p), 0);
+    const helgKrav = Math.max(0, ...[5, 6].map(i => delar.reduce((t, d) => t + per[i][d], 0)));
+    const helgBehovsPersoner = helgKrav * 2;  // varannan helg (hård lokal regel)
+    const bristPass = Math.max(0, kravVecka - passVecka);
+    const fler = Math.max(bristPass ? Math.ceil(bristPass / PASS_PER_VECKA) : 0, Math.max(0, helgBehovsPersoner - kan.length));
+    // knappt: de med kompetensen arbetar också pass där den inte krävs, så under 1,5 gånger kravet blir det ofta luckor
+    const knappt = !fler && passVecka < kravVecka * 1.5;
+    return { krav: k.id, kompetens: k.kompetens, namn: namnFor(l, k.kompetens), delar, kravVecka, med: med.map(p => p.id), kan: kan.map(p => p.id),
+      passVecka: Math.round(passVecka * 10) / 10, helgKrav, helgBehovsPersoner, bristPass: Math.round(bristPass * 10) / 10, fler, knappt };
+  });
+}
+const sv = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toString().replace(".", ",");
+const DELTEXT = { morgon: "dag", kvall: "kväll", natt: "natt" };
+function balansKort(ind, org) {
+  const B = balans(ind, org);
+  if (!B.length) return "";
+  return `<div class="komp-balans">${B.map(b => {
+    const ok = !b.fler && !b.knappt;
+    return `<div class="komp-rad ${ok ? "ok" : b.fler ? "brist" : "knappt"}"><b>${esc(b.namn)}</b> <span class="dampad liten">(${b.delar.map(d => DELTEXT[d]).join(", ") || "inga pass"})</span><br>
+      <span class="liten">Krävs <b>${sv(b.kravVecka)}</b> pass per vecka. ${b.kan.length} med kompetensen hinner ungefär <b>${sv(b.passVecka)}</b> pass per vecka${b.helgKrav ? `, och helgerna kräver minst ${b.helgBehovsPersoner} med kompetensen (varannan helg)` : ""}.</span>
+      <br><span class="liten ${ok ? "plus" : "minus"}">${ok ? "✓ Räcker med marginal." : b.knappt ? "⚠ Knappt: de med kompetensen arbetar också andra pass, så räkna med några kompetensvakanser. En till med kompetensen ger marginal." : `⚠ Räcker inte: ungefär ${b.fler} till behöver kompetensen${b.bristPass ? ` (${sv(b.bristPass)} pass per vecka saknas)` : ""}.`}</span></div>`;
+  }).join("")}<p class="dampad liten" style="margin:6px 0 0">En uppskattning före schemat. De med kompetensen arbetar också pass där den inte krävs, så marginal behövs. Motorn lägger schemat och visar det som fattas som kompetensvakanser.</p></div>`;
+}
+
+// ---------------------------------------------------------------- fliken Kompetens i en enhet
+function flik(ind, org) {
+  const l = [...new Map([...kopia(org), ...(ind.kompetenser || [])].map(k => [k.id, k])).values()];
+  const pers = ind.personal || [], krav = ind.kompetenskrav || [];
+  const kravRad = (k, n) => {
+    const per = perDag(k.behov);
+    return `<tr><td><select data-kk="${n}" data-kf="kompetens" aria-label="Kompetens">${l.map(x => `<option value="${esc(x.id)}"${x.id === k.kompetens ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></td>
+      ${["vardag", "helg"].map(dag => DELAR.map(([d]) => `<td><input type="number" min="0" max="20" inputmode="numeric" data-kk="${n}" data-kf="${dag}.${d}" value="${per[dag === "vardag" ? 0 : 5][d] || ""}" placeholder="0" style="width:56px" aria-label="${dag} ${DELTEXT[d]}"></td>`).join("")).join("")}
+      <td><button class="liten fara" data-kk-bort="${n}" aria-label="Ta bort kravet">×</button></td></tr>`;
+  };
+  const avvikande = krav.some(k => Object.keys(k.behov || {}).some(x => DAGAR.includes(x)));
+  return `<p class="dampad liten">Vilka kompetenser medarbetarna har, och hur många med en kompetens som behövs på passen. Kraven väger direkt efter behovet: motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass för det. Det som inte går syns som kompetensvakanser. Listan med kompetenser ändras på sidan Organisation.</p>
+    <h3>Kompetenskrav</h3>
+    ${krav.length ? `<div class="rull"><table class="form komp-krav"><thead><tr><th rowspan="2">Kompetens</th><th colspan="3">Vardag, minst</th><th colspan="3">Helg, minst</th><th rowspan="2"></th></tr>
+      <tr>${["vardag", "helg"].map(() => DELAR.map(([, t]) => `<th>${t}</th>`).join("")).join("")}</tr></thead><tbody>${krav.map(kravRad).join("")}</tbody></table></div>
+      ${avvikande ? `<p class="dampad liten">Något krav har egna värden för en enskild veckodag. De ligger kvar; tabellen visar vardag och helg.</p>` : ""}` : `<p class="dampad liten">Inga krav än.</p>`}
+    <p class="chips"><button data-kk-ny="1">+ Kompetenskrav</button></p>
+    ${krav.length ? `<h3>Kompetensbalans</h3>${balansKort(ind, org)}` : ""}
+    <h3>Medarbetarnas kompetenser</h3>
+    ${pers.length ? `<div class="rull"><table class="komp-matris"><thead><tr><th>Medarbetare</th>${l.map(k => `<th title="${esc(k.namn)}"><span class="komp-chip" style="--kf:${fargFor(l, k.id)}">${esc(kortNamn(l, k.id))}</span></th>`).join("")}</tr></thead><tbody>
+      ${pers.map(p => `<tr><th>${esc(p.id)}</th>${l.map(k => `<td><input type="checkbox" data-kp="${esc(p.id)}" value="${esc(k.id)}"${(p.kompetenser || []).includes(k.id) ? " checked" : ""} aria-label="${esc(p.id)}: ${esc(k.namn)}"></td>`).join("")}</tr>`).join("")}
+      <tr class="summa"><th>Antal</th>${l.map(k => `<td>${pers.filter(p => (p.kompetenser || []).includes(k.id)).length}</td>`).join("")}</tr></tbody></table></div>`
+      : `<p class="dampad liten">Lägg till medarbetare först.</p>`}
+    <p class="dampad liten">${l.map(k => `<span class="komp-chip" style="--kf:${fargFor(l, k.id)}">${esc(kortNamn(l, k.id))}</span> ${esc(k.namn)}`).join(" · ")}</p>`;
+}
+// Händelser i fliken: ändrar indata och returnerar true om något ändrades. el = elementet som ändrades eller klickades.
+function hantera(ind, org, el) {
+  if (el.dataset.kp) { sattPerson(ind, org, el.dataset.kp, el.value, el.checked); return true; }
+  if (el.dataset.kk !== undefined && el.dataset.kf) { andraKrav(ind, org, +el.dataset.kk, el.dataset.kf, el.value); return true; }
+  if (el.dataset.kkNy) { nyttKrav(ind, org); return true; }
+  if (el.dataset.kkBort !== undefined) { taBortKrav(ind, org, +el.dataset.kkBort); return true; }
+  return false;
+}
+
+// ---------------------------------------------------------------- efter schemat
+// Märkning efter personens id i schemat: korta namn på kompetenserna.
+function marke(ind, pid) {
+  const p = (ind.personal || []).find(x => x.id === pid);
+  if (!p || !(p.kompetenser || []).length) return "";
+  const l = ind.kompetenser || [];
+  return `<small class="komp-marke">${p.kompetenser.map(id => `<span class="komp-chip" style="--kf:${fargFor(l, id)}" title="${esc(namnFor(l, id))}">${esc(kortNamn(l, id))}</span>`).join("")}</small>`;
+}
+
+// Förslag på vem som bör utbildas: de utan kompetensen som oftast arbetar de pass där den saknas.
+function utbildning(res, ind) {
+  const rader = res.kompetens_tackning || [], ut = {};
+  for (const r of rader) {
+    if (!r.saknas) continue;
+    const pa = Object.entries(res.schema).filter(([pid, rad]) => rad[r.dag] && rad[r.dag].dygnsdel === r.dygnsdel && !r.med.includes(pid)).map(([pid]) => pid);
+    const o = ut[r.kompetens] || (ut[r.kompetens] = { kompetens: r.kompetens, namn: r.namn, saknas: 0, per: {} });
+    o.saknas += r.saknas;
+    pa.forEach(pid => (o.per[pid] = (o.per[pid] || 0) + 1));
+  }
+  return Object.values(ut).map(o => ({ ...o, forslag: Object.entries(o.per).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([pid, n]) => ({ pid, pass: n })) }));
+}
+
+// Kortet under schemat: täckning per krav, de första tillfällena som saknar kompetens, och utbildningsförslag.
+function tackningKort(res, ind) {
+  if (!res || !(res.kompetenskrav || []).length) return "";
+  const rader = res.kompetens_tackning || [];
+  const per = res.kompetenskrav.map(k => {
+    const l = rader.filter(x => x.krav === k.id);
+    return { k, behov: l.reduce((s, x) => s + x.behov, 0), saknas: l.reduce((s, x) => s + x.saknas, 0), brist: l.filter(x => x.saknas) };
+  });
+  const U = utbildning(res, ind);
+  const summa = per.reduce((s, x) => s + x.saknas, 0);
+  return `<section class="kort komp-kort"><h2>Kompetens</h2>
+    <p class="dampad liten">${summa ? `${summa} gånger saknas någon med en kompetens som krävs (kompetensvakanser). Motorn har valt vilka som arbetar så att så många krav som möjligt täcks, utan extra pass och utan att behovet blir sämre.` : "Alla kompetenskrav är täckta."}</p>
+    <div class="rull"><table class="jamfor"><thead><tr><th>Krav</th><th class="tal">Pass med krav</th><th class="tal">Täckta</th><th class="tal">Saknas</th></tr></thead><tbody>
+    ${per.map(x => `<tr><td><b>${esc(x.k.namn)}</b></td><td class="tal">${x.behov}</td><td class="tal">${x.behov - x.saknas}</td><td class="tal${x.saknas ? " minus" : ""}">${x.saknas || "–"}</td></tr>`).join("")}</tbody></table></div>
+    ${per.filter(x => x.brist.length).map(x => `<p class="liten" style="margin:8px 0 0"><b>${esc(x.k.namn)} saknas:</b> ${x.brist.slice(0, 8).map(r => `v${r.vecka} ${r.veckodag} ${DELTEXT[r.dygnsdel]}`).join(", ")}${x.brist.length > 8 ? ` och ${x.brist.length - 8} till` : ""}.</p>`).join("")}
+    ${U.length ? `<h3 style="margin-top:12px">Förslag på utbildning</h3><ul class="punkter liten">${U.map(u => `<li><b>${esc(u.namn)}:</b> ${u.forslag.length ? u.forslag.map(f => `${esc(f.pid)} (arbetar ${f.pass} av passen där den saknas)`).join(", ") : "ingen arbetar de passen"}. Med kompetensen hade de kunnat täcka bristen utan att schemat ändras.</li>`).join("")}</ul>` : ""}</section>`;
+}
+
+return { STANDARD, kopia, lagg, andra, taBort, orgKort, enhetsLista, synka, sattPerson, nyttKrav, taBortKrav, andraKrav, perDag, komprimera,
+  balans, balansKort, flik, hantera, marke, utbildning, tackningKort, esc };
+})();
+if (typeof module !== "undefined") module.exports = KOMP;
+</script>
+<script>"use strict";
 // Konsekvensanalys i lättversionen: en översättning av schemamotor/analys.py (underlag, förslag,
 // konsekvenser, rangordning). Schemat för varje förslag läggs av motor.js och granskas av granskning.js.
 // Ändras analys.py ska den här filen ändras på samma sätt; tests/js/analys_test.js jämför dem.
@@ -5663,6 +6032,15 @@ const lager = {
     if (this.db) return this.db.doc(`${this.bas}/grund`).set({ forskola: true, tid: Date.now() });
     const d = this.lokal(); d.grund = true; this.lokalSpara(d);
   },
+  // organisationens kompetenser (kompetens.js); null = startlistan
+  async kompetenser() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/kompetenser`).get()); return d.exists ? (d.data().lista || null) : null; } catch { return null; } }
+    return this.lokal().kompetenser || null;
+  },
+  async sparaKompetenser(lista) {
+    if (this.db) return this.db.doc(`${this.bas}/kompetenser`).set({ lista });
+    const d = this.lokal(); d.kompetenser = lista; this.lokalSpara(d);
+  },
   // organisationens aktivitetstyper (organisation.js); null = standardtyperna
   async akttyper() {
     if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/akttyper`).get()); return d.exists ? (d.data().typer || null) : null; } catch { return null; } }
@@ -5734,6 +6112,7 @@ async function visaLista() {
   try { if (!(await lager.grundKlar())) { await laggInGrund(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
+  try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
   if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
@@ -5779,7 +6158,7 @@ async function oppna(e, opt = {}) {
       <label for="namn" style="margin-top:6px">${st.org ? ORG.ikon(st.org, e, GUIDE.HUS) : ""}Enhet${st.org && e.org && ORG.finns(st.org, e.org) ? ` <span class="org-etikett" style="--ef:${ORG.enhetsfarg(st.org, e)}">${esc(ORG.sokvag(st.org, e.org))}</span>` : ""}</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
       <div class="chips" style="margin-top:10px"><button class="primar" data-g="senaste" id="senaste-knapp" hidden>‹ Till schemat</button><button data-g="simulering">Simulering</button><button data-g="kalender">📅 Kalender</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
     <section class="kort" id="kontroll"></section>
-    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["team", "Team"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
+    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["team", "Team"], ["kompetens", "Kompetens"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
       `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
     <section class="kort" id="korningar"><h2>Körningar</h2><p class="dampad liten">Laddar …</p></section>`;
   $("#namn").oninput = ev => { st.enhet.namn = ev.target.value; andrad(false); };
@@ -5835,6 +6214,8 @@ function ritaFlik() {
       }).join("") +
       `<div class="chips" style="margin-top:10px"><button data-g="ny-person">+ Person</button><button data-g="ny-person" data-natt="1">+ Nattperson</button></div>
       <p class="dampad liten" style="margin-top:8px">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person. Grupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
+  } else if (st.flik === "kompetens") {
+    el.innerHTML = KOMP.flik(i, st.kompetenser);
   } else if (st.flik === "team") {
     const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
     el.innerHTML = `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Personal). Personalen är gemensam – där ett team har för få lånas personal in från ett annat. Enhetens behov blir summan av teamens.</p>` +
@@ -6286,12 +6667,15 @@ async function visaOrganisation() {
   try { st.enheter = await lager.enheter(); } catch { st.enheter = []; }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
+  try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
   const enh = st.enheter.map(e => ({ ...e, team: (e.indata && e.indata.team) || [] }));
   $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button>${temaKnapp()}</div>
       <h1 style="margin-top:4px">Organisation</h1><p class="dampad liten" style="margin:4px 0 0">Bygg upp verksamheter, enheter, områden och team, och aktivitetstyperna. Personal, behov och regler fyller du i sedan, i varje enhet.</p></header>
     ${ORG.importKort(st.org, st.imp)}
-    ${ORG.stod(st.org, enh, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
+    ${ORG.stod(st.org, enh, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}
+    ${KOMP.orgKort(st.kompetenser)}`;
 }
+async function sparaKompetenser(l) { await lager.sparaKompetenser(l); st.kompetenser = l; }
 // Importen från Excel (organisation.js): läs filen, visa förhandsvisningen, och lägg in det valda.
 async function lasImport(fil) {
   await laddaXlsx();
@@ -6365,11 +6749,21 @@ document.addEventListener("click", async e => {
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
+      case "kom-bort": if (!confirm("Ta bort kompetensen ur listan? Medarbetare och krav i enheterna som redan har den behåller den.")) return; await sparaKompetenser(KOMP.taBort(st.kompetenser, el.dataset.id)); break;
       case "grund": { const r = await laggInGrund(); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }
     visaOrganisation();
   } catch (err) { meddela("Kunde inte spara: " + err.message); }
+});
+document.addEventListener("change", async e => {
+  const el = e.target; if (!el.dataset || !el.dataset.kom || st.vy !== "organisation") return;
+  try { await sparaKompetenser(KOMP.andra(st.kompetenser, el.dataset.kom, el.dataset.falt, el.value)); } catch (err) { meddela(err.message); visaOrganisation(); }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "kom-ny") return;
+  e.preventDefault();
+  try { await sparaKompetenser(KOMP.lagg(st.kompetenser, $("#kom-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
 });
 document.addEventListener("change", async e => {
   const el = e.target; if (!el.dataset || !el.dataset.akt || st.vy !== "organisation") return;
@@ -6379,6 +6773,15 @@ document.addEventListener("submit", async e => {
   if (e.target.id !== "akt-ny") return;
   e.preventDefault();
   try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
+});
+// fliken Kompetens (kompetens.js)
+document.addEventListener("change", e => {
+  const el = e.target; if (!st.enhet || st.vy === "organisation" || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;
+  if (KOMP.hantera(st.enhet.indata, st.kompetenser, el)) andrad(true);
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-kk-ny],[data-kk-bort]"); if (!el || !st.enhet) return;
+  if (KOMP.hantera(st.enhet.indata, st.kompetenser, el)) andrad(true);
 });
 // Enhetens färg: egen eller verksamhetens (organisation.js).
 const fargVal = e => `<label class="org-plats">Färg <input type="color" class="org-farg" data-enhetfarg="${e.id}" value="${ORG.enhetsfarg(st.org, e)}" aria-label="Färg för ${esc(e.namn)}">${e.farg ? `<button class="lank liten" data-enhetfargarv="${e.id}" title="Använd verksamhetens färg">↺ verksamhetens</button>` : ""}</label>`;
@@ -6489,7 +6892,8 @@ function ritaResultat() {
       `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">D dag, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet. <span class="vv" style="display:inline">VV</span> veckovila (veckans längsta vila, minst 36 h); tryck för tider.</p></section>`;
     { const dagar = st.vecka === -1 ? Array.from({ length: res.veckor * 7 }, (_, d) => d) : Array.from({ length: 7 }, (_, i) => st.vecka * 7 + i);
       const ind = st.korning.indata || st.enhet.indata;
-      h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`; }
+      h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`;
+      if (!st.red) h += KOMP.tackningKort(res, ind); }
     { const bem = GRAF.bemanning(res, st.korning.indata || st.enhet.indata);
       h += `<div class="grafyta"><section class="kort"><h2>Bemanning mot behov</h2><p class="dampad liten">Antal pass per dag. Strecket är behovet, svart är resurstid.</p>${GRAF.behovsstaplar(bem)}</section>
         <section class="kort"><h2>Värmekarta</h2><p class="dampad liten">Röd = för få, svart = fler än behovet, beige = i balans.</p>${GRAF.varmekarta(bem, res.veckor)}</section></div>`; }
@@ -6647,7 +7051,7 @@ function ritaOversikt(k, brott) {
     <div class="nyckel"><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small>vakanta pass</small></div>
     <div class="nyckel"><span>Planerad övertid</span><b>${sv(Math.round(n.overtid * 10) / 10)} h</b><small>per vecka, utöver kontrakt</small></div>
     <div class="nyckel"><span>◼ Resurspass</span><b>${n.resursPass}</b><small>${sv(Math.round(n.resursTimmarVecka * 10) / 10)} h per vecka utöver behovet</small></div></div>`;
-  h += `<div class="grafyta">${GRAF.grafkort(k)}${TEAM.tackningKort(k.resultat)}${GRAF.balansKort([{ namn: k.namn, k }])}${GRAF.resursKort(k, p => `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`)}</div>`;
+  h += `<div class="grafyta">${GRAF.grafkort(k)}${TEAM.tackningKort(k.resultat)}${KOMP.tackningKort(k.resultat, k.indata)}${GRAF.balansKort([{ namn: k.namn, k }])}${GRAF.resursKort(k, p => `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`)}</div>`;
   h += `<section class="kort"><div class="rad"><h2 style="margin:0">Regelkontroll</h2><button class="lank" data-g="rflik" data-f="regler">Visa detaljer</button></div><div style="margin-top:8px">${regelLista(k, brott, false)}</div></section>`;
   return h;
 }
@@ -6848,7 +7252,7 @@ function dagTabell(res, dagar, period) {
   let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${46 + dagar.length * 30}px"` : ""}><thead>`;
   if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">V${w + 1}</th>`).join("")}</tr>`;
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>${dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7][0] : DAGAR[d % 7]}</th>`).join("")}</tr></thead><tbody>`;
-  for (const p of pers) h += `<tr><td title="${esc(p)}">${st.red ? esc(p) : `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`}${harTeam && hem[p] ? TEAM.hemMarke(ind.team, hem[p]) : ""}</td>` + dagar.map(d => {
+  for (const p of pers) h += `<tr><td title="${esc(p)}">${st.red ? esc(p) : `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`}${harTeam && hem[p] ? TEAM.hemMarke(ind.team, hem[p]) : ""}${KOMP.marke(ind, p)}</td>` + dagar.map(d => {
     const x = res.schema[p][d], n = p + "|" + d;
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);

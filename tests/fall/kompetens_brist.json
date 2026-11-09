@@ -1,0 +1,84 @@
+{
+ "beskrivning": "Kompetens som inte räcker: minst en med läkemedelsdelegering på varje kvällspass, men bara en av åtta har delegering (75 %). Kravet är mjukt: schemat läggs utan avtalsbrott, och kvällarna som saknar delegering syns som kompetensvakanser i stället för att någon arbetar för mycket eller ett extra pass läggs.",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true,
+  "kompetensvakanser_min": 8
+ },
+ "enhet": "Test – kompetens",
+ "veckor": 4,
+ "cykliskt": true,
+ "behov": {
+  "vardag": {
+   "morgon": 2,
+   "kvall": 2
+  },
+  "helg": {
+   "morgon": 2,
+   "kvall": 2
+  }
+ },
+ "kompetenser": [
+  {
+   "id": "del",
+   "namn": "Läkemedelsdelegering",
+   "kort": "DEL"
+  },
+  {
+   "id": "usk",
+   "namn": "Undersköterska",
+   "kort": "USK"
+  }
+ ],
+ "kompetenskrav": [
+  {
+   "id": "K1",
+   "kompetens": "del",
+   "behov": {
+    "alla": {
+     "kvall": 1
+    }
+   }
+  }
+ ],
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 0.75,
+   "kompetenser": [
+    "del"
+   ]
+  },
+  {
+   "id": "A2",
+   "grad": 0.75
+  },
+  {
+   "id": "A3",
+   "grad": 0.75
+  },
+  {
+   "id": "A4",
+   "grad": 0.75
+  },
+  {
+   "id": "A5",
+   "grad": 0.75
+  },
+  {
+   "id": "A6",
+   "grad": 0.75
+  },
+  {
+   "id": "A7",
+   "grad": 0.75
+  },
+  {
+   "id": "A8",
+   "grad": 0.75
+  }
+ ],
+ "losare": {
+  "tid_per_steg_s": 10
+ }
+}

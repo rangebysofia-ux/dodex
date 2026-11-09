@@ -212,6 +212,7 @@ async function laddaEnhet(id) {
     st.enhet = e; st.indata = e.indata; st.andrad = false; st.kontroll = null; st.valdaKorningar = new Set(); st.redigeraOnsk = null; st.korning = null;
     if (!st.org) try { st.org = ORG.kopia((await api("GET", "organisation")).noder); } catch { st.org = ORG.kopia(); }
     if (!st.akttyper) try { st.akttyper = ORG.aktKopia((await api("GET", "aktivitetstyper")).typer); } catch { st.akttyper = ORG.aktKopia(); }
+    if (!st.kompetenser) try { st.kompetenser = KOMP.kopia((await api("GET", "kompetenser")).kompetenser); } catch { st.kompetenser = KOMP.kopia(); }
   }
   st.korningar = await api("GET", `enheter/${id}/korningar`);
 }
@@ -243,7 +244,7 @@ async function visaEnhet(id, flik) {
 }
 
 function ritaEnhet() {
-  const F = [["personal", "Personal"], ["team", "Team"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["period", "Period"], ["json", "Avancerat"]];
+  const F = [["personal", "Personal"], ["team", "Team"], ["kompetens", "Kompetens"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["period", "Period"], ["json", "Avancerat"]];
   vy().innerHTML = `
     <section class="kort">
       <div class="rubrikrad">
@@ -289,6 +290,7 @@ function ritaFlik() {
       <p style="margin-top:12px" class="chips"><button data-g="ny-person">+ Person</button> <button data-g="ny-person" data-natt="1">+ Nattperson</button></p>
       <p class="dampad liten">Gult betyder undantag: från varannan helg, eller från jämn fördelning mellan morgon och kväll. Helggrupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
 
+    case "kompetens": return KOMP.flik(i, st.kompetenser);
     case "team": {
       const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
       return `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Medarbetare). Personalen är gemensam – där ett team har för få lånas personal in från ett team som har fler. Enhetens behov blir summan av teamens. Se docs/team.md.</p>
@@ -1165,17 +1167,29 @@ document.addEventListener("toggle", e => {
   if (d.open) st.orgOppna.add(d.dataset.org); else st.orgOppna.delete(d.dataset.org);
 }, true);
 
+// ---------------------------------------------------------------- fliken Kompetens (kompetens.js)
+document.addEventListener("change", e => {
+  const el = e.target; if (!st.indata || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;
+  if (KOMP.hantera(st.indata, st.kompetenser, el)) markeraAndrad(true);
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-kk-ny],[data-kk-bort]"); if (!el || !st.indata) return;
+  if (KOMP.hantera(st.indata, st.kompetenser, el)) markeraAndrad(true);
+});
+
 // ---------------------------------------------------------------- sidan Organisation (organisation.js)
 // Bygg upp verksamheter, enheter, områden/team och aktivitetstyper utan att lägga något schema.
 const ritaOmOrg = () => (st.vy === "organisation" ? visaOrganisation() : visaEnheter());
 async function visaOrganisation() {
   st.vy = "organisation"; st.enhet = null; ritaMeny(); sokvag([["Enheter", "#/"], ["Organisation"]]);
-  const [enheter, org, akt] = await Promise.all([api("GET", "enheter"), api("GET", "organisation").catch(() => ({})), api("GET", "aktivitetstyper").catch(() => ({}))]);
-  st.org = ORG.kopia(org.noder); st.akttyper = ORG.aktKopia(akt.typer); st.enhetLista = enheter;
+  const [enheter, org, akt, komp] = await Promise.all([api("GET", "enheter"), api("GET", "organisation").catch(() => ({})), api("GET", "aktivitetstyper").catch(() => ({})), api("GET", "kompetenser").catch(() => ({}))]);
+  st.org = ORG.kopia(org.noder); st.akttyper = ORG.aktKopia(akt.typer); st.kompetenser = KOMP.kopia(komp.kompetenser); st.enhetLista = enheter;
   vy().innerHTML = `<section class="kort"><h1>Organisation</h1><p class="dampad" style="margin-top:6px">Verksamheter, enheter, områden och team, och organisationens aktivitetstyper. Allt här går att bygga upp innan något schema läggs. Personal, behov och regler fyller du i sedan, i varje enhet.</p></section>
     ${ORG.importKort(st.org, st.imp)}
-    ${ORG.stod(st.org, enheter, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#/e/${e.id}/oversikt"` })}`;
+    ${ORG.stod(st.org, enheter, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#/e/${e.id}/oversikt"` })}
+    ${KOMP.orgKort(st.kompetenser)}`;
 }
+async function sparaKompetenser(l) { await api("PUT", "kompetenser", { kompetenser: l }); st.kompetenser = l; }
 // Excel-stöd (SheetJS) för importen, laddas först när det behövs.
 function laddaXlsx() {
   if (window.XLSX) return Promise.resolve();
@@ -1241,11 +1255,21 @@ document.addEventListener("click", async e => {
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
+      case "kom-bort": if (!confirm("Ta bort kompetensen ur listan? Medarbetare och krav i enheterna som redan har den behåller den.")) return; await sparaKompetenser(KOMP.taBort(st.kompetenser, el.dataset.id)); break;
       case "grund": { const r = await api("POST", "grund"); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }
     visaOrganisation();
   } catch (err) { meddela(err.message); }
+});
+document.addEventListener("change", async e => {
+  const el = e.target; if (!el.dataset || !el.dataset.kom || st.vy !== "organisation") return;
+  try { await sparaKompetenser(KOMP.andra(st.kompetenser, el.dataset.kom, el.dataset.falt, el.value)); } catch (err) { meddela(err.message); visaOrganisation(); }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "kom-ny") return;
+  e.preventDefault();
+  try { await sparaKompetenser(KOMP.lagg(st.kompetenser, $("#kom-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
 });
 document.addEventListener("change", async e => {
   const el = e.target; if (!el.dataset || !el.dataset.akt || st.vy !== "organisation") return;

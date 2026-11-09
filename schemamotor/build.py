@@ -69,8 +69,8 @@ STANDARDREGLER = {
 }
 # Rättvisa mellan personer och jämn bemanning mellan dag och kväll vägs ihop i ett mål (rättvisan dubbelt),
 # så att lösaren kan väga dem mot varandra. Nyckeltalen redovisas var för sig (KPI_MAL).
-MALORDNING = ["vakanser", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
-KPI_MAL = ["vakanser", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
+MALORDNING = ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
+KPI_MAL = ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
 
 
 def malordning(r, mal):
@@ -84,18 +84,19 @@ def malordning(r, mal):
     return ordning
 
 
-# Profiler för tre schemaalternativ. Behovet (vakanser) ligger alltid först: det är högsta mjuka nivå.
+# Profiler för tre schemaalternativ. Behovet (vakanser) ligger alltid först: det är högsta mjuka nivå. Direkt efter
+# kommer kompetenskraven (docs/kompetens.md): rätt kompetens på plats, men aldrig på bekostnad av behovet.
 #   standard     – som tidigare
 #   medarbetare  – rättvist: alla så lika som möjligt (kvällar, helger, blandning) och önskemål före block och passlängd
 #   verksamhet   – verksamhetens behov först: det som blir över eller saknas sprids jämnt över dagar och dygnsdelar
 #   ekonomi      – lägsta uppskattade OB-kostnad (AB 25 § 21, utan helgdagar): extra pass där OB är lägst
 PROFILER = {
     "standard": None,
-    "medarbetare": ["vakanser", "aktiviteter", "natt_vila", "hemteam", "rattvisa", "spridning", "onskemal", "jamn_bemanning",
+    "medarbetare": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "rattvisa", "spridning", "onskemal", "jamn_bemanning",
                     "blocklangd", "passlangd"],
-    "verksamhet": ["vakanser", "aktiviteter", "natt_vila", "hemteam", "jamn_bemanning", "blocklangd", "passlangd", "rattvisa",
+    "verksamhet": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "jamn_bemanning", "blocklangd", "passlangd", "rattvisa",
                    "spridning", "onskemal"],
-    "ekonomi": ["vakanser", "aktiviteter", "natt_vila", "hemteam", "ekonomi", "passlangd", "blocklangd", "rattvisa_jamn",
+    "ekonomi": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "ekonomi", "passlangd", "blocklangd", "rattvisa_jamn",
                 "spridning", "onskemal"],
 }
 
@@ -105,15 +106,15 @@ def profilordning(prob, fas):
     profil = prob.get("profil") or "standard"
     if PROFILER.get(profil) is None:
         if fas == "monster":
-            return malordning(prob["r"], ["vakanser", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"])
+            return malordning(prob["r"], ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"])
         if fas == "langder":
-            return ["vakanser", "aktiviteter", "passlangd", "onskemal"]
+            return ["vakanser", "kompetens", "aktiviteter", "passlangd", "onskemal"]
         return malordning(prob["r"], MALORDNING)
     ordning = [m for m in PROFILER[profil] if not (m == "spridning" and prob["r"].get("spridning_kvallar") == "av")]
     if fas == "monster":
         return [m for m in ordning if m != "passlangd"]
     if fas == "langder":
-        return [m for m in ordning if m in ("vakanser", "aktiviteter", "ekonomi", "passlangd", "onskemal")]
+        return [m for m in ordning if m in ("vakanser", "kompetens", "aktiviteter", "ekonomi", "passlangd", "onskemal")]
     return ordning
 
 
@@ -310,7 +311,7 @@ def forbered(indata):
             "id": pid, "grad": p["grad"], "dygnsdelar": delar, "natt": natt, "tillatna": tillatna, "band": set(tillatna),
             "pass_delperioder": pass_lista, "mal_minuter": mal_min, "tolerans": tol, "mal_langd": mal_langd,
             "helgfrekvens": p.get("helgfrekvens", r["helgfrekvens"]), "helggrupp": p.get("helggrupp"),
-            "team": p.get("team"),
+            "team": p.get("team"), "kompetenser": set(p.get("kompetenser") or []),
         })
 
     onskemal = []
@@ -398,7 +399,14 @@ def forbered(indata):
         if p["team"] and p["team"] not in tids:
             raise IndataFel(f"{p['id']} har teamet {p['team']}, som inte finns.")
 
+    # kompetenskrav (docs/kompetens.md): minst så många med kompetensen i tjänst per dag och dygnsdel
+    knamn = {k["id"]: k.get("namn") or k["id"] for k in indata.get("kompetenser") or []}
+    kompetenskrav = [{"id": k.get("id") or f"K{i + 1}", "kompetens": k["kompetens"], "namn": knamn.get(k["kompetens"], k["kompetens"]),
+                      "behov": expandera_dagvarden(k.get("behov"), dict)}
+                     for i, k in enumerate(indata.get("kompetenskrav") or [])]
+
     return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team,
+            "kompetenskrav": kompetenskrav, "kompetensnamn": knamn,
             "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
             "aktiviteter": aktiviteter, "enhet": indata.get("enhet", ""),
             "profil": (indata.get("losare") or {}).get("profil") or "standard"}
@@ -728,6 +736,20 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 m.add(sum(egna) + b >= behov_t)
                 hem_brist.append(b)
     mal["hemteam"] = sum(hem_brist) if hem_brist else 0
+    # kompetens (mjukt, direkt efter vakanserna): minst så många med kompetensen bland dem som arbetar dygnsdelen.
+    # Inga extra pass för kompetensens skull: det som fattas syns som kompetensvakanser (användarens beslut 2026-11-09).
+    komp_brist = []
+    for k in prob.get("kompetenskrav") or []:
+        for d in range(N):
+            for del_, antal in k["behov"][d % 7].items():
+                if not antal:
+                    continue
+                har = [x[pi, d, s] for pi, p in enumerate(prob["personer"]) if k["kompetens"] in p.get("kompetenser", ())
+                       for s in p["tillatna"] if M[s]["dygnsdel"] == del_ and (pi, d, s) in x]
+                b = m.new_int_var(0, antal, f"komp_{k['id']}_{d}_{del_}")
+                m.add(sum(har) + b >= antal)
+                komp_brist.append(b)
+    mal["kompetens"] = sum(komp_brist) if komp_brist else 0
     # aktiviteter: saknade deltagare väger alltid tyngre än ojämn fördelning mellan personerna
     vikt = 1 + len(akt_jamn) * N
     mal["aktiviteter"] = (vikt * sum(akt_brist) + sum(akt_jamn)) if akt_brist else 0
@@ -1012,6 +1034,23 @@ def fordela_team(schema, team, hem, N):
     return rader
 
 
+def kompetens_tackning(schema, krav, komp, N):
+    """Hur många med kompetensen som arbetar varje dag och dygnsdel där det finns ett krav, och hur många som
+    saknas. krav = prob["kompetenskrav"] (behov per veckodag), komp = {person: set(kompetenser)}."""
+    rader = []
+    for k in krav:
+        for d in range(N):
+            for del_, antal in k["behov"][d % 7].items():
+                if not antal:
+                    continue
+                med = [pid for pid, rad in schema.items() if d < len(rad) and rad[d] and rad[d]["dygnsdel"] == del_
+                       and k["kompetens"] in komp.get(pid, ())]
+                rader.append({"krav": k["id"], "kompetens": k["kompetens"], "namn": k["namn"], "dag": d, "vecka": d // 7 + 1,
+                              "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "behov": antal, "i_tjanst": len(med),
+                              "med": med, "saknas": max(0, antal - len(med))})
+    return rader
+
+
 def tolka(prob, solver, var, steg, kpi_mal):
     M, N = prob["mallar"], prob["N"]
     schema = {}
@@ -1062,6 +1101,10 @@ def tolka(prob, solver, var, steg, kpi_mal):
         team_tackning = fordela_team(schema, prob["team"], {p["id"]: p.get("team") for p in prob["personer"]}, N)
         kpi["team_lan"] = sum(x["inlanade"] for x in team_tackning)
         kpi["team_saknas"] = sum(x["saknas"] for x in team_tackning)
+    komp_tackning = []
+    if prob.get("kompetenskrav"):
+        komp_tackning = kompetens_tackning(schema, prob["kompetenskrav"], {p["id"]: p.get("kompetenser", set()) for p in prob["personer"]}, N)
+        kpi["kompetensvakanser"] = sum(x["saknas"] for x in komp_tackning)
     # uppskattad OB per vecka (AB 25 § 21, utan helgdagar), för att jämföra alternativ
     kpi["ob_kr_vecka"] = round(sum(ob_kronor({"start": tid(p["start"]), "slut": tid(p["slut"]) + (DYGN if tid(p["slut"]) <= tid(p["start"]) else 0)}, d % 7)
                                    for rad in schema.values() for d, p in enumerate(rad) if p) / prob["W"])
@@ -1077,7 +1120,9 @@ def tolka(prob, solver, var, steg, kpi_mal):
     return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"], "profil": prob.get("profil", "standard"),
             "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "aktiviteter": tillfallen,
             "schema": schema, **({"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": team_tackning}
-                                 if prob.get("team") else {})}
+                                 if prob.get("team") else {}),
+            **({"kompetenskrav": [{"id": k["id"], "kompetens": k["kompetens"], "namn": k["namn"]} for k in prob["kompetenskrav"]],
+                "kompetens_tackning": komp_tackning} if prob.get("kompetenskrav") else {})}
 
 
 def markdown(res):

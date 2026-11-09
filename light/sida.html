@@ -379,6 +379,19 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
 .imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
 .imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }
+
+/* kompetens (kompetens.js) */
+.komp-chip { display: inline-block; font: 800 9.5px/1.3 var(--sans); letter-spacing: .02em; color: #fff; background: var(--kf, #7a6a55); border-radius: 4px; padding: 0 4px; margin: 1px 2px 0 0; }
+.komp-marke { display: block; line-height: 1.2; }
+.komp-matris th, .komp-matris td { text-align: center; padding: 4px 6px; }
+.komp-matris tbody th { text-align: left; }
+.komp-matris tr.summa td, .komp-matris tr.summa th { font-weight: 700; color: var(--dampad); }
+.komp-krav select { width: auto; min-width: 150px; }
+.komp-balans { display: grid; gap: 8px; }
+.komp-rad { border: 1px solid var(--linje); border-left: 5px solid var(--bra, #2f8a6f); border-radius: 10px; padding: 8px 10px; }
+.komp-rad.brist { border-left-color: var(--dalig, #c0473f); }
+.komp-rad.knappt { border-left-color: var(--guld, #c9a03a); }
+.os-komp .os-typ { grid-template-columns: auto 1fr auto auto; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -405,6 +418,7 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 <script>__ORGANISATION__</script>
 <script>const GRUND = __GRUND__;</script>
 <script>__TEAM__</script>
+<script>__KOMPETENS__</script>
 <script>__ANALYS__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
 <script>
@@ -468,6 +482,15 @@ const lager = {
   async sattGrundKlar() {
     if (this.db) return this.db.doc(`${this.bas}/grund`).set({ forskola: true, tid: Date.now() });
     const d = this.lokal(); d.grund = true; this.lokalSpara(d);
+  },
+  // organisationens kompetenser (kompetens.js); null = startlistan
+  async kompetenser() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/kompetenser`).get()); return d.exists ? (d.data().lista || null) : null; } catch { return null; } }
+    return this.lokal().kompetenser || null;
+  },
+  async sparaKompetenser(lista) {
+    if (this.db) return this.db.doc(`${this.bas}/kompetenser`).set({ lista });
+    const d = this.lokal(); d.kompetenser = lista; this.lokalSpara(d);
   },
   // organisationens aktivitetstyper (organisation.js); null = standardtyperna
   async akttyper() {
@@ -540,6 +563,7 @@ async function visaLista() {
   try { if (!(await lager.grundKlar())) { await laggInGrund(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
+  try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
   if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
@@ -585,7 +609,7 @@ async function oppna(e, opt = {}) {
       <label for="namn" style="margin-top:6px">${st.org ? ORG.ikon(st.org, e, GUIDE.HUS) : ""}Enhet${st.org && e.org && ORG.finns(st.org, e.org) ? ` <span class="org-etikett" style="--ef:${ORG.enhetsfarg(st.org, e)}">${esc(ORG.sokvag(st.org, e.org))}</span>` : ""}</label><input id="namn" value="${esc(e.namn)}" style="font-weight:600;font-size:18px">
       <div class="chips" style="margin-top:10px"><button class="primar" data-g="senaste" id="senaste-knapp" hidden>‹ Till schemat</button><button data-g="simulering">Simulering</button><button data-g="kalender">📅 Kalender</button><button data-g="till-aktiviteter">★ Aktiviteter (APT m.m.)</button></div></header>
     <section class="kort" id="kontroll"></section>
-    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["team", "Team"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
+    <section class="kort"><div class="flikar" role="tablist">${[["personal", "Personal"], ["team", "Team"], ["kompetens", "Kompetens"], ["behov", "Behov"], ["onskemal", "Önskemål"], ["aktiviteter", "Aktiviteter"], ["balans", "Bemanningsbalans"], ["regler", "Regler"], ["period", "Period"]].map(([k, t]) =>
       `<button role="tab" data-g="flik" data-f="${k}" aria-selected="${st.flik === k}">${t}</button>`).join("")}</div><div id="flik"></div></section>
     <section class="kort" id="korningar"><h2>Körningar</h2><p class="dampad liten">Laddar …</p></section>`;
   $("#namn").oninput = ev => { st.enhet.namn = ev.target.value; andrad(false); };
@@ -641,6 +665,8 @@ function ritaFlik() {
       }).join("") +
       `<div class="chips" style="margin-top:10px"><button data-g="ny-person">+ Person</button><button data-g="ny-person" data-natt="1">+ Nattperson</button></div>
       <p class="dampad liten" style="margin-top:8px">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person. Grupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
+  } else if (st.flik === "kompetens") {
+    el.innerHTML = KOMP.flik(i, st.kompetenser);
   } else if (st.flik === "team") {
     const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
     el.innerHTML = `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Personal). Personalen är gemensam – där ett team har för få lånas personal in från ett annat. Enhetens behov blir summan av teamens.</p>` +
@@ -1092,12 +1118,15 @@ async function visaOrganisation() {
   try { st.enheter = await lager.enheter(); } catch { st.enheter = []; }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
+  try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
   const enh = st.enheter.map(e => ({ ...e, team: (e.indata && e.indata.team) || [] }));
   $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button>${temaKnapp()}</div>
       <h1 style="margin-top:4px">Organisation</h1><p class="dampad liten" style="margin:4px 0 0">Bygg upp verksamheter, enheter, områden och team, och aktivitetstyperna. Personal, behov och regler fyller du i sedan, i varje enhet.</p></header>
     ${ORG.importKort(st.org, st.imp)}
-    ${ORG.stod(st.org, enh, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
+    ${ORG.stod(st.org, enh, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}
+    ${KOMP.orgKort(st.kompetenser)}`;
 }
+async function sparaKompetenser(l) { await lager.sparaKompetenser(l); st.kompetenser = l; }
 // Importen från Excel (organisation.js): läs filen, visa förhandsvisningen, och lägg in det valda.
 async function lasImport(fil) {
   await laddaXlsx();
@@ -1171,11 +1200,21 @@ document.addEventListener("click", async e => {
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
+      case "kom-bort": if (!confirm("Ta bort kompetensen ur listan? Medarbetare och krav i enheterna som redan har den behåller den.")) return; await sparaKompetenser(KOMP.taBort(st.kompetenser, el.dataset.id)); break;
       case "grund": { const r = await laggInGrund(); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }
     visaOrganisation();
   } catch (err) { meddela("Kunde inte spara: " + err.message); }
+});
+document.addEventListener("change", async e => {
+  const el = e.target; if (!el.dataset || !el.dataset.kom || st.vy !== "organisation") return;
+  try { await sparaKompetenser(KOMP.andra(st.kompetenser, el.dataset.kom, el.dataset.falt, el.value)); } catch (err) { meddela(err.message); visaOrganisation(); }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "kom-ny") return;
+  e.preventDefault();
+  try { await sparaKompetenser(KOMP.lagg(st.kompetenser, $("#kom-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
 });
 document.addEventListener("change", async e => {
   const el = e.target; if (!el.dataset || !el.dataset.akt || st.vy !== "organisation") return;
@@ -1185,6 +1224,15 @@ document.addEventListener("submit", async e => {
   if (e.target.id !== "akt-ny") return;
   e.preventDefault();
   try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
+});
+// fliken Kompetens (kompetens.js)
+document.addEventListener("change", e => {
+  const el = e.target; if (!st.enhet || st.vy === "organisation" || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;
+  if (KOMP.hantera(st.enhet.indata, st.kompetenser, el)) andrad(true);
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-kk-ny],[data-kk-bort]"); if (!el || !st.enhet) return;
+  if (KOMP.hantera(st.enhet.indata, st.kompetenser, el)) andrad(true);
 });
 // Enhetens färg: egen eller verksamhetens (organisation.js).
 const fargVal = e => `<label class="org-plats">Färg <input type="color" class="org-farg" data-enhetfarg="${e.id}" value="${ORG.enhetsfarg(st.org, e)}" aria-label="Färg för ${esc(e.namn)}">${e.farg ? `<button class="lank liten" data-enhetfargarv="${e.id}" title="Använd verksamhetens färg">↺ verksamhetens</button>` : ""}</label>`;
@@ -1295,7 +1343,8 @@ function ritaResultat() {
       `<p class="liten" id="info" style="margin-top:8px">${st.red ? "Tryck på ett pass för att ändra, flytta eller ta bort det. Tryck på en tom ruta för att lägga till ett pass." : cellInfo()}</p><p class="dampad liten">D dag, K kväll, N natt. Streckad ruta = vakant pass. <span class="minus">−1</span> vakans. <b>◼ R</b> resurspass och <span class="plus">+1</span> resurstid, utöver behovet. <span class="vv" style="display:inline">VV</span> veckovila (veckans längsta vila, minst 36 h); tryck för tider.</p></section>`;
     { const dagar = st.vecka === -1 ? Array.from({ length: res.veckor * 7 }, (_, d) => d) : Array.from({ length: 7 }, (_, i) => st.vecka * 7 + i);
       const ind = st.korning.indata || st.enhet.indata;
-      h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`; }
+      h += `<section class="kort"><h2>Sammanställning ${st.vecka === -1 ? "hela perioden" : "vecka " + (st.vecka + 1)}</h2>${GRAF.summaTabell(res, ind, dagar, GRAF.resurs(res, ind), "")}</section>`;
+      if (!st.red) h += KOMP.tackningKort(res, ind); }
     { const bem = GRAF.bemanning(res, st.korning.indata || st.enhet.indata);
       h += `<div class="grafyta"><section class="kort"><h2>Bemanning mot behov</h2><p class="dampad liten">Antal pass per dag. Strecket är behovet, svart är resurstid.</p>${GRAF.behovsstaplar(bem)}</section>
         <section class="kort"><h2>Värmekarta</h2><p class="dampad liten">Röd = för få, svart = fler än behovet, beige = i balans.</p>${GRAF.varmekarta(bem, res.veckor)}</section></div>`; }
@@ -1453,7 +1502,7 @@ function ritaOversikt(k, brott) {
     <div class="nyckel"><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small>vakanta pass</small></div>
     <div class="nyckel"><span>Planerad övertid</span><b>${sv(Math.round(n.overtid * 10) / 10)} h</b><small>per vecka, utöver kontrakt</small></div>
     <div class="nyckel"><span>◼ Resurspass</span><b>${n.resursPass}</b><small>${sv(Math.round(n.resursTimmarVecka * 10) / 10)} h per vecka utöver behovet</small></div></div>`;
-  h += `<div class="grafyta">${GRAF.grafkort(k)}${TEAM.tackningKort(k.resultat)}${GRAF.balansKort([{ namn: k.namn, k }])}${GRAF.resursKort(k, p => `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`)}</div>`;
+  h += `<div class="grafyta">${GRAF.grafkort(k)}${TEAM.tackningKort(k.resultat)}${KOMP.tackningKort(k.resultat, k.indata)}${GRAF.balansKort([{ namn: k.namn, k }])}${GRAF.resursKort(k, p => `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`)}</div>`;
   h += `<section class="kort"><div class="rad"><h2 style="margin:0">Regelkontroll</h2><button class="lank" data-g="rflik" data-f="regler">Visa detaljer</button></div><div style="margin-top:8px">${regelLista(k, brott, false)}</div></section>`;
   return h;
 }
@@ -1654,7 +1703,7 @@ function dagTabell(res, dagar, period) {
   let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${46 + dagar.length * 30}px"` : ""}><thead>`;
   if (period) h += `<tr><th></th>${Array.from({ length: dagar.length / 7 }, (_, w) => `<th colspan="7" class="ny-vecka" style="text-align:left">V${w + 1}</th>`).join("")}</tr>`;
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>${dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7][0] : DAGAR[d % 7]}</th>`).join("")}</tr></thead><tbody>`;
-  for (const p of pers) h += `<tr><td title="${esc(p)}">${st.red ? esc(p) : `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`}${harTeam && hem[p] ? TEAM.hemMarke(ind.team, hem[p]) : ""}</td>` + dagar.map(d => {
+  for (const p of pers) h += `<tr><td title="${esc(p)}">${st.red ? esc(p) : `<button class="lank" data-g="person" data-p="${esc(p)}" style="font-weight:700">${esc(p)}</button>`}${harTeam && hem[p] ? TEAM.hemMarke(ind.team, hem[p]) : ""}${KOMP.marke(ind, p)}</td>` + dagar.map(d => {
     const x = res.schema[p][d], n = p + "|" + d;
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);

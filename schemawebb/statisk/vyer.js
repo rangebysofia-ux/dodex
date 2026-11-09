@@ -193,7 +193,7 @@ function ritaKorningsvy() {
   h += st.red ? redigeringsrad() : sammanfattning();
   if (st.vy === "personer") h += ritaPersoner();
   else if (st.vy === "bemanning") h += ritaBemanning();
-  else h += ritaSchemavy() + (st.red ? "" : TEAM.tackningKort(res) + bemanningsgrafer(res, k.indata) + GRAF.aktivitetKort(res));
+  else h += ritaSchemavy() + (st.red ? "" : TEAM.tackningKort(res) + KOMP.tackningKort(res, k.indata) + bemanningsgrafer(res, k.indata) + GRAF.aktivitetKort(res));
   vy().innerHTML = h;
   kopplaKorningsval(); kopplaGodkann();
 }
@@ -256,7 +256,7 @@ function schemaDagar(res, dagar, filter, period) {
   h += `<tr><th>${period ? "" : "V" + (Math.floor(dagar[0] / 7) + 1)}</th>` + dagar.map(d => `<th ${kl(d)}>${period ? DAGAR[d % 7].slice(0, 2) : DAGAR[d % 7]}</th>`).join("") + GRAF.summaHuvud(kol) + `</tr></thead><tbody>`;
   for (const pid of pers) {
     const red = !!st.red, vv = GRAF.veckovilaDagar(res, ind, pid);
-    h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a>${harTeam && hem[pid] ? TEAM.hemMarke(ind.team, hem[pid]) : ""}</td>` + dagar.map(d => {
+    h += `<tr><td title="${esc(pid)}"${red && st.red.felpersoner?.has(pid) ? ' class="regelfel"' : ""}><a href="#/e/${st.enhet.id}/personer/${st.korning.id}?p=${encodeURIComponent(pid)}" style="color:inherit;text-decoration:none">${esc(pid)}</a>${harTeam && hem[pid] ? TEAM.hemMarke(ind.team, hem[pid]) : ""}${KOMP.marke(ind, pid)}</td>` + dagar.map(d => {
       const p = res.schema[pid][d], n = pid + ":" + d;
       const mal = red ? ` data-mal="${esc(n)}"` : "";
       if (!p) return `<td ${kl(d, vv.has(d) ? " vvdag" : "")}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : vv.has(d) ? GRAF.vvMarke(vv.get(d), period) : ""}</td>`;

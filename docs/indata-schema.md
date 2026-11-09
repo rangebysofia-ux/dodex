@@ -123,4 +123,6 @@ Exempel: APT tisdag 14–16 vecka 2 och 4, där var och en går en gång (ungef�
 
 schemamotor/validate.py läser samma `schema`-format, antingen hela utdatafilen eller en fil med bara `{"schema": {...}}`. Ett schema från ett annat system kan granskas genom att räkna om det till detta format. `dygnsdel` behövs för fönsterkontrollen och för behovet; `rast` för rastkontrollen.
 
+**kompetenser**, **kompetenskrav** och `personal[].kompetenser` – kompetenser i enheten (`id`, `namn`, `kort`, `farg`), krav på minst så många med en kompetens per dag och dygnsdel (`kompetens`, `behov` i samma format som enhetens behov), och vilka kompetenser var och en har. Kravet är mjukt, direkt efter behovet. Se `docs/kompetens.md`.
+
 **team** – valfria team i arbetsgruppen: `id`, `namn`, `behov` (som enhetens) och `farg` (valfri, bara för visning). `personal[].team` anger hemteamet. Enhetens behov är summan av teamens. Se `docs/team.md`.

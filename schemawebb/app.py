@@ -444,6 +444,30 @@ def spara_aktivitetstyper(a: AktTyperIn):
     return {"ok": True}
 
 
+class KompetensIn(BaseModel):
+    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9-]+$")
+    namn: str = Field(min_length=1, max_length=80)
+    kort: Optional[str] = Field(None, max_length=6)
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class KompetenserIn(BaseModel):
+    kompetenser: list[KompetensIn] = Field(max_length=200)
+
+
+@app.get("/api/kompetenser", dependencies=[Depends(inloggad)])
+def hamta_kompetenser():
+    return {"kompetenser": db.installning("kompetenser")}  # None = startlistan i kompetens.js
+
+
+@app.put("/api/kompetenser", dependencies=[Depends(inloggad)])
+def spara_kompetenser(k: KompetenserIn):
+    if len({x.id for x in k.kompetenser}) != len(k.kompetenser):
+        raise HTTPException(422, "Samma kompetens finns två gånger.")
+    db.satt_installning("kompetenser", [x.model_dump() for x in k.kompetenser])
+    return {"ok": True}
+
+
 @app.post("/api/grund", dependencies=[Depends(inloggad)])
 def lagg_in_grund():
     """Lägger in förskolorna och avdelningarna som saknas (schemawebb/grund_forskola.json)."""

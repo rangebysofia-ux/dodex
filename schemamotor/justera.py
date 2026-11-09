@@ -6,7 +6,7 @@ schemat följer reglerna avgör den fristående granskningen (validate.py), inte
 """
 import re
 
-from .build import DAGNAMN, DYGN, IndataFel, forbered, fordela_team, klocka, netto_for, tid
+from .build import DAGNAMN, DYGN, IndataFel, forbered, fordela_team, klocka, kompetens_tackning, netto_for, tid
 
 KLOCKA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 DELAR = ("morgon", "kvall", "natt")
@@ -153,6 +153,12 @@ def justera(indata, schema, grund=None):
             k["team"] = hem.get(pid)
             k["utlanad"] = sum(1 for x in nytt[pid] if x and hem.get(pid) and x.get("team") not in (None, hem[pid]))
         extra = {"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": tack}
+    # kompetens: täckningen räknas om efter justeringen (docs/kompetens.md)
+    if prob.get("kompetenskrav"):
+        kt = kompetens_tackning(nytt, prob["kompetenskrav"], {p["id"]: p.get("kompetenser", set()) for p in prob["personer"]}, W * 7)
+        kpi["kompetensvakanser"] = sum(x["saknas"] for x in kt)
+        extra["kompetenskrav"] = [{"id": k["id"], "kompetens": k["kompetens"], "namn": k["namn"]} for k in prob["kompetenskrav"]]
+        extra["kompetens_tackning"] = kt
     return {"status": "OK", "enhet": prob["enhet"], "veckor": W, "cykliskt": prob["cykliskt"],
             "steg": (grund or {}).get("steg", []), "kpi": kpi, "personer": personer, "vakanser": vakanser,
             "aktiviteter": tillfallen, "schema": nytt, "justerat": True, **extra}

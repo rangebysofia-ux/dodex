@@ -33,6 +33,7 @@ def main():
                 .replace("__OB__", skydda((HAR.parent / "schemawebb" / "statisk" / "ob.js").read_text(encoding="utf-8")))
                 .replace("__INKLISTRING__", skydda((HAR.parent / "schemawebb" / "statisk" / "inklistring.js").read_text(encoding="utf-8")))
                 .replace("__GUIDE__", skydda((HAR.parent / "schemawebb" / "statisk" / "guide.js").read_text(encoding="utf-8")))
+                .replace("__KOMPETENS__", skydda((HAR.parent / "schemawebb" / "statisk" / "kompetens.js").read_text(encoding="utf-8")))
                 .replace("__TEAM__", skydda((HAR.parent / "schemawebb" / "statisk" / "team.js").read_text(encoding="utf-8")))
                 .replace("__ORGANISATION__", skydda((HAR.parent / "schemawebb" / "statisk" / "organisation.js").read_text(encoding="utf-8")))
                 .replace("__ENHETSFIL__", skydda((HAR.parent / "schemawebb" / "statisk" / "enhetsfil.js").read_text(encoding="utf-8")))

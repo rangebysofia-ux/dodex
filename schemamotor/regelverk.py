@@ -105,10 +105,15 @@ KALLOR = {
     "SCHEMA_14_DAGAR": ("AB 25 § 13 mom. 5: schemat ska meddelas arbetstagaren senast 14 dagar innan det börjar gälla.", "–"),
     "KRAV": ("Medarbetarens önskemål som verksamheten har gjort till krav.", "–"),
     "AKTIVITET": ("Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid.", "–"),
+    "KOMPETENS": ("Verksamhetens beslut om kompetens i tjänst (till exempel delegering enligt verksamhetens rutin).", "–"),
 }
 
 MJUKA = {
     "vakanser": ("Vakanser", "verksamhet", None, "Antal pass och klockslag där behovet inte täcks. Högsta mjuka nivå: behovet görs aldrig hårt.", "BEHOV"),
+    "kompetens": ("Kompetens i tjänst", "verksamhet", None,
+                  "Antal gånger det saknas någon med en kompetens som krävs, till exempel läkemedelsdelegering på kvällen. "
+                  "Direkt efter behovet: motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass "
+                  "för det och gör aldrig en vakans för det. Det som fattas syns som kompetensvakans. Verksamhetens beslut 2026-11-09.", "KOMPETENS"),
     "aktiviteter": ("Aktiviteter under arbetstid", "verksamhet", None,
                     "Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela "
                     "aktivitetstiden. Aktiviteter markerade som krav är hårda.", "AKTIVITET"),

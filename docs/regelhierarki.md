@@ -76,7 +76,10 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 33. **Förskolorna är grunden i verktyget.** De 29 förskolorna med sina avdelningar finns från start under Förskola (avdelningarna som team). Äldreomsorgen avvaktar. Hemtjänstgruppen under Äldreomsorg heter ORDBO. Se `docs/organisation.md`. Beslutat av användaren 2026-11-09.
 
+34. **Kompetensbaserade behov.** En enhet kan kräva minst så många med en kompetens per dag och dygnsdel, till exempel läkemedelsdelegering på kvällen. Kravet är mjukt och ligger direkt efter behovet (vakanser → kompetens → …): motorn väljer vilka som arbetar, gör aldrig behovet sämre och lägger aldrig ett extra pass för kompetensens skull. Det som inte går syns som kompetensvakanser (användarens beslut). Till planeringen hör organisationens kompetenslista, kompetensbalans före schemat, kompetens i schemat och förslag på utbildning. Se `docs/kompetens.md`. Beslutat av användaren 2026-11-09.
+
 Öppna frågor, alltså inte beslutade:
+- Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.
 
