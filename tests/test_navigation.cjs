@@ -49,7 +49,7 @@ function kontrolleraNavigation() {
 
   st.enhet = null;
   st.vy = "hem";
-  vm.runInNewContext("ritaMeny();", ctx);
+  vm.runInNewContext(menyKod + "\nritaMeny();", ctx);
   const utan = noder["#meny"].innerHTML;
   assert.match(utan, /aria-disabled="true"/, "Enhetsbundna länkar måste vara inaktiva utan enhet");
   assert.ok(utan.includes('href="#/konton"'), "Konton ska fortfarande gå att öppna utan vald enhet");
