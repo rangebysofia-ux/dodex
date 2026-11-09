@@ -1,0 +1,43 @@
+name: DODEX – navigation och regression
+on:
+  push:
+    branches:
+      - feature/dodex-navigation-overview-v2
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  javascript:
+    name: JavaScript och navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Kontrollera JavaScript-syntax
+        run: |
+          node --check schemawebb/statisk/app.js
+          node --check schemawebb/statisk/sidor.js
+      - name: Testa huvudmeny och översikt
+        run: node tests/test_navigation.cjs
+
+  python:
+    name: Befintliga Python-regressionstester
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Installera testberoenden
+        run: python -m pip install -e '.[dev]'
+      - name: Kör befintliga tester
+        run: python -m pytest -q
