@@ -172,3 +172,17 @@ process.stdout.write(JSON.stringify(r));""")
     assert ut["om"]["nya"] == 0 and ut["om"]["samma"]
     assert sorted(x["team"][0] for x in ut["om"]["andrade"]) == ["1A", "Lag A"]
     assert "Valt:" in ut["html"]
+
+
+@nod
+def test_import_enskilda_avdelningar_kan_valjas_bort():
+    ut = kor_js(IMPORT + r"""
+const p = O.importPlan(hier), v = new Set(p.poster.map(x => x.nyckel));
+const bort = new Set(["SÄBO / Skogen / Tallen ¦ 1A"]);
+const a = O.importera(O.kopia(), p, v, "aldreomsorg", [], bort);
+const h = O.importForhand(p, v, bort);
+process.stdout.write(JSON.stringify({ tallen: a.nya.find(x => x.namn === "Tallen").team, valt: h.match(/och (\d+) avdelningar/)[1],
+  kryss: (h.match(/data-imp-avd="SÄBO \/ Skogen \/ Tallen ¦ 1A"[^>]*>/) || [""])[0].includes("checked") }));""")
+    assert ut["tallen"] == ["1B"]
+    assert ut["valt"] == "4"  # Lag A, Lag B, Lag C och 1B
+    assert ut["kryss"] is False

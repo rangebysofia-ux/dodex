@@ -1192,7 +1192,7 @@ async function lasImport(fil) {
   const wb = XLSX.read(new Uint8Array(await fil.arrayBuffer()), { type: "array" });
   const plan = ORG.importPlan(ORG.bladUr(XLSX, wb));
   if (!plan.poster.length) throw new Error("Hittade inga enheter i filen. Första raden ska vara rubriker, till exempel Förskola och Avdelning.");
-  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
+  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), bort: new Set(), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
 }
 document.addEventListener("change", async e => {
   if (st.vy !== "organisation") return;
@@ -1200,11 +1200,12 @@ document.addEventListener("change", async e => {
   try {
     if (el.id === "org-import" && el.files[0]) { st.imp = await lasImport(el.files[0]); return visaOrganisation(); }
     if (el.id === "imp-plats") { st.imp.forelder = el.value || null; return; }
-    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda); }
+    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda, st.imp.bort); }
+    if (el.dataset && el.dataset.impAvd) { if (el.checked) st.imp.bort.delete(el.dataset.impAvd); else st.imp.bort.add(el.dataset.impAvd); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda, st.imp.bort); }
   } catch (err) { meddela(err.message); }
 });
 async function korImport() {
-  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enhetLista || []);
+  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enhetLista || [], st.imp.bort);
   if (r.noder !== st.org) { await api("PUT", "organisation", { noder: r.noder }); st.org = r.noder; }
   for (const x of r.nya) {
     const ind = GUIDE.tomIndata(x.namn); x.team.forEach(t => TEAM.laggTill(ind, t));

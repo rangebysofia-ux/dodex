@@ -376,6 +376,9 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 
 .imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
 .imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
+.imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
+.imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
+.imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -1090,7 +1093,7 @@ async function lasImport(fil) {
   const wb = XLSX.read(new Uint8Array(await fil.arrayBuffer()), { type: "array" });
   const plan = ORG.importPlan(ORG.bladUr(XLSX, wb));
   if (!plan.poster.length) throw new Error("Hittade inga enheter i filen. Första raden ska vara rubriker, till exempel Förskola och Avdelning.");
-  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
+  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), bort: new Set(), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
 }
 document.addEventListener("change", async e => {
   if (st.vy !== "organisation") return;
@@ -1098,11 +1101,12 @@ document.addEventListener("change", async e => {
   try {
     if (el.id === "org-import" && el.files[0]) { st.imp = await lasImport(el.files[0]); return visaOrganisation(); }
     if (el.id === "imp-plats") { st.imp.forelder = el.value || null; return; }
-    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda); }
+    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda, st.imp.bort); }
+    if (el.dataset && el.dataset.impAvd) { if (el.checked) st.imp.bort.delete(el.dataset.impAvd); else st.imp.bort.add(el.dataset.impAvd); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda, st.imp.bort); }
   } catch (err) { meddela(err.message); }
 });
 async function korImport() {
-  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enheter || []);
+  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enheter || [], st.imp.bort);
   if (r.noder !== st.org) { await lager.sparaOrg(r.noder); st.org = r.noder; }
   for (const x of r.nya) {
     const ind = GUIDE.tomIndata(x.namn); x.team.forEach(t => TEAM.laggTill(ind, t));

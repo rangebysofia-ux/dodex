@@ -594,3 +594,6 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 
 .imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
 .imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
+.imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
+.imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
+.imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }

@@ -62,7 +62,7 @@ Hela organisationen kan byggas upp innan något schema läggs (användarens öns
 2. **Sammanställning:** enheten och en kolumn *Avdelningar* med namnen åtskilda av komma.
 3. **Hierarki:** *Område*, *Typ*, *Under* och *Avdelningar*. *Under* anger vägen, till exempel "SÄBO / Furulund". En rad med avdelningar blir en enhet. En rad som andra ligger under blir en grupp. En rad utan avdelningar och utan något under blir en enhet utan team.
 
-Förhandsvisningen visar allt som ett träd med kryssrutor. Bocka ur det som ska vänta: en bortvald grupp tar med sig allt under. Välj också var det ska läggas. Förslaget är Förskola eller Äldreomsorg, efter vad filen innehåller.
+Förhandsvisningen visar allt som ett träd med kryssrutor. Bocka ur det som ska vänta: en bortvald grupp tar med sig allt under. Enskilda avdelningar går också att bocka ur, till exempel dubbletter i underlaget. Välj också var det ska läggas. Förslaget är Förskola eller Äldreomsorg, efter vad filen innehåller.
 
 Avdelningarna blir områden/team i enhetens gemensamma schema. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas, så importen kan köras om. Excel-filen läses i webbläsaren med SheetJS, samma bibliotek som Excel-exporten i lättversionen (`ORG.importPlan`, `importVal`, `importera`).
 

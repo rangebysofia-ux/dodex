@@ -376,6 +376,9 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 
 .imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
 .imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
+.imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
+.imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
+.imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -4917,15 +4920,16 @@ function importPlan(blad) {
   return { poster: ordning.map(k => poster.get(k)), forslag };
 }
 
-// Förhandsvisning med kryssrutor; valda = Set av nycklar.
-function importForhand(plan, valda) {
+// Förhandsvisning med kryssrutor; valda = Set av nycklar, bort = Set av bortvalda avdelningar (avdNyckel).
+const avdNyckel = (nyckel, avd) => nyckel + " ¦ " + avd;
+function importForhand(plan, valda, bort = new Set()) {
   const barnTill = f => plan.poster.filter(p => p.foralder === f);
   const rad = (p, niva) => `<li style="--niva:${niva}"><label class="check"><input type="checkbox" data-imp="${esc(p.nyckel)}"${valda.has(p.nyckel) ? " checked" : ""}>
-      <b>${p.typ === "grupp" ? "▸ " : "🏠 "}${esc(p.namn)}</b></label>${p.team.length ? ` <span class="dampad liten">${p.team.length} ${p.team.length === 1 ? "avdelning" : "avdelningar"}: ${esc(p.team.join(", "))}</span>` : ""}</li>
+      <b>${p.typ === "grupp" ? "▸ " : "🏠 "}${esc(p.namn)}</b></label>${p.team.length ? `<span class="imp-avd">${p.team.map(a => `<label class="imp-chip"><input type="checkbox" data-imp-avd="${esc(avdNyckel(p.nyckel, a))}"${valda.has(p.nyckel) && !bort.has(avdNyckel(p.nyckel, a)) ? " checked" : ""}${valda.has(p.nyckel) ? "" : " disabled"}> ${esc(a)}</label>`).join("")}</span>` : ""}</li>
     ${barnTill(p.nyckel).map(b => rad(b, niva + 1)).join("")}`;
   const n = plan.poster.filter(p => valda.has(p.nyckel)), e = n.filter(p => p.typ === "enhet");
   return `<ul class="org-red imp-lista">${barnTill(null).map(p => rad(p, 0)).join("")}</ul>
-    <p class="liten">Valt: ${n.length - e.length} grupper, ${e.length} enheter och ${e.reduce((s, p) => s + p.team.length, 0)} avdelningar.</p>`;
+    <p class="liten">Valt: ${n.length - e.length} grupper, ${e.length} enheter och ${e.reduce((s, p) => s + p.team.filter(a => !bort.has(avdNyckel(p.nyckel, a))).length, 0)} avdelningar.</p>`;
 }
 // Kryssrutor: en bortvald grupp tar med sig allt under, en vald post tar med sig sina överordnade.
 function importVal(plan, valda, nyckel, pa) {
@@ -4939,7 +4943,7 @@ function importVal(plan, valda, nyckel, pa) {
 // och avdelningar som redan finns läggs inte till igen, så importen kan köras om. enheter = befintliga enheter
 // ({id, namn, org, indata}). Returnerar { noder, nya: [{namn, org, team}], andrade: [{id, team}] } – skapandet
 // och sparandet gör webben respektive lättversionen.
-function importera(noder, plan, valda, forelder, enheter) {
+function importera(noder, plan, valda, forelder, enheter, bort = new Set()) {
   const idFor = new Map(); let n = noder;
   const nya = [], andrade = [];
   let fargNr = 0;
@@ -4957,12 +4961,13 @@ function importera(noder, plan, valda, forelder, enheter) {
       }
       continue;
     }
+    const team = p.team.filter(a => !bort.has(avdNyckel(p.nyckel, a)));
     const finns = enheter.find(e => e.namn.toLowerCase() === p.namn.toLowerCase() && (e.org || null) === (f || null));
     if (finns) {
       const har = new Set(((finns.indata && finns.indata.team) || finns.team || []).map(t => String(t.namn || "").toLowerCase()));
-      const saknas = p.team.filter(t => !har.has(t.toLowerCase()));
+      const saknas = team.filter(t => !har.has(t.toLowerCase()));
       if (saknas.length) andrade.push({ id: finns.id, team: saknas });
-    } else nya.push({ namn: p.namn, org: f, team: [...p.team] });
+    } else nya.push({ namn: p.namn, org: f, team });
   }
   return { noder: n, nya, andrade };
 }
@@ -4973,8 +4978,8 @@ function importKort(noder, imp) {
       <label class="knapp">Välj Excel-fil<input type="file" id="org-import" accept=".xlsx,.xls,.csv" hidden></label></section>`;
   return `<section class="kort"><h2>Importera ${esc(imp.fil || "")}</h2>
       <div class="falt" style="max-width:420px"><div><label for="imp-plats">Lägg under</label><select id="imp-plats">${alternativ(noder, imp.forelder, { tom: "Överst i organisationen" })}</select></div></div>
-      <p class="dampad liten">Bocka ur det som ska vänta. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas. Avdelningarna blir områden/team i enhetens gemensamma schema.</p>
-      <div id="imp-forhand">${importForhand(imp.plan, imp.valda)}</div>
+      <p class="dampad liten">Bocka ur det som ska vänta, eller enskilda avdelningar som inte ska med. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas. Avdelningarna blir områden/team i enhetens gemensamma schema.</p>
+      <div id="imp-forhand">${importForhand(imp.plan, imp.valda, imp.bort)}</div>
       <p class="chips"><button class="primar" data-os="import-kor">Importera</button><button data-os="import-avbryt">Avbryt</button></p></section>`;
 }
 // Kalkylbladen ur en fil som SheetJS har läst: [{namn, rader}].
@@ -6010,7 +6015,7 @@ async function lasImport(fil) {
   const wb = XLSX.read(new Uint8Array(await fil.arrayBuffer()), { type: "array" });
   const plan = ORG.importPlan(ORG.bladUr(XLSX, wb));
   if (!plan.poster.length) throw new Error("Hittade inga enheter i filen. Första raden ska vara rubriker, till exempel Förskola och Avdelning.");
-  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
+  return { fil: fil.name.replace(/\.[^.]+$/, ""), plan, valda: new Set(plan.poster.map(p => p.nyckel)), bort: new Set(), forelder: plan.forslag && ORG.finns(st.org, plan.forslag) ? plan.forslag : null };
 }
 document.addEventListener("change", async e => {
   if (st.vy !== "organisation") return;
@@ -6018,11 +6023,12 @@ document.addEventListener("change", async e => {
   try {
     if (el.id === "org-import" && el.files[0]) { st.imp = await lasImport(el.files[0]); return visaOrganisation(); }
     if (el.id === "imp-plats") { st.imp.forelder = el.value || null; return; }
-    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda); }
+    if (el.dataset && el.dataset.imp) { st.imp.valda = ORG.importVal(st.imp.plan, st.imp.valda, el.dataset.imp, el.checked); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda, st.imp.bort); }
+    if (el.dataset && el.dataset.impAvd) { if (el.checked) st.imp.bort.delete(el.dataset.impAvd); else st.imp.bort.add(el.dataset.impAvd); $("#imp-forhand").innerHTML = ORG.importForhand(st.imp.plan, st.imp.valda, st.imp.bort); }
   } catch (err) { meddela(err.message); }
 });
 async function korImport() {
-  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enheter || []);
+  const r = ORG.importera(st.org, st.imp.plan, st.imp.valda, st.imp.forelder, st.enheter || [], st.imp.bort);
   if (r.noder !== st.org) { await lager.sparaOrg(r.noder); st.org = r.noder; }
   for (const x of r.nya) {
     const ind = GUIDE.tomIndata(x.namn); x.team.forEach(t => TEAM.laggTill(ind, t));
