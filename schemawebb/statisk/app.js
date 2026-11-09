@@ -1240,6 +1240,7 @@ document.addEventListener("click", async e => {
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
+      case "grund": { const r = await api("POST", "grund"); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }
     visaOrganisation();

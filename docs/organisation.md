@@ -56,6 +56,15 @@ Hela organisationen kan byggas upp innan något schema läggs (användarens öns
   - När en aktivitet läggs in i en enhet väljs typen. Aktiviteten får då typens namn, kategori och färg.
   - I schemat visas aktivitetens markering i dess färg, och i aktivitetslistan med en färgprick. En aktivitet utan färg får kategorins standardfärg.
 
+## Grunden: förskolorna
+
+Förskolorna och deras avdelningar finns som grund i verktyget (användarens beslut 2026-11-09): 29 förskolor med 113 avdelningar under Förskola, från `schemawebb/grund_forskola.json`. Varje förskola blir en enhet, och avdelningarna blir områden/team i förskolans gemensamma schema. Personal, behov och regler fylls i sedan.
+
+- **Webben** lägger in grunden en gång när tjänsten startar (flaggan `grund_forskola`). En förskola som tas bort kommer alltså inte tillbaka av sig själv. `SCHEMA_GRUND=av` stänger av det (testerna gör det).
+- **Lättversionen** lägger in grunden första gången listan öppnas, i användarens egen lagring.
+- Knappen **Lägg in förskolorna** på sidan Organisation lägger in förskolor och avdelningar som saknas, till exempel efter att något har tagits bort av misstag.
+- Äldreomsorgen ingår inte i grunden än. Den kan importeras från Excel när den är klar.
+
 ## Importera från Excel
 
 Överst på sidan Organisation finns **Importera från Excel**. Bara namn läses, inga personuppgifter. Filen kan se ut på tre sätt (första raden är rubriker):
@@ -83,4 +92,4 @@ Avdelningarna blir områden/team i enhetens gemensamma schema. Grupper och enhet
 - `ORG.stod` ritar sidan Organisation. `TEAM.laggTill`, `TEAM.bytNamn` och `TEAM.taBort` ändrar en enhets team.
 - Aktivitetstyper: `ORG.AKT_STANDARD`, `aktLagg`, `aktAndra`, `aktTaBort`, `aktAlternativ`, `aktFalt` och `aktFarg`. Webben: `GET` och `PUT /api/aktivitetstyper`, där `null` betyder standardtyperna. Lättversionen: dokumentet `akttyper` i användarens lagring.
 - `GET /api/enheter` innehåller enhetens team (id, namn och färg).
-- Tester: `tests/test_organisation.py`, `tests/test_omraden.py` och `tests/test_organisationsstod.py`.
+- Tester: `tests/test_organisation.py`, `tests/test_omraden.py`, `tests/test_organisationsstod.py` och `tests/test_grund.py`.

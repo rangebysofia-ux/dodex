@@ -1,0 +1,264 @@
+{
+ "beskrivning": "Grunden i verktyget: förskolorna och deras avdelningar (användarens underlag 2026-11-09). Bara namn, inga personuppgifter. Se docs/organisation.md.",
+ "verksamhet": "forskola",
+ "enheter": [
+  {
+   "namn": "Anneberg",
+   "avdelningar": [
+    "Diamanten",
+    "Juvelen",
+    "Kristallen",
+    "Pärlan",
+    "Rubinen"
+   ]
+  },
+  {
+   "namn": "Besebäcken",
+   "avdelningar": [
+    "Körsbärsdalen",
+    "Smultronstället"
+   ]
+  },
+  {
+   "namn": "Björndammen",
+   "avdelningar": [
+    "Ängen",
+    "Fjärilen",
+    "Skogen",
+    "Ugglan"
+   ]
+  },
+  {
+   "namn": "Ensittare",
+   "avdelningar": [
+    "Borgen",
+    "Herrgården",
+    "Slottet",
+    "Torpet",
+    "Villan"
+   ]
+  },
+  {
+   "namn": "Finngösa",
+   "avdelningar": [
+    "Åsen",
+    "Berget",
+    "Hällen"
+   ]
+  },
+  {
+   "namn": "Fridåsen",
+   "avdelningar": [
+    "Ängsullen",
+    "Skogsstjärnan"
+   ]
+  },
+  {
+   "namn": "Hallen",
+   "avdelningar": [
+    "Älgen",
+    "Haren",
+    "Rådjuret",
+    "Räven"
+   ]
+  },
+  {
+   "namn": "Hossaberget",
+   "avdelningar": [
+    "Friheten",
+    "Vänskapen"
+   ]
+  },
+  {
+   "namn": "Hultet",
+   "avdelningar": [
+    "Bullerbyn",
+    "Junibacken",
+    "Körsbärsdalen",
+    "Lönneberga",
+    "Saltkråkan",
+    "Villekulla"
+   ]
+  },
+  {
+   "namn": "Hyggesvägen",
+   "avdelningar": [
+    "Mumintrollet"
+   ]
+  },
+  {
+   "namn": "Jonsered",
+   "avdelningar": [
+    "Anna-Stinas",
+    "Gjuteriet",
+    "Snickeriet",
+    "Spinneriet",
+    "Väveriet"
+   ]
+  },
+  {
+   "namn": "Kronvägen",
+   "avdelningar": [
+    "Enhörningen",
+    "Nyckeln",
+    "Skatten",
+    "Spiran",
+    "Tornet"
+   ]
+  },
+  {
+   "namn": "Kullegården",
+   "avdelningar": [
+    "Björken",
+    "Blåklinten",
+    "Daggkåpan",
+    "Eken",
+    "Humle",
+    "Kastanjen",
+    "Linden",
+    "Ringblomman",
+    "Solrosen",
+    "Vallmon"
+   ]
+  },
+  {
+   "namn": "Kvarnängen",
+   "avdelningar": [
+    "Kristallen",
+    "Månstrålen",
+    "Regnbågen",
+    "Snöflingan",
+    "Solglimten",
+    "Vattendroppen"
+   ]
+  },
+  {
+   "namn": "Lexby",
+   "avdelningar": [
+    "Bullerbyn",
+    "Saltkråkan"
+   ]
+  },
+  {
+   "namn": "Lillegård",
+   "avdelningar": [
+    "Kotten",
+    "Pärlan",
+    "Stjärnan"
+   ]
+  },
+  {
+   "namn": "Mellby",
+   "avdelningar": [
+    "Junibacken",
+    "Solsidan",
+    "Vinbärsgården"
+   ]
+  },
+  {
+   "namn": "Nävervägen",
+   "avdelningar": [
+    "Gläntan",
+    "Humlan"
+   ]
+  },
+  {
+   "namn": "Norrgården",
+   "avdelningar": [
+    "Måseskär",
+    "Mysingen"
+   ]
+  },
+  {
+   "namn": "Nygården",
+   "avdelningar": [
+    "Grön",
+    "Lila",
+    "Röd"
+   ]
+  },
+  {
+   "namn": "Öjersjö Brunn",
+   "avdelningar": [
+    "Björnen",
+    "Lodjuret",
+    "Ugglan",
+    "Vargen"
+   ]
+  },
+  {
+   "namn": "Oluf Nilssons väg",
+   "avdelningar": [
+    "Aspen",
+    "Björken",
+    "Eken",
+    "Lönnen"
+   ]
+  },
+  {
+   "namn": "Soldatängen",
+   "avdelningar": [
+    "Blåa",
+    "Gröna",
+    "Gula",
+    "Lila",
+    "Orange",
+    "Röda"
+   ]
+  },
+  {
+   "namn": "Sotenäs",
+   "avdelningar": [
+    "Lekfullheten",
+    "Möjligheten",
+    "Nyfikenheten",
+    "Utmaningen"
+   ]
+  },
+  {
+   "namn": "Stora Terassen",
+   "avdelningar": [
+    "Norrgården",
+    "Sörgården"
+   ]
+  },
+  {
+   "namn": "Tallmossen",
+   "avdelningar": [
+    "Björken",
+    "Boken",
+    "Granen",
+    "Knoppen",
+    "Kotten",
+    "Lövet"
+   ]
+  },
+  {
+   "namn": "Timmerslätt",
+   "avdelningar": [
+    "Möjligheten",
+    "Omtanken",
+    "Tryggheten",
+    "Utforskaren"
+   ]
+  },
+  {
+   "namn": "Ugglum",
+   "avdelningar": [
+    "Pepparkakshuset",
+    "Solbacken"
+   ]
+  },
+  {
+   "namn": "Ugglumsleden",
+   "avdelningar": [
+    "Eld",
+    "Jord",
+    "Luft",
+    "Månen",
+    "Solen",
+    "Vatten"
+   ]
+  }
+ ]
+}

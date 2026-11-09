@@ -8,7 +8,7 @@ Tjänsten är en Docker-container (`Dockerfile`) med en SQLite-databas på en di
 2. Skapa ett konto på render.com och koppla det till GitHub.
 3. Välj **New → Blueprint**, välj repot och godkänn. Render läser `render.yaml`.
 4. Fyll i **SCHEMA_LOSENORD** när Render frågar. Välj ett långt lösenord (minst 16 tecken) och dela det bara med dem som ska använda systemet.
-   Logga sedan in och skapa chefskontot under **Konton**: det första kontot blir chef och hanterar kontona. Alla inloggade kan godkänna scheman (`SCHEMA_GODKANNARE=chef` begränsar det till chefer).
+   Logga sedan in och skapa chefskontot under **Konton**: det första kontot blir chef och hanterar kontona. Alla inloggade kan godkänna scheman (`SCHEMA_GODKANNARE=chef` begränsar det till chefer). Förskolorna och deras avdelningar läggs in som grund första gången tjänsten startar (`docs/organisation.md`).
 5. Vänta tills bygget är klart (några minuter första gången). Adressen visas överst, till exempel `https://dodex.onrender.com` (är namnet upptaget lägger Render till ett kort tillägg, som `dodex-a1b2.onrender.com`). Egen domän, till exempel `dodex.rangeby.se`, kopplas under Settings → Custom Domains med en CNAME-post hos domänleverantören som pekar på Render-adressen.
 6. Öppna adressen i mobilen och logga in. Lägg gärna sidan på hemskärmen.
 

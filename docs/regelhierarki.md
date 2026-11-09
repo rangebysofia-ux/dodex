@@ -74,6 +74,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 32. **Organisationen byggs upp utan schema.** Verksamheter, enheter, områden och team, och organisationens aktivitetstyper med namn och färg, läggs upp på sidan Organisation innan något schema läggs. En aktivitet i en enhet får sin typs namn, kategori och färg. Se `docs/organisation.md`. Beslutat av användaren 2026-11-08.
 
+33. **Förskolorna är grunden i verktyget.** De 29 förskolorna med sina avdelningar finns från start under Förskola (avdelningarna som team). Äldreomsorgen avvaktar. Hemtjänstgruppen under Äldreomsorg heter ORDBO. Se `docs/organisation.md`. Beslutat av användaren 2026-11-09.
+
 Öppna frågor, alltså inte beslutade:
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

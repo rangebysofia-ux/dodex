@@ -41,7 +41,7 @@ from schemamotor.build import IndataFel, forbered, los
 from schemamotor.justera import justera
 from schemamotor.modell import kontrollera_indata
 from schemamotor.onskemal import beskriv, kontrollera as kontrollera_onskemal
-from schemawebb import db
+from schemawebb import db, grund
 
 STATISK = Path(__file__).resolve().parent / "statisk"
 FALL = next((f for f in (Path(os.environ.get("SCHEMA_EXEMPEL", "")),
@@ -225,6 +225,7 @@ def _forhandskontroll(indata):
 async def livstid(app):
     global korare
     db.anslut()
+    grund.vid_start()  # förskolorna som grund, en gång (schemawebb/grund.py)
     korare = ThreadPoolExecutor(max_workers=1, thread_name_prefix="losare")
     yield
     korare.shutdown(wait=False, cancel_futures=True)
@@ -441,6 +442,12 @@ def spara_aktivitetstyper(a: AktTyperIn):
         raise HTTPException(422, "Samma aktivitetstyp finns två gånger.")
     db.satt_installning("aktivitetstyper", [t.model_dump() for t in a.typer])
     return {"ok": True}
+
+
+@app.post("/api/grund", dependencies=[Depends(inloggad)])
+def lagg_in_grund():
+    """Lägger in förskolorna och avdelningarna som saknas (schemawebb/grund_forskola.json)."""
+    return grund.lagg_in()
 
 
 class FlyttaIn(BaseModel):

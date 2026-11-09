@@ -403,6 +403,7 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 <script>__GUIDE__</script>
 <script>__ENHETSFIL__</script>
 <script>__ORGANISATION__</script>
+<script>const GRUND = __GRUND__;</script>
 <script>__TEAM__</script>
 <script>__ANALYS__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
@@ -458,6 +459,15 @@ const lager = {
   async sparaOrg(noder) {
     if (this.db) return this.db.doc(`${this.bas}/org`).set({ noder });
     const d = this.lokal(); d.org = noder; this.lokalSpara(d);
+  },
+  // grunden (förskolorna) är inlagd en gång; en förskola som tas bort kommer inte tillbaka
+  async grundKlar() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/grund`).get()); return d.exists; } catch { return true; } }
+    return !!this.lokal().grund;
+  },
+  async sattGrundKlar() {
+    if (this.db) return this.db.doc(`${this.bas}/grund`).set({ forskola: true, tid: Date.now() });
+    const d = this.lokal(); d.grund = true; this.lokalSpara(d);
   },
   // organisationens aktivitetstyper (organisation.js); null = standardtyperna
   async akttyper() {
@@ -527,6 +537,7 @@ async function visaLista() {
   if (!st.guide) st.nyOrg = null;  // gruppen gäller bara den enhet som skapas i guiden
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
+  try { if (!(await lager.grundKlar())) { await laggInGrund(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
   if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; $("#sida").innerHTML = GUIDE.html(st.guide); return; }
@@ -1123,6 +1134,24 @@ async function andraEnhetL(id, andring) {
   await lager.sparaEnhet(n);
 }
 async function sparaAkttyper(l) { await lager.sparaAkttyper(l); st.akttyper = l; }
+// Grunden: förskolorna och avdelningarna (schemawebb/grund_forskola.json). Lägger bara in det som saknas.
+async function laggInGrund() {
+  const fanns = await lager.enheter();
+  let nya = 0, avd = 0;
+  for (const f of GRUND.enheter) {
+    const e = fanns.find(x => x.namn.toLowerCase() === f.namn.toLowerCase() && x.org === GRUND.verksamhet);
+    if (!e) {
+      const ind = GUIDE.tomIndata(f.namn); f.avdelningar.forEach(a => TEAM.laggTill(ind, a));
+      await lager.sparaEnhet({ id: nyttId(), namn: f.namn, indata: ind, org: GRUND.verksamhet }); nya++; avd += f.avdelningar.length;
+    } else {
+      const har = new Set(((e.indata && e.indata.team) || []).map(t => String(t.namn).toLowerCase()));
+      const saknas = f.avdelningar.filter(a => !har.has(a.toLowerCase()));
+      if (saknas.length) { const n = structuredClone(e); saknas.forEach(a => TEAM.laggTill(n.indata, a)); await lager.sparaEnhet(n); avd += saknas.length; }
+    }
+  }
+  await lager.sattGrundKlar();
+  return { nya, avdelningar: avd };
+}
 document.addEventListener("click", async e => {
   const el = e.target.closest("[data-os]"); if (!el || st.vy !== "organisation") return;
   e.preventDefault();
@@ -1141,6 +1170,7 @@ document.addEventListener("click", async e => {
       case "akt-bort": if (!confirm("Ta bort aktivitetstypen? Aktiviteter som redan finns i enheterna ligger kvar.")) return; await sparaAkttyper(ORG.aktTaBort(st.akttyper, el.dataset.id)); break;
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
+      case "grund": { const r = await laggInGrund(); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }
     visaOrganisation();
