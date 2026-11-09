@@ -29,8 +29,8 @@ const LISTA = [
   },
   {
     id: "bilaga-j", namn: "Funktionsstöd med Bilaga J",
-    kort: "Dag, kväll och varannan helg, med arbetspass och jour i följd.",
-    punkter: ["Heltid 37 timmar per vecka (lokal standard), som dag/kväll/helg.", "Arbetspass och jourpass i direkt anslutning: högst 20 timmar sammanlagt, och vilan efteråt minst lika lång (AB 25 § 13 mom. 5).", "Jour läggs efter kvällspasset, till exempel 22:00–07:00. Dygnsvilan 11 h gäller allt annat.", "Bilaga J gäller ersättning och villkor för jouren. Arbetsgivaren ska begära MBL-förhandling innan arbetspass och jour läggs i följd."],
+    kort: "Dag, kväll och varannan helg, med jourpass över dygnet.",
+    punkter: ["Heltid 37 timmar per vecka (lokal standard), som dag/kväll/helg.", "Jourpass över dygnet, till exempel 15:00–08:00: arbete till midnatt, jour 00:00–06:00 och arbete till 08:00. Ett pass som belastar två arbetsdagar.", "Hälften av jourtiden räknas som arbetstid (verksamhetens val). Jourpasset räknas in i kvällens och morgonens bemanning.", "Högst 20 timmar, och vilan efteråt minst lika lång som passet (AB 25 § 13 mom. 5). Dygnsvilan 11 h gäller allt annat.", "Bilaga J gäller ersättning och villkor för jouren. Arbetsgivaren ska begära MBL-förhandling innan arbete och jour läggs i följd."],
     kalla: "AB 25 § 13 mom. 5 (undantag från dygnsvila vid kombination av arbete och jour, högst 20 timmar sammanlagt, efterföljande vila minst lika lång) och Bilaga J (särskilda bestämmelser för viss jourtjänstgörande personal, lydelse 2024-04-01).",
     heltid: 2220, regler: {}, avvikelser: [], jour: true,
   },
@@ -47,7 +47,7 @@ function andringar(ind, id) {
   if (!R.avvikelser.includes("helgfrekvens") && (ind.regler || {}).helgfrekvens === "ingen") ut.push("Varannan helg gäller igen.");
   if (R.regler.pass_per_vecka && (ind.regler || {}).pass_per_vecka !== R.regler.pass_per_vecka) ut.push(`${R.regler.pass_per_vecka} pass per vecka.`);
   if (!R.regler.pass_per_vecka && (ind.regler || {}).pass_per_vecka) ut.push("4,75 pass per vecka igen.");
-  if (R.jour && !ind.jour) ut.push("Jour efter kvällspasset 22:00–07:00, en per natt. Tider och antal ändras under Behov.");
+  if (R.jour && !ind.jour) ut.push("Jourpass 15:00–08:00 med jour 00:00–06:00, ett per natt. Tider, andel arbetstid och antal ändras under Behov.");
   if (!R.jour && ind.jour) ut.push("Jouren tas bort.");
   if (R.dagtid) {
     const n = (ind.personal || []).filter(p => !(p.dygnsdelar || []).includes("natt") && (p.dygnsdelar || ["morgon", "kvall"]).join() !== "morgon").length;
@@ -78,7 +78,7 @@ function tillampa(ind, id) {
     if (b.alla) { b.vardag = b.vardag || { ...b.alla }; delete b.alla; }
     b.helg = { morgon: 0, kvall: 0, natt: 0 };
   }
-  if (R.jour && !ind.jour) ind.jour = { slut: "07:00", behov: { alla: 1 } };
+  if (R.jour && !ind.jour) ind.jour = { ...JOUR_STANDARD, behov: { alla: 1 } };
   if (!R.jour) delete ind.jour;
   ind.regelverk = R.id;
   return ind;
@@ -95,9 +95,11 @@ function varningar(ind) {
     if (ej.length) ut.push(`${ej.join(", ")} arbetar inte bara dag.`);
   }
   if (ind.jour) {
-    const r = ind.regler || {}, per = jourPerDag(ind.jour.behov);
-    if ((per[4] || per[5]) && r.hel_helg !== false && r.ingen_fredagskvall_fore_ledig_helg !== false && (ind.personal || []).some(p => (p.helgfrekvens || r.helgfrekvens || "2/4") === "2/4"))
-      ut.push("Jour fredag och lördag natt kräver ledig dag efter, men med hel arbetshelg och ingen fredagskväll före ledig helg arbetar den som har kväll fredag eller lördag hela helgen. Räkna med vakanta jourer de nätterna, eller låt några ha andra helgregler.");
+    const t = x => { const [h, m] = String(x).split(":").map(Number); return h * 60 + m; };
+    const span = 24 * 60 - t(ind.jour.start || "15:00") + t(ind.jour.slut || "08:00");
+    if (span > 20 * 60) ut.push(`Jourpasset är ${span / 60} timmar. Arbete och jour i följd får vara högst 20 timmar (AB 25 § 13 mom. 5).`);
+    if (!(ind.personal || []).some(p => !(p.dygnsdelar || []).includes("natt") && (p.dygnsdelar || ["morgon", "kvall"]).includes("kvall") && p.jour !== false))
+      ut.push("Ingen medarbetare kan gå jourpass: det krävs någon som arbetar kväll.");
   }
   if ((ind.heltid_minuter_per_vecka || 2220) !== R.heltid) ut.push(`Heltiden är ändrad från regelverkets ${(R.heltid / 60).toString().replace(".", ",")} timmar.`);
   return ut;
@@ -113,18 +115,31 @@ function jourPerDag(spec) {
   }
   return ut;
 }
-// Avsnittet under Behov: när jouren slutar och hur många jourer per natt (natten efter respektive dag).
+const JOUR_STANDARD = { start: "15:00", jour_fran: "00:00", jour_till: "06:00", slut: "08:00", andel_arbetstid: 0.5 };
+// Avsnittet under Behov: jourpassets tider, andel arbetstid och hur många jourpass per natt (natten efter respektive dag).
 function jourHtml(ind) {
   if (!ind.jour) return "";
-  const per = jourPerDag(ind.jour.behov), ks = (ind.regler || {}).kvall_slut || "22:00";
-  return `<div class="jour-red"><p class="dampad liten" style="margin:0 0 8px">Jour i direkt anslutning efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J). Jouren börjar när kvällspasset slutar (${esc(ks)}). Pass och jour högst 20 timmar sammanlagt, och vilan efteråt minst lika lång, så dagen efter jouren är ledig.</p>
-    <div class="falt" style="max-width:420px"><div><label for="jour-slut">Jouren slutar</label><input type="time" id="jour-slut" data-jour="slut" value="${esc(ind.jour.slut)}"></div></div>
-    <div class="rull"><table class="form"><thead><tr><th>Jour natten efter</th>${DAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody><tr><th>Antal</th>
-      ${DAGAR.map((d, i) => `<td><input type="number" min="0" max="10" inputmode="numeric" data-jour="${d}" value="${per[i] || ""}" placeholder="0" style="width:56px" aria-label="Jour natten efter ${d}"></td>`).join("")}</tr></tbody></table></div></div>`;
+  const J = { ...JOUR_STANDARD, ...ind.jour }, per = jourPerDag(J.behov);
+  const t = x => { const [h, m] = String(x).split(":").map(Number); return h * 60 + m; };
+  const span = 24 * 60 - t(J.start) + t(J.slut), jlen = Math.max(0, t(J.jour_till) - t(J.jour_fran));
+  const arb = span - jlen + Math.round(jlen * J.andel_arbetstid) - (24 * 60 - t(J.start) > 300 ? 30 : 0);
+  const fel = span > 20 * 60 ? `<p class="liten minus">Jourpasset är ${(span / 60).toString().replace(".", ",")} timmar. Arbete och jour i följd får vara högst 20 timmar (AB 25 § 13 mom. 5).</p>` : "";
+  return `<div class="jour-red"><p class="dampad liten" style="margin:0 0 8px">Ett jourpass över dygnet (Bilaga J): arbete från starten till midnatt, jour och sedan arbete till slutet dagen efter. Det är ett pass som belastar två arbetsdagar och räknas in i kvällens och morgonens bemanning. Högst 20 timmar, och vilan efteråt minst lika lång som passet (AB 25 § 13 mom. 5).</p>
+    <div class="falt" style="max-width:640px">
+      <div><label for="jour-start">Passet börjar</label><input type="time" id="jour-start" data-jour="start" value="${esc(J.start)}"></div>
+      <div><label for="jour-fran">Jour från</label><input type="time" id="jour-fran" data-jour="jour_fran" value="${esc(J.jour_fran)}"></div>
+      <div><label for="jour-till">Jour till</label><input type="time" id="jour-till" data-jour="jour_till" value="${esc(J.jour_till)}"></div>
+      <div><label for="jour-slut">Passet slutar</label><input type="time" id="jour-slut" data-jour="slut" value="${esc(J.slut)}"></div>
+      <div><label for="jour-andel">Av jourtiden är arbetstid, %</label><input type="number" min="0" max="100" step="5" id="jour-andel" data-jour="andel_arbetstid" value="${Math.round(J.andel_arbetstid * 100)}"></div>
+    </div>
+    <p class="liten" style="margin:6px 0">${(span / 60).toString().replace(".", ",")} timmar från start till slut, varav jour ${(jlen / 60).toString().replace(".", ",")} timmar. Arbetstid ungefär ${(arb / 60).toString().replace(".", ",")} timmar.</p>${fel}
+    <div class="rull"><table class="form"><thead><tr><th>Jourpass som börjar</th>${DAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody><tr><th>Antal</th>
+      ${DAGAR.map((d, i) => `<td><input type="number" min="0" max="10" inputmode="numeric" data-jour="${d}" value="${per[i] || ""}" placeholder="0" style="width:56px" aria-label="Jourpass som börjar ${d}"></td>`).join("")}</tr></tbody></table></div></div>`;
 }
 function jourAndra(ind, el) {
   const k = el.dataset.jour; if (!k || !ind.jour) return false;
-  if (k === "slut") { if (el.value) ind.jour.slut = el.value; return true; }
+  if (["start", "slut", "jour_fran", "jour_till"].includes(k)) { if (el.value) ind.jour[k] = el.value; return true; }
+  if (k === "andel_arbetstid") { ind.jour.andel_arbetstid = Math.max(0, Math.min(100, Number(el.value) || 0)) / 100; return true; }
   const per = jourPerDag(ind.jour.behov);
   per[DAGAR.indexOf(k)] = Math.max(0, parseInt(el.value) || 0);
   ind.jour.behov = per.every(v => v === per[0]) ? { alla: per[0] } : Object.fromEntries(DAGAR.map((d, i) => [d, per[i]]).filter(([, v]) => v));

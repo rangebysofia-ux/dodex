@@ -102,6 +102,7 @@ table.schema .helg { background: var(--helg); }
 .pass { border: 0; width: 100%; border-radius: 5px; padding: 4px 1px; line-height: 1.15; font: inherit; cursor: pointer; display: block; }
 .pass b { display: block; font-size: 12.5px; } .pass small { font: 10.5px var(--mono); }
 .pass.morgon { background: var(--morgon); color: var(--morgon-text); box-shadow: inset 3px 0 0 var(--morgon-kant); } .pass.kvall { background: var(--kvall); color: var(--kvall-text); box-shadow: inset 3px 0 0 var(--kvall-kant); } .pass.natt { background: var(--natt); color: var(--natt-text); box-shadow: inset 3px 0 0 var(--natt-kant); }
+.pass.jour { background: var(--jour-bg, #ece2f6); color: var(--jour-text, #4b2f7a); box-shadow: inset 3px 0 0 var(--jour-kant, #a98bd6); }
 .pass.vald { outline: 2px solid var(--accent); outline-offset: 1px; }
 table.schema .summa { font: 600 11.5px var(--mono); text-align: center; padding: 2px 4px; white-space: nowrap; background: var(--yta2); }
 table.schema th.summa { font: 700 10.5px var(--sans); color: var(--dampad); }
@@ -402,8 +403,14 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .regelverk-kort select { width: auto; min-width: 260px; }
 
 /* jour (Bilaga J) */
-.pass .jour-marke { display: block; font: 800 9.5px/1.1 var(--mono, monospace); font-style: normal; color: #fff; background: #3b3f6e; border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
 .jour-red { margin-top: 4px; }
+
+/* jourpasset över dygnet: två halvor som hänger ihop, jourtiden lägre */
+td:has(> .pass.jourdel-1) { padding-right: 0 !important; }
+td:has(> .pass.jourdel-2) { padding-left: 0 !important; }
+.pass.jourdel-1 { border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: inset 3px 0 0 var(--jour-kant, #a98bd6); }
+.pass.jourdel-2 { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: none; background: linear-gradient(to bottom, transparent 0 38%, var(--jour-bg, #ece2f6) 38%); padding-top: 14px; }
+.pass.jourdel-2 .jour-marke { display: block; font: 700 9px/1.1 var(--mono, monospace); font-style: normal; color: var(--jour-text, #4b2f7a); opacity: .85; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -1281,7 +1288,7 @@ document.addEventListener("change", e => {
   if (l) { GUIDE.sattStarttider(ind, l); andrad(true); }
 });
 // regelverk (regelverk.js)
-document.addEventListener("change", e => { if (st.enhet && e.target.dataset && e.target.dataset.jour && RV.jourAndra(st.enhet.indata, e.target)) andrad(false); });
+document.addEventListener("change", e => { if (st.enhet && e.target.dataset && e.target.dataset.jour && RV.jourAndra(st.enhet.indata, e.target)) andrad(true); });
 document.addEventListener("change", e => {
   if (!e.target.dataset || !e.target.dataset.rv || !st.enhet) return;
   st.rvVal = e.target.value; ritaFlik();
@@ -1426,7 +1433,7 @@ function ritaResultat() {
 // ------------------------------------------------------------------ person
 function ritaPerson(pid, res, ind) {
   const x = res.personer[pid], rad = res.schema[pid], W = res.veckor, p = ind.personal.find(q => q.id === pid) || {};
-  const kod = { morgon: "D", kvall: "K", natt: "N" }, rs = GRAF.resurs(res, ind), vvP = GRAF.veckovilaDagar(res, ind, pid);
+  const kod = { morgon: "D", kvall: "K", natt: "N", jour: "J" }, rs = GRAF.resurs(res, ind), vvP = GRAF.veckovilaDagar(res, ind, pid);
   let h = `<section class="kort"><button class="lank" data-g="person" data-p="">‹ Alla personer</button><h2 style="margin:6px 0 0">${esc(pid)}</h2>
     <p class="dampad" style="margin:2px 0 0">${Math.round((p.grad ?? 1) * 100)} % · ${(p.dygnsdelar || ["morgon", "kvall"]).map(d => DELAR[d].toLowerCase()).join(" och ")} · ${x.pass} pass · ${x.kvallspass} kvällar</p>
     <div class="rull" style="margin-top:10px"><table class="schema"><thead><tr><th></th>${DAGAR.map((d, i) => `<th class="${i > 4 ? "helg" : ""}">${d}</th>`).join("")}<th class="tal">Tid</th></tr></thead><tbody>`;
@@ -1765,7 +1772,7 @@ function dagTabell(res, dagar, period) {
   const hem = Object.fromEntries((ind.personal || []).map(q => [q.id, q.team || null])), harTeam = (ind.team || []).length > 0;
   const pers = Object.keys(res.schema).filter(q => !harTeam || !st.teamFilter || hem[q] === st.teamFilter);
   const vvAlla = Object.fromEntries(pers.map(p => [p, GRAF.veckovilaDagar(res, ind, p)]));
-  const kod = { morgon: "D", kvall: "K", natt: "N" };
+  const kod = { morgon: "D", kvall: "K", natt: "N", jour: "J" };
   res.vakanser.forEach(x => (vak[x.dag] = (vak[x.dag] || 0) + x.antal));
   const kl = d => `class="${d % 7 > 4 ? "helg" : ""}${period && d % 7 === 0 ? " ny-vecka" : ""}"`;
   let h = `<div class="rull"><table class="schema${period ? " period" : ""}"${period ? ` style="min-width:${46 + dagar.length * 30}px"` : ""}><thead>`;
@@ -1776,7 +1783,7 @@ function dagTabell(res, dagar, period) {
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
     const vv = !x && vvAlla[p].get(d);
-    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${GRAF.jourMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}" data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}"><b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>${period ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${GRAF.jourMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {
@@ -1786,7 +1793,7 @@ function dagTabell(res, dagar, period) {
   const bd = behovDag(st.korning.indata || st.enhet.indata);
   h += `<tr class="bem"><td>I tj.</td>` + dagar.map(d => {
     const c = { morgon: 0, kvall: 0, natt: 0 };
-    pers.forEach(p => { const x = res.schema[p][d]; if (x) c[x.dygnsdel]++; });
+    pers.forEach(p => { const x = res.schema[p][d]; if (x && c[GRAF.behovsdel(x)] !== undefined) c[GRAF.behovsdel(x)]++; });
     const over = ["morgon", "kvall", "natt"].reduce((s, k) => s + Math.max(0, c[k] - bd[d % 7][k]), 0);
     const marke = `${vak[d] ? `<span class="minus">−${vak[d]}</span>` : ""}${over ? `<span class="plus">+${over}</span>` : ""}`;
     return `<td ${kl(d).replace('class="', `class="${vak[d] ? "vakans " : over ? "over " : ""}`)}>${period ? (marke || "✓") : `D${c.morgon}<br>K${c.kvall}<br>N${c.natt}${marke ? "<br>" + marke : ""}`}</td>`;

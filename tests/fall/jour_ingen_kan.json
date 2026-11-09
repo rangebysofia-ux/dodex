@@ -1,0 +1,101 @@
+{
+ "beskrivning": "Jourpass som ingen kan gå: alla medarbetare arbetar bara dag, så ingen kan ha jourpasset 15:00–08:00. Jourbehovet är mjukt: varje natt syns som ett vakant jourpass, och schemat är fritt från avtalsbrott.",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true,
+  "jour_saknas": 16
+ },
+ "enhet": "Test – jour",
+ "veckor": 4,
+ "cykliskt": true,
+ "regelverk": "bilaga-j",
+ "behov": {
+  "vardag": {
+   "morgon": 2
+  },
+  "helg": {
+   "morgon": 2
+  }
+ },
+ "jour": {
+  "start": "15:00",
+  "slut": "08:00",
+  "jour_fran": "00:00",
+  "jour_till": "06:00",
+  "andel_arbetstid": 0.5,
+  "behov": {
+   "mån": 1,
+   "tis": 1,
+   "ons": 1,
+   "tor": 1
+  }
+ },
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A2",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A3",
+   "grad": 0.9,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A4",
+   "grad": 0.9,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A5",
+   "grad": 0.8,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A6",
+   "grad": 0.8,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A7",
+   "grad": 0.75,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A8",
+   "grad": 0.75,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A9",
+   "grad": 0.75,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  }
+ ],
+ "losare": {
+  "tid_per_steg_s": 15
+ }
+}

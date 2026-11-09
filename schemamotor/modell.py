@@ -137,10 +137,26 @@ class Team(Strikt):
 
 
 class Jour(Strikt):
-    """Jour i direkt anslutning efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J; docs/regelverk.md). Jouren börjar
-    när kvällspasset slutar och slutar vid `slut`. `behov` = antal jourer per natt, i samma dagformat som behovet."""
-    slut: Klocka
+    """Jourpass över dygnet (Bilaga J, AB 25 § 13 mom. 5; docs/regelverk.md): arbete från `start` till midnatt, jour
+    `jour_fran`–`jour_till` och arbete till `slut` dagen efter. Ett pass som belastar två arbetsdagar. Högst 20 timmar.
+    `andel_arbetstid` = hur stor del av jourtiden som räknas som arbetstid. `behov` = jourpass per natt."""
+    start: Klocka = "15:00"
+    slut: Klocka = "08:00"
+    jour_fran: Klocka = "00:00"
+    jour_till: Klocka = "06:00"
+    andel_arbetstid: float = Field(default=0.5, ge=0, le=1)
     behov: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def tider(self):
+        t = lambda s: int(s[:2]) * 60 + int(s[3:])
+        if t(self.start) < 12 * 60:
+            raise ValueError("jourpasset ska börja på eftermiddagen eller kvällen (efter kl. 12)")
+        if not (t(self.jour_fran) < t(self.jour_till) <= t(self.slut) < 12 * 60):
+            raise ValueError("jouren ska ligga efter midnatt och före passets slut på morgonen")
+        if 24 * 60 - t(self.start) + t(self.slut) > 20 * 60:
+            raise ValueError("arbete och jour i följd får vara högst 20 timmar (AB 25 § 13 mom. 5)")
+        return self
 
     @field_validator("behov")
     @classmethod

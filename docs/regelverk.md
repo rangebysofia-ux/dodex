@@ -24,22 +24,21 @@ AB 25 § 13 mom. 5 tillåter undantag från dygnsvilan bara vid kombination av a
 - Vilan efteråt ska vara minst lika lång som den sammanlagda arbetstiden.
 - Arbetsgivaren ska begära MBL-förhandling innan arbetspass och jour läggs i följd.
 
-Användaren har valt att funktionsstödets regelverk ska ha *arbetspass och jour i följd* (inte sovande jour som egen passtyp och inte dygnspass upp till 24 timmar).
+Användarens beslut 2026-11-09: jouren läggs som ett **jourpass över dygnet**, som verksamheten brukar lägga dem.
 
-### Så fungerar jouren
+### Så fungerar jourpasset
 
-- När regelverket *Funktionsstöd med Bilaga J* väljs får enheten jour efter kvällspasset, 22:00–07:00, en per natt. Under **Behov → Jour** ändras när jouren slutar och hur många jourer det ska vara natten efter varje veckodag.
-- Jouren börjar när kvällspasset slutar (`kvall_slut`), alltså i direkt anslutning.
-- Motorn väljer vem som har jour. Kvällspass och jour är högst 20 timmar sammanlagt. Dagen efter jouren är ledig, och nästa pass börjar tidigast när vilan efter jouren är minst lika lång som pass och jour tillsammans.
-- Jour är inte vila. För veckovilan räknas jouren som upptagen tid. Undantaget från dygnsvilan gäller bara kombinationen pass + jour.
-- Jourbehovet är mjukt, på samma nivå som behovet. En natt som saknar jour syns som *vakant jour* (`jourvakanser`, nyckeltalet `jour_saknas`).
-- Jouren räknas inte som ordinarie arbetstid i DODEX: passets arbetstid är kvällspasset. Hur jourtid ersätts står i Bilaga J. Det räknas inte här.
-- En medarbetare kan undantas från jour med `personal[].jour: false`.
-- I schemat står **+J 07:00** på kvällspasset som följs av jour.
+- Exempel: passet börjar 15:00, arbete till 24:00, jour 00:00–06:00 och arbete 06:00–08:00. Det räknas som **ett pass** men belastar **två arbetsdagar**: börjar det en måndag är både måndag och tisdag arbetsdagar. Det gäller för blockregler, helger och veckovila.
+- Under **Behov → Jour** ändras när passet börjar och slutar, när jouren börjar och slutar, hur stor del av jourtiden som är arbetstid, och hur många jourpass som börjar varje veckodag.
+- **Arbetstid:** arbetet 15–24 (med rast) och 06–08, plus hälften av jourtiden (användarens beslut, ändras under Behov). Exemplet ger 8,5 + 2 + 3 = 13,5 timmar. De andra passen blir kortare så att kontraktet stämmer.
+- **Behovet:** jourpasset räknas in i kvällens bemanning samma dag och morgonens bemanning dagen efter (användarens beslut). Jourbehovet är mjukt, på samma nivå som behovet. En natt utan jourpass syns som *vakant jourpass* (`jourvakanser`, `jour_saknas`).
+- **Vila:** hela passet är högst 20 timmar. Vilan efteråt ska vara minst lika lång som passet. Undantaget från dygnsvilan gäller bara inom jourpasset. Jourtiden är inte vila, så den räknas som upptagen tid för veckovilan.
+- **I schemat** står passets första halva (🛏️ J 15:00–00:00) och andra halva (00:00–08:00) som ett sammanhängande pass över båda dagarna. Jourtiden ligger lägre i andra halvan.
+- En medarbetare kan undantas från jourpass med `personal[].jour: false`. Jourpass går bara till dem som arbetar kväll.
 
-### Krock med de lokala helgreglerna
+### Hur många jourpass det blir
 
-Jour fredag och lördag natt kräver ledig dag efter. Med hel arbetshelg och *ingen fredagskväll före ledig helg* arbetar den som har kväll fredag eller lördag hela helgen. Därför går det inte att lägga jour de nätterna med varannan helg. Regelverket varnar för det. Det som går att göra: ha jour söndag–torsdag, låta några ha andra helgregler (undantag per person), eller ändra de lokala helgreglerna för enheten. Det är ett beslut för verksamheten (öppen fråga i `regelhierarki.md`).
+Varje jourpass tar två arbetsdagar och många timmar. Med få medarbetare räcker det inte till jourpass varje natt. I testfallet med nio personer, två på dagen och två på kvällen och jourpass måndag–torsdag läggs ungefär hälften av nätterna, utan avtalsbrott. Resten syns som vakanta jourpass. Lösaren hittar inte alltid det bästa schemat inom tidsgränsen.
 
 ### Källa
 
@@ -49,5 +48,5 @@ Kravet på högst 20 timmar och efterföljande vila är kontrollerat mot AB 25 i
 
 - `schemawebb/statisk/regelverk.js` (RV): `LISTA`, `andringar`, `tillampa`, `varningar` och `kort`. Delas av webben och lättversionen.
 - `schemamotor/modell.py`: fälten `regelverk`, `jour` och `personal[].jour`.
-- Jouren: `schemamotor/build.py` (variablerna `j`, `JOUR_MAX`), `justera.py`, `validate.py` (regeln JOUR, nivå avtal, och vakant jour), `light/motor.js` (`jourDag`, `jourFor`) och `light/granskning.js`. `explain.py` behöver ingen regelgrupp: jouren väljs av motorn och kan aldrig göra schemat olösbart.
-- Testfall: `tests/fall/regelverk_40_timmar.json`, `jour_bilaga_j.json` (jour söndag–torsdag natt) och `jour_over_20_timmar.json` (jour 22–15 blir över 20 timmar, så ingen jour läggs). Tester: `tests/test_regelverk_enhet.py` och `tests/test_jour.py`.
+- Jourpasset: passmallarna `JOUR-1` och `JOUR-2` i `schemamotor/build.py` (två halvor som hör ihop, `JOUR_MAX`), `justera.py`, `validate.py` (regeln JOUR, nivå avtal; `behovsdel`), `light/motor.js` (passtyperna `JA` och `JB`, `delAv`) och `light/granskning.js`. `explain.py` behöver ingen regelgrupp: jourpasset väljs av motorn och kan aldrig göra schemat olösbart, och ett pass över 20 timmar avvisas redan i indatakontrollen.
+- Testfall: `tests/fall/regelverk_40_timmar.json`, `jour_bilaga_j.json` (jourpass 15–08 måndag–torsdag) och `jour_ingen_kan.json` (ingen arbetar kväll, så inga jourpass läggs). Tester: `tests/test_regelverk_enhet.py` och `tests/test_jour.py`.

@@ -9,7 +9,7 @@ import re
 from .build import DAGNAMN, DYGN, IndataFel, forbered, fordela_team, klocka, kompetens_tackning, netto_for, tid
 
 KLOCKA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
-DELAR = ("morgon", "kvall", "natt")
+DELAR = ("morgon", "kvall", "natt", "jour")
 
 
 def _pass(p, prob, natt):
@@ -30,7 +30,16 @@ def _pass(p, prob, natt):
     r = prob["r"]
     rg, rl = r["rast_grans_minuter"], r["rast_minuter"]
     ut = {"mall": p.get("mall") or "manuell", "dygnsdel": del_, "start": klocka(s), "slut": klocka(e)}
-    if del_ == "natt" and natt.get("maltidsuppehall", True):
+    if del_ == "jour":  # jourpassets halvor (docs/regelverk.md): mallens arbetstid, där jouren räknas till en andel
+        M = prob["mallar"]
+        J = prob.get("jour")
+        if not J or p.get("jourdel") not in (1, 2):
+            raise IndataFel("Ett jourpass måste ha jourdel 1 eller 2, och enheten måste ha jour.")
+        mall = M[J["A"] if p["jourdel"] == 1 else J["B"]]
+        ut.update(jourdel=p["jourdel"], rast=mall["rast"], netto=mall["netto"])
+        if mall.get("jour"):
+            ut["jour"] = {"start": klocka(mall["jour"][0]), "slut": klocka(mall["jour"][1])}
+    elif del_ == "natt" and natt.get("maltidsuppehall", True):
         ut.update(rast=0, netto=langd, maltidsuppehall=True)
     else:
         n = netto_for(langd, rg, rl)
@@ -46,10 +55,6 @@ def _pass(p, prob, natt):
            for a in p.get("aktiviteter") or [] if isinstance(a, dict) and a.get("id") in kanda]
     if akt:
         ut["aktiviteter"] = akt
-    # jour efter passet följer med (docs/regelverk.md); om den fortfarande är tillåten avgör granskningen
-    if prob.get("jour") and isinstance(p.get("jour"), dict):
-        J = prob["jour"]
-        ut["jour"] = {"start": klocka(J["start"]), "slut": klocka(J["slut"])}
     return ut
 
 
@@ -137,7 +142,7 @@ def justera(indata, schema, grund=None):
     personer = {}
     for pid, p in kanda.items():
         rad = [x for x in nytt[pid] if x]
-        personer[pid] = {"pass": len(rad), "minuter": sum(x["netto"] for x in rad), "mal_minuter": p["mal_minuter"],
+        personer[pid] = {"pass": sum(1 for x in rad if x.get("jourdel") != 2), "minuter": sum(x["netto"] for x in rad), "mal_minuter": p["mal_minuter"],
                          "kvallspass": sum(x["dygnsdel"] == "kvall" for x in rad),
                          "helggrupp": gamla.get(pid, {}).get("helggrupp"),
                          "aktiviteter": sum(len(x.get("aktiviteter", [])) for x in rad)}
@@ -162,11 +167,11 @@ def justera(indata, schema, grund=None):
         jb = prob["jour"]["behov"]
         jv = []
         for d in range(W * 7):
-            n = sum(1 for rad in nytt.values() if rad[d] and rad[d].get("jour"))
+            n = sum(1 for rad in nytt.values() if rad[d] and rad[d].get("jourdel") == 1)
             if n < jb[d % 7]:
                 jv.append({"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "antal": jb[d % 7] - n})
         kpi["jour_saknas"] = sum(v["antal"] for v in jv)
-        kpi["jourpass"] = sum(1 for rad in nytt.values() for p in rad if p and p.get("jour"))
+        kpi["jourpass"] = sum(1 for rad in nytt.values() for p in rad if p and p.get("jourdel") == 1)
         extra["jourvakanser"] = jv
     # kompetens: täckningen räknas om efter justeringen (docs/kompetens.md)
     if prob.get("kompetenskrav"):

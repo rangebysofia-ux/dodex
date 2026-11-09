@@ -12,12 +12,12 @@ ROT = Path(__file__).resolve().parent.parent
 @pytest.mark.skipif(not shutil.which("node"), reason="Node saknas")
 def test_passikon():
     kod = r"""const G = require(process.argv[1]);
-process.stdout.write(JSON.stringify({ m: G.passIkon("morgon"), k: G.passIkon("kvall"), n: G.passIkon("natt"), x: G.passIkon("jour") }));"""
+process.stdout.write(JSON.stringify({ m: G.passIkon("morgon"), k: G.passIkon("kvall"), n: G.passIkon("natt"), x: G.passIkon("okand"), j: G.passIkon("jour") }));"""
     ut = json.loads(subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "grafer.js")],
                                    capture_output=True, text=True, timeout=60, check=True).stdout)
     assert "☀️" in ut["m"] and "🌙" in ut["k"] and "🌃" in ut["n"]
     assert 'aria-hidden="true"' in ut["m"]  # bokstaven D/K/N står kvar för skärmläsare och utskrift
-    assert ut["x"] == ""
+    assert ut["x"] == "" and "🛏️" in ut["j"]  # jourpasset (docs/regelverk.md)
 
 
 def test_symbolerna_anvands_i_webb_och_telefon():

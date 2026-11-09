@@ -2,7 +2,7 @@
 // Vyer för en körning: Schema (alla pass, morgon, kväll, natt eller klockslag), Personer och Bemanning.
 // Laddas före app.js och använder dess hjälpfunktioner när vyerna ritas.
 
-const KOD = { morgon: "D", kvall: "K", natt: "N" };
+const KOD = { morgon: "D", kvall: "K", natt: "N", jour: "J" };
 const FARG = { morgon: "var(--morgon)", kvall: "var(--kvall)", natt: "var(--natt)" };
 const KPI_NAMN = [["vakanta_pass", "Vakanta pass"], ["vakanta_tidpunkter", "Vakanta tidpunkter"], ["blocklangd", "Arbetsdagar i följd över 4"],
   ["passlangd", "Passlängd, avvikelse i minuter"], ["rattvisa", "Rättvisa, spridning"], ["jamn_bemanning", "Ojämn bemanning mellan dagar"], ["onskemal", "Brutna önskemål"],
@@ -39,7 +39,7 @@ function bemanning(res, indata) {
   const N = res.veckor * 7, behov = behovPerDag(indata);
   return Array.from({ length: N }, (_, d) => {
     const n = { morgon: 0, kvall: 0, natt: 0 };
-    for (const rad of Object.values(res.schema)) { const p = rad[d]; if (p && n[p.dygnsdel] !== undefined) n[p.dygnsdel]++; }
+    for (const rad of Object.values(res.schema)) { const p = rad[d]; if (p && n[GRAF.behovsdel(p)] !== undefined) n[GRAF.behovsdel(p)]++; }
     const b = behov[d % 7];
     const vak = { morgon: Math.max(0, b.morgon - n.morgon), kvall: Math.max(0, b.kvall - n.kvall), natt: Math.max(0, b.natt - n.natt) };
     const over = { morgon: Math.max(0, n.morgon - b.morgon), kvall: Math.max(0, n.kvall - b.kvall), natt: Math.max(0, n.natt - b.natt) };
@@ -262,7 +262,7 @@ function schemaDagar(res, dagar, filter, period) {
       if (!p) return `<td ${kl(d, vv.has(d) ? " vvdag" : "")}${mal}>${red ? `<button class="tom" data-g="ny-pass" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(pid)} ${DAGAR[d % 7]}">+</button>` : vv.has(d) ? GRAF.vvMarke(vv.get(d), period) : ""}</td>`;
       if (filter !== "alla" && p.dygnsdel !== filter) return `<td ${kl(d)}${mal}><span class="pass dold" aria-label="${DELAR[p.dygnsdel]}">·</span></td>`;
       const resurs = rs.has(n);
-      return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${resurs ? " resurs" : ""}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter || resurs ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${resurs ? "\n◼ Resurspass, utöver behovet" : ""}${esc(GRAF.aktText(p))}"` : ""}
+      return `<td ${kl(d)}${mal}><button class="pass ${p.dygnsdel}${p.jourdel ? " jourdel-" + p.jourdel : ""}${resurs ? " resurs" : ""}${st.valdCell === n ? " vald" : ""}${p.manuell ? " manuell" : ""}" data-g="${red ? "andra-pass" : "cell"}" data-c="${esc(n)}"${red ? ' draggable="true"' : ""}${period || p.aktiviteter || resurs ? ` data-tips="${esc(pid)} vecka ${Math.floor(d / 7) + 1} ${DAGAR[d % 7]}\n${DELAR[p.dygnsdel]} ${p.start}–${p.slut}${resurs ? "\n◼ Resurspass, utöver behovet" : ""}${esc(GRAF.aktText(p))}"` : ""}
         aria-label="${esc(pid)} ${DAGAR[d % 7]}: ${DELAR[p.dygnsdel]} ${p.start} till ${p.slut}${resurs ? ", resurspass" : ""}"><b>${GRAF.passIkon(p.dygnsdel)}${KOD[p.dygnsdel] || "?"}</b>${period ? "" : `<small>${p.start}–${p.slut}</small>`}${resurs && !period ? GRAF.resursMarke : ""}${GRAF.aktMarke(p)}${GRAF.jourMarke(p)}${harTeam && p.team && p.team !== hem[pid] ? TEAM.lanMarke(ind.team, p.team) : ""}</button></td>`;
     }).join("") + GRAF.summaCeller(GRAF.radSumma(res, ind, pid, dagar, rs), kol, ind) + `</tr>`;
   }

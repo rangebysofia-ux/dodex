@@ -1192,7 +1192,7 @@ document.addEventListener("change", e => {
   if (l) { GUIDE.sattStarttider(ind, l); markeraAndrad(true); }
 });
 // ---------------------------------------------------------------- regelverk (regelverk.js)
-document.addEventListener("change", e => { if (st.indata && e.target.dataset && e.target.dataset.jour && RV.jourAndra(st.indata, e.target)) markeraAndrad(false); });
+document.addEventListener("change", e => { if (st.indata && e.target.dataset && e.target.dataset.jour && RV.jourAndra(st.indata, e.target)) markeraAndrad(true); });
 document.addEventListener("change", e => {
   if (!e.target.dataset || !e.target.dataset.rv || !st.indata) return;
   st.rvVal = e.target.value; ritaInstallningar();

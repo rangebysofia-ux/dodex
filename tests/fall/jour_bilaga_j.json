@@ -1,9 +1,9 @@
 {
- "beskrivning": "Funktionsstöd med Bilaga J: jour 22:00–07:00 i direkt anslutning efter ett kvällspass, söndag till torsdag natt. Kvällspass och jour högst 20 timmar sammanlagt, och vilan efteråt minst lika lång (AB 25 § 13 mom. 5): dagen efter jouren är ledig. Ska gå att lösa utan avtalsbrott, med jour varje sådan natt. (Fredag och lördag natt krockar med de lokala helgreglerna, se docs/regelverk.md.)",
+ "beskrivning": "Funktionsstöd med Bilaga J: jourpass 15:00–08:00 med jour 00:00–06:00, måndag till torsdag natt. Ett pass som belastar två arbetsdagar och räknas in som kväll och morgon i behovet; hälften av jourtiden är arbetstid. Högst 20 timmar och vilan efteråt minst lika lång (AB 25 § 13 mom. 5). Ska gå att lösa utan avtalsbrott, med jourpass.",
  "forvantat": {
   "status": "OK",
   "validering_utan_fel": true,
-  "jour_saknas": 0
+  "jourpass_min": 4
  },
  "enhet": "Test – jour",
  "veckor": 4,
@@ -20,9 +20,12 @@
   }
  },
  "jour": {
-  "slut": "07:00",
+  "start": "15:00",
+  "slut": "08:00",
+  "jour_fran": "00:00",
+  "jour_till": "06:00",
+  "andel_arbetstid": 0.5,
   "behov": {
-   "sön": 1,
    "mån": 1,
    "tis": 1,
    "ons": 1,
@@ -68,6 +71,6 @@
   }
  ],
  "losare": {
-  "tid_per_steg_s": 10
+  "tid_per_steg_s": 15
  }
 }

@@ -40,7 +40,7 @@ process.stdout.write(JSON.stringify(r));""")
     t = ut["tillbaka"]
     assert t["regelverk"] == "dag-kvall-helg" and "heltid_minuter_per_vecka" not in t
     assert t["avvikelser"] == ["dygnsvila_minuter"] and "regler" not in t
-    assert len(ut["j"]) == 1 and "Jour efter kvällspasset" in ut["j"][0]  # samma värden som dag/kväll/helg, plus jouren
+    assert len(ut["j"]) == 1 and "Jourpass 15:00–08:00" in ut["j"][0]  # samma värden som dag/kväll/helg, plus jouren
     assert "40 timmar per helgfri vecka" in ut["kort"] and "Det här ändras" in ut["kort"]
 
 
