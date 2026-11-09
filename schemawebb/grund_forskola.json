@@ -1,5 +1,5 @@
 {
- "beskrivning": "Grunden i verktyget: förskolorna och deras avdelningar (användarens underlag 2026-11-09). Bara namn, inga personuppgifter. Se docs/organisation.md.",
+ "beskrivning": "Grunden i verktyget: förskolorna och deras avdelningar (användarens underlag 2026-11-09). Bara namn, inga personuppgifter. Se docs/organisation.md. Förskolorna har öppet 06:00–18:00 som grundinställning (regler morgon_start och kvall_slut).",
  "verksamhet": "forskola",
  "enheter": [
   {
@@ -260,5 +260,9 @@
     "Vatten"
    ]
   }
- ]
+ ],
+ "regler": {
+  "morgon_start": "06:00",
+  "kvall_slut": "18:00"
+ }
 }

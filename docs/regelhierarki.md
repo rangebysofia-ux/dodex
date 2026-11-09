@@ -78,6 +78,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 34. **Kompetensbaserade behov.** En enhet kan kräva minst så många med en kompetens per dag och dygnsdel, till exempel läkemedelsdelegering på kvällen. Kravet är mjukt och ligger direkt efter behovet (vakanser → kompetens → …): motorn väljer vilka som arbetar, gör aldrig behovet sämre och lägger aldrig ett extra pass för kompetensens skull. Det som inte går syns som kompetensvakanser (användarens beslut). Till planeringen hör organisationens kompetenslista, kompetensbalans före schemat, kompetens i schemat och förslag på utbildning. Se `docs/kompetens.md`. Beslutat av användaren 2026-11-09.
 
+35. **Starttider för dagpassen och förskolornas tider.** När behovet läggs in kan man ange hur många av dagpassen som börjar vid varje tid (till exempel 1 kl. 06, 1 kl. 07 och 2 kl. 08), så att hela dagen täcks. Tiderna blir tillåtna starter (som beslut 24). Kravet är mjukt och på samma nivå som behovet: det som saknas blir startvakanser. Förskolornas grundinställning är öppet 06:00–18:00 (`morgon_start` 06:00, `kvall_slut` 18:00). Se `docs/starttider.md`. Beslutat av användaren 2026-11-09.
+
 Öppna frågor, alltså inte beslutade:
 - Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.

@@ -162,7 +162,7 @@ async function visaInloggning(s) {
 async function visaEnheter() {
   st.vy = "hem"; st.enhet = null; st.korning = null;
   if (!st.guide) st.nyOrg = null;  // gruppen gäller bara den enhet som skapas i guiden
-  if (st.guide) { if (!$(".guide")) { ritaMeny(); sokvag([["Enheter", "#/"], ["Ny enhet"]]); } st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; vy().innerHTML = GUIDE.html(st.guide); return; }
+  if (st.guide) { if (!$(".guide")) { ritaMeny(); sokvag([["Enheter", "#/"], ["Ny enhet"]]); } st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; st.guide.forskola = !!st.org && ORG.vag(st.org, (st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) || "").includes("forskola"); vy().innerHTML = GUIDE.html(st.guide); return; }
   try { st.enhetLista = await api("GET", "enheter"); } catch { /* behåll */ }
   ritaMeny();
   sokvag([["Enheter"]]);
@@ -306,7 +306,8 @@ function ritaFlik() {
       if ((i.team || []).length) {
         const s = TEAM.summaBehov(i.team);
         return `<div class="banner info">${IKON.grupp}<div><strong>Behovet anges per team</strong>Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under Medarbetare → Team.</div></div>
-          <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
+          <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
+          <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}`;
       }
       const b = i.behov || {};
       const tp = [];
@@ -322,6 +323,7 @@ function ritaFlik() {
         <button data-g="ny-behovsrad">Lägg till rad</button></div>
       <h3>Arbetstiden som behovet ger</h3>
       <div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
       <h3>Täckning vid klockslag</h3>
       <p class="dampad liten">Minst så många i tjänst vid klockslaget, till exempel tidigt på morgonen eller mitt på dagen när dag och kväll överlappar. Passens längd anpassas efter det, och med rörlig starttid (Regler, Dagpass får också börja) även dagpassens start. Täckningsgraden syns i vyn Klockslag.</p>
       ${tp.length ? `<div class="rull"><table class="form"><thead><tr><th>Dagar</th><th>Klockslag</th><th>Antal</th><th></th></tr></thead><tbody>
@@ -1167,6 +1169,26 @@ document.addEventListener("toggle", e => {
   if (d.open) st.orgOppna.add(d.dataset.org); else st.orgOppna.delete(d.dataset.org);
 }, true);
 
+
+// starttider för dagpassen (guide.js): i guiden (data-gst) och i enhetens behov (data-st)
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-gst-ny],[data-gst-bort],[data-st-ny],[data-st-bort]"); if (!el) return;
+  e.preventDefault();
+  if (el.matches("[data-gst-ny],[data-gst-bort]")) {
+    if (!st.guide) return;
+    st.guide.starttider = GUIDE.starttiderAndra(st.guide.starttider, el, { attr: "gst", knapp: "gst", start: st.guide.tider.morgon });
+    return visaEnheter();
+  }
+  const ind = st.indata; if (!ind) return;
+  GUIDE.sattStarttider(ind, GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" }));
+  markeraAndrad(true);
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.st === undefined) return;
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" });
+  if (l) { GUIDE.sattStarttider(ind, l); markeraAndrad(true); }
+});
 // ---------------------------------------------------------------- fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {
   const el = e.target; if (!st.indata || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;

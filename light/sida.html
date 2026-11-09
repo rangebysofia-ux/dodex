@@ -392,6 +392,10 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .komp-rad.brist { border-left-color: var(--dalig, #c0473f); }
 .komp-rad.knappt { border-left-color: var(--guld, #c9a03a); }
 .os-komp .os-typ { grid-template-columns: auto 1fr auto auto; }
+
+/* starttider för dagpassen (guide.js) */
+.starttid-rad { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+.starttid-rad input[type=time] { width: 120px; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -479,6 +483,14 @@ const lager = {
     if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/grund`).get()); return d.exists; } catch { return true; } }
     return !!this.lokal().grund;
   },
+  async grundTiderKlar() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/grund_tider`).get()); return d.exists; } catch { return true; } }
+    return !!this.lokal().grundTider;
+  },
+  async sattGrundTiderKlar() {
+    if (this.db) return this.db.doc(`${this.bas}/grund_tider`).set({ forskola: true, tid: Date.now() });
+    const d = this.lokal(); d.grundTider = true; this.lokalSpara(d);
+  },
   async sattGrundKlar() {
     if (this.db) return this.db.doc(`${this.bas}/grund`).set({ forskola: true, tid: Date.now() });
     const d = this.lokal(); d.grund = true; this.lokalSpara(d);
@@ -561,10 +573,11 @@ async function visaLista() {
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
   try { if (!(await lager.grundKlar())) { await laggInGrund(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
+  try { if (!(await lager.grundTiderKlar())) { await grundTider(); st.enheter = await lager.enheter(); } } catch { /* nästa gång */ }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
   try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
-  if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; $("#sida").innerHTML = GUIDE.html(st.guide); return; }
+  if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; st.guide.forskola = !!st.org && ORG.vag(st.org, (st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) || "").includes("forskola"); $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
       <div style="display:grid;justify-items:end;gap:4px">${temaKnapp()}<span class="dampad" style="font-size:11.5px">© Sofia Rångeby</span></div></div></header>
@@ -679,7 +692,8 @@ function ritaFlik() {
   } else if (st.flik === "behov" && (i.team || []).length) {
     const s = TEAM.summaBehov(i.team);
     el.innerHTML = `<div class="banner info"><strong>Behovet anges per team</strong><span class="liten">Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under fliken Team.</span></div>
-      <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
+      <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}`;
   } else if (st.flik === "behov") {
     const b = i.behov || (i.behov = {});
     el.innerHTML = `<p class="dampad liten">Antal pass per dygnsdel. Rader längre ned gäller före rader ovanför.</p>
@@ -687,6 +701,7 @@ function ritaFlik() {
       ${Object.keys(b).map(k => `<tr><th>${DAGNYCKEL[k] || esc(k)}</th>${["morgon", "kvall", "natt"].map(d => `<td><input type="number" inputmode="numeric" min="0" data-b="${k}" data-d="${d}" value="${b[k][d] ?? 0}" style="width:64px" aria-label="${DAGNYCKEL[k]} ${DELAR[d]}"></td>`).join("")}
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
       <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
       <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>
       <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
   } else if (st.flik === "onskemal") {
@@ -1163,6 +1178,15 @@ async function andraEnhetL(id, andring) {
   await lager.sparaEnhet(n);
 }
 async function sparaAkttyper(l) { await lager.sparaAkttyper(l); st.akttyper = l; }
+// Förskolornas öppettider (06:00–18:00) i förskolor som saknar egna tider; en tid som användaren har satt ändras inte.
+async function grundTider() {
+  for (const e of await lager.enheter()) {
+    if (e.org !== GRUND.verksamhet) continue;
+    const r = (e.indata && e.indata.regler) || {}, saknas = Object.entries(GRUND.regler || {}).filter(([k]) => !(k in r));
+    if (saknas.length) await lager.sparaEnhet({ ...e, indata: { ...e.indata, regler: { ...r, ...Object.fromEntries(saknas) } } });
+  }
+  await lager.sattGrundTiderKlar();
+}
 // Grunden: förskolorna och avdelningarna (schemawebb/grund_forskola.json). Lägger bara in det som saknas.
 async function laggInGrund() {
   const fanns = await lager.enheter();
@@ -1171,6 +1195,7 @@ async function laggInGrund() {
     const e = fanns.find(x => x.namn.toLowerCase() === f.namn.toLowerCase() && x.org === GRUND.verksamhet);
     if (!e) {
       const ind = GUIDE.tomIndata(f.namn); f.avdelningar.forEach(a => TEAM.laggTill(ind, a));
+      if (GRUND.regler) ind.regler = { ...GRUND.regler };
       await lager.sparaEnhet({ id: nyttId(), namn: f.namn, indata: ind, org: GRUND.verksamhet }); nya++; avd += f.avdelningar.length;
     } else {
       const har = new Set(((e.indata && e.indata.team) || []).map(t => String(t.namn).toLowerCase()));
@@ -1224,6 +1249,26 @@ document.addEventListener("submit", async e => {
   if (e.target.id !== "akt-ny") return;
   e.preventDefault();
   try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
+});
+
+// starttider för dagpassen (guide.js): i guiden (data-gst) och i enhetens behov (data-st)
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-gst-ny],[data-gst-bort],[data-st-ny],[data-st-bort]"); if (!el) return;
+  e.preventDefault();
+  if (el.matches("[data-gst-ny],[data-gst-bort]")) {
+    if (!st.guide) return;
+    st.guide.starttider = GUIDE.starttiderAndra(st.guide.starttider, el, { attr: "gst", knapp: "gst", start: st.guide.tider.morgon });
+    return visaLista();
+  }
+  const ind = (st.enhet && st.enhet.indata); if (!ind) return;
+  GUIDE.sattStarttider(ind, GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" }));
+  andrad(true);
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.st === undefined) return;
+  const ind = (st.enhet && st.enhet.indata); if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" });
+  if (l) { GUIDE.sattStarttider(ind, l); andrad(true); }
 });
 // fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {

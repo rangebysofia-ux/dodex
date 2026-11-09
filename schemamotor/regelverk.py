@@ -106,6 +106,7 @@ KALLOR = {
     "KRAV": ("Medarbetarens önskemål som verksamheten har gjort till krav.", "–"),
     "AKTIVITET": ("Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid.", "–"),
     "KOMPETENS": ("Verksamhetens beslut om kompetens i tjänst (till exempel delegering enligt verksamhetens rutin).", "–"),
+    "STARTTID": ("Verksamhetens beslut om starttider för dagpassen (till exempel förskolans öppettider).", "–"),
 }
 
 MJUKA = {

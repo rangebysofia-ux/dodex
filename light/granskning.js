@@ -12,7 +12,7 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", STARTTID: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
@@ -122,7 +122,7 @@ const GRANSKNING = (() => {
           if (rast < r.rast_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: över 5 h arbete utan rast.`);
           else if (paPlats - rast > 2 * r.rast_grans_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: rasten kan inte placeras så att ingen del blir över 5 h.`);
         }
-        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid)]);
+        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid), ...(((indata.starttider || {}).morgon) || []).map(x => tid(x.tid))]);
         if (p.dygnsdel === "morgon" && (!starter.has(s % DYGN) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: morgonpass ${p.start}–${p.slut} följer inte fönstret.`);
         if (p.dygnsdel === "kvall" && (e % DYGN !== tid(r.kvall_slut) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
@@ -320,6 +320,16 @@ const GRANSKNING = (() => {
     for (let d = 0; d < N; d++) for (const [del, antal] of Object.entries(behov[d % 7])) {
       let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
       if (n < antal) { vakanser += antal - n; brott("BEHOV", null, `${dagText(d)}: ${antal - n} vakant ${del === "kvall" ? "kvälls" : del}pass.`, false); }
+    }
+    // starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Mjukt: en varning.
+    const stL = (((indata.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0]).sort((a, b) => a[0] - b[0]);
+    if (stL.length) for (let d = 0; d < N; d++) {
+      let kvar = Number(behov[d % 7].morgon || 0);
+      for (const [t, antal] of stL) {
+        const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "morgon" && tid(x.start) === t) n++; }
+        if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} dagpass börjar kl ${klocka(t)}.`, false);
+      }
     }
     // minsta bemanning på golvet under aktiviteter (behov, mjukt)
     for (const a of Object.values(akt)) {

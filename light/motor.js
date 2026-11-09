@@ -224,7 +224,9 @@ const MOTOR = (() => {
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
     // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
     const kompetens = kompFor(ind);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, enhet: ind.enhet || "" };
+    // starttider för dagpassen (docs/starttider.md): [minut, antal] i tidsordning
+    const starttider = ((((ind.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, enhet: ind.enhet || "" };
   }
 
   // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
@@ -671,6 +673,7 @@ const MOTOR = (() => {
     });
     const golvVak = [];
     const tillfallen = aktiviteter(pr, schema, brott, golvVak);
+    const startVak = starttiderFor(pr, schema);
     for (const t of tillfallen) if (t.saknas && t.krav) hardTotalt++;
     pers.forEach(p => {
       const rad = schema[p.id];
@@ -699,6 +702,8 @@ const MOTOR = (() => {
         _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
+    const startDel = pr.starttider && pr.starttider.length ? { startvakanser: startVak } : {};
+    if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
     if (pr.kompetens && pr.kompetens.length) {
       const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
@@ -710,8 +715,43 @@ const MOTOR = (() => {
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel,
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel, ...startDel,
     };
+  }
+
+  // Starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Dagpassen läggs med start
+  // morgon_start; här flyttas så många som behövs till de andra tiderna, med samma längd. Ett pass flyttas bara om
+  // det ryms i fönstret och vilan räcker, och aldrig ett pass med en aktivitet. Det som inte går blir startvakanser.
+  function starttiderFor(pr, schema) {
+    const ut = [], L = pr.starttider || [];
+    if (!L.length) return ut;
+    const kf = tid(pr.r.kant_fran), kt = tid(pr.r.kant_till), idx = Object.fromEntries(pr.pers.map(p => [p.id, p]));
+    for (let d = 0; d < pr.N; d++) {
+      let kvar = pr.behov[d % 7][M] || 0;
+      const krav = [];
+      for (const [t, antal] of L) { const a = Math.min(antal, kvar); kvar -= a; if (a > 0) krav.push([t, a]); }
+      if (!krav.length) continue;
+      const pa = t => Object.keys(schema).filter(pid => { const v = schema[pid][d]; return v && v.dygnsdel === "morgon" && tid(v.start) === t; });
+      // de senare tiderna först, med de kortaste passen först (de ryms lättast)
+      for (const [t, a] of krav.filter(([t]) => t !== pr.ms).sort((x, y) => y[0] - x[0])) {
+        let n = pa(t).length;
+        const kand = pa(pr.ms).filter(pid => !schema[pid][d].aktiviteter).sort((x, y) => schema[x][d].netto - schema[y][d].netto);
+        for (const pid of kand) {
+          if (n >= a) break;
+          const v = schema[pid][d], o = tid(v.slut) - tid(v.start), slut = t + o;
+          if (slut < kf || slut > kt) continue;
+          const ny = { ...v, start: klocka(t), slut: klocka(slut), mall: "M" + klocka(t) + "-" + klocka(slut) };
+          schema[pid][d] = ny;
+          if (vilaOk(schema[pid], pr, idx[pid])) n++; else schema[pid][d] = v;
+        }
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+      for (const [t, a] of krav.filter(([t]) => t === pr.ms)) {
+        const n = pa(t).length;
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+    }
+    return ut;
   }
 
   // Välj deltagare till varje aktivitetstillfälle bland dem som arbetar: först de vars pass redan täcker,

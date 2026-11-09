@@ -60,7 +60,7 @@ Hela organisationen kan byggas upp innan något schema läggs (användarens öns
 
 ## Grunden: förskolorna
 
-Förskolorna och deras avdelningar finns som grund i verktyget (användarens beslut 2026-11-09): 29 förskolor med 113 avdelningar under Förskola, från `schemawebb/grund_forskola.json`. Varje förskola blir en enhet, och avdelningarna blir områden/team i förskolans gemensamma schema. Personal, behov och regler fylls i sedan.
+Förskolorna och deras avdelningar finns som grund i verktyget (användarens beslut 2026-11-09): 29 förskolor med 113 avdelningar under Förskola, från `schemawebb/grund_forskola.json`. Förskolorna har öppet 06:00–18:00 som grundinställning (`docs/starttider.md`). Varje förskola blir en enhet, och avdelningarna blir områden/team i förskolans gemensamma schema. Personal, behov och regler fylls i sedan.
 
 - **Webben** lägger in grunden en gång när tjänsten startar (flaggan `grund_forskola`). En förskola som tas bort kommer alltså inte tillbaka av sig själv. `SCHEMA_GRUND=av` stänger av det (testerna gör det).
 - **Lättversionen** lägger in grunden första gången listan öppnas, i användarens egen lagring.

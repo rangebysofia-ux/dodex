@@ -211,6 +211,11 @@ def forbered(indata):
     """Validera indata och räkna fram passmallar, mål och dagval. Returnerar ett 'problem'."""
     r = dict(STANDARDREGLER)
     r.update(indata.get("regler", {}))
+    # starttider för dagpassen (docs/starttider.md): av dagbehovet börjar så många vid varje tid. Tiderna blir tillåtna
+    # starter (som morgon_starter, beslut 24), och motorn ser till att så många börjar då (mjukt, som behovet).
+    starttider = sorted((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("morgon") or []))
+    if starttider:
+        r["morgon_starter"] = sorted(set(r.get("morgon_starter") or []) | {klocka(t) for t, _ in starttider})
     W = indata["veckor"]
     N = W * 7
     cykliskt = indata.get("cykliskt", True)
@@ -405,7 +410,7 @@ def forbered(indata):
                       "behov": expandera_dagvarden(k.get("behov"), dict)}
                      for i, k in enumerate(indata.get("kompetenskrav") or [])]
 
-    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team,
+    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team, "starttider": starttider,
             "kompetenskrav": kompetenskrav, "kompetensnamn": knamn,
             "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
             "aktiviteter": aktiviteter, "enhet": indata.get("enhet", ""),
@@ -684,6 +689,18 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             v = m.new_int_var(0, antal, f"vak_{d}_{del_}")
             m.add(sum(tack) + v >= antal)
             vak.append((v, d, del_, None))
+        # starttider: så många av dagpassen börjar vid varje tid, i tidsordning och högst dagens dagbehov
+        kvar = prob["behov"][wd].get("morgon", 0) or 0
+        for t, antal in prob.get("starttider") or []:
+            a = min(antal, kvar)
+            kvar -= a
+            if a <= 0:
+                continue
+            tack = [x[pi, d, s] for pi, p in enumerate(prob["personer"]) for s in p["tillatna"]
+                    if M[s]["dygnsdel"] == "morgon" and M[s]["start"] == t and (pi, d, s) in x]
+            v = m.new_int_var(0, a, f"vaks_{d}_{t}")
+            m.add(sum(tack) + v >= a)
+            vak.append((v, d, None, "start " + klocka(t)))
         for tp in prob["tidpunkter"][wd]:
             t = tid(tp["tid"])
             tack = []
@@ -890,6 +907,11 @@ def monsterproblem(prob):
                 val.add(min(kand, key=lambda s: M[s]["netto"]))
                 val.add(max(kand, key=lambda s: M[s]["netto"]))
                 val.add(min(kand, key=lambda s: abs(M[s]["netto"] - p["mal_langd"])))
+                if del_ == "morgon":  # en passmall per starttid, så att mönstret kan fyllas med rätt starter
+                    for t, _ in enkel.get("starttider") or []:
+                        egna = [s for s in kand if M[s]["start"] == t]
+                        if egna:
+                            val.add(min(egna, key=lambda s: abs(M[s]["netto"] - p["mal_langd"])))
         val.update(p.get("aktivitetspass", {}))  # pass som täcker en aktivitet (bara på dess dagar)
         p["tillatna"] = sorted(val)
     return enkel
@@ -1091,8 +1113,13 @@ def tolka(prob, solver, var, steg, kpi_mal):
                                "deltagare": delt, "behov": a["_behov"][d], "saknas": a["_behov"][d] - len(delt),
                                "utanfor": a["_utanfor"]})
     vakanser = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "tid": t,
-                 "antal": solver.value(v)} for v, d, del_, t in var["vak"] if solver.value(v)]
+                 "antal": solver.value(v)} for v, d, del_, t in var["vak"] if solver.value(v) and not str(t).startswith("start ")]
+    # starttider som inte fick så många som skulle börja då (docs/starttider.md)
+    startvak = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "start": t[6:], "antal": solver.value(v)}
+                for v, d, _, t in var["vak"] if str(t).startswith("start ") and solver.value(v)]
     kpi = dict(kpi_mal)
+    if prob.get("starttider"):
+        kpi["starttid_saknas"] = sum(v["antal"] for v in startvak)
     kpi["vakanta_pass"] = sum(v["antal"] for v in vakanser if v["dygnsdel"])
     kpi["vakanta_tidpunkter"] = sum(v["antal"] for v in vakanser if v["tid"])
     kpi["aktivitet_saknas"] = sum(t["saknas"] for t in tillfallen)
@@ -1119,6 +1146,7 @@ def tolka(prob, solver, var, steg, kpi_mal):
                                 if prob.get("team") else {})}
     return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"], "profil": prob.get("profil", "standard"),
             "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "aktiviteter": tillfallen,
+            **({"startvakanser": startvak} if prob.get("starttider") else {}),
             "schema": schema, **({"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": team_tackning}
                                  if prob.get("team") else {}),
             **({"kompetenskrav": [{"id": k["id"], "kompetens": k["kompetens"], "namn": k["namn"]} for k in prob["kompetenskrav"]],

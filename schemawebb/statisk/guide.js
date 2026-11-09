@@ -123,6 +123,7 @@ const GUIDE = (() => {
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);
     if (g.passMall) ut.bemanningsbalans = { pass: structuredClone(g.passMall) };
+    if ((g.starttider || []).length) sattStarttider(ut, g.starttider);
     if (teamLista && teamLista.length) ut.team = teamLista;
     return ut;
   }
@@ -139,6 +140,44 @@ const GUIDE = (() => {
       if (ind.budget_timmar_vecka) ind.budget_timmar_vecka = Math.round(ind.budget_timmar_vecka * ind.personal.length / Math.max(1, alla.personal.length) * 10) / 10;
       return { namn: o.namn.trim(), farg: o.farg, indata: ind };
     });
+  }
+
+  // ---------------------------------------------------------------- starttider för dagpassen (docs/starttider.md)
+  // Av dagbehovet: hur många som börjar vid varje tid. attr = attributnamnet för fälten (data-st i enheten, data-gst i
+  // guiden), knapp = prefix för knapparna. Delas av webben, lättversionen och guiden.
+  function starttiderHtml(lista, { start = "07:00", behov = null, attr = "st", knapp = "st" } = {}) {
+    const summa = lista.reduce((s, x) => s + (Number(x.antal) || 0), 0);
+    const maxBehov = behov ? Math.max(0, ...Object.values(behov).map(v => (v && v.morgon) || 0)) : null;
+    return `<div class="starttider"><p class="dampad liten" style="margin:0 0 8px">Hur många av dagpassen som börjar vid varje tid, till exempel 1 kl. 06:00, 1 kl. 07:00 och 2 kl. 08:00, så att hela dagen täcks. Övriga börjar kl. ${esc(start)}. Passen blir lika långa som annars, så den som börjar senare slutar senare.</p>
+      ${lista.map((x, i) => `<div class="starttid-rad"><input type="time" data-${attr}="${i}" data-sf="tid" value="${esc(x.tid)}" aria-label="Starttid ${i + 1}"><input type="number" min="1" max="50" inputmode="numeric" data-${attr}="${i}" data-sf="antal" value="${esc(x.antal)}" aria-label="Antal som börjar då" style="width:70px"><span class="dampad liten">börjar då</span><button class="liten fara" data-${knapp}-bort="${i}" aria-label="Ta bort starttiden">×</button></div>`).join("")}
+      <p class="chips" style="margin:6px 0 0"><button class="liten" data-${knapp}-ny="1">+ Starttid</button></p>
+      ${lista.length && maxBehov !== null ? `<p class="liten ${summa > maxBehov ? "minus" : "dampad"}" style="margin:4px 0 0">${summa} av dagbehovet (högst ${maxBehov}) har en angiven starttid.${summa > maxBehov ? " Fler än behovet: de senare tiderna räknas bara så långt behovet räcker." : ""}</p>` : ""}</div>`;
+  }
+  // Ändra listan efter en händelse. Returnerar den nya listan (eller null om elementet inte hör hit).
+  function starttiderAndra(lista, el, { attr = "st", knapp = "st", start = "07:00" } = {}) {
+    lista = (lista || []).map(x => ({ ...x }));
+    const ds = el.dataset;
+    const nyckel = attr.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), kn = knapp.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    if (ds[kn + "Ny"]) {
+      const sista = lista.length ? lista[lista.length - 1].tid : start;
+      const [h, m] = sista.split(":").map(Number);
+      lista.push({ tid: lista.length ? `${String(Math.min(23, h + 1)).padStart(2, "0")}:${String(m).padStart(2, "0")}` : start, antal: 1 });
+      return lista;
+    }
+    if (ds[kn + "Bort"] !== undefined) { lista.splice(+ds[kn + "Bort"], 1); return lista; }
+    if (ds[nyckel] !== undefined && ds.sf) {
+      const x = lista[+ds[nyckel]]; if (!x) return null;
+      if (ds.sf === "tid") { if (el.value) x.tid = el.value; } else x.antal = Math.max(1, parseInt(el.value) || 1);
+      return lista;
+    }
+    return null;
+  }
+  // Skriv listan till indata: sorterad, utan dubbletter (samma tid slås ihop), eller bort om den är tom.
+  function sattStarttider(ind, lista) {
+    const per = new Map();
+    for (const x of lista || []) if (x.tid) per.set(x.tid, (per.get(x.tid) || 0) + (Number(x.antal) || 0));
+    const ut = [...per].filter(([, a]) => a > 0).sort((a, b) => a[0].localeCompare(b[0])).map(([tid, antal]) => ({ tid, antal }));
+    if (ut.length) ind.starttider = { morgon: ut }; else delete ind.starttider;
   }
 
   // Den tomma enheten som AI-assistenten fyller i tillsammans med användaren.
@@ -219,12 +258,16 @@ const GUIDE = (() => {
         (!r.dagPass && !r.natter ? tips("Skriv hur många som behöver vara i tjänst på dag, kväll och natt.") : tips(`Det blir ${r.dagPass} dag- och kvällspass och ${r.natter} nätter per vecka, ungefär <b>${sv(r.behovTimmar)} h per vecka</b>. För helgerna behövs minst <b>${r.minDag} med dag och kväll</b> och <b>${r.minNatt} med natt</b>${r.fredagStyr ? " (fredagskvällen styr: den som arbetar fredag kväll arbetar helgen)" : ""}.`)) +
         (g.antalDag < r.minDag || g.antalNatt < r.minNatt ? tips(`Ni är ${g.antalDag} med dag och kväll och ${g.antalNatt} med natt. Färre än minsta antal ger vakanser på helgerna. <button class="liten" data-guide="minsta">Ändra till ${r.minDag} och ${r.minNatt}</button>`, true) : "") +
         (k < r.behovTimmar - 0.5 ? tips(`Kontrakterad tid (${sv(k)} h) är mindre än behovet (${sv(r.behovTimmar)} h). Räkna med vakanser.`, true) : ""); break;
-      case 6: h = fraga("Vilka tider gäller för passen?") +
+      case 6:
+        // förskolor: öppet 06:00–18:00 som grundinställning (användarens beslut 2026-11-09)
+        if (g.forskola && !g.forskolaTider) { g.tider.morgon = "06:00"; g.tider.kvall = "18:00"; g.forskolaTider = true; }
+        h = fraga("Vilka tider gäller för passen?") +
         `<div class="falt" style="max-width:640px"><div><label for="g-ms">Dagpass börjar</label><input id="g-ms" type="time" data-gt="morgon" value="${g.tider.morgon}"></div>
           <div><label for="g-ks">Kvällspass slutar</label><input id="g-ks" type="time" data-gt="kvall" value="${g.tider.kvall}"></div>
           <div><label for="g-ns">Nattpass börjar</label><input id="g-ns" type="time" data-gt="nattStart" value="${g.tider.nattStart}"></div>
           <div><label for="g-ne">Nattpass slutar</label><input id="g-ne" type="time" data-gt="nattSlut" value="${g.tider.nattSlut}"></div></div>` +
-        tips("Dagpassets slut och kvällspassets start anpassas efter sysselsättningsgraden, med passbyte mellan kl. 12 och 18. Nattpasset är " + sv(nattTimmarPass(g)) + " h med måltidsuppehåll."); break;
+        tips("Dagpassets slut och kvällspassets start anpassas efter sysselsättningsgraden, med passbyte mellan kl. 12 och 18. Nattpasset är " + sv(nattTimmarPass(g)) + " h med måltidsuppehåll.") +
+        `<details${(g.starttider || []).length ? " open" : ""} style="margin-top:12px"><summary><b>Olika starttider för dagpassen</b></summary>${starttiderHtml(g.starttider || [], { start: g.tider.morgon, behov: g.behovDag || g.behov, attr: "gst", knapp: "gst" })}</details>`; break;
       case 7: h = fraga("Hur lång är schemaperioden, och när börjar den?") +
         `<div class="falt" style="max-width:640px"><div><label for="g-veckor">Period</label><select id="g-veckor" data-gf="veckor">${[4, 6, 8, 12].map(v => `<option value="${v}"${+g.veckor === v ? " selected" : ""}>${v} veckor</option>`).join("")}</select></div>
           <div><label for="g-start">Startdatum, måndag (valfritt)</label><input id="g-start" type="date" data-gf="startdatum" value="${esc(g.startdatum)}"></div>
@@ -271,6 +314,7 @@ const GUIDE = (() => {
     }
     if (el.dataset.gb) { const [d, k] = el.dataset.gb.split("."); (g.behovDag && g.behovDag[d] ? g.behovDag : g.behov)[d][k] = Math.max(0, parseInt(el.value) || 0); return true; }
     if (el.dataset.gt) { if (el.value) g.tider[el.dataset.gt] = el.value; return true; }
+    if (el.dataset.gst !== undefined) { const l = starttiderAndra(g.starttider, el, { attr: "gst", knapp: "gst", start: g.tider.morgon }); if (l) g.starttider = l; return true; }
     if (el.dataset.go) { const [i, k] = el.dataset.go.split("."); g.omradesLista[+i][k] = el.value; return k === "farg"; }
     if (el.dataset.gp) { const [i, k] = el.dataset.gp.split("."); g.personer[+i][k] = k === "grad" ? Math.max(0, parseInt(el.value) || 0) : el.value; return true; }
     const f = el.dataset.gf; if (!f) return false;
@@ -430,6 +474,6 @@ const GUIDE = (() => {
     return null;
   }
 
-  return { HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
+  return { starttiderHtml, starttiderAndra, sattStarttider, HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
 })();
 if (typeof module !== "undefined") module.exports = GUIDE;

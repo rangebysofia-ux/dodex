@@ -1,0 +1,118 @@
+{
+ "beskrivning": "Starttider: förskola som har öppet 06:00–18:00. Av dagbehovet på sex börjar en kl. 06:00, en kl. 07:00, två kl. 08:00 och resten kl. 09:00. Ska gå att lösa utan avtalsbrott: varje vardag börjar rätt antal vid varje tid.",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true,
+  "starttid_saknas": 0
+ },
+ "enhet": "Test – förskola med starttider",
+ "veckor": 4,
+ "cykliskt": true,
+ "regler": {
+  "morgon_start": "06:00",
+  "kvall_slut": "18:00"
+ },
+ "behov": {
+  "vardag": {
+   "morgon": 6
+  },
+  "helg": {
+   "morgon": 0
+  }
+ },
+ "starttider": {
+  "morgon": [
+   {
+    "tid": "06:00",
+    "antal": 1
+   },
+   {
+    "tid": "07:00",
+    "antal": 1
+   },
+   {
+    "tid": "08:00",
+    "antal": 2
+   },
+   {
+    "tid": "09:00",
+    "antal": 2
+   }
+  ]
+ },
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A2",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A3",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A4",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A5",
+   "grad": 0.9,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A6",
+   "grad": 0.9,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A7",
+   "grad": 0.8,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A8",
+   "grad": 0.8,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A9",
+   "grad": 0.75,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A10",
+   "grad": 0.75,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  }
+ ],
+ "losare": {
+  "tid_per_steg_s": 10
+ }
+}

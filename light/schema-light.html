@@ -392,6 +392,10 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .komp-rad.brist { border-left-color: var(--dalig, #c0473f); }
 .komp-rad.knappt { border-left-color: var(--guld, #c9a03a); }
 .os-komp .os-typ { grid-template-columns: auto 1fr auto auto; }
+
+/* starttider för dagpassen (guide.js) */
+.starttid-rad { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+.starttid-rad input[type=time] { width: 120px; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -631,7 +635,9 @@ const MOTOR = (() => {
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
     // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
     const kompetens = kompFor(ind);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, enhet: ind.enhet || "" };
+    // starttider för dagpassen (docs/starttider.md): [minut, antal] i tidsordning
+    const starttider = ((((ind.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, enhet: ind.enhet || "" };
   }
 
   // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
@@ -1078,6 +1084,7 @@ const MOTOR = (() => {
     });
     const golvVak = [];
     const tillfallen = aktiviteter(pr, schema, brott, golvVak);
+    const startVak = starttiderFor(pr, schema);
     for (const t of tillfallen) if (t.saknas && t.krav) hardTotalt++;
     pers.forEach(p => {
       const rad = schema[p.id];
@@ -1106,6 +1113,8 @@ const MOTOR = (() => {
         _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
+    const startDel = pr.starttider && pr.starttider.length ? { startvakanser: startVak } : {};
+    if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
     if (pr.kompetens && pr.kompetens.length) {
       const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
@@ -1117,8 +1126,43 @@ const MOTOR = (() => {
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel,
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel, ...startDel,
     };
+  }
+
+  // Starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Dagpassen läggs med start
+  // morgon_start; här flyttas så många som behövs till de andra tiderna, med samma längd. Ett pass flyttas bara om
+  // det ryms i fönstret och vilan räcker, och aldrig ett pass med en aktivitet. Det som inte går blir startvakanser.
+  function starttiderFor(pr, schema) {
+    const ut = [], L = pr.starttider || [];
+    if (!L.length) return ut;
+    const kf = tid(pr.r.kant_fran), kt = tid(pr.r.kant_till), idx = Object.fromEntries(pr.pers.map(p => [p.id, p]));
+    for (let d = 0; d < pr.N; d++) {
+      let kvar = pr.behov[d % 7][M] || 0;
+      const krav = [];
+      for (const [t, antal] of L) { const a = Math.min(antal, kvar); kvar -= a; if (a > 0) krav.push([t, a]); }
+      if (!krav.length) continue;
+      const pa = t => Object.keys(schema).filter(pid => { const v = schema[pid][d]; return v && v.dygnsdel === "morgon" && tid(v.start) === t; });
+      // de senare tiderna först, med de kortaste passen först (de ryms lättast)
+      for (const [t, a] of krav.filter(([t]) => t !== pr.ms).sort((x, y) => y[0] - x[0])) {
+        let n = pa(t).length;
+        const kand = pa(pr.ms).filter(pid => !schema[pid][d].aktiviteter).sort((x, y) => schema[x][d].netto - schema[y][d].netto);
+        for (const pid of kand) {
+          if (n >= a) break;
+          const v = schema[pid][d], o = tid(v.slut) - tid(v.start), slut = t + o;
+          if (slut < kf || slut > kt) continue;
+          const ny = { ...v, start: klocka(t), slut: klocka(slut), mall: "M" + klocka(t) + "-" + klocka(slut) };
+          schema[pid][d] = ny;
+          if (vilaOk(schema[pid], pr, idx[pid])) n++; else schema[pid][d] = v;
+        }
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+      for (const [t, a] of krav.filter(([t]) => t === pr.ms)) {
+        const n = pa(t).length;
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+    }
+    return ut;
   }
 
   // Välj deltagare till varje aktivitetstillfälle bland dem som arbetar: först de vars pass redan täcker,
@@ -1320,7 +1364,7 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", STARTTID: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
@@ -1430,7 +1474,7 @@ const GRANSKNING = (() => {
           if (rast < r.rast_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: över 5 h arbete utan rast.`);
           else if (paPlats - rast > 2 * r.rast_grans_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: rasten kan inte placeras så att ingen del blir över 5 h.`);
         }
-        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid)]);
+        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid), ...(((indata.starttider || {}).morgon) || []).map(x => tid(x.tid))]);
         if (p.dygnsdel === "morgon" && (!starter.has(s % DYGN) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: morgonpass ${p.start}–${p.slut} följer inte fönstret.`);
         if (p.dygnsdel === "kvall" && (e % DYGN !== tid(r.kvall_slut) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
@@ -1628,6 +1672,16 @@ const GRANSKNING = (() => {
     for (let d = 0; d < N; d++) for (const [del, antal] of Object.entries(behov[d % 7])) {
       let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
       if (n < antal) { vakanser += antal - n; brott("BEHOV", null, `${dagText(d)}: ${antal - n} vakant ${del === "kvall" ? "kvälls" : del}pass.`, false); }
+    }
+    // starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Mjukt: en varning.
+    const stL = (((indata.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0]).sort((a, b) => a[0] - b[0]);
+    if (stL.length) for (let d = 0; d < N; d++) {
+      let kvar = Number(behov[d % 7].morgon || 0);
+      for (const [t, antal] of stL) {
+        const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "morgon" && tid(x.start) === t) n++; }
+        if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} dagpass börjar kl ${klocka(t)}.`, false);
+      }
     }
     // minsta bemanning på golvet under aktiviteter (behov, mjukt)
     for (const a of Object.values(akt)) {
@@ -1872,7 +1926,9 @@ const MOTOR = (() => {
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
     // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
     const kompetens = kompFor(ind);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, enhet: ind.enhet || "" };
+    // starttider för dagpassen (docs/starttider.md): [minut, antal] i tidsordning
+    const starttider = ((((ind.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, enhet: ind.enhet || "" };
   }
 
   // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
@@ -2319,6 +2375,7 @@ const MOTOR = (() => {
     });
     const golvVak = [];
     const tillfallen = aktiviteter(pr, schema, brott, golvVak);
+    const startVak = starttiderFor(pr, schema);
     for (const t of tillfallen) if (t.saknas && t.krav) hardTotalt++;
     pers.forEach(p => {
       const rad = schema[p.id];
@@ -2347,6 +2404,8 @@ const MOTOR = (() => {
         _kpi: { team_lan: tack.reduce((s, x) => s + x.inlanade, 0), team_saknas: tack.reduce((s, x) => s + x.saknas, 0) } };
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
+    const startDel = pr.starttider && pr.starttider.length ? { startvakanser: startVak } : {};
+    if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
     if (pr.kompetens && pr.kompetens.length) {
       const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
@@ -2358,8 +2417,43 @@ const MOTOR = (() => {
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
         rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
-      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel,
+      personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel, ...startDel,
     };
+  }
+
+  // Starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Dagpassen läggs med start
+  // morgon_start; här flyttas så många som behövs till de andra tiderna, med samma längd. Ett pass flyttas bara om
+  // det ryms i fönstret och vilan räcker, och aldrig ett pass med en aktivitet. Det som inte går blir startvakanser.
+  function starttiderFor(pr, schema) {
+    const ut = [], L = pr.starttider || [];
+    if (!L.length) return ut;
+    const kf = tid(pr.r.kant_fran), kt = tid(pr.r.kant_till), idx = Object.fromEntries(pr.pers.map(p => [p.id, p]));
+    for (let d = 0; d < pr.N; d++) {
+      let kvar = pr.behov[d % 7][M] || 0;
+      const krav = [];
+      for (const [t, antal] of L) { const a = Math.min(antal, kvar); kvar -= a; if (a > 0) krav.push([t, a]); }
+      if (!krav.length) continue;
+      const pa = t => Object.keys(schema).filter(pid => { const v = schema[pid][d]; return v && v.dygnsdel === "morgon" && tid(v.start) === t; });
+      // de senare tiderna först, med de kortaste passen först (de ryms lättast)
+      for (const [t, a] of krav.filter(([t]) => t !== pr.ms).sort((x, y) => y[0] - x[0])) {
+        let n = pa(t).length;
+        const kand = pa(pr.ms).filter(pid => !schema[pid][d].aktiviteter).sort((x, y) => schema[x][d].netto - schema[y][d].netto);
+        for (const pid of kand) {
+          if (n >= a) break;
+          const v = schema[pid][d], o = tid(v.slut) - tid(v.start), slut = t + o;
+          if (slut < kf || slut > kt) continue;
+          const ny = { ...v, start: klocka(t), slut: klocka(slut), mall: "M" + klocka(t) + "-" + klocka(slut) };
+          schema[pid][d] = ny;
+          if (vilaOk(schema[pid], pr, idx[pid])) n++; else schema[pid][d] = v;
+        }
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+      for (const [t, a] of krav.filter(([t]) => t === pr.ms)) {
+        const n = pa(t).length;
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+    }
+    return ut;
   }
 
   // Välj deltagare till varje aktivitetstillfälle bland dem som arbetar: först de vars pass redan täcker,
@@ -4450,6 +4544,7 @@ const GUIDE = (() => {
     if (Number(g.budget)) ut.budget_timmar_vecka = Number(g.budget);
     if (Number(g.timkostnad)) ut.timkostnad_kr = Number(g.timkostnad);
     if (g.passMall) ut.bemanningsbalans = { pass: structuredClone(g.passMall) };
+    if ((g.starttider || []).length) sattStarttider(ut, g.starttider);
     if (teamLista && teamLista.length) ut.team = teamLista;
     return ut;
   }
@@ -4466,6 +4561,44 @@ const GUIDE = (() => {
       if (ind.budget_timmar_vecka) ind.budget_timmar_vecka = Math.round(ind.budget_timmar_vecka * ind.personal.length / Math.max(1, alla.personal.length) * 10) / 10;
       return { namn: o.namn.trim(), farg: o.farg, indata: ind };
     });
+  }
+
+  // ---------------------------------------------------------------- starttider för dagpassen (docs/starttider.md)
+  // Av dagbehovet: hur många som börjar vid varje tid. attr = attributnamnet för fälten (data-st i enheten, data-gst i
+  // guiden), knapp = prefix för knapparna. Delas av webben, lättversionen och guiden.
+  function starttiderHtml(lista, { start = "07:00", behov = null, attr = "st", knapp = "st" } = {}) {
+    const summa = lista.reduce((s, x) => s + (Number(x.antal) || 0), 0);
+    const maxBehov = behov ? Math.max(0, ...Object.values(behov).map(v => (v && v.morgon) || 0)) : null;
+    return `<div class="starttider"><p class="dampad liten" style="margin:0 0 8px">Hur många av dagpassen som börjar vid varje tid, till exempel 1 kl. 06:00, 1 kl. 07:00 och 2 kl. 08:00, så att hela dagen täcks. Övriga börjar kl. ${esc(start)}. Passen blir lika långa som annars, så den som börjar senare slutar senare.</p>
+      ${lista.map((x, i) => `<div class="starttid-rad"><input type="time" data-${attr}="${i}" data-sf="tid" value="${esc(x.tid)}" aria-label="Starttid ${i + 1}"><input type="number" min="1" max="50" inputmode="numeric" data-${attr}="${i}" data-sf="antal" value="${esc(x.antal)}" aria-label="Antal som börjar då" style="width:70px"><span class="dampad liten">börjar då</span><button class="liten fara" data-${knapp}-bort="${i}" aria-label="Ta bort starttiden">×</button></div>`).join("")}
+      <p class="chips" style="margin:6px 0 0"><button class="liten" data-${knapp}-ny="1">+ Starttid</button></p>
+      ${lista.length && maxBehov !== null ? `<p class="liten ${summa > maxBehov ? "minus" : "dampad"}" style="margin:4px 0 0">${summa} av dagbehovet (högst ${maxBehov}) har en angiven starttid.${summa > maxBehov ? " Fler än behovet: de senare tiderna räknas bara så långt behovet räcker." : ""}</p>` : ""}</div>`;
+  }
+  // Ändra listan efter en händelse. Returnerar den nya listan (eller null om elementet inte hör hit).
+  function starttiderAndra(lista, el, { attr = "st", knapp = "st", start = "07:00" } = {}) {
+    lista = (lista || []).map(x => ({ ...x }));
+    const ds = el.dataset;
+    const nyckel = attr.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), kn = knapp.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    if (ds[kn + "Ny"]) {
+      const sista = lista.length ? lista[lista.length - 1].tid : start;
+      const [h, m] = sista.split(":").map(Number);
+      lista.push({ tid: lista.length ? `${String(Math.min(23, h + 1)).padStart(2, "0")}:${String(m).padStart(2, "0")}` : start, antal: 1 });
+      return lista;
+    }
+    if (ds[kn + "Bort"] !== undefined) { lista.splice(+ds[kn + "Bort"], 1); return lista; }
+    if (ds[nyckel] !== undefined && ds.sf) {
+      const x = lista[+ds[nyckel]]; if (!x) return null;
+      if (ds.sf === "tid") { if (el.value) x.tid = el.value; } else x.antal = Math.max(1, parseInt(el.value) || 1);
+      return lista;
+    }
+    return null;
+  }
+  // Skriv listan till indata: sorterad, utan dubbletter (samma tid slås ihop), eller bort om den är tom.
+  function sattStarttider(ind, lista) {
+    const per = new Map();
+    for (const x of lista || []) if (x.tid) per.set(x.tid, (per.get(x.tid) || 0) + (Number(x.antal) || 0));
+    const ut = [...per].filter(([, a]) => a > 0).sort((a, b) => a[0].localeCompare(b[0])).map(([tid, antal]) => ({ tid, antal }));
+    if (ut.length) ind.starttider = { morgon: ut }; else delete ind.starttider;
   }
 
   // Den tomma enheten som AI-assistenten fyller i tillsammans med användaren.
@@ -4546,12 +4679,16 @@ const GUIDE = (() => {
         (!r.dagPass && !r.natter ? tips("Skriv hur många som behöver vara i tjänst på dag, kväll och natt.") : tips(`Det blir ${r.dagPass} dag- och kvällspass och ${r.natter} nätter per vecka, ungefär <b>${sv(r.behovTimmar)} h per vecka</b>. För helgerna behövs minst <b>${r.minDag} med dag och kväll</b> och <b>${r.minNatt} med natt</b>${r.fredagStyr ? " (fredagskvällen styr: den som arbetar fredag kväll arbetar helgen)" : ""}.`)) +
         (g.antalDag < r.minDag || g.antalNatt < r.minNatt ? tips(`Ni är ${g.antalDag} med dag och kväll och ${g.antalNatt} med natt. Färre än minsta antal ger vakanser på helgerna. <button class="liten" data-guide="minsta">Ändra till ${r.minDag} och ${r.minNatt}</button>`, true) : "") +
         (k < r.behovTimmar - 0.5 ? tips(`Kontrakterad tid (${sv(k)} h) är mindre än behovet (${sv(r.behovTimmar)} h). Räkna med vakanser.`, true) : ""); break;
-      case 6: h = fraga("Vilka tider gäller för passen?") +
+      case 6:
+        // förskolor: öppet 06:00–18:00 som grundinställning (användarens beslut 2026-11-09)
+        if (g.forskola && !g.forskolaTider) { g.tider.morgon = "06:00"; g.tider.kvall = "18:00"; g.forskolaTider = true; }
+        h = fraga("Vilka tider gäller för passen?") +
         `<div class="falt" style="max-width:640px"><div><label for="g-ms">Dagpass börjar</label><input id="g-ms" type="time" data-gt="morgon" value="${g.tider.morgon}"></div>
           <div><label for="g-ks">Kvällspass slutar</label><input id="g-ks" type="time" data-gt="kvall" value="${g.tider.kvall}"></div>
           <div><label for="g-ns">Nattpass börjar</label><input id="g-ns" type="time" data-gt="nattStart" value="${g.tider.nattStart}"></div>
           <div><label for="g-ne">Nattpass slutar</label><input id="g-ne" type="time" data-gt="nattSlut" value="${g.tider.nattSlut}"></div></div>` +
-        tips("Dagpassets slut och kvällspassets start anpassas efter sysselsättningsgraden, med passbyte mellan kl. 12 och 18. Nattpasset är " + sv(nattTimmarPass(g)) + " h med måltidsuppehåll."); break;
+        tips("Dagpassets slut och kvällspassets start anpassas efter sysselsättningsgraden, med passbyte mellan kl. 12 och 18. Nattpasset är " + sv(nattTimmarPass(g)) + " h med måltidsuppehåll.") +
+        `<details${(g.starttider || []).length ? " open" : ""} style="margin-top:12px"><summary><b>Olika starttider för dagpassen</b></summary>${starttiderHtml(g.starttider || [], { start: g.tider.morgon, behov: g.behovDag || g.behov, attr: "gst", knapp: "gst" })}</details>`; break;
       case 7: h = fraga("Hur lång är schemaperioden, och när börjar den?") +
         `<div class="falt" style="max-width:640px"><div><label for="g-veckor">Period</label><select id="g-veckor" data-gf="veckor">${[4, 6, 8, 12].map(v => `<option value="${v}"${+g.veckor === v ? " selected" : ""}>${v} veckor</option>`).join("")}</select></div>
           <div><label for="g-start">Startdatum, måndag (valfritt)</label><input id="g-start" type="date" data-gf="startdatum" value="${esc(g.startdatum)}"></div>
@@ -4598,6 +4735,7 @@ const GUIDE = (() => {
     }
     if (el.dataset.gb) { const [d, k] = el.dataset.gb.split("."); (g.behovDag && g.behovDag[d] ? g.behovDag : g.behov)[d][k] = Math.max(0, parseInt(el.value) || 0); return true; }
     if (el.dataset.gt) { if (el.value) g.tider[el.dataset.gt] = el.value; return true; }
+    if (el.dataset.gst !== undefined) { const l = starttiderAndra(g.starttider, el, { attr: "gst", knapp: "gst", start: g.tider.morgon }); if (l) g.starttider = l; return true; }
     if (el.dataset.go) { const [i, k] = el.dataset.go.split("."); g.omradesLista[+i][k] = el.value; return k === "farg"; }
     if (el.dataset.gp) { const [i, k] = el.dataset.gp.split("."); g.personer[+i][k] = k === "grad" ? Math.max(0, parseInt(el.value) || 0) : el.value; return true; }
     const f = el.dataset.gf; if (!f) return false;
@@ -4757,7 +4895,7 @@ const GUIDE = (() => {
     return null;
   }
 
-  return { HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
+  return { starttiderHtml, starttiderAndra, sattStarttider, HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
 })();
 if (typeof module !== "undefined") module.exports = GUIDE;
 </script>
@@ -5170,7 +5308,7 @@ return { vag, importKort, bladUr, importPlan, importForhand, importVal, importer
 if (typeof module !== "undefined") module.exports = ORG;
 </script>
 <script>const GRUND = {
- "beskrivning": "Grunden i verktyget: förskolorna och deras avdelningar (användarens underlag 2026-11-09). Bara namn, inga personuppgifter. Se docs/organisation.md.",
+ "beskrivning": "Grunden i verktyget: förskolorna och deras avdelningar (användarens underlag 2026-11-09). Bara namn, inga personuppgifter. Se docs/organisation.md. Förskolorna har öppet 06:00–18:00 som grundinställning (regler morgon_start och kvall_slut).",
  "verksamhet": "forskola",
  "enheter": [
   {
@@ -5431,7 +5569,11 @@ if (typeof module !== "undefined") module.exports = ORG;
     "Vatten"
    ]
   }
- ]
+ ],
+ "regler": {
+  "morgon_start": "06:00",
+  "kvall_slut": "18:00"
+ }
 }
 ;</script>
 <script>"use strict";
@@ -6029,6 +6171,14 @@ const lager = {
     if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/grund`).get()); return d.exists; } catch { return true; } }
     return !!this.lokal().grund;
   },
+  async grundTiderKlar() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/grund_tider`).get()); return d.exists; } catch { return true; } }
+    return !!this.lokal().grundTider;
+  },
+  async sattGrundTiderKlar() {
+    if (this.db) return this.db.doc(`${this.bas}/grund_tider`).set({ forskola: true, tid: Date.now() });
+    const d = this.lokal(); d.grundTider = true; this.lokalSpara(d);
+  },
   async sattGrundKlar() {
     if (this.db) return this.db.doc(`${this.bas}/grund`).set({ forskola: true, tid: Date.now() });
     const d = this.lokal(); d.grund = true; this.lokalSpara(d);
@@ -6111,10 +6261,11 @@ async function visaLista() {
   $("#sida").innerHTML = `<p class="tom">Laddar …</p>`;
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
   try { if (!(await lager.grundKlar())) { await laggInGrund(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
+  try { if (!(await lager.grundTiderKlar())) { await grundTider(); st.enheter = await lager.enheter(); } } catch { /* nästa gång */ }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
   try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
-  if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; $("#sida").innerHTML = GUIDE.html(st.guide); return; }
+  if (st.guide) { st.guide.orgval = st.org ? ORG.alternativ(st.org, st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) : ""; st.guide.forskola = !!st.org && ORG.vag(st.org, (st.guide.plats !== undefined ? st.guide.plats : st.nyOrg) || "").includes("forskola"); $("#sida").innerHTML = GUIDE.html(st.guide); return; }
   $("#sida").innerHTML = `
     <header class="kort"><div class="rad"><div class="logga">${LOGGA}<span><b>DODEX</b><small>SCHEDULER · LIGHT</small></span></div>
       <div style="display:grid;justify-items:end;gap:4px">${temaKnapp()}<span class="dampad" style="font-size:11.5px">© Sofia Rångeby</span></div></div></header>
@@ -6229,7 +6380,8 @@ function ritaFlik() {
   } else if (st.flik === "behov" && (i.team || []).length) {
     const s = TEAM.summaBehov(i.team);
     el.innerHTML = `<div class="banner info"><strong>Behovet anges per team</strong><span class="liten">Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under fliken Team.</span></div>
-      <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
+      <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}`;
   } else if (st.flik === "behov") {
     const b = i.behov || (i.behov = {});
     el.innerHTML = `<p class="dampad liten">Antal pass per dygnsdel. Rader längre ned gäller före rader ovanför.</p>
@@ -6237,6 +6389,7 @@ function ritaFlik() {
       ${Object.keys(b).map(k => `<tr><th>${DAGNYCKEL[k] || esc(k)}</th>${["morgon", "kvall", "natt"].map(d => `<td><input type="number" inputmode="numeric" min="0" data-b="${k}" data-d="${d}" value="${b[k][d] ?? 0}" style="width:64px" aria-label="${DAGNYCKEL[k]} ${DELAR[d]}"></td>`).join("")}
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
       <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
       <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>
       <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
   } else if (st.flik === "onskemal") {
@@ -6713,6 +6866,15 @@ async function andraEnhetL(id, andring) {
   await lager.sparaEnhet(n);
 }
 async function sparaAkttyper(l) { await lager.sparaAkttyper(l); st.akttyper = l; }
+// Förskolornas öppettider (06:00–18:00) i förskolor som saknar egna tider; en tid som användaren har satt ändras inte.
+async function grundTider() {
+  for (const e of await lager.enheter()) {
+    if (e.org !== GRUND.verksamhet) continue;
+    const r = (e.indata && e.indata.regler) || {}, saknas = Object.entries(GRUND.regler || {}).filter(([k]) => !(k in r));
+    if (saknas.length) await lager.sparaEnhet({ ...e, indata: { ...e.indata, regler: { ...r, ...Object.fromEntries(saknas) } } });
+  }
+  await lager.sattGrundTiderKlar();
+}
 // Grunden: förskolorna och avdelningarna (schemawebb/grund_forskola.json). Lägger bara in det som saknas.
 async function laggInGrund() {
   const fanns = await lager.enheter();
@@ -6721,6 +6883,7 @@ async function laggInGrund() {
     const e = fanns.find(x => x.namn.toLowerCase() === f.namn.toLowerCase() && x.org === GRUND.verksamhet);
     if (!e) {
       const ind = GUIDE.tomIndata(f.namn); f.avdelningar.forEach(a => TEAM.laggTill(ind, a));
+      if (GRUND.regler) ind.regler = { ...GRUND.regler };
       await lager.sparaEnhet({ id: nyttId(), namn: f.namn, indata: ind, org: GRUND.verksamhet }); nya++; avd += f.avdelningar.length;
     } else {
       const har = new Set(((e.indata && e.indata.team) || []).map(t => String(t.namn).toLowerCase()));
@@ -6774,6 +6937,26 @@ document.addEventListener("submit", async e => {
   if (e.target.id !== "akt-ny") return;
   e.preventDefault();
   try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
+});
+
+// starttider för dagpassen (guide.js): i guiden (data-gst) och i enhetens behov (data-st)
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-gst-ny],[data-gst-bort],[data-st-ny],[data-st-bort]"); if (!el) return;
+  e.preventDefault();
+  if (el.matches("[data-gst-ny],[data-gst-bort]")) {
+    if (!st.guide) return;
+    st.guide.starttider = GUIDE.starttiderAndra(st.guide.starttider, el, { attr: "gst", knapp: "gst", start: st.guide.tider.morgon });
+    return visaLista();
+  }
+  const ind = (st.enhet && st.enhet.indata); if (!ind) return;
+  GUIDE.sattStarttider(ind, GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" }));
+  andrad(true);
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.st === undefined) return;
+  const ind = (st.enhet && st.enhet.indata); if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" });
+  if (l) { GUIDE.sattStarttider(ind, l); andrad(true); }
 });
 // fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {

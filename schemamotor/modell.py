@@ -134,6 +134,24 @@ class Team(Strikt):
         return v
 
 
+class Starttid(Strikt):
+    """Så många av dagpassen som börjar vid en viss tid (docs/starttider.md)."""
+    tid: Klocka
+    antal: int = Field(ge=1, le=50)
+
+
+class Starttider(Strikt):
+    morgon: list[Starttid] = Field(default_factory=list)
+
+    @field_validator("morgon")
+    @classmethod
+    def unika(cls, v):
+        tider = [s.tid for s in v]
+        if len(set(tider)) != len(tider):
+            raise ValueError("samma starttid finns flera gånger")
+        return v
+
+
 class Kompetens(Strikt):
     """En kompetens i enheten, till exempel undersköterska eller läkemedelsdelegering (docs/kompetens.md)."""
     id: str = Field(min_length=1, max_length=40)
@@ -276,6 +294,8 @@ class Indata(BaseModel):
     aktiviteter: list[Aktivitet] = Field(default_factory=list)
     team: list[Team] = Field(default_factory=list)
     kompetenser: list[Kompetens] = Field(default_factory=list)
+    # olika starttider för dagpassen: av dagbehovet börjar så många vid varje tid (docs/starttider.md)
+    starttider: Optional[Starttider] = None
     kompetenskrav: list[Kompetenskrav] = Field(default_factory=list)
     bemanningsbalans: Optional[Bemanningsbalans] = None
     losare: dict = Field(default_factory=dict)

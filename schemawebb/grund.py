@@ -42,7 +42,7 @@ def lagg_in():
             for a in f["avdelningar"]:
                 team.append(_team(a, team))
             indata = {"enhet": f["namn"], "veckor": 4, "cykliskt": True, "behov": json.loads(json.dumps(NOLL)),
-                      "personal": [], "onskemal": [], "team": team}
+                      "personal": [], "onskemal": [], "team": team, **({"regler": dict(d["regler"])} if d.get("regler") else {})}
             db.skapa_enhet(f["namn"], indata, org)
             nya += 1
             avd += len(team)
@@ -64,9 +64,33 @@ def lagg_in():
     return {"nya": nya, "avdelningar": avd}
 
 
+def tider():
+    """Förskolornas öppettider (06:00–18:00) som grundinställning i de förskolor som redan finns och saknar egna
+    tider. En tid som användaren har satt ändras inte. Returnerar antalet ändrade förskolor."""
+    d = data()
+    std = d.get("regler") or {}
+    n = 0
+    for e in db.enheter():
+        if e["org"] != d["verksamhet"]:
+            continue
+        hel = db.enhet(e["id"])
+        indata = hel["indata"] if isinstance(hel["indata"], dict) else json.loads(hel["indata"])
+        regler = dict(indata.get("regler") or {})
+        saknas = {k: v for k, v in std.items() if k not in regler}
+        if saknas:
+            indata["regler"] = {**regler, **saknas}
+            db.spara_enhet(e["id"], hel["namn"], indata)
+            n += 1
+    db.satt_installning("grund_forskola_tider", True)
+    return n
+
+
 def vid_start():
     if os.environ.get("SCHEMA_GRUND", "").lower() in ("av", "0", "nej"):
         return None
-    if db.installning("grund_forskola"):
-        return None
-    return lagg_in()
+    ut = None
+    if not db.installning("grund_forskola"):
+        ut = lagg_in()
+    if not db.installning("grund_forskola_tider"):
+        tider()
+    return ut

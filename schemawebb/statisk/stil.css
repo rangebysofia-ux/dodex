@@ -610,3 +610,7 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .komp-rad.brist { border-left-color: var(--dalig, #c0473f); }
 .komp-rad.knappt { border-left-color: var(--guld, #c9a03a); }
 .os-komp .os-typ { grid-template-columns: auto 1fr auto auto; }
+
+/* starttider för dagpassen (guide.js) */
+.starttid-rad { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+.starttid-rad input[type=time] { width: 120px; }

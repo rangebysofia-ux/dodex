@@ -32,7 +32,7 @@ NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS":
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
         "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel",
-        "TEAM": "verksamhet", "KOMPETENS": "verksamhet"}
+        "TEAM": "verksamhet", "KOMPETENS": "verksamhet", "STARTTID": "verksamhet"}
 
 
 def tid(s):
@@ -213,7 +213,8 @@ def kontrollera(indata, schema_dok):
                     brott("RAST", pid, f"{dag_text(d)} {p['start']}–{p['slut']}: rasten kan inte placeras så att "
                                        f"ingen del blir längre än {r['rast_grans_minuter'] / 60:g} h.")
             del_ = p.get("dygnsdel")
-            starter = {tid(r["morgon_start"])} | {tid(t) for t in r.get("morgon_starter") or []}
+            starter = ({tid(r["morgon_start"])} | {tid(t) for t in r.get("morgon_starter") or []}
+                       | {tid(x["tid"]) for x in ((indata.get("starttider") or {}).get("morgon") or [])})  # docs/starttider.md
             if del_ == "morgon" and (s % DYGN not in starter or not
                                      tid(r["kant_fran"]) <= e % DYGN <= tid(r["kant_till"])):
                 brott("PASSFONSTER", pid, f"{dag_text(d)}: morgonpass {p['start']}–{p['slut']} följer inte fönstret.")
@@ -495,6 +496,20 @@ def kontrollera(indata, schema_dok):
             if n < tp["antal"]:
                 vakanser += tp["antal"] - n
                 brott("BEHOV", None, f"{dag_text(d)} kl {tp['tid']}: {n} i tjänst, behov {tp['antal']}.", hard=False)
+    # starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid, i tidsordning och högst dagens
+    # dagbehov. Mjukt: det som saknas är en varning.
+    st_lista = sorted(((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("morgon") or [])))
+    if st_lista:
+        for d in range(N):
+            kvar = int(behov[d % 7].get("morgon", 0) or 0)
+            for t, antal in st_lista:
+                a = min(antal, kvar)
+                kvar -= a
+                if a <= 0:
+                    continue
+                n = sum(1 for rad in schema.values() if d < len(rad) and (x := rad[d]) and x.get("dygnsdel") == "morgon" and tid(x["start"]) == t)
+                if n < a:
+                    brott("STARTTID", None, f"{dag_text(d)}: {n} av {a} dagpass börjar kl {klocka(t)}.", hard=False)
     # minsta bemanning på golvet under aktiviteter (behov, mjukt)
     for a in akt.values():
         minst = a.get("minst_pa_golvet") or 0
