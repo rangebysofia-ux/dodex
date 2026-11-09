@@ -176,7 +176,7 @@ async function visaEnheter() {
       <div class="chips"><a class="knapp liten" href="#/organisation" title="Verksamheter, enheter, områden och aktivitetstyper">Organisation</a>
       <label class="knapp liten" title="Öppna en enhet som har sparats som fil, i webben eller i telefonen">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div></div>
     ${st.orgRed ? `<section class="kort"><h2>Organisation</h2><p class="dampad liten">Verksamheter och grupper som enheterna ordnas under. Påverkar inte schemaläggningen. En borttagen grupps enheter flyttas upp ett steg.</p>${ORG.redigera(st.org)}</section>` : ""}
-    <section class="org-trad">${ORG.trad(st.org, enheter, { stangda: st.orgStangda || new Set(),
+    <section class="org-trad">${ORG.trad(st.org, enheter, { oppna: st.orgOppna || new Set(),
       nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}" title="Ny enhet i ${esc(ORG.sokvag(st.org, id))}">+ Ny enhet</button>`,
       ritaEnhet: e => `
       <div class="kort enhet" style="--ef:${ORG.enhetsfarg(st.org, e)}">
@@ -1161,8 +1161,8 @@ document.addEventListener("change", async e => {
 // kom ihåg vilka grupper som är ihopfällda
 document.addEventListener("toggle", e => {
   const d = e.target; if (!d.classList?.contains("org-grupp")) return;
-  st.orgStangda = st.orgStangda || new Set();
-  if (d.open) st.orgStangda.delete(d.dataset.org); else st.orgStangda.add(d.dataset.org);
+  st.orgOppna = st.orgOppna || new Set();
+  if (d.open) st.orgOppna.add(d.dataset.org); else st.orgOppna.delete(d.dataset.org);
 }, true);
 
 // ---------------------------------------------------------------- sidan Organisation (organisation.js)
@@ -1174,7 +1174,7 @@ async function visaOrganisation() {
   st.org = ORG.kopia(org.noder); st.akttyper = ORG.aktKopia(akt.typer); st.enhetLista = enheter;
   vy().innerHTML = `<section class="kort"><h1>Organisation</h1><p class="dampad" style="margin-top:6px">Verksamheter, enheter, områden och team, och organisationens aktivitetstyper. Allt här går att bygga upp innan något schema läggs. Personal, behov och regler fyller du i sedan, i varje enhet.</p></section>
     ${ORG.importKort(st.org, st.imp)}
-    ${ORG.stod(st.org, enheter, st.akttyper, { stangda: st.orgStangda || new Set(), lank: e => `href="#/e/${e.id}/oversikt"` })}`;
+    ${ORG.stod(st.org, enheter, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#/e/${e.id}/oversikt"` })}`;
 }
 // Excel-stöd (SheetJS) för importen, laddas först när det behövs.
 function laddaXlsx() {
@@ -1231,6 +1231,7 @@ document.addEventListener("click", async e => {
       case "enhet-ny": {
         const namn = prompt(`Namn på den nya enheten i ${ORG.sokvag(st.org, el.dataset.org)}`); if (!namn || !namn.trim()) return;
         await api("POST", "enheter", { namn: namn.trim(), indata: GUIDE.tomIndata(namn.trim()), org: el.dataset.org });
+        st.orgOppna = st.orgOppna || new Set(); ORG.vag(st.org, el.dataset.org).forEach(x => st.orgOppna.add(x));
         meddela(`${namn.trim()} är skapad. Lägg till områden eller team, eller öppna enheten och fyll i personal och behov.`); break;
       }
       case "enhet-namn": { const n = prompt("Nytt namn på enheten"); if (!n || !n.trim()) return; await andraEnhet(id, x => { x.namn = n.trim(); x.indata.enhet = n.trim(); }); break; }

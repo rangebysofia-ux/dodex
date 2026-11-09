@@ -46,6 +46,8 @@ Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
 
 ## Sidan Organisation
 
+Alla grupper i trädet är stängda tills man öppnar dem (användarens önskemål 2026-11-09), både på startsidan och på sidan Organisation. Det man har öppnat förblir öppet när man byter sida. När en enhet läggs till öppnas gruppen där den hamnade. Enheterna står i bokstavsordning på sidan Organisation.
+
 Hela organisationen kan byggas upp innan något schema läggs (användarens önskemål 2026-11-08, beslut 32 i `regelhierarki.md`). Sidan nås via **Organisation** i sidomenyn i webben och via knappen **Organisation** vid Mina enheter i telefonen.
 
 - **Struktur:** verksamheter och grupper i fritt antal nivåer, med färg, *+ Enhet*, *+ Undergrupp*, *Byt namn* och *Ta bort*.

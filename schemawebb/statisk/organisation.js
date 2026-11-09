@@ -46,6 +46,9 @@ const kopia = n => (n && n.length ? n : STANDARD).map(x => (x.id === "hemtjanst"
 const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || null));
 const finns = (noder, id) => noder.some(x => x.id === id);
 
+// Gruppen och alla grupper ovanför, till exempel för att öppna dem när en enhet har lagts till där.
+function vag(noder, id) { const ut = []; let x = noder.find(n => n.id === id), varv = 0; while (x && varv++ < 20) { ut.push(x.id); x = noder.find(n => n.id === x.forelder); } return ut; }
+
 // "Äldreomsorg › SÄBO"
 function sokvag(noder, id) {
   const ut = []; let x = noder.find(n => n.id === id), varv = 0;
@@ -135,9 +138,10 @@ const aktNamnEfterTyp = (l, nuvarande, t) => (!String(nuvarande || "").trim() ||
 // Hela strukturen på ett ställe, utan att något schema behöver läggas: verksamheter och grupper, enheterna under
 // dem med färg och områden/team, och organisationens aktivitetstyper. enheter = [{id, namn, org, farg, team}].
 // lank(e) ger adressen eller data-attributen för att öppna en enhet.
-function stod(noder, enheter, typer, { lank = () => "", stangda = new Set() } = {}) {
+function stod(noder, enheter, typer, { lank = () => "", oppna = new Set() } = {}) {
   const per = new Map();
-  for (const e of enheter) { const k = e.org && finns(noder, e.org) ? e.org : ""; if (!per.has(k)) per.set(k, []); per.get(k).push(e); }
+  // i bokstavsordning, så att det går att hitta i en lång lista
+  for (const e of [...enheter].sort((a, b) => String(a.namn).localeCompare(String(b.namn), "sv"))) { const k = e.org && finns(noder, e.org) ? e.org : ""; if (!per.has(k)) per.set(k, []); per.get(k).push(e); }
   const enhet = e => `<div class="os-enhet" style="--ef:${enhetsfarg(noder, e)}">
       <div class="os-rad"><input type="color" class="org-farg" data-enhetfarg="${esc(e.id)}" value="${enhetsfarg(noder, e)}" aria-label="Färg för ${esc(e.namn)}" title="Färg">
         <span class="os-hus" aria-hidden="true">🏠</span><b class="os-namn">${lank(e) ? `<a ${lank(e)}>${esc(e.namn)}</a>` : esc(e.namn)}</b>
@@ -145,7 +149,7 @@ function stod(noder, enheter, typer, { lank = () => "", stangda = new Set() } = 
       ${(e.team || []).length ? `<div class="os-team">${e.team.map((t, i) => `<span class="os-teamchip" style="--tf:${giltigFarg(t.farg) ? t.farg : PALETT[i % PALETT.length]}"><button class="lank" data-os="team-namn" data-e="${esc(e.id)}" data-t="${esc(t.id)}" title="Byt namn">${esc(t.namn || t.id)}</button><button class="os-x" data-os="team-bort" data-e="${esc(e.id)}" data-t="${esc(t.id)}" aria-label="Ta bort ${esc(t.namn || t.id)}">×</button></span>`).join("")}</div>` : ""}</div>`;
   const grupp = (x, niva) => {
     const egna = per.get(x.id) || [], under = barn(noder, x.id);
-    return `<details class="org-grupp os-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${stangda.has(x.id) ? "" : " open"}>
+    return `<details class="org-grupp os-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${oppna.has(x.id) ? " open" : ""}>
       <summary><span class="org-prick" aria-hidden="true"></span><span class="org-namn">${esc(x.namn)}</span></summary>
       <div class="os-verktyg"><input type="color" class="org-farg" data-orgfarg="${esc(x.id)}" value="${farg(noder, x.id)}" aria-label="Färg för ${esc(x.namn)}" title="Färg">
         <span class="chips os-knappar"><button class="liten primar" data-os="enhet-ny" data-org="${esc(x.id)}">+ Enhet</button><button class="liten" data-orgg="under" data-id="${esc(x.id)}">+ Undergrupp</button><button class="liten" data-orgg="byt" data-id="${esc(x.id)}">Byt namn</button>${under.length ? "" : `<button class="liten fara" data-orgg="bort" data-id="${esc(x.id)}">Ta bort</button>`}</span></div>
@@ -158,7 +162,7 @@ function stod(noder, enheter, typer, { lank = () => "", stangda = new Set() } = 
   return `<section class="kort"><h2>Struktur</h2>
       <p class="dampad liten"><b>+ Enhet</b> lägger till en enhet under en verksamhet. <b>+ Område/team</b> delar upp enheten i områden eller team med ett gemensamt schema. Ska ett område ha eget schema, gör det till en egen enhet under en undergrupp. Färgerna är bara till för att hitta rätt.</p>
       <div class="org-trad os-trad">${barn(noder, null).map(x => grupp(x, 0)).join("")}
-      ${utan.length ? `<details class="org-grupp niva0" open><summary><span class="org-namn">Utan placering</span></summary><div class="os-innehall">${utan.map(enhet).join("")}</div></details>` : ""}</div>
+      ${utan.length ? `<details class="org-grupp niva0" data-org=""${oppna.has("") ? " open" : ""}><summary><span class="org-namn">Utan placering</span></summary><div class="os-innehall">${utan.map(enhet).join("")}</div></details>` : ""}</div>
       <form class="chips" id="org-ny" style="margin-top:12px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till verksamhet</button></form></section>
     <section class="kort"><h2>Aktivitetstyper</h2>
       <p class="dampad liten">Typer av aktiviteter under arbetstid, med namn och färg. Välj typen när du lägger in en aktivitet i en enhet, så får den namnet och färgen. Kategorin säger vad det är för slags aktivitet.</p>
@@ -295,22 +299,23 @@ function alternativ(noder, valt, { tom = "Utan placering" } = {}) {
   return ut.join("");
 }
 
+// Alla grupper är stängda tills användaren öppnar dem (oppna = Set av öppnade grupper; "" = Utan placering).
 // Enheterna grupperade i strukturen. ritaEnhet(e) ger HTML för en enhet; nyKnapp(id) ger HTML för "ny enhet här".
 // Grupper utan enheter längre ned visas också, så att man kan lägga till där.
-function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", stangda = new Set() } = {}) {
+function trad(noder, enheter, { ritaEnhet, nyKnapp = () => "", oppna = new Set() } = {}) {
   const per = new Map();
   for (const e of enheter) { const k = e.org && finns(noder, e.org) ? e.org : ""; if (!per.has(k)) per.set(k, []); per.get(k).push(e); }
   const antal = id => (per.get(id) || []).length + barn(noder, id).reduce((s, x) => s + antal(x.id), 0);
   const grupp = (x, niva) => {
     const egna = per.get(x.id) || [], n = antal(x.id);
-    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${stangda.has(x.id) ? "" : " open"}>
+    return `<details class="org-grupp niva${Math.min(niva, 3)}" data-org="${esc(x.id)}" style="--ef:${farg(noder, x.id)}"${oppna.has(x.id) ? " open" : ""}>
       <summary><span class="org-prick" aria-hidden="true"></span><span class="org-namn">${esc(x.namn)}</span><span class="org-antal">${n} ${n === 1 ? "enhet" : "enheter"}</span>${nyKnapp(x.id)}</summary>
       <div class="org-innehall">${egna.map(ritaEnhet).join("")}${barn(noder, x.id).map(y => grupp(y, niva + 1)).join("")}
       ${!egna.length && !barn(noder, x.id).length ? `<p class="dampad liten org-tom">Inga enheter här än.</p>` : ""}</div></details>`;
   };
   let h = barn(noder, null).map(x => grupp(x, 0)).join("");
   const utan = per.get("") || [];
-  if (utan.length) h += `<details class="org-grupp niva0" data-org="" open><summary><span class="org-namn">Utan placering</span><span class="org-antal">${utan.length} ${utan.length === 1 ? "enhet" : "enheter"}</span></summary><div class="org-innehall">${utan.map(ritaEnhet).join("")}</div></details>`;
+  if (utan.length) h += `<details class="org-grupp niva0" data-org=""${oppna.has("") ? " open" : ""}><summary><span class="org-namn">Utan placering</span><span class="org-antal">${utan.length} ${utan.length === 1 ? "enhet" : "enheter"}</span></summary><div class="org-innehall">${utan.map(ritaEnhet).join("")}</div></details>`;
   return h;
 }
 
@@ -323,6 +328,6 @@ function redigera(noder) {
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { importKort, bladUr, importPlan, importForhand, importVal, importera, aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { vag, importKort, bladUr, importPlan, importForhand, importVal, importera, aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;

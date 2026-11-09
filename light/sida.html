@@ -547,7 +547,7 @@ async function visaLista() {
     ${GUIDE.val({ harEnheter: st.enheter.length > 0 })}
     <section class="kort" id="mina-enheter"><div class="rad"><h2 style="margin:0">Mina enheter</h2><div class="chips"><button class="liten" data-g="organisation">Organisation</button><label class="knapp liten" title="Öppna en enhet som har sparats som fil, i telefonen eller i webben">Öppna fil<input type="file" id="enhetsfil-in" accept=".json,application/json" hidden></label></div></div>
       ${st.orgRed ? `<div class="formular" style="margin-top:10px"><b>Organisation</b><span class="dampad liten">Verksamheter och grupper som enheterna ordnas under. Påverkar inte schemaläggningen. En borttagen grupps enheter flyttas upp ett steg.</span>${ORG.redigera(st.org)}</div>` : ""}
-      <div class="org-trad" style="margin-top:10px">${ORG.trad(st.org, st.enheter, { stangda: st.orgStangda || new Set(),
+      <div class="org-trad" style="margin-top:10px">${ORG.trad(st.org, st.enheter, { oppna: st.orgOppna || new Set(),
         nyKnapp: id => `<button class="liten org-ny" data-guide="ny-i" data-org="${esc(id)}">+ Ny</button>`,
         ritaEnhet: e => `<div class="onsk org-enhet" style="--ef:${ORG.enhetsfarg(st.org, e)}"><div><button class="lank" data-g="oppna" data-id="${e.id}" style="font-weight:600;font-size:16px">${ORG.ikon(st.org, e, GUIDE.HUS)}${esc(e.namn)}</button>
         <div class="dampad liten">${(e.indata.personal || []).length} personer · ${e.indata.veckor} veckor · ändrad ${datum(e.andrad)}</div>
@@ -1096,7 +1096,7 @@ async function visaOrganisation() {
   $("#sida").innerHTML = `<header class="kort"><div class="rad"><button class="lank" data-g="tillbaka">‹ Enheter</button>${temaKnapp()}</div>
       <h1 style="margin-top:4px">Organisation</h1><p class="dampad liten" style="margin:4px 0 0">Bygg upp verksamheter, enheter, områden och team, och aktivitetstyperna. Personal, behov och regler fyller du i sedan, i varje enhet.</p></header>
     ${ORG.importKort(st.org, st.imp)}
-    ${ORG.stod(st.org, enh, st.akttyper, { stangda: st.orgStangda || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
+    ${ORG.stod(st.org, enh, st.akttyper, { oppna: st.orgOppna || new Set(), lank: e => `href="#" data-g="oppna" data-id="${esc(e.id)}"` })}`;
 }
 // Importen från Excel (organisation.js): läs filen, visa förhandsvisningen, och lägg in det valda.
 async function lasImport(fil) {
@@ -1161,6 +1161,7 @@ document.addEventListener("click", async e => {
       case "enhet-ny": {
         const namn = prompt(`Namn på den nya enheten i ${ORG.sokvag(st.org, el.dataset.org)}`); if (!namn || !namn.trim()) return;
         await lager.sparaEnhet({ id: nyttId(), namn: namn.trim(), indata: GUIDE.tomIndata(namn.trim()), org: el.dataset.org });
+        st.orgOppna = st.orgOppna || new Set(); ORG.vag(st.org, el.dataset.org).forEach(x => st.orgOppna.add(x));
         meddela(`${namn.trim()} är skapad. Lägg till områden eller team, eller öppna enheten och fyll i personal och behov.`); break;
       }
       case "enhet-namn": { const n = prompt("Nytt namn på enheten"); if (!n || !n.trim()) return; await andraEnhetL(id, x => { x.namn = n.trim(); x.indata.enhet = n.trim(); }); break; }
@@ -1219,8 +1220,8 @@ document.addEventListener("change", async e => {
 });
 document.addEventListener("toggle", e => {
   const d = e.target; if (!d.classList || !d.classList.contains("org-grupp")) return;
-  st.orgStangda = st.orgStangda || new Set();
-  if (d.open) st.orgStangda.delete(d.dataset.org); else st.orgStangda.add(d.dataset.org);
+  st.orgOppna = st.orgOppna || new Set();
+  if (d.open) st.orgOppna.add(d.dataset.org); else st.orgOppna.delete(d.dataset.org);
 }, true);
 
 // Kalender över godkända scheman (samma som webben, GRAF.kalender i grafer.js).
