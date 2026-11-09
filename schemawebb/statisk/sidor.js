@@ -23,6 +23,29 @@ function nyckeltalskort(k, foregaende) {
 }
 
 // ---------------------------------------------------------------- Översikt
+function oversiktsflode(id, k) {
+  // Länkar till fungerande sidor; framtida driftfunktioner markeras i text.
+  const bas = `#/e/${id}`;
+  const aktivt = !!st.enhet?.aktivt;
+  const steg = [
+    { nr: "01 / FÖRUTSÄTTNINGAR", namn: "Ekonomi och behov", text: "Utgå från budget, bemanningsbehov och tillgängliga årsarbetare.",
+      lankar: [["Bemanningsbalans", `${bas}/bemanningsbalans`], ["Behov", `${bas}/behov`]] },
+    { nr: "02 / PLANERA", namn: "Grundschema", text: k?.resultat?.status === "OK" ? "Schemaförslag finns. Granska regler och jämför alternativ." : "Skapa eller granska ett schema utifrån behov och avtal.",
+      lankar: [["Öppna schema", `${bas}/schema`], ["Regelkontroll", `${bas}/regelkontroll`]] },
+    { nr: "03 / AKTIVERA", namn: "Kalender och drift", text: aktivt
+      ? "Ett grundschema är aktiverat. Frånvaro och vikariebokning byggs i nästa etapp."
+      : "Visa aktiverade scheman. Frånvaro och vikariebokning byggs i nästa etapp.",
+      lankar: [["Öppna kalender", `${bas}/kalender`]] },
+    { nr: "04 / FÖLJ UPP", namn: "Analys och uppföljning", text: "Jämför bemanningsalternativ och följ schemats konsekvenser.",
+      lankar: [["Simulering", `${bas}/analys`], ["Nyckeltal", `${bas}/nyckeltal`]] },
+  ];
+  return `<section aria-label="Arbeta vidare i DODEX"><div class="arbetsflode-rubrik">
+    <h2>Arbeta vidare</h2><p class="dampad liten">Samma enhet, en sammanhängande process</p></div>
+    <div class="arbetsflode">${steg.map(s => `<article class="arbetssteg"><span class="arbetssteg-nr">${s.nr}</span><h3>${s.namn}</h3>
+      <p>${s.text}</p><div class="arbetssteg-lankar">${s.lankar.map(([namn, href]) => `<a href="${href}">${namn}</a>`).join("")}</div></article>`).join("")}</div>
+  </section>`;
+}
+
 async function visaOversikt(id) {
   st.vy = "oversikt";
   await laddaEnhet(id);
@@ -35,6 +58,7 @@ async function visaOversikt(id) {
   let h = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>${st.org ? ORG.ikon(st.org, st.enhet, GUIDE.HUS) : ""}${esc(st.enhet.namn)}</h1>${st.org && st.enhet.org && ORG.finns(st.org, st.enhet.org) ? `<span class="org-etikett" style="--ef:${ORG.enhetsfarg(st.org, st.enhet)}">${esc(ORG.sokvag(st.org, st.enhet.org))}</span>` : ""}
       <p class="dampad" style="margin:4px 0 0">${ind.personal.length} medarbetare · ${ind.veckor} veckor${ind.cykliskt !== false ? ", cykliskt" : ""} · ${sv(kt, 1)} h kontrakterat per vecka${ind.budget_timmar_vecka ? ` av budget ${sv(ind.budget_timmar_vecka, 1)} h` : ""}${k ? ` · senaste schema ${datum(k.skapad)}` : ""}</p></div>
       <div>${k ? `<a class="knapp liten" href="#/e/${id}/schema/${k.id}">${IKON.schema} Öppna schemat</a>` : ""}</div></div></section>
+    ${oversiktsflode(id, k)}
     ${nyckeltalskort(k, foregaende)}`;
   if (k && k.status === "klar" && k.resultat?.status === "OK") {
     h += grafkort(k) + GRAF.balansKort([{ namn: k.namn, k }]) + GRAF.resursKort(k, p => `<a href="#/e/${id}/personer/${k.id}?p=${encodeURIComponent(p)}">${esc(p)}</a>`);
