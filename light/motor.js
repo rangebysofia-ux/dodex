@@ -24,7 +24,8 @@ const MOTOR = (() => {
   const WNV = 2e3;     // vila mellan nattblock under gränsen (mjuk lokal regel, efter vakanser och aktiviteter)
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
   const WH = 500;      // team: pass där ett team inte täcks av sin egen personal (efter nattvilan, före block)
-  const WK = 8e4;      // kompetens: saknas någon med en kompetens som krävs (direkt efter vakanser, före aktiviteter)
+  const WK = 8e4;
+  const JOUR_MAX = 20 * 60; // AB 25 § 13 mom. 5: arbetspass och jour i följd högst 20 timmar sammanlagt      // kompetens: saknas någon med en kompetens som krävs (direkt efter vakanser, före aktiviteter)
 
   // OB-kategori och kronor (AB 25 § 21, nivå 2025-04-01, utan helgdagar), för profilen ekonomi och jämförelsen.
   // Samma förenkling som ob_kategori i schemamotor/build.py.
@@ -118,7 +119,7 @@ const MOTOR = (() => {
       }
       const frek = p.helgfrekvens || r.helgfrekvens;
       const tol = p.tolerans_minuter ?? (natt ? Math.max(r.tolerans_minuter, Math.ceil(nnet / 2)) : r.tolerans_minuter);
-      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []) });
+      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []), jourOk: p.jour !== false });
     }
     if (!pers.length) fel.push("Lägg till minst en person.");
 
@@ -224,9 +225,20 @@ const MOTOR = (() => {
     for (const p of pers) if (p.team && !team.some(t => t.id === p.team)) fel.push(`${p.id} har teamet ${p.team}, som inte finns.`);
     // kompetenskrav (docs/kompetens.md): minst så många med kompetensen per dag och dygnsdel
     const kompetens = kompFor(ind);
+    // jour efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J; docs/regelverk.md): börjar när kvällspasset slutar
+    let jour = null;
+    if (ind.jour) {
+      let je = tid(ind.jour.slut); if (je <= ks) je += DYGN;
+      const jb = [0, 0, 0, 0, 0, 0, 0];
+      for (const [nyckel, v] of Object.entries(ind.jour.behov || {})) {
+        const idx = nyckel === "vardag" ? [0, 1, 2, 3, 4] : nyckel === "helg" ? [5, 6] : nyckel === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(nyckel)];
+        for (const i of idx) if (i >= 0) jb[i] = Number(v) || 0;
+      }
+      jour = { start: ks, slut: je, len: je - ks, behov: jb };
+    }
     // starttider för dagpassen (docs/starttider.md): [minut, antal] i tidsordning
     const starttider = ((((ind.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, enhet: ind.enhet || "" };
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, jour, enhet: ind.enhet || "" };
   }
 
   // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
@@ -538,6 +550,16 @@ const MOTOR = (() => {
       return k;
     }
 
+    // jour: nätter där för få kan ha jour (kvällspass, ledig nästa dag, och pass + jour högst 20 timmar)
+    const J = pr.jour;
+    const jourKan = J ? pers.map(p => !p.natt && p.jourOk && onsite(p.bas, r) + J.len <= JOUR_MAX) : [];
+    function jourDag(X, d) {
+      if (!J || !J.behov[d % 7]) return 0;
+      const d1 = cyk ? (d + 1) % N : d + 1; if (d1 >= N) return J.behov[d % 7];
+      let n = 0; for (let pi = 0; pi < pers.length; pi++) if (jourKan[pi] && X[pi][d] === K && !X[pi][d1]) n++;
+      return Math.max(0, J.behov[d % 7] - n);
+    }
+
     let bastX = null, bastKost = Infinity;
     const start = Date.now();
     const omstarter = opt.omstarter ?? 3;
@@ -551,7 +573,8 @@ const MOTOR = (() => {
       let jk = jamnKost(cnt), ak = aktKost(X);
       const hemC = Array.from({ length: N }, (_, d) => hemDag(X, d));
       const kompC = Array.from({ length: N }, (_, d) => kompDag(X, d));
-      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH + kompC.reduce((a, b) => a + b, 0) * WK;
+      const jourC = Array.from({ length: N }, (_, d) => jourDag(X, d));
+      let kost = pk.reduce((s, k) => s + k.summa, 0) + vak * WV + jk + ak + hemC.reduce((a, b) => a + b, 0) * WH + kompC.reduce((a, b) => a + b, 0) * WK + jourC.reduce((a, b) => a + b, 0) * WV;
       let lokalBast = kost, lokalX = X.map(x => x.slice());
       const budget = tidsgrans * 1000 / omstarter;
       const t0 = Date.now();
@@ -612,12 +635,15 @@ const MOTOR = (() => {
         if (harTeam) for (const [, d] of andrade) if (!(d in hemNy)) { hemNy[d] = hemDag(X, d); delta += (hemNy[d] - hemC[d]) * WH; }
         const kompNy = {};
         if (harKomp) for (const [, d] of andrade) if (!(d in kompNy)) { kompNy[d] = kompDag(X, d); delta += (kompNy[d] - kompC[d]) * WK; }
+        const jourNy = {};
+        if (J) for (const [, d] of andrade) for (const dd of [d, (d - 1 + N) % N]) if (!(dd in jourNy)) { jourNy[dd] = jourDag(X, dd); delta += (jourNy[dd] - jourC[dd]) * WV; }
         const nya = {};
         for (const q of berorda) { nya[q] = personKost(q, X[q]); delta += nya[q].summa - pk[q].summa; }
         if (delta <= 0 || rnd() < Math.exp(-delta / T)) {
           kost += delta; jk = jkNy; ak = akNy;
           for (const d in hemNy) hemC[d] = hemNy[d];
           for (const d in kompNy) kompC[d] = kompNy[d];
+          for (const d in jourNy) jourC[d] = jourNy[d];
           for (const q of berorda) pk[q] = nya[q];
           if (kost < lokalBast - 1e-9) { lokalBast = kost; lokalX = X.map(x => x.slice()); }
         } else {
@@ -674,6 +700,7 @@ const MOTOR = (() => {
     const golvVak = [];
     const tillfallen = aktiviteter(pr, schema, brott, golvVak);
     const startVak = starttiderFor(pr, schema);
+    const jourVak = jourFor(pr, schema);
     for (const t of tillfallen) if (t.saknas && t.krav) hardTotalt++;
     pers.forEach(p => {
       const rad = schema[p.id];
@@ -703,6 +730,12 @@ const MOTOR = (() => {
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
     const startDel = pr.starttider && pr.starttider.length ? { startvakanser: startVak } : {};
+    if (pr.jour) {
+      startDel.jourvakanser = jourVak;
+      teamKpi.jour_saknas = jourVak.reduce((s, v) => s + v.antal, 0);
+      teamKpi.jourpass = Object.values(schema).reduce((s, rad) => s + rad.filter(v => v && v.jour).length, 0);
+      for (const p of pers) personer[p.id].jour = schema[p.id].filter(v => v && v.jour).length;
+    }
     if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
     if (pr.kompetens && pr.kompetens.length) {
@@ -750,6 +783,36 @@ const MOTOR = (() => {
         const n = pa(t).length;
         if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
       }
+    }
+    return ut;
+  }
+
+  // Jour (docs/regelverk.md): för varje natt med jourbehov väljs bland dem som har kvällspass och är lediga nästa dag
+  // de som haft minst jour. Pass + jour högst 20 timmar och vilan efter jouren minst lika lång; veckovilan kontrolleras
+  // med jouren som upptagen tid. Det som inte går blir vakanta jourer.
+  function jourFor(pr, schema) {
+    const J = pr.jour, ut = []; if (!J) return ut;
+    const idx = Object.fromEntries(pr.pers.map(p => [p.id, p])), antal = {};
+    for (let d = 0; d < pr.N; d++) {
+      const b = J.behov[d % 7]; if (!b) continue;
+      const d1 = pr.cyk ? (d + 1) % pr.N : d + 1;
+      const kand = Object.keys(schema).filter(pid => {
+        const v = schema[pid][d], p = idx[pid];
+        if (!v || v.dygnsdel !== "kvall" || !p.jourOk || p.natt || d1 >= pr.N || schema[pid][d1]) return false;
+        const tot = (tid(v.slut) - tid(v.start) + DYGN) % DYGN + J.len;
+        if (tot > JOUR_MAX || tid(v.slut) !== J.start % DYGN) return false;
+        // nästa pass efter jouren: minst lika lång vila som pass + jour
+        for (let k = 2; k < pr.N; k++) { const dd = pr.cyk ? (d + k) % pr.N : d + k; if (dd >= pr.N) break; const w = schema[pid][dd]; if (w) return k * DYGN + tid(w.start) - J.slut >= tot; }
+        return true;
+      }).sort((a, b) => (antal[a] || 0) - (antal[b] || 0));
+      let n = 0;
+      for (const pid of kand) {
+        if (n >= b) break;
+        const v = schema[pid][d];
+        schema[pid][d] = { ...v, jour: { start: klocka(J.start), slut: klocka(J.slut) } };
+        if (vilaOk(schema[pid], pr, idx[pid])) { n++; antal[pid] = (antal[pid] || 0) + 1; } else schema[pid][d] = v;
+      }
+      if (n < b) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], antal: b - n });
     }
     return ut;
   }
@@ -877,12 +940,17 @@ const MOTOR = (() => {
     const { r, N, W, cyk } = pr;
     const L = N * DYGN;
     let iv = [];
-    rad.forEach((v, d) => { if (v) { const s = d * DYGN + tid(v.start); let e = d * DYGN + tid(v.slut); if (e <= s) e += DYGN; iv.push([s, e]); } });
+    let jiv = [];
+    rad.forEach((v, d) => { if (v) { const s = d * DYGN + tid(v.start); let e = d * DYGN + tid(v.slut); if (e <= s) e += DYGN; iv.push([s, e]);
+      if (v.jour) { let js = d * DYGN + tid(v.jour.start); while (js < e - 1) js += DYGN; let je = d * DYGN + tid(v.jour.slut); while (je <= js) je += DYGN; jiv.push([js, je]); } } });
     if (cyk) iv = iv.concat(iv.map(([s, e]) => [s - L, e - L]), iv.map(([s, e]) => [s + L, e + L]));
+    if (cyk) jiv = jiv.concat(jiv.map(([s, e]) => [s - L, e - L]), jiv.map(([s, e]) => [s + L, e + L]));
     iv.sort((a, b) => a[0] - b[0]);
+    const ivV = iv.concat(jiv).sort((a, b) => a[0] - b[0]);
+    const luckaV = (a, b) => { let pos = a, best = 0; for (const [s, e] of ivV) { if (e <= a || s >= b) continue; best = Math.max(best, Math.max(s, a) - pos); pos = Math.max(pos, Math.min(e, b)); } return Math.max(best, b - pos); };
     const lucka = (a, b) => { let pos = a, best = 0; for (const [s, e] of iv) { if (e <= a || s >= b) continue; best = Math.max(best, Math.max(s, a) - pos); pos = Math.max(pos, Math.min(e, b)); } return Math.max(best, b - pos); };
     for (let i = 1; i < iv.length; i++) if (iv[i][0] - iv[i - 1][1] < r.dygnsvila_minuter && iv[i][0] >= 0 && iv[i][0] < L) return false;
-    for (let w = 0; w < W; w++) if (lucka(w * 7 * DYGN, (w + 1) * 7 * DYGN) < r.veckovila_minuter) return false;
+    for (let w = 0; w < W; w++) if (luckaV(w * 7 * DYGN, (w + 1) * 7 * DYGN) < r.veckovila_minuter) return false;
     const db = p.natt ? pr.nattDb : pr.db;
     for (let d = 0; d < N; d++) if (lucka(d * DYGN + db, d * DYGN + db + DYGN) < r.dygnsvila_minuter) return false;
     return true;

@@ -1,0 +1,73 @@
+{
+ "beskrivning": "Funktionsstöd med Bilaga J: jour 22:00–07:00 i direkt anslutning efter ett kvällspass, söndag till torsdag natt. Kvällspass och jour högst 20 timmar sammanlagt, och vilan efteråt minst lika lång (AB 25 § 13 mom. 5): dagen efter jouren är ledig. Ska gå att lösa utan avtalsbrott, med jour varje sådan natt. (Fredag och lördag natt krockar med de lokala helgreglerna, se docs/regelverk.md.)",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true,
+  "jour_saknas": 0
+ },
+ "enhet": "Test – jour",
+ "veckor": 4,
+ "cykliskt": true,
+ "regelverk": "bilaga-j",
+ "behov": {
+  "vardag": {
+   "morgon": 2,
+   "kvall": 2
+  },
+  "helg": {
+   "morgon": 2,
+   "kvall": 2
+  }
+ },
+ "jour": {
+  "slut": "07:00",
+  "behov": {
+   "sön": 1,
+   "mån": 1,
+   "tis": 1,
+   "ons": 1,
+   "tor": 1
+  }
+ },
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 1
+  },
+  {
+   "id": "A2",
+   "grad": 1
+  },
+  {
+   "id": "A3",
+   "grad": 0.9
+  },
+  {
+   "id": "A4",
+   "grad": 0.9
+  },
+  {
+   "id": "A5",
+   "grad": 0.8
+  },
+  {
+   "id": "A6",
+   "grad": 0.8
+  },
+  {
+   "id": "A7",
+   "grad": 0.75
+  },
+  {
+   "id": "A8",
+   "grad": 0.75
+  },
+  {
+   "id": "A9",
+   "grad": 0.75
+  }
+ ],
+ "losare": {
+  "tid_per_steg_s": 10
+ }
+}

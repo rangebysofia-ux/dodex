@@ -83,6 +83,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 36. **Regelverk för en enhet.** Tre färdiga regelverk väljs per enhet under Regler: *Dag, kväll och helgrotation* (heltid 37 h, användarens val), *40-timmarsvecka, dagtid mån–fre* (heltid 40 h per helgfri vecka enligt AB 25 § 13 mom. 2, bara dagpass, inga helger, 5 pass per vecka; varannan helg upplåst som synlig avvikelse) och *Funktionsstöd med Bilaga J* (som dag/kväll/helg, och arbetspass och jour i följd enligt AB 25 § 13 mom. 5: högst 20 timmar sammanlagt och minst lika lång vila efteråt). Avtal och lag ändras aldrig. Se `docs/regelverk.md`. Beslutat av användaren 2026-11-09.
 
 Öppna frågor, alltså inte beslutade:
+- Jour fredag och lördag natt krockar med hel arbetshelg och ingen fredagskväll före ledig helg: den som har kväll de dagarna arbetar hela helgen och kan inte vara ledig dagen efter jouren. Ska helgreglerna ändras för enheter med jour, eller ska jour de nätterna lösas på annat sätt (se `docs/regelverk.md`)?
+- Ersättning för jour enligt Bilaga J räknas inte än; bilagans text ska kontrolleras mot SKR:s publicering först.
 - Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.

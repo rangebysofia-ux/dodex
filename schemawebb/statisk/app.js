@@ -324,6 +324,7 @@ function ritaFlik() {
       <h3>Arbetstiden som behovet ger</h3>
       <div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
       <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      ${i.jour ? `<h3>Jour</h3>${RV.jourHtml(i)}` : ""}
       <h3>Täckning vid klockslag</h3>
       <p class="dampad liten">Minst så många i tjänst vid klockslaget, till exempel tidigt på morgonen eller mitt på dagen när dag och kväll överlappar. Passens längd anpassas efter det, och med rörlig starttid (Regler, Dagpass får också börja) även dagpassens start. Täckningsgraden syns i vyn Klockslag.</p>
       ${tp.length ? `<div class="rull"><table class="form"><thead><tr><th>Dagar</th><th>Klockslag</th><th>Antal</th><th></th></tr></thead><tbody>
@@ -1191,6 +1192,7 @@ document.addEventListener("change", e => {
   if (l) { GUIDE.sattStarttider(ind, l); markeraAndrad(true); }
 });
 // ---------------------------------------------------------------- regelverk (regelverk.js)
+document.addEventListener("change", e => { if (st.indata && e.target.dataset && e.target.dataset.jour && RV.jourAndra(st.indata, e.target)) markeraAndrad(false); });
 document.addEventListener("change", e => {
   if (!e.target.dataset || !e.target.dataset.rv || !st.indata) return;
   st.rvVal = e.target.value; ritaInstallningar();

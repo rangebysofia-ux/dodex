@@ -12,7 +12,7 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { TEAM: "verksamhet", KOMPETENS: "verksamhet", STARTTID: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { JOUR: "avtal", TEAM: "verksamhet", KOMPETENS: "verksamhet", STARTTID: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
@@ -109,8 +109,25 @@ const GRANSKNING = (() => {
         const a = d * DYGN + db;
         if (langstaLucka(iv, a, a + DYGN) < r.dygnsvila_minuter) brott("DYGNSVILA", pid, `Ingen sammanhängande dygnsvila på 11 h i perioden från ${dagText(d)} kl ${klocka(db)}.`);
       }
+      // jour i direkt anslutning efter ett pass (AB 25 § 13 mom. 5, Bilaga J): pass + jour högst 20 timmar och vilan
+      // efter jouren minst lika lång. Jouren är inte vila: den räknas som upptagen tid för veckovilan.
+      let jiv = [];
+      sort.forEach(([d, s, e, p], i) => {
+        const jr = p && p.jour; if (!jr) return;
+        let js = d * DYGN + tid(jr.start); while (js < e - 1) js += DYGN;
+        let je = d * DYGN + tid(jr.slut); while (je <= js) je += DYGN;
+        jiv.push([js, je]);
+        if (!indata.jour) brott("JOUR", pid, `${dagText(d)}: jour i schemat, men enheten har ingen jour.`);
+        if (js !== e) brott("JOUR", pid, `${dagText(d)}: jouren börjar ${klocka(js)}, men passet slutar ${klocka(e)}. Jour ska ligga i direkt anslutning.`);
+        const tot = (e - s) + (je - js);
+        if (tot > 20 * 60) brott("JOUR", pid, `${dagText(d)}: pass och jour är ${h(tot)} h sammanlagt (högst 20 h).`);
+        const nasta = i + 1 < sort.length ? sort[i + 1] : (cyk && sort.length ? [sort[0][0] + N, sort[0][1] + L] : null);
+        if (nasta && nasta[1] - je < tot) brott("JOUR", pid, `${dagText(d)}: bara ${h(nasta[1] - je)} h vila efter jouren; minst lika lång som pass och jour (${h(tot)} h).`);
+      });
+      if (cyk) jiv = jiv.concat(jiv.map(([s, e]) => [s - L, e - L]), jiv.map(([s, e]) => [s + L, e + L]));
+      const ivV = iv.concat(jiv);
       for (let w = 0; w < (cyk ? W : W - 1); w++) {
-        const a = w * 7 * DYGN + vb, l = langstaLucka(iv, a, a + 7 * DYGN);
+        const a = w * 7 * DYGN + vb, l = langstaLucka(ivV, a, a + 7 * DYGN);
         if (l < r.veckovila_minuter) brott("VECKOVILA", pid, `Längsta vila vecka ${w + 1} är ${h(l)} h (minst 36 h).`);
       }
       const arbetstider = [];
@@ -320,6 +337,18 @@ const GRANSKNING = (() => {
     for (let d = 0; d < N; d++) for (const [del, antal] of Object.entries(behov[d % 7])) {
       let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
       if (n < antal) { vakanser += antal - n; brott("BEHOV", null, `${dagText(d)}: ${antal - n} vakant ${del === "kvall" ? "kvälls" : del}pass.`, false); }
+    }
+    // jour (docs/regelverk.md): så många jourer per natt som behovet. Mjukt: det som saknas är en varning.
+    if (indata.jour) {
+      const jb = [0, 0, 0, 0, 0, 0, 0];
+      for (const [k, v] of Object.entries(indata.jour.behov || {})) {
+        const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGNAMN.indexOf(k)];
+        for (const i of idx) if (i >= 0) jb[i] = Number(v) || 0;
+      }
+      for (let d = 0; d < N; d++) {
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.jour) n++; }
+        if (n < jb[d % 7]) brott("BEHOV", null, `${dagText(d)}: ${jb[d % 7] - n} vakant jour.`, false);
+      }
     }
     // starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Mjukt: en varning.
     const stL = (((indata.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0]).sort((a, b) => a[0] - b[0]);

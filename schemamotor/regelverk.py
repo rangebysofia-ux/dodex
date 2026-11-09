@@ -107,6 +107,7 @@ KALLOR = {
     "AKTIVITET": ("Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid.", "–"),
     "KOMPETENS": ("Verksamhetens beslut om kompetens i tjänst (till exempel delegering enligt verksamhetens rutin).", "–"),
     "STARTTID": ("Verksamhetens beslut om starttider för dagpassen (till exempel förskolans öppettider).", "–"),
+    "JOUR": ("AB 25 § 13 mom. 5: undantag från dygnsvilan vid arbete och jour i direkt anslutning, högst 20 timmar sammanlagt och efterföljande vila minst lika lång. Bilaga J (viss jourtjänstgörande personal).", "Bara vid särskilda skäl; MBL-förhandling före införande."),
 }
 
 MJUKA = {

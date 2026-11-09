@@ -46,6 +46,10 @@ def _pass(p, prob, natt):
            for a in p.get("aktiviteter") or [] if isinstance(a, dict) and a.get("id") in kanda]
     if akt:
         ut["aktiviteter"] = akt
+    # jour efter passet följer med (docs/regelverk.md); om den fortfarande är tillåten avgör granskningen
+    if prob.get("jour") and isinstance(p.get("jour"), dict):
+        J = prob["jour"]
+        ut["jour"] = {"start": klocka(J["start"]), "slut": klocka(J["slut"])}
     return ut
 
 
@@ -153,6 +157,17 @@ def justera(indata, schema, grund=None):
             k["team"] = hem.get(pid)
             k["utlanad"] = sum(1 for x in nytt[pid] if x and hem.get(pid) and x.get("team") not in (None, hem[pid]))
         extra = {"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": tack}
+    # jour: nätter som saknar jour efter justeringen
+    if prob.get("jour"):
+        jb = prob["jour"]["behov"]
+        jv = []
+        for d in range(W * 7):
+            n = sum(1 for rad in nytt.values() if rad[d] and rad[d].get("jour"))
+            if n < jb[d % 7]:
+                jv.append({"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "antal": jb[d % 7] - n})
+        kpi["jour_saknas"] = sum(v["antal"] for v in jv)
+        kpi["jourpass"] = sum(1 for rad in nytt.values() for p in rad if p and p.get("jour"))
+        extra["jourvakanser"] = jv
     # kompetens: täckningen räknas om efter justeringen (docs/kompetens.md)
     if prob.get("kompetenskrav"):
         kt = kompetens_tackning(nytt, prob["kompetenskrav"], {p["id"]: p.get("kompetenser", set()) for p in prob["personer"]}, W * 7)

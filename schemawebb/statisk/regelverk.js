@@ -47,6 +47,8 @@ function andringar(ind, id) {
   if (!R.avvikelser.includes("helgfrekvens") && (ind.regler || {}).helgfrekvens === "ingen") ut.push("Varannan helg gäller igen.");
   if (R.regler.pass_per_vecka && (ind.regler || {}).pass_per_vecka !== R.regler.pass_per_vecka) ut.push(`${R.regler.pass_per_vecka} pass per vecka.`);
   if (!R.regler.pass_per_vecka && (ind.regler || {}).pass_per_vecka) ut.push("4,75 pass per vecka igen.");
+  if (R.jour && !ind.jour) ut.push("Jour efter kvällspasset 22:00–07:00, en per natt. Tider och antal ändras under Behov.");
+  if (!R.jour && ind.jour) ut.push("Jouren tas bort.");
   if (R.dagtid) {
     const n = (ind.personal || []).filter(p => !(p.dygnsdelar || []).includes("natt") && (p.dygnsdelar || ["morgon", "kvall"]).join() !== "morgon").length;
     if (n) ut.push(`${n} medarbetare får bara dagpass.`);
@@ -76,6 +78,8 @@ function tillampa(ind, id) {
     if (b.alla) { b.vardag = b.vardag || { ...b.alla }; delete b.alla; }
     b.helg = { morgon: 0, kvall: 0, natt: 0 };
   }
+  if (R.jour && !ind.jour) ind.jour = { slut: "07:00", behov: { alla: 1 } };
+  if (!R.jour) delete ind.jour;
   ind.regelverk = R.id;
   return ind;
 }
@@ -90,8 +94,41 @@ function varningar(ind) {
     const ej = (ind.personal || []).filter(p => (p.dygnsdelar || ["morgon", "kvall"]).some(d => d !== "morgon")).map(p => p.id);
     if (ej.length) ut.push(`${ej.join(", ")} arbetar inte bara dag.`);
   }
+  if (ind.jour) {
+    const r = ind.regler || {}, per = jourPerDag(ind.jour.behov);
+    if ((per[4] || per[5]) && r.hel_helg !== false && r.ingen_fredagskvall_fore_ledig_helg !== false && (ind.personal || []).some(p => (p.helgfrekvens || r.helgfrekvens || "2/4") === "2/4"))
+      ut.push("Jour fredag och lördag natt kräver ledig dag efter, men med hel arbetshelg och ingen fredagskväll före ledig helg arbetar den som har kväll fredag eller lördag hela helgen. Räkna med vakanta jourer de nätterna, eller låt några ha andra helgregler.");
+  }
   if ((ind.heltid_minuter_per_vecka || 2220) !== R.heltid) ut.push(`Heltiden är ändrad från regelverkets ${(R.heltid / 60).toString().replace(".", ",")} timmar.`);
   return ut;
+}
+
+// ---------------------------------------------------------------- jour (Bilaga J)
+const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
+function jourPerDag(spec) {
+  const ut = [0, 0, 0, 0, 0, 0, 0];
+  for (const [k, v] of Object.entries(spec || {})) {
+    const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGAR.indexOf(k)];
+    for (const i of idx) if (i >= 0) ut[i] = Number(v) || 0;
+  }
+  return ut;
+}
+// Avsnittet under Behov: när jouren slutar och hur många jourer per natt (natten efter respektive dag).
+function jourHtml(ind) {
+  if (!ind.jour) return "";
+  const per = jourPerDag(ind.jour.behov), ks = (ind.regler || {}).kvall_slut || "22:00";
+  return `<div class="jour-red"><p class="dampad liten" style="margin:0 0 8px">Jour i direkt anslutning efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J). Jouren börjar när kvällspasset slutar (${esc(ks)}). Pass och jour högst 20 timmar sammanlagt, och vilan efteråt minst lika lång, så dagen efter jouren är ledig.</p>
+    <div class="falt" style="max-width:420px"><div><label for="jour-slut">Jouren slutar</label><input type="time" id="jour-slut" data-jour="slut" value="${esc(ind.jour.slut)}"></div></div>
+    <div class="rull"><table class="form"><thead><tr><th>Jour natten efter</th>${DAGAR.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody><tr><th>Antal</th>
+      ${DAGAR.map((d, i) => `<td><input type="number" min="0" max="10" inputmode="numeric" data-jour="${d}" value="${per[i] || ""}" placeholder="0" style="width:56px" aria-label="Jour natten efter ${d}"></td>`).join("")}</tr></tbody></table></div></div>`;
+}
+function jourAndra(ind, el) {
+  const k = el.dataset.jour; if (!k || !ind.jour) return false;
+  if (k === "slut") { if (el.value) ind.jour.slut = el.value; return true; }
+  const per = jourPerDag(ind.jour.behov);
+  per[DAGAR.indexOf(k)] = Math.max(0, parseInt(el.value) || 0);
+  ind.jour.behov = per.every(v => v === per[0]) ? { alla: per[0] } : Object.fromEntries(DAGAR.map((d, i) => [d, per[i]]).filter(([, v]) => v));
+  return true;
 }
 
 // Kortet i Regler: vilket regelverk som gäller, och val av ett annat.
@@ -111,6 +148,6 @@ function kort(ind, valt) {
   </div>`;
 }
 
-return { LISTA, hitta, andringar, tillampa, varningar, kort, NYCKLAR };
+return { LISTA, hitta, andringar, tillampa, varningar, kort, NYCKLAR, jourHtml, jourAndra, jourPerDag };
 })();
 if (typeof module !== "undefined") module.exports = RV;

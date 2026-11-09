@@ -32,7 +32,7 @@ NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS":
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
         "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel",
-        "TEAM": "verksamhet", "KOMPETENS": "verksamhet", "STARTTID": "verksamhet"}
+        "TEAM": "verksamhet", "KOMPETENS": "verksamhet", "STARTTID": "verksamhet", "JOUR": "avtal"}
 
 
 def tid(s):
@@ -193,6 +193,31 @@ def kontrollera(indata, schema_dok):
             if langsta_lucka(iv, a, a + DYGN) < r["dygnsvila_minuter"]:
                 brott("DYGNSVILA", pid, f"Ingen sammanhängande dygnsvila på {r['dygnsvila_minuter'] / 60:g} h i "
                                         f"perioden från {dag_text(d)} kl {klocka(db)}.")
+        # jour i direkt anslutning efter ett pass (AB 25 § 13 mom. 5, Bilaga J): arbetspass + jour högst 20 timmar,
+        # och vilan efter jouren minst lika lång. Jouren är inte vila: den räknas som upptagen tid för veckovilan.
+        jouriv = []
+        for i, (d, s, e, p) in enumerate(sorterade):
+            jr = p.get("jour") if isinstance(p, dict) else None
+            if not jr:
+                continue
+            js, je = d * DYGN + tid(jr["start"]), d * DYGN + tid(jr["slut"])
+            while js < e - 1:  # jouren börjar efter passet (samma dag eller natten)
+                js += DYGN
+            while je <= js:
+                je += DYGN
+            jouriv.append((js, je))
+            if not indata.get("jour"):
+                brott("JOUR", pid, f"{dag_text(d)}: jour i schemat, men enheten har ingen jour.")
+            if js != e:
+                brott("JOUR", pid, f"{dag_text(d)}: jouren börjar {klocka(js)}, men passet slutar {klocka(e)}. Jour ska ligga i direkt anslutning.")
+            total = (e - s) + (je - js)
+            if total > 20 * 60:
+                brott("JOUR", pid, f"{dag_text(d)}: pass och jour är {total / 60:.1f} h sammanlagt (högst 20 h).")
+            nasta = sorterade[i + 1] if i + 1 < len(sorterade) else ((sorterade[0][0] + N, sorterade[0][1] + L, sorterade[0][2] + L, None) if cyk and sorterade else None)
+            if nasta and nasta[1] - je < total:
+                brott("JOUR", pid, f"{dag_text(d)}: bara {(nasta[1] - je) / 60:.1f} h vila efter jouren; minst lika lång som pass och jour ({total / 60:.1f} h).")
+        if jouriv:
+            iv = iv + jouriv + ([(s - L, e - L) for s, e in jouriv] + [(s + L, e + L) for s, e in jouriv] if cyk else [])
         # veckovila per sjudagarsperiod från veckobrytet
         for w in range(W if cyk else W - 1):
             a = w * 7 * DYGN + vb
@@ -496,6 +521,16 @@ def kontrollera(indata, schema_dok):
             if n < tp["antal"]:
                 vakanser += tp["antal"] - n
                 brott("BEHOV", None, f"{dag_text(d)} kl {tp['tid']}: {n} i tjänst, behov {tp['antal']}.", hard=False)
+    # jour (docs/regelverk.md): så många jourer per natt som behovet. Mjukt: det som saknas är en varning.
+    if indata.get("jour"):
+        jb = [0] * 7
+        for nyckel, v in (indata["jour"].get("behov") or {}).items():
+            for i in dagindex(nyckel):
+                jb[i] = int(v or 0)
+        for d in range(N):
+            n = sum(1 for rad in schema.values() if d < len(rad) and (x := rad[d]) and x.get("jour"))
+            if n < jb[d % 7]:
+                brott("BEHOV", None, f"{dag_text(d)}: {jb[d % 7] - n} vakant jour.", hard=False)
     # starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid, i tidsordning och högst dagens
     # dagbehov. Mjukt: det som saknas är en varning.
     st_lista = sorted(((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("morgon") or [])))

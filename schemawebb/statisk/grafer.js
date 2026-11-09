@@ -450,6 +450,8 @@ function resurs(res, indata) {
 // Symboler för passen (användarens önskemål): sol för dag, måne för kväll, natthimmel för natt.
 const PASSIKON = { morgon: "☀️", kvall: "🌙", natt: "🌃" };
 const passIkon = del => PASSIKON[del] ? `<span class="passikon" aria-hidden="true">${PASSIKON[del]}</span>` : "";
+// Jour efter passet (Bilaga J): ett J med tiderna som verktygstips.
+const jourMarke = p => (p && p.jour ? `<i class="jour-marke" title="Jour ${p.jour.start}–${p.jour.slut}" aria-label="Jour ${p.jour.start} till ${p.jour.slut}">+J ${p.jour.slut}</i>` : "");
 const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
 
 // ---------------------------------------------------------------- aktiviteter
@@ -694,6 +696,6 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { jourMarke, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

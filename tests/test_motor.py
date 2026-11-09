@@ -38,6 +38,10 @@ def test_fall(fall, tmp_path):
             assert kpi["vakanta_pass"] == forv["vakanta_pass"], kpi
         if "natt_vila_max" in forv:
             assert kpi["natt_vila"] <= forv["natt_vila_max"], kpi
+        if "jour_saknas" in forv:
+            assert kpi.get("jour_saknas", 0) == forv["jour_saknas"], kpi
+        if "jour_saknas_min" in forv:
+            assert kpi["jour_saknas"] >= forv["jour_saknas_min"], kpi
         if "starttid_saknas" in forv:
             assert kpi.get("starttid_saknas", 0) == forv["starttid_saknas"], kpi
         if "kompetensvakanser" in forv:

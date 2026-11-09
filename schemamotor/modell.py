@@ -101,6 +101,8 @@ class Person(Strikt):
     team: Optional[str] = Field(default=None, min_length=1, max_length=40)
     # kompetenser (id i indata.kompetenser), till exempel undersköterska eller läkemedelsdelegering (docs/kompetens.md)
     kompetenser: list[str] = Field(default_factory=list)
+    # jour efter kvällspasset (när enheten har jour); false = den här personen har inte jour
+    jour: Optional[bool] = None
 
     @field_validator("dygnsdelar")
     @classmethod
@@ -131,6 +133,23 @@ class Team(Strikt):
                     raise ValueError(f"okänd dygnsdel: {del_} (använd morgon, kvall eller natt)")
                 if antal < 0:
                     raise ValueError(f"behovet för {nyckel} {del_} kan inte vara negativt")
+        return v
+
+
+class Jour(Strikt):
+    """Jour i direkt anslutning efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J; docs/regelverk.md). Jouren börjar
+    när kvällspasset slutar och slutar vid `slut`. `behov` = antal jourer per natt, i samma dagformat som behovet."""
+    slut: Klocka
+    behov: dict[str, int] = Field(default_factory=dict)
+
+    @field_validator("behov")
+    @classmethod
+    def dagnycklar(cls, v):
+        for nyckel, antal in v.items():
+            if nyckel not in DAGNYCKLAR:
+                raise ValueError(f"okänd dag: {nyckel} (använd vardag, helg, alla eller {', '.join(DAGNAMN)})")
+            if antal < 0:
+                raise ValueError(f"jourbehovet för {nyckel} kan inte vara negativt")
         return v
 
 
@@ -294,6 +313,8 @@ class Indata(BaseModel):
     aktiviteter: list[Aktivitet] = Field(default_factory=list)
     team: list[Team] = Field(default_factory=list)
     kompetenser: list[Kompetens] = Field(default_factory=list)
+    # jour efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J; docs/regelverk.md)
+    jour: Optional[Jour] = None
     # olika starttider för dagpassen: av dagbehovet börjar så många vid varje tid (docs/starttider.md)
     starttider: Optional[Starttider] = None
     kompetenskrav: list[Kompetenskrav] = Field(default_factory=list)

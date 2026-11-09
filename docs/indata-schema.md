@@ -123,6 +123,8 @@ Exempel: APT tisdag 14–16 vecka 2 och 4, där var och en går en gång (ungef�
 
 schemamotor/validate.py läser samma `schema`-format, antingen hela utdatafilen eller en fil med bara `{"schema": {...}}`. Ett schema från ett annat system kan granskas genom att räkna om det till detta format. `dygnsdel` behövs för fönsterkontrollen och för behovet; `rast` för rastkontrollen.
 
+**jour** – jour efter kvällspasset (Bilaga J): `{"slut": "07:00", "behov": {"alla": 1}}`. Jouren börjar när kvällspasset slutar. Pass + jour högst 20 timmar, och vilan efteråt minst lika lång (AB 25 § 13 mom. 5). `personal[].jour: false` undantar en person. Se `docs/regelverk.md`.
+
 **regelverk** – valt regelverk: `dag-kvall-helg`, `40-timmar` eller `bilaga-j`. Värdena står i `regler`, `heltid_minuter_per_vecka` och `avvikelser`. Se `docs/regelverk.md`.
 
 **starttider** – olika starttider för dagpassen: `{"morgon": [{"tid": "06:00", "antal": 1}, {"tid": "07:00", "antal": 1}]}`. Av dagbehovet börjar så många vid varje tid. Mjukt, på samma nivå som behovet. Se `docs/starttider.md`.

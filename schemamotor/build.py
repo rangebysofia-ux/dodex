@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover
 
 DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
 DYGN = 24 * 60
+JOUR_MAX = 20 * 60  # AB 25 § 13 mom. 5: arbetspass och jour i följd högst 20 timmar sammanlagt
 
 STANDARDREGLER = {
     "dygnsvila_minuter": 660,
@@ -316,7 +317,7 @@ def forbered(indata):
             "id": pid, "grad": p["grad"], "dygnsdelar": delar, "natt": natt, "tillatna": tillatna, "band": set(tillatna),
             "pass_delperioder": pass_lista, "mal_minuter": mal_min, "tolerans": tol, "mal_langd": mal_langd,
             "helgfrekvens": p.get("helgfrekvens", r["helgfrekvens"]), "helggrupp": p.get("helggrupp"),
-            "team": p.get("team"), "kompetenser": set(p.get("kompetenser") or []),
+            "team": p.get("team"), "kompetenser": set(p.get("kompetenser") or []), "jour_ok": p.get("jour") is not False,
         })
 
     onskemal = []
@@ -410,7 +411,15 @@ def forbered(indata):
                       "behov": expandera_dagvarden(k.get("behov"), dict)}
                      for i, k in enumerate(indata.get("kompetenskrav") or [])]
 
-    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team, "starttider": starttider,
+    # jour efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J): börjar när kvällspasset slutar, behov per natt
+    jour = None
+    if indata.get("jour"):
+        js, je = ks, tid(indata["jour"]["slut"])
+        if je <= js:
+            je += DYGN
+        jour = {"start": js, "slut": je, "len": je - js, "behov": [int(v or 0) for v in expandera_dagvarden(indata["jour"].get("behov"), int)]}
+
+    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team, "starttider": starttider, "jour": jour,
             "kompetenskrav": kompetenskrav, "kompetensnamn": knamn,
             "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
             "aktiviteter": aktiviteter, "enhet": indata.get("enhet", ""),
@@ -465,6 +474,32 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 if d not in dagar and (pi, d, s) in x:
                     m.add(x[pi, d, s] == 0)
 
+    # --- jour i direkt anslutning efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J; docs/regelverk.md). Undantaget från
+    # dygnsvilan gäller bara kombinationen arbete + jour: sammanlagt högst 20 timmar, och vilan efteråt minst lika lång.
+    # Dagen efter jouren är därför ledig, och nästa pass börjar tidigast när vilan räcker.
+    J, j = prob.get("jour"), {}
+    if J:
+        for pi, p in enumerate(prob["personer"]):
+            if not p.get("jour_ok") or p["natt"]:
+                continue
+            kv = [s for s in p["tillatna"] if M[s]["dygnsdel"] == "kvall" and (M[s]["slut"] - M[s]["start"]) + J["len"] <= JOUR_MAX]
+            if not kv:
+                continue
+            for d in range(N):
+                d1, d2 = nasta(d), nasta(d, 2)
+                if d1 is None or not J["behov"][d % 7]:
+                    continue
+                v = m.new_bool_var(f"j_{p['id']}_{d}")
+                m.add(v <= sum(x[pi, d, s] for s in kv))
+                m.add(work[pi, d1] == 0).only_enforce_if(v)
+                if d2 is not None:
+                    tidiga = [x[pi, d2, t] for t in p["tillatna"] if 2 * DYGN + M[t]["start"] - J["slut"] < JOUR_MAX]
+                    if tidiga:
+                        m.add(sum(tidiga) == 0).only_enforce_if(v)
+                j[pi, d] = v
+        for d in range(N):
+            m.add(sum(v for (pi, dd), v in j.items() if dd == d) <= J["behov"][d % 7])
+
     hs = veckotid(r["helg_start"]) - 4 * DYGN   # minuter efter fredag 00:00
     he = veckotid(r["helg_slut"])                # minuter efter måndag 00:00
 
@@ -496,6 +531,8 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             for k in range(1, 6):  # en ledig dag med tillräckligt tidigt slut före och sen start efter
                 b = m.new_bool_var("")
                 m.add(work[pi, dagar[k]] == 0).only_enforce_if(b)
+                if (pi, dagar[k - 1]) in j:  # jour natten före tar vilan från den lediga dagen
+                    m.add(j[pi, dagar[k - 1]] == 0).only_enforce_if(b)
                 for slut in sorted({M[s]["slut"] for s in T}):
                     tidiga = [x[pi, dagar[k + 1], t] for t in T if slut - M[t]["start"] > grans]
                     if tidiga:
@@ -689,6 +726,11 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             v = m.new_int_var(0, antal, f"vak_{d}_{del_}")
             m.add(sum(tack) + v >= antal)
             vak.append((v, d, del_, None))
+        # jour: så många jourer per natt (behov, samma nivå som vakanserna)
+        if J and J["behov"][wd]:
+            v = m.new_int_var(0, J["behov"][wd], f"vakj_{d}")
+            m.add(sum(vv for (pi, dd), vv in j.items() if dd == d) + v >= J["behov"][wd])
+            vak.append((v, d, "jour", None))
         # starttider: så många av dagpassen börjar vid varje tid, i tidsordning och högst dagens dagbehov
         kvar = prob["behov"][wd].get("morgon", 0) or 0
         for t, antal in prob.get("starttider") or []:
@@ -886,7 +928,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
     else:
         mal["ekonomi"] = 0
 
-    var = {"x": x, "work": work, "vak": vak, "y": y, "akt_brist": akt_brist}
+    var = {"x": x, "work": work, "vak": vak, "y": y, "akt_brist": akt_brist, "j": j}
     return m, var, mal, grupper
 
 
@@ -1113,11 +1155,25 @@ def tolka(prob, solver, var, steg, kpi_mal):
                                "deltagare": delt, "behov": a["_behov"][d], "saknas": a["_behov"][d] - len(delt),
                                "utanfor": a["_utanfor"]})
     vakanser = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "tid": t,
-                 "antal": solver.value(v)} for v, d, del_, t in var["vak"] if solver.value(v) and not str(t).startswith("start ")]
+                 "antal": solver.value(v)} for v, d, del_, t in var["vak"]
+                if solver.value(v) and not str(t).startswith("start ") and del_ != "jour"]
+    # jour efter kvällspasset (docs/regelverk.md): på passet, och nätter som saknar jour
+    J = prob.get("jour")
+    jourvak = []
+    if J:
+        for (pi, d), v in var.get("j", {}).items():
+            if solver.value(v):
+                pass_ = schema[prob["personer"][pi]["id"]][d]
+                pass_["jour"] = {"start": klocka(J["start"]), "slut": klocka(J["slut"])}
+        jourvak = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "antal": solver.value(v)}
+                   for v, d, del_, _ in var["vak"] if del_ == "jour" and solver.value(v)]
     # starttider som inte fick så många som skulle börja då (docs/starttider.md)
     startvak = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "start": t[6:], "antal": solver.value(v)}
                 for v, d, _, t in var["vak"] if str(t).startswith("start ") and solver.value(v)]
     kpi = dict(kpi_mal)
+    if J:
+        kpi["jour_saknas"] = sum(v["antal"] for v in jourvak)
+        kpi["jourpass"] = sum(1 for rad in schema.values() for p in rad if p and p.get("jour"))
     if prob.get("starttider"):
         kpi["starttid_saknas"] = sum(v["antal"] for v in startvak)
     kpi["vakanta_pass"] = sum(v["antal"] for v in vakanser if v["dygnsdel"])
@@ -1142,11 +1198,13 @@ def tolka(prob, solver, var, steg, kpi_mal):
                              "mal_minuter": p["mal_minuter"], "kvallspass": sum(x["dygnsdel"] == "kvall" for x in rad),
                              "helggrupp": ("A" if solver.value(p["_grupp"]) else "B") if "_grupp" in p else None,
                              "aktiviteter": sum(len(x.get("aktiviteter", [])) for x in rad),
+                             **({"jour": sum(1 for x in rad if x.get("jour"))} if J else {}),
                              **({"team": p.get("team"), "utlanad": sum(1 for x in rad if p.get("team") and x.get("team") not in (None, p["team"]))}
                                 if prob.get("team") else {})}
     return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"], "profil": prob.get("profil", "standard"),
             "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "aktiviteter": tillfallen,
             **({"startvakanser": startvak} if prob.get("starttider") else {}),
+            **({"jourvakanser": jourvak} if J else {}),
             "schema": schema, **({"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": team_tackning}
                                  if prob.get("team") else {}),
             **({"kompetenskrav": [{"id": k["id"], "kompetens": k["kompetens"], "namn": k["namn"]} for k in prob["kompetenskrav"]],
