@@ -597,3 +597,64 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
 .imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
 .imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }
+
+/* ---------- DODEX 2.0: gruppnavigering utan förändring av befintlig grafisk profil */
+.meny-dator { display: flex; flex-direction: column; gap: 3px; min-height: 100%; }
+.meny-mobil { display: none; }
+.meny-grupp { border-top: 1px solid rgba(255,255,255,.10); padding-top: 6px; margin-top: 4px; }
+.meny-grupp > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: var(--meny-text); font: 650 13px var(--sans); cursor: pointer; padding: 9px 12px; border-radius: 10px; }
+.meny-grupp > summary::-webkit-details-marker { display: none; }
+.meny-grupp > summary:hover { background: var(--skog-2); color: #fff; }
+.meny-grupp > summary:focus-visible { outline: 2px solid var(--guld); outline-offset: 2px; }
+.meny-grupp .meny-pil { font-size: 18px; transition: transform .2s ease; }
+.meny-grupp[open] .meny-pil { transform: rotate(180deg); }
+.meny-grupp-innehall { padding: 0 0 6px 10px; display: grid; gap: 2px; }
+.meny-grupp-innehall .post { font-size: 13px; }
+.meny .meny-notis { font-size: 11px; line-height: 1.45; margin: 3px 10px 8px;
+  color: var(--meny-text); opacity: .8; }
+/* På översikten är flödeskorten länkar till existerande sidor, aldrig skenbara åtgärder. */
+.arbetsflode-rubrik { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.arbetsflode { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+.arbetssteg { background: var(--yta); border: 1px solid var(--linje); box-shadow: var(--skugga);
+  border-radius: 17px; padding: 17px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.arbetssteg .arbetssteg-nr { font-size: 11px; color: var(--guld-djup); letter-spacing: .04em; font-weight: 800; }
+.arbetssteg h3 { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text); margin: 0; }
+.arbetssteg p { font-size: 12.5px; color: var(--dampad); margin: 0; flex: 1; }
+.arbetssteg .arbetssteg-lankar { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
+.arbetssteg .arbetssteg-lankar a { border-radius: 999px; color: var(--skog); background: var(--accent-svag);
+  text-decoration: none; font-size: 12px; font-weight: 700; padding: 5px 9px; }
+.arbetssteg .arbetssteg-lankar a:hover { text-decoration: underline; }
+.arbetssteg .arbetssteg-lankar a:focus-visible { outline: 2px solid var(--accent); }
+@media (max-width: 1199px) { .arbetsflode { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 640px) { .arbetsflode { grid-template-columns: 1fr; gap: 9px; } .arbetssteg { padding: 15px; } }
+@media (max-width: 959px) {
+  .meny .meny-dator { display: none; }
+  .meny .meny-mobil { display: flex; align-items: stretch; width: 100%; gap: 2px; }
+  .meny .meny-mobil > a.post { flex: 1 1 0; min-width: 0; padding: 6px 2px; }
+  .meny .mobil-mer { position: static; display: flex; flex: 1 1 0; min-width: 0; }
+  .meny .mobil-mer > summary { display: flex; flex-direction: column; justify-content: center; align-items: center;
+    flex: 1; cursor: pointer; gap: 2px; border-radius: 10px; padding: 6px 2px;
+    font: 500 10px var(--sans); color: var(--meny-text); list-style: none; }
+  .meny .mobil-mer > summary::-webkit-details-marker { display: none; }
+  .meny .mobil-mer > summary svg { height: 21px; width: 21px; }
+  .meny .mobil-mer > summary:hover,
+  .meny .mobil-mer > summary.mobil-mer-aktiv,
+  .meny .mobil-mer[open] > summary { background: var(--meny-aktiv); color: var(--meny-aktiv-text); }
+  .meny .mobil-fler-panel { position: absolute; left: 0; right: 0; bottom: calc(100% + 1px);
+    max-height: min(75vh, 650px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--skog); border-top: 1px solid rgba(255,255,255,.2);
+    padding: 15px 18px 20px; box-shadow: 0 -12px 28px rgba(0,0,0,.2);
+    display: grid; gap: 12px; }
+  .meny .mobil-fler-panel h2 { color: var(--guld-ljus); font-size: 15px; margin: 0; }
+  .meny .mobil-menygrupp { display: grid; gap: 3px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 9px; }
+  .meny .mobil-menygrupp h3 { color: var(--guld-ljus); font-size: 11px; margin: 0 0 5px; letter-spacing: .07em; }
+  .meny .mobil-fler-panel a.post,
+  .meny .mobil-fler-panel button.post { display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 10px; flex: 0 0 auto; width: 100%; min-width: 0; text-align: left; font-size: 13px;
+    padding: 8px 10px; white-space: normal; }
+  .meny .mobil-fler-panel a.post .lang { display: inline; }
+  .meny .mobil-fler-panel a.post .kortnamn { display: none; }
+  .meny .mobil-fler-panel button.post { background: transparent; }
+  .meny .mobil-fler-panel .meny-notis { margin-left: 10px; }
+}
