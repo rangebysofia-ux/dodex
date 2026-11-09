@@ -19,6 +19,7 @@ const STANDARD = [
   { id: "vb", namn: "Vårdbiträde", kort: "VB", farg: "#7a6a55" },
   { id: "ssk", namn: "Sjuksköterska", kort: "SSK", farg: "#3f6bb0" },
   { id: "del", namn: "Läkemedelsdelegering", kort: "DEL", farg: "#c0473f" },
+  { id: "insulin", namn: "Insulindelegering", kort: "INS", farg: "#b5487e" },  // användarens önskemål 2026-11-09
   { id: "korkort", namn: "Körkort", kort: "KK", farg: "#b08a2e" },
   { id: "fl", namn: "Förskollärare", kort: "FL", farg: "#9a4fa8" },
   { id: "bsk", namn: "Barnskötare", kort: "BSK", farg: "#2b8aa0" },

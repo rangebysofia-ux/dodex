@@ -119,9 +119,9 @@ K.hantera(i2, null, { dataset: { kp: "A1" }, value: "ssk", checked: false });
 K.hantera(i2, null, { dataset: { kkBort: "0" } });
 r.tom = i2;
 // organisationens lista
-let l = K.kopia(); r.antal = l.length; l = K.lagg(l, "Insulin delegering"); r.ny = l.at(-1);
-try { K.lagg(l, "insulin delegering"); } catch (e) { r.dubblett = e.message; }
-r.kort = K.andra(l, "insulin-delegering", "kort", "ins").at(-1).kort;
+let l = K.kopia(); r.antal = l.length; r.insulin = l.find(k => k.id === "insulin"); l = K.lagg(l, "Insulin för diabetes"); r.ny = l.at(-1);
+try { K.lagg(l, "insulindelegering"); } catch (e) { r.dubblett = e.message; }
+r.kort = K.andra(l, "insulin-for-diabetes", "kort", "ifd2").at(-1).kort;
 // efter schemat: utbildningsförslag och kort
 const res = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
 r.utb = K.utbildning(res, require("./tests/fall/kompetens_brist.json"));
@@ -136,8 +136,9 @@ process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "data" / "kompetens
     assert ut["i2"]["kompetenskrav"][0]["kompetens"] == "ssk"
     assert ut["i2"]["kompetenskrav"][0]["behov"] == {"vardag": {"kvall": 1}, "helg": {"kvall": 1, "natt": 2}}
     assert "kompetenser" not in ut["tom"] and "kompetenskrav" not in ut["tom"]
-    assert ut["antal"] == 7 and ut["ny"]["id"] == "insulin-delegering" and ut["ny"]["kort"] == "ID"
-    assert "redan" in ut["dubblett"] and ut["kort"] == "INS"
+    assert ut["antal"] == 8 and ut["ny"]["id"] == "insulin-for-diabetes" and ut["ny"]["kort"] == "IFD"
+    assert ut["insulin"] == {"id": "insulin", "namn": "Insulindelegering", "kort": "INS", "farg": "#b5487e"}
+    assert "redan" in ut["dubblett"] and ut["kort"] == "IFD2"
     assert ut["utb"][0]["kompetens"] == "del" and ut["utb"][0]["forslag"]
     assert "Förslag på utbildning" in ut["kortHtml"] and "Läkemedelsdelegering" in ut["kortHtml"]
     assert ">DEL<" in ut["marke"]
