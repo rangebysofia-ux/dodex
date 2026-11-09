@@ -9,8 +9,8 @@ def grundschema(veckor, placerade):
     rader = {}
     for person, poster in placerade.items():
         rad = [None] * (7 * veckor)
-        for dag, start, slut, del in poster:
-            rad[dag] = {"start": start, "slut": slut, "dygnsdel": del, "rast": 30}
+        for dag, start, slut, dygnsdel in poster:
+            rad[dag] = {"start": start, "slut": slut, "dygnsdel": dygnsdel, "rast": 30}
         rader[person] = rad
     return {"resultat": {"status": "OK", "veckor": veckor, "schema": rader}}
 
