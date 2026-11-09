@@ -57,3 +57,21 @@ def test_modellen_godtar_regelverket():
 def test_lattversionen_har_regelverken():
     s = (ROT / "light" / "schema-light.html").read_text(encoding="utf-8")
     assert "const RV = (" in s and "RV.kort(" in s
+
+
+@nod
+def test_bilaga_j_bara_for_lss_enheter():
+    ut = kor(r"""
+const RV = require("./schemawebb/statisk/regelverk.js"), ORG = require("./schemawebb/statisk/organisation.js");
+const n = ORG.kopia().concat([{ id: "gb", namn: "Gruppbostäder", forelder: "lss" }, { id: "fs", namn: "Funktionsstöd", forelder: null }]);
+const ind = JSON.parse(JSON.stringify(require("./tests/fall/six_week_basic.json")));
+const val = h => (h.match(/<option value="([^"]+)"/g) || []).map(x => x.slice(15, -1));
+const r = { lss: ["lss", "gb", "fs", "sabo", "forskola", null].map(id => ORG.arLss(n, id)) };
+r.ja = val(RV.kort(ind, null, { lss: true })); r.nej = val(RV.kort(ind, "bilaga-j", { lss: false }));
+r.nejText = RV.kort(ind, "bilaga-j", { lss: false });
+RV.tillampa(ind, "bilaga-j"); r.redan = RV.kort(ind, null, { lss: false });
+process.stdout.write(JSON.stringify(r));""")
+    assert ut["lss"] == [True, True, True, False, False, False]  # under LSS, eller en grupp som heter funktionsstöd
+    assert "bilaga-j" in ut["ja"] and "bilaga-j" not in ut["nej"]
+    assert "Använd funktionsstöd" not in ut["nejText"] and "kan väljas för enheter som ligger under LSS" in ut["nejText"]
+    assert "Enheten ligger inte under LSS" in ut["redan"]  # redan valt: syns som varning, tas inte bort tyst

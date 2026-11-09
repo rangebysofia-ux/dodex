@@ -47,6 +47,9 @@ const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || nu
 const finns = (noder, id) => noder.some(x => x.id === id);
 
 // Gruppen och alla grupper ovanför, till exempel för att öppna dem när en enhet har lagts till där.
+// Ligger enheten under LSS eller funktionsstöd? Bilaga J (jour) erbjuds bara där (användarens beslut 2026-11-09).
+const LSS_NAMN = /\blss\b|funktionsst/i;
+function arLss(noder, id) { return !!id && vag(noder, id).some(x => x === "lss" || LSS_NAMN.test(((noder.find(n => n.id === x) || {}).namn) || "")); }
 function vag(noder, id) { const ut = []; let x = noder.find(n => n.id === id), varv = 0; while (x && varv++ < 20) { ut.push(x.id); x = noder.find(n => n.id === x.forelder); } return ut; }
 
 // "Äldreomsorg › SÄBO"
@@ -328,6 +331,6 @@ function redigera(noder) {
     <form class="chips" id="org-ny" style="margin-top:10px"><input id="org-ny-namn" placeholder="Ny verksamhet, till exempel Socialpsykiatri" style="max-width:320px"><button type="submit" class="liten">+ Lägg till överst</button></form>`;
 }
 
-return { vag, importKort, bladUr, importPlan, importForhand, importVal, importera, aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
+return { vag, arLss, importKort, bladUr, importPlan, importForhand, importVal, importera, aktAlternativ, aktTyp, aktFalt, aktNamnEfterTyp, KATEGORI, AKT_STANDARD, aktKopia, aktLagg, aktAndra, aktTaBort, aktFarg, stod, grupp, STANDARD, PALETT, farg, sattFarg, ikon, enhetsfarg, giltigFarg, kopia, barn, sokvag, lagg, bytNamn, taBort, alternativ, trad, redigera, finns };
 })();
 if (typeof module !== "undefined") module.exports = ORG;

@@ -32,7 +32,7 @@ const LISTA = [
     kort: "Dag, kväll och varannan helg, med jourpass över dygnet.",
     punkter: ["Heltid 37 timmar per vecka (lokal standard), som dag/kväll/helg.", "Jourpass över dygnet, till exempel 15:00–08:00: arbete till midnatt, jour 00:00–06:00 och arbete till 08:00. Ett pass som belastar två arbetsdagar.", "Hälften av jourtiden räknas som arbetstid (verksamhetens val). Jourpasset räknas in i kvällens och morgonens bemanning.", "Högst 20 timmar, och vilan efteråt minst lika lång som passet (AB 25 § 13 mom. 5). Dygnsvilan 11 h gäller allt annat.", "Bilaga J gäller ersättning och villkor för jouren. Arbetsgivaren ska begära MBL-förhandling innan arbete och jour läggs i följd."],
     kalla: "AB 25 § 13 mom. 5 (undantag från dygnsvila vid kombination av arbete och jour, högst 20 timmar sammanlagt, efterföljande vila minst lika lång) och Bilaga J (särskilda bestämmelser för viss jourtjänstgörande personal, lydelse 2024-04-01).",
-    heltid: 2220, regler: {}, avvikelser: [], jour: true,
+    heltid: 2220, regler: {}, avvikelser: [], jour: true, bara_lss: true,
   },
 ];
 const hitta = id => LISTA.find(x => x.id === id) || null;
@@ -147,13 +147,16 @@ function jourAndra(ind, el) {
 }
 
 // Kortet i Regler: vilket regelverk som gäller, och val av ett annat.
-function kort(ind, valt) {
-  const nu = hitta(ind.regelverk), v = hitta(valt) || nu || LISTA[0];
+// lss: ligger enheten under LSS/funktionsstöd i organisationen? Annars visas inte Bilaga J som val.
+function kort(ind, valt, { lss = true } = {}) {
+  const nu = hitta(ind.regelverk), tillatet = x => x && (!x.bara_lss || lss || x === nu);
+  const lista = LISTA.filter(tillatet), v = (tillatet(hitta(valt)) && hitta(valt)) || nu || LISTA[0];
   const A = valt && valt !== ind.regelverk ? andringar(ind, valt) : [];
   const V = varningar(ind);
   return `<div class="regelverk-kort">
     <div class="rubrikrad"><div><b>Regelverk:</b> ${nu ? esc(nu.namn) : "inget valt (standardregler)"}</div></div>
-    <div class="falt" style="margin-top:8px"><div><label for="rv-val">Välj regelverk</label><select id="rv-val" data-rv="1">${LISTA.map(x => `<option value="${x.id}"${x.id === v.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div></div>
+    <div class="falt" style="margin-top:8px"><div><label for="rv-val">Välj regelverk</label><select id="rv-val" data-rv="1">${lista.map(x => `<option value="${x.id}"${x.id === v.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div></div>
+    ${lss ? "" : nu && nu.bara_lss ? `<div class="banner varn"><div><strong>Enheten ligger inte under LSS</strong><span class="liten">Bilaga J och jourpass gäller funktionsstöd. Flytta enheten till LSS i Organisation, eller välj ett annat regelverk.</span></div></div>` : `<p class="dampad liten" style="margin:6px 0 0">Funktionsstöd med Bilaga J (jourpass) kan väljas för enheter som ligger under LSS i Organisation.</p>`}
     <p class="liten" style="margin:8px 0 4px">${esc(v.kort)}</p>
     <ul class="punkter liten">${v.punkter.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
     <p class="dampad liten" style="margin:4px 0">${esc(v.kalla)}</p>

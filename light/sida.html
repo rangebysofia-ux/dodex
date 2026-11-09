@@ -744,7 +744,7 @@ function ritaFlik() {
     const r = i.regler || {};
     const last = (namn, niva, varde) => `<div class="regel"><div>${namn}<br><span class="niva skarp">${niva}</span> <span class="niva">hård</span></div><span class="lat">${varde}</span></div>`;
     const tal = (k, namn, niva, std, steg) => `<div class="regel"><div>${namn}<br><span class="niva">${niva}</span></div><input type="number" step="${steg}" data-r="${k}" value="${r[k] ?? std}"></div>`;
-    el.innerHTML = `${RV.kort(i, st.rvVal)}<p class="dampad liten" style="margin-top:12px">Avtal, lag och varannan helg är låsta. Övriga lokala regler och principer går att justera.</p>
+    el.innerHTML = `${RV.kort(i, st.rvVal, { lss: ORG.arLss(st.org || ORG.kopia(), st.enhet && st.enhet.org) })}<p class="dampad liten" style="margin-top:12px">Avtal, lag och varannan helg är låsta. Övriga lokala regler och principer går att justera.</p>
       ${last("Dygnsvila", "avtal", "11 h")}${last("Veckovila", "avtal", "36 h")}${last("Rast efter högst", "lag", "5 h arbete")}
       <div class="regel"><div>Varannan helg<br><span class="niva">lokal regel</span> <span class="niva">hård</span></div><span class="lat">låst</span></div>
       <div class="regel"><div>Ingen fredagskväll före ledig helg<br><span class="niva">lokal regel</span></div><input type="checkbox" data-r="ingen_fredagskvall_fore_ledig_helg" data-t="check"${r.ingen_fredagskvall_fore_ledig_helg === false ? "" : " checked"} aria-label="På"></div>

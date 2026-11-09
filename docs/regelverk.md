@@ -15,6 +15,7 @@ Användarens beslut 2026-11-09 (beslut 36 i `regelhierarki.md`). En enhet kan f�
 - Avtal och lag ändras aldrig: dygnsvila, veckovila och rast gäller i alla tre.
 - 40-timmarsveckan har ingen helgtjänstgöring. Varannan helg låses då upp för enheten (`avvikelser: ["helgfrekvens"]`) och syns som en avvikelse, på samma sätt som när den låses upp för hand.
 - Byter man regelverk återställs först det förra regelverkets värden. Det som har låsts upp för hand ligger kvar.
+- **Funktionsstöd med Bilaga J** kan bara väljas för enheter som ligger under LSS i Organisation, eller under en grupp vars namn innehåller LSS eller funktionsstöd (användarens beslut 2026-11-09). Andra enheter ser en rad om det i stället för valet. Har en enhet redan Bilaga J och flyttas bort från LSS tas regelverket inte bort tyst; det syns en varning.
 - 40-timmarsveckan ändrar också medarbetarna (utom nattpersonal) till bara dagpass och sätter helgbehovet till 0. Behov på kväll eller natt ändras inte. Det visas i stället som en varning: *Stämmer inte med regelverket*.
 
 ## Jour (Bilaga J)

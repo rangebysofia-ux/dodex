@@ -1,6 +1,6 @@
 # Organisationsstruktur
 
-Enheterna ordnas under verksamheter på startsidan, i webben och i telefonen. Strukturen är bara ordning och rubriker. Den påverkar inte schemaläggningen. Användarens önskemål 2026-11-08.
+Enheterna ordnas under verksamheter på startsidan, i webben och i telefonen. Strukturen är bara ordning och rubriker. Den påverkar inte schemaläggningen. Användarens önskemål 2026-11-08. Ett undantag i inställningarna: regelverket Funktionsstöd med Bilaga J (jourpass) erbjuds bara för enheter under LSS (`ORG.arLss`, se `docs/regelverk.md`).
 
 ## Startstruktur
 
