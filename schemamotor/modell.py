@@ -299,6 +299,8 @@ class Indata(BaseModel):
     kompetenskrav: list[Kompetenskrav] = Field(default_factory=list)
     bemanningsbalans: Optional[Bemanningsbalans] = None
     losare: dict = Field(default_factory=dict)
+    # valt regelverk (docs/regelverk.md); värdena står i regler, heltid och avvikelser, namnet visas för användaren
+    regelverk: Optional[Literal["dag-kvall-helg", "40-timmar", "bilaga-j"]] = None
     # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
     avvikelser: list[str] = Field(default_factory=list)
     budget_timmar_vecka: Optional[float] = Field(default=None, gt=0)

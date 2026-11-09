@@ -80,6 +80,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 35. **Starttider för dagpassen och förskolornas tider.** När behovet läggs in kan man ange hur många av dagpassen som börjar vid varje tid (till exempel 1 kl. 06, 1 kl. 07 och 2 kl. 08), så att hela dagen täcks. Tiderna blir tillåtna starter (som beslut 24). Kravet är mjukt och på samma nivå som behovet: det som saknas blir startvakanser. Förskolornas grundinställning är öppet 06:00–18:00 (`morgon_start` 06:00, `kvall_slut` 18:00). Se `docs/starttider.md`. Beslutat av användaren 2026-11-09.
 
+36. **Regelverk för en enhet.** Tre färdiga regelverk väljs per enhet under Regler: *Dag, kväll och helgrotation* (heltid 37 h, användarens val), *40-timmarsvecka, dagtid mån–fre* (heltid 40 h per helgfri vecka enligt AB 25 § 13 mom. 2, bara dagpass, inga helger, 5 pass per vecka; varannan helg upplåst som synlig avvikelse) och *Funktionsstöd med Bilaga J* (som dag/kväll/helg, och arbetspass och jour i följd enligt AB 25 § 13 mom. 5: högst 20 timmar sammanlagt och minst lika lång vila efteråt). Avtal och lag ändras aldrig. Se `docs/regelverk.md`. Beslutat av användaren 2026-11-09.
+
 Öppna frågor, alltså inte beslutade:
 - Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.

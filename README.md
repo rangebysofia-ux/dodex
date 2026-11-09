@@ -90,6 +90,7 @@ Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad
 - `docs/avtal-regler.md` – vila, rast och dygnsbryt
 - `docs/indata-schema.md` – format för indata och schema
 - `docs/team.md` – team i en arbetsgrupp: eget behov per team, hemteam och lån mellan team
+- `docs/regelverk.md` – regelverk per enhet: dag/kväll/helg, 40-timmarsvecka och funktionsstöd med Bilaga J
 - `docs/starttider.md` – olika starttider för dagpassen, och förskolornas tider 06:00–18:00
 - `docs/kompetens.md` – kompetensbaserade behov: kompetenser, krav per pass, kompetensbalans och utbildningsförslag
 - `docs/organisation.md` – organisationsstrukturen: enheter under Äldreomsorg (SÄBO, ORDBO), LSS, Förskola och egna grupper

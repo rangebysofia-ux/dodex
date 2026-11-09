@@ -396,6 +396,10 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 /* starttider för dagpassen (guide.js) */
 .starttid-rad { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
 .starttid-rad input[type=time] { width: 120px; }
+
+/* regelverk (regelverk.js) */
+.regelverk-kort { border: 1px solid var(--linje); border-radius: 14px; padding: 12px 14px; background: var(--yta2, transparent); }
+.regelverk-kort select { width: auto; min-width: 260px; }
 </style>
 
 <div class="sida" id="sida"><p class="tom">Laddar …</p></div>
@@ -423,6 +427,7 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 <script>const GRUND = __GRUND__;</script>
 <script>__TEAM__</script>
 <script>__KOMPETENS__</script>
+<script>__REGELVERK__</script>
 <script>__ANALYS__</script>
 <script type="application/json" id="exempel">__EXEMPEL__</script>
 <script>
@@ -725,7 +730,7 @@ function ritaFlik() {
     const r = i.regler || {};
     const last = (namn, niva, varde) => `<div class="regel"><div>${namn}<br><span class="niva skarp">${niva}</span> <span class="niva">hård</span></div><span class="lat">${varde}</span></div>`;
     const tal = (k, namn, niva, std, steg) => `<div class="regel"><div>${namn}<br><span class="niva">${niva}</span></div><input type="number" step="${steg}" data-r="${k}" value="${r[k] ?? std}"></div>`;
-    el.innerHTML = `<p class="dampad liten">Avtal, lag och varannan helg är låsta. Övriga lokala regler och principer går att justera.</p>
+    el.innerHTML = `${RV.kort(i, st.rvVal)}<p class="dampad liten" style="margin-top:12px">Avtal, lag och varannan helg är låsta. Övriga lokala regler och principer går att justera.</p>
       ${last("Dygnsvila", "avtal", "11 h")}${last("Veckovila", "avtal", "36 h")}${last("Rast efter högst", "lag", "5 h arbete")}
       <div class="regel"><div>Varannan helg<br><span class="niva">lokal regel</span> <span class="niva">hård</span></div><span class="lat">låst</span></div>
       <div class="regel"><div>Ingen fredagskväll före ledig helg<br><span class="niva">lokal regel</span></div><input type="checkbox" data-r="ingen_fredagskvall_fore_ledig_helg" data-t="check"${r.ingen_fredagskvall_fore_ledig_helg === false ? "" : " checked"} aria-label="På"></div>
@@ -1269,6 +1274,18 @@ document.addEventListener("change", e => {
   const ind = (st.enhet && st.enhet.indata); if (!ind) return;
   const l = GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" });
   if (l) { GUIDE.sattStarttider(ind, l); andrad(true); }
+});
+// regelverk (regelverk.js)
+document.addEventListener("change", e => {
+  if (!e.target.dataset || !e.target.dataset.rv || !st.enhet) return;
+  st.rvVal = e.target.value; ritaFlik();
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-rv-anvand]"); if (!el || !st.enhet) return;
+  const R = RV.hitta(el.dataset.rvAnvand), i = st.enhet.indata;
+  if (!confirm(`Använd ${R.namn}?\n\n${RV.andringar(i, R.id).join("\n") || "Inga värden ändras."}`)) return;
+  RV.tillampa(i, R.id); st.rvVal = null;
+  meddela(`${R.namn} gäller nu för enheten.`); andrad(true);
 });
 // fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {

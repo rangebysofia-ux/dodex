@@ -887,6 +887,7 @@ function ritaInstallningar() {
   }
   vy().innerHTML = `
     <section class="kort"><h1>Inställningar</h1>${flikrad}
+      <div style="margin-top:12px">${RV.kort(st.indata, st.rvVal)}</div>
       <p class="dampad" style="margin:12px 0 0">Alla regler går att ändra. Regler från avtal, lag och varannan helg är låsta: lås upp dem bara om ni har ett lokalt avtal eller beslut, och avvikelsen syns då på alla scheman. Behovet är alltid mjukt: hellre en vakans än ett regelbrott.</p></section>
     <div id="regler" class="tva">
       ${grupper.map(g => `<section class="kort"><h2>${g}</h2><div class="regelgrupp">${REGLER.filter(x => x.grupp === g).map(rad).join("")}
@@ -1189,6 +1190,19 @@ document.addEventListener("change", e => {
   const l = GUIDE.starttiderAndra(((ind.starttider || {}).morgon) || [], el, { start: (ind.regler || {}).morgon_start || "07:00" });
   if (l) { GUIDE.sattStarttider(ind, l); markeraAndrad(true); }
 });
+// ---------------------------------------------------------------- regelverk (regelverk.js)
+document.addEventListener("change", e => {
+  if (!e.target.dataset || !e.target.dataset.rv || !st.indata) return;
+  st.rvVal = e.target.value; ritaInstallningar();
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-rv-anvand]"); if (!el || !st.indata) return;
+  const R = RV.hitta(el.dataset.rvAnvand);
+  if (!confirm(`Använd ${R.namn}?\n\n${RV.andringar(st.indata, R.id).join("\n") || "Inga värden ändras."}`)) return;
+  RV.tillampa(st.indata, R.id); st.rvVal = null;
+  meddela(`${R.namn} gäller nu för enheten.`); markeraAndrad(true); ritaInstallningar();
+});
+
 // ---------------------------------------------------------------- fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {
   const el = e.target; if (!st.indata || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;
