@@ -658,3 +658,8 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
   .meny .mobil-fler-panel button.post { background: transparent; }
   .meny .mobil-fler-panel .meny-notis { margin-left: 10px; }
 }
+
+/* Säkerställ att innehållet i stängda details-grupper verkligen är dolt,
+   även när egna grid/flex-regler gäller i webbläsarens CSS. */
+.meny .meny-grupp:not([open]) > .meny-grupp-innehall { display: none; }
+.meny .mobil-mer:not([open]) > .mobil-fler-panel { display: none; }
