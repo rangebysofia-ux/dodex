@@ -4715,7 +4715,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const STANDARD = [
   { id: "aldreomsorg", namn: "Äldreomsorg", forelder: null, farg: "#b08a2e" },
   { id: "sabo", namn: "SÄBO", forelder: "aldreomsorg", farg: "#c46a2b" },
-  { id: "hemtjanst", namn: "Hemtjänst", forelder: "aldreomsorg", farg: "#2f8a6f" },
+  { id: "hemtjanst", namn: "ORDBO", forelder: "aldreomsorg", farg: "#2f8a6f" },  // ordinärt boende (hemtjänst), användarens namn 2026-11-09
   { id: "lss", namn: "LSS", forelder: null, farg: "#3f6bb0" },
   { id: "forskola", namn: "Förskola", forelder: null, farg: "#9a4fa8" },
 ];
@@ -4745,7 +4745,9 @@ const enhetsfarg = (noder, e) => (e && giltigFarg(e.farg) ? e.farg : farg(noder,
 // Husmärket för en enhet. Andra argumentet är enheten ({org, farg}) eller bara verksamhetens id.
 const ikon = (noder, e, hus = "🏠") => `<span class="enhet-ikon" style="--ef:${typeof e === "object" && e ? enhetsfarg(noder, e) : farg(noder, e)}" aria-hidden="true">${hus}</span>`;
 
-const kopia = n => (n && n.length ? n : STANDARD).map(x => ({ ...x }));
+// En sparad struktur där startgruppen fortfarande heter Hemtjänst får det nya startnamnet ORDBO (användarens beslut
+// 2026-11-09). En grupp som användaren själv har döpt om lämnas orörd.
+const kopia = n => (n && n.length ? n : STANDARD).map(x => (x.id === "hemtjanst" && x.namn === "Hemtjänst" ? { ...x, namn: "ORDBO" } : { ...x }));
 const barn = (noder, id) => noder.filter(x => (x.forelder || null) === (id || null));
 const finns = (noder, id) => noder.some(x => x.id === id);
 

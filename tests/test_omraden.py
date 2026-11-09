@@ -100,7 +100,7 @@ process.stdout.write(JSON.stringify(r));""")
     assert ut["egen"] == "#123456" and ut["palett"].startswith("#") and ut["okand"] == "#8b8f8a"
     assert "--tf:#123456" in ut["hem"] and "→" in ut["lan"]
     assert ut["ny"] == "hemtjanst-centrum" and ut["samma"]
-    assert ut["sokvag"] == "Äldreomsorg › Hemtjänst › Hemtjänst Centrum"
+    assert ut["sokvag"] == "Äldreomsorg › ORDBO › Hemtjänst Centrum"
     assert ut["enhet"] == "#2f8a6f"  # ärver Hemtjänsts färg
     assert ut["egenEnhet"] == "#abcdef"
 

@@ -65,7 +65,7 @@ ut.trad = h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 process.stdout.write(JSON.stringify(ut));"""
     ut = json.loads(subprocess.run(["node", "-e", kod, str(ROT / "schemawebb" / "statisk" / "organisation.js")],
                                    capture_output=True, text=True, timeout=60, check=True).stdout)
-    assert ut["start"] == ["Äldreomsorg", "SÄBO", "Hemtjänst", "LSS", "Förskola"]
+    assert ut["start"] == ["Äldreomsorg", "SÄBO", "ORDBO", "LSS", "Förskola"]
     assert ut["sokvag"] == "Äldreomsorg › SÄBO › Område norr"
     assert "redan" in ut["dubblett"] and "undergrupperna" in ut["undergrupp"]
     assert ut["flytta"] == "sabo"

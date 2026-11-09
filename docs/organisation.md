@@ -7,12 +7,14 @@ Enheterna ordnas under verksamheter på startsidan, i webben och i telefonen. St
 ```
 Äldreomsorg
   SÄBO
-  Hemtjänst
+  ORDBO        (ordinärt boende, hemtjänst)
 LSS
 Förskola
 ```
 
-Strukturen kan ändras fritt under **Ändra organisation**, med valfritt antal nivåer:
+Gruppen för hemtjänst heter ORDBO (användarens beslut 2026-11-09). En sparad struktur där den fortfarande heter Hemtjänst får det nya namnet när den läses in, om användaren inte har döpt om den själv.
+
+Strukturen kan ändras fritt på sidan **Organisation**, med valfritt antal nivåer:
 - *Byt namn* på en grupp.
 - *+ Undergrupp*, till exempel ett område under SÄBO.
 - *Ta bort* en grupp. Det går bara när gruppen saknar undergrupper, och dess enheter flyttas upp ett steg.
@@ -34,7 +36,7 @@ DODEX är byggt för verksamhet dygnet runt. För förskolan anger man bara dagb
 
 Varje verksamhet och grupp har en färg, så att man ser direkt vilken sorts enhet det är. Enheterna under en grupp får gruppens färg: huset 🏠 framför enhetens namn, en kant på enhetskortet och en etikett med verksamheten (till exempel Äldreomsorg › SÄBO) överst på enhetens sida.
 
-- Startfärgerna: Äldreomsorg guld, SÄBO orange, Hemtjänst grön, LSS blå och Förskola lila.
+- Startfärgerna: Äldreomsorg guld, SÄBO orange, ORDBO grön, LSS blå och Förskola lila.
 - En undergrupp utan egen färg ärver färgen från närmaste grupp ovanför.
 - Färgen ändras under **Ändra struktur**, med den runda färgrutan framför gruppens namn.
 - En enhet kan också ha en egen färg (väljs vid enheten i listan, ↺ går tillbaka till verksamhetens). Områden som skapas i guiden får var sin färg.
