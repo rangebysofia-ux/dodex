@@ -680,6 +680,9 @@ function ritaKontroll() {
     ${st.enhet.indata.personal.some(p => p.extra_helgpass) ? `<p class="liten" style="margin:8px 0 0;color:var(--varn)">Extra helgpass: ${st.enhet.indata.personal.filter(p => p.extra_helgpass).map(p => `${esc(p.id)} (högst ${p.extra_helgpass})`).join(", ")}</p>` : ""}`;
 }
 
+// Förskola: behovet anges som Tidig, Mellan och Sen (guide.js, docs/starttider.md).
+const arForskola = i => !!(i && i.forskolepass) || (!!st.org && !!st.enhet && ORG.vag(st.org, st.enhet.org || "").includes("forskola"));
+
 function ritaFlik() {
   const i = st.enhet.indata, el = $("#flik"); if (!el) return;
   document.querySelectorAll("[data-g=flik]").forEach(b => b.setAttribute("aria-selected", b.dataset.f === st.flik));
@@ -701,16 +704,20 @@ function ritaFlik() {
       `<div class="chips" style="margin-top:10px"><button data-g="ny-person">+ Person</button><button data-g="ny-person" data-natt="1">+ Nattperson</button></div>
       <p class="dampad liten" style="margin-top:8px">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person. Grupp A arbetar helgerna i vecka 1, 3, 5 … Extra helgpass: så många lördagar eller söndagar på lediga helger får personen ta under perioden, ett pass per helg. De ersätter pass på vardagar och används där schemat behöver dem.</p>`;
   } else if (st.flik === "kompetens") {
-    el.innerHTML = KOMP.flik(i, st.kompetenser);
+    el.innerHTML = arForskola(i) ? KOMP.flik(i, KOMP.forskolaLista(st.kompetenser), { forskola: true }) : KOMP.flik(i, st.kompetenser);
   } else if (st.flik === "team") {
     const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
     el.innerHTML = `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Personal). Personalen är gemensam – där ett team har för få lånas personal in från ett annat. Enhetens behov blir summan av teamens.</p>` +
       T.map((t, n) => { const b = TEAM.perDag(t.behov), ant = i.personal.filter(q => q.team === t.id).length;
         return `<div class="formular"><div class="rad"><input type="color" class="org-farg" data-tm="${n}" data-tf="farg" value="${TEAM.farg(T, t.id)}" aria-label="Färg för ${esc(t.namn || t.id)}" title="Färg"><input data-tm="${n}" data-tf="namn" value="${esc(t.namn || "")}" placeholder="Teamets namn" style="font-weight:700;max-width:220px"><span class="dampad liten">${ant} ${ant === 1 ? "medarbetare" : "medarbetare"}</span><button class="liten fara" data-g="ta-bort-team" data-n="${n}">Ta bort</button></div>
-        <div class="rull"><table><thead><tr><th></th>${DL.map(([, x]) => `<th>${x}</th>`).join("")}</tr></thead><tbody>
-        ${[["vardag", "Vardag", 0], ["helg", "Helg", 5]].map(([k, txt, di]) => `<tr><th>${txt}</th>${DL.map(([d]) => `<td><input type="number" min="0" inputmode="numeric" data-tm="${n}" data-tb="${k}.${d}" value="${b[di][d] || ""}" placeholder="0" style="width:64px"></td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`; }).join("") +
+        ${arForskola(i) ? "" : `<div class="rull"><table><thead><tr><th></th>${DL.map(([, x]) => `<th>${x}</th>`).join("")}</tr></thead><tbody>
+        ${[["vardag", "Vardag", 0], ["helg", "Helg", 5]].map(([k, txt, di]) => `<tr><th>${txt}</th>${DL.map(([d]) => `<td><input type="number" min="0" inputmode="numeric" data-tm="${n}" data-tb="${k}.${d}" value="${b[di][d] || ""}" placeholder="0" style="width:64px"></td>`).join("")}</tr>`).join("")}</tbody></table></div>`}</div>`; }).join("") +
       `<p><button data-g="ny-team">+ Team</button></p>` +
-      (T.length ? `<p class="dampad liten">Enhetens behov (summan): ${(() => { const s = TEAM.summaBehov(T); return `vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt)`; })()}. Utan hemteam räknas man som gemensam och kan arbeta i alla team.</p>` : "");
+      (arForskola(i) && T.length ? `<h3>Behov per avdelning</h3>${GUIDE.forskolaHtml(i, { farg: t => TEAM.prick(T, t.id) })}` : "") +
+      (T.length && !arForskola(i) ? `<p class="dampad liten">Enhetens behov (summan): ${(() => { const s = TEAM.summaBehov(T); return `vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt)`; })()}. Utan hemteam räknas man som gemensam och kan arbeta i alla team.</p>` : "");
+  } else if (st.flik === "behov" && arForskola(i)) {
+    el.innerHTML = `<h3>Tidig, Mellan och Sen</h3>${GUIDE.forskolaHtml(i, { farg: t => TEAM.prick(i.team, t.id) })}
+      <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
   } else if (st.flik === "behov" && (i.team || []).length) {
     const s = TEAM.summaBehov(i.team);
     el.innerHTML = `<div class="banner info"><strong>Behovet anges per team</strong><span class="liten">Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under fliken Team.</span></div>
@@ -908,6 +915,15 @@ function ritaKorningar() {
 }
 
 // ------------------------------------------------------------------ ändringar
+// förskolans Tidig, Mellan och Sen (guide.js): ändra direkt, rita om när fältet lämnas
+document.addEventListener("input", ev => {
+  const d = ev.target.dataset;
+  if (st.enhet && d && (d.fsk || d.fskTid) && GUIDE.forskolaAndra(st.enhet.indata, ev.target)) andrad(false);
+});
+document.addEventListener("change", ev => {
+  const d = ev.target.dataset;
+  if (st.enhet && d && (d.fsk || d.fskTid)) ritaFlik();
+});
 document.addEventListener("input", ev => {
   const el = ev.target; if (!st.enhet || !el.closest("#flik")) return;
   const i = st.enhet.indata;
@@ -967,12 +983,13 @@ document.addEventListener("click", async ev => {
       const t = i.team[+el.dataset.n]; if (!confirm(`Ta bort ${t.namn || t.id}? Medarbetarna blir utan hemteam.`)) return;
       i.team.splice(+el.dataset.n, 1); i.personal.forEach(q => { if (q.team === t.id) delete q.team; });
       if (i.team.length) i.behov = TEAM.summaBehov(i.team); else delete i.team;
+      if (i.forskolepass) GUIDE.forskolaTillampa(i);
       andrad(true); return;
     }
     case "ny-person": {
       const natt = el.dataset.natt === "1", ids = new Set(i.personal.map(p => p.id)), pre = natt ? "N" : "P";
       let n = i.personal.length + 1; while (ids.has(pre + n)) n++;
-      i.personal.push(natt ? { id: pre + n, grad: 1, dygnsdelar: ["natt"] } : { id: pre + n, grad: 0.75 }); return andrad(true);
+      i.personal.push(natt ? { id: pre + n, grad: 1, dygnsdelar: ["natt"] } : { id: pre + n, grad: arForskola(i) ? 1 : 0.75 }); return andrad(true);  // förskola: 100 %
     }
     case "ta-bort-person": {
       const p = i.personal[+el.dataset.n];
@@ -1310,11 +1327,11 @@ document.addEventListener("click", e => {
 // fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {
   const el = e.target; if (!st.enhet || st.vy === "organisation" || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;
-  if (KOMP.hantera(st.enhet.indata, st.kompetenser, el)) andrad(true);
+  if (KOMP.hantera(st.enhet.indata, arForskola(st.enhet.indata) ? KOMP.forskolaLista(st.kompetenser) : st.kompetenser, el)) andrad(true);
 });
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-kk-ny],[data-kk-bort]"); if (!el || !st.enhet) return;
-  if (KOMP.hantera(st.enhet.indata, st.kompetenser, el)) andrad(true);
+  if (KOMP.hantera(st.enhet.indata, arForskola(st.enhet.indata) ? KOMP.forskolaLista(st.kompetenser) : st.kompetenser, el)) andrad(true);
 });
 // Enhetens färg: egen eller verksamhetens (organisation.js).
 const fargVal = e => `<label class="org-plats">Färg <input type="color" class="org-farg" data-enhetfarg="${e.id}" value="${ORG.enhetsfarg(st.org, e)}" aria-label="Färg för ${esc(e.namn)}">${e.farg ? `<button class="lank liten" data-enhetfargarv="${e.id}" title="Använd verksamhetens färg">↺ verksamhetens</button>` : ""}</label>`;
@@ -1790,7 +1807,7 @@ function dagTabell(res, dagar, period) {
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
     const vv = !x && vvAlla[p].get(d);
-    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}"${x.jourdel ? ` title="${esc(GRAF.jourTitel(x))}"` : ""} data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}">${x.jourdel ? GRAF.jourInnehall(x) : `<b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>`}${period || x.jourdel ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${GRAF.extraMarke(x)}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}"${x.jourdel ? ` title="${esc(GRAF.jourTitel(x))}"` : ""} data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}">${x.jourdel ? GRAF.jourInnehall(x) : GUIDE.forskolaMarke(ind, x) || `<b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>`}${period || x.jourdel ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${GRAF.extraMarke(x)}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {

@@ -4,7 +4,7 @@ Användarens beslut 2026-11-09 (beslut 34 i `regelhierarki.md`). Utöver hur må
 
 ## Kompetenser
 
-Organisationens lista finns på sidan **Organisation** under *Kompetenser*: namn, kort märkning i schemat (till exempel DEL) och färg. Startlistan är Undersköterska, Vårdbiträde, Sjuksköterska, Läkemedelsdelegering, Insulindelegering, Körkort, Förskollärare och Barnskötare. Den går att ändra, och nya kompetenser kan läggas till.
+Organisationens lista finns på sidan **Organisation** under *Kompetenser*: namn, kort märkning i schemat (till exempel DEL) och färg. Startlistan är Undersköterska, Vårdbiträde, Sjuksköterska, Läkemedelsdelegering, Insulindelegering, Körkort, Förskollärare, Barnskötare och Pedagog. I en förskola visas bara Förskollärare och Pedagog (användarens beslut 2026-11-10, se `docs/starttider.md`). Den går att ändra, och nya kompetenser kan läggas till.
 
 I varje enhet finns fliken **Kompetens**:
 - **Kompetenskrav:** kompetens och minsta antal per pass (dag, kväll, natt) för vardag och helg.

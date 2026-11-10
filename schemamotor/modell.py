@@ -124,6 +124,8 @@ class Team(Strikt):
     namn: str = Field(default="", max_length=80)
     farg: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")  # bara för visning
     behov: dict[str, dict[str, int]] = Field(default_factory=dict)
+    # förskolans pass per vardag (Tidig, Mellan, Sen; docs/starttider.md). Läggs om till behov av gränssnittet.
+    forskolepass: Optional[dict[Literal["tidig", "mellan", "sen"], int]] = None
 
     @field_validator("behov")
     @classmethod
@@ -176,6 +178,14 @@ class Starttid(Strikt):
     """Så många av dagpassen som börjar vid en viss tid (docs/starttider.md)."""
     tid: Klocka
     antal: int = Field(ge=1, le=50)
+
+
+class Forskolepass(Strikt):
+    """Förskolans pass (användarens beslut 2026-11-10, docs/starttider.md): Tidig börjar `tider.tidig`, Mellan börjar
+    `tider.mellan`, Sen slutar `tider.sen`. `behov` = antal per vardag när förskolan inte har avdelningar (team).
+    Gränssnittet lägger om det till behov, starttider och tider; motorn läser bara de vanliga fälten."""
+    tider: dict[Literal["tidig", "mellan", "sen"], Klocka] = Field(default_factory=dict)
+    behov: dict[Literal["tidig", "mellan", "sen"], int] = Field(default_factory=dict)
 
 
 class Starttider(Strikt):
@@ -336,6 +346,7 @@ class Indata(BaseModel):
     jour: Optional[Jour] = None
     # olika starttider för dagpassen: av dagbehovet börjar så många vid varje tid (docs/starttider.md)
     starttider: Optional[Starttider] = None
+    forskolepass: Optional[Forskolepass] = None
     kompetenskrav: list[Kompetenskrav] = Field(default_factory=list)
     bemanningsbalans: Optional[Bemanningsbalans] = None
     losare: dict = Field(default_factory=dict)

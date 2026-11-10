@@ -136,7 +136,7 @@ process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "data" / "kompetens
     assert ut["i2"]["kompetenskrav"][0]["kompetens"] == "ssk"
     assert ut["i2"]["kompetenskrav"][0]["behov"] == {"vardag": {"kvall": 1}, "helg": {"kvall": 1, "natt": 2}}
     assert "kompetenser" not in ut["tom"] and "kompetenskrav" not in ut["tom"]
-    assert ut["antal"] == 8 and ut["ny"]["id"] == "insulin-for-diabetes" and ut["ny"]["kort"] == "IFD"
+    assert ut["antal"] == 9 and ut["ny"]["id"] == "insulin-for-diabetes" and ut["ny"]["kort"] == "IFD"
     assert ut["insulin"] == {"id": "insulin", "namn": "Insulindelegering", "kort": "INS", "farg": "#b5487e"}
     assert "redan" in ut["dubblett"] and ut["kort"] == "IFD2"
     assert ut["utb"][0]["kompetens"] == "del" and ut["utb"][0]["forslag"]

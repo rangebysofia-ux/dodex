@@ -269,6 +269,10 @@ function ritaEnhet() {
   uppdateraSparaknapp();
 }
 
+// Förskola: behovet anges som Tidig, Mellan och Sen (guide.js, docs/starttider.md).
+const arForskola = i => !!(i && i.forskolepass) || (!!st.org && !!st.enhet && ORG.vag(st.org, st.enhet.org || "").includes("forskola"));
+const fskFarg = t => TEAM.prick(st.indata.team, t.id);
+
 function ritaFlik() {
   const i = st.indata;
   switch (st.flik) {
@@ -291,19 +295,22 @@ function ritaFlik() {
       <p style="margin-top:12px" class="chips"><button data-g="ny-person">+ Person</button> <button data-g="ny-person" data-natt="1">+ Nattperson</button></p>
       <p class="dampad liten">Gult betyder undantag: från varannan helg, eller från jämn fördelning mellan morgon och kväll. Helggrupp A arbetar helgerna i vecka 1, 3, 5 … Extra helg: så många lördagar eller söndagar på lediga helger får personen ta under perioden, ett pass per helg. De ersätter pass på vardagar och används där schemat behöver dem.</p>`;
 
-    case "kompetens": return KOMP.flik(i, st.kompetenser);
+    case "kompetens": return arForskola(i) ? KOMP.flik(i, KOMP.forskolaLista(st.kompetenser), { forskola: true }) : KOMP.flik(i, st.kompetenser);
     case "team": {
       const T = i.team || [], DL = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
       return `<p class="dampad liten">Om arbetsgruppen har flera mindre team: varje team har ett eget behov, och varje medarbetare ett hemteam (väljs under Medarbetare). Personalen är gemensam – där ett team har för få lånas personal in från ett team som har fler. Enhetens behov blir summan av teamens. Se docs/team.md.</p>
         ${T.map((t, n) => { const b = TEAM.perDag(t.behov), ant = i.personal.filter(q => q.team === t.id).length;
           return `<div class="kort" style="box-shadow:none;margin:10px 0"><div class="rubrikrad"><input type="color" class="org-farg" data-s="team.${n}.farg" value="${TEAM.farg(T, t.id)}" aria-label="Färg för ${esc(t.namn || t.id)}" title="Färg"><input data-s="team.${n}.namn" value="${esc(t.namn || "")}" placeholder="Teamets namn" style="font-weight:700;max-width:260px" aria-label="Teamets namn">
             <span class="dampad liten">${ant} medarbetare</span><button class="liten fara" data-g="ta-bort-team" data-n="${n}">Ta bort</button></div>
-            <div class="rull"><table class="form"><thead><tr><th></th>${DL.map(([, x]) => `<th>${x}</th>`).join("")}</tr></thead><tbody>
-            ${[["vardag", "Vardag (mån–fre)", 0], ["helg", "Helg (lör–sön)", 5]].map(([k, txt, di]) => `<tr><th>${txt}</th>${DL.map(([d]) => `<td><input type="number" min="0" inputmode="numeric" data-s="team.${n}.behov.${k}.${d}" data-t="heltal" value="${b[di][d] || ""}" placeholder="0" style="width:74px" aria-label="${esc(t.namn)} ${txt} ${d}"></td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`; }).join("")}
+            ${arForskola(i) ? "" : `<div class="rull"><table class="form"><thead><tr><th></th>${DL.map(([, x]) => `<th>${x}</th>`).join("")}</tr></thead><tbody>
+            ${[["vardag", "Vardag (mån–fre)", 0], ["helg", "Helg (lör–sön)", 5]].map(([k, txt, di]) => `<tr><th>${txt}</th>${DL.map(([d]) => `<td><input type="number" min="0" inputmode="numeric" data-s="team.${n}.behov.${k}.${d}" data-t="heltal" value="${b[di][d] || ""}" placeholder="0" style="width:74px" aria-label="${esc(t.namn)} ${txt} ${d}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>`}</div>`; }).join("")}
         <p class="chips"><button data-g="ny-team">+ Team</button></p>
-        ${T.length ? `<p class="dampad liten">Enhetens behov (summan): ${(() => { const s = TEAM.summaBehov(T); return `vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt)`; })()}. Utan hemteam räknas man som gemensam och kan arbeta i alla team.</p>` : ""}`;
+        ${arForskola(i) && T.length ? `<h3>Behov per avdelning</h3>${GUIDE.forskolaHtml(i, { farg: fskFarg })}` : ""}
+        ${T.length && !arForskola(i) ? `<p class="dampad liten">Enhetens behov (summan): ${(() => { const s = TEAM.summaBehov(T); return `vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt)`; })()}. Utan hemteam räknas man som gemensam och kan arbeta i alla team.</p>` : ""}`;
     }
     case "behov": {
+      if (arForskola(i)) return `<h3>Tidig, Mellan och Sen</h3>${GUIDE.forskolaHtml(i, { farg: fskFarg })}
+          <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
       if ((i.team || []).length) {
         const s = TEAM.summaBehov(i.team);
         return `<div class="banner info">${IKON.grupp}<div><strong>Behovet anges per team</strong>Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under Medarbetare → Team.</div></div>
@@ -705,6 +712,16 @@ function tidpunktLista() {
   const tp = []; Object.entries(st.indata.tidpunkter || {}).forEach(([k, l]) => l.forEach(t => tp.push({ k, ...t }))); return tp;
 }
 
+// förskolans Tidig, Mellan och Sen (guide.js): ändra direkt, rita om när fältet lämnas
+document.addEventListener("input", e => {
+  const d = e.target.dataset;
+  if (st.indata && d && (d.fsk || d.fskTid) && GUIDE.forskolaAndra(st.indata, e.target)) markeraAndrad(false);
+});
+document.addEventListener("change", e => {
+  const d = e.target.dataset;
+  if (st.indata && d && (d.fsk || d.fskTid) && $("#flik")) $("#flik").innerHTML = ritaFlik();
+});
+
 document.addEventListener("input", e => {
   const el = e.target;
   if (!st.indata) return;
@@ -1046,12 +1063,13 @@ document.addEventListener("click", async e => {
         if (!confirm(`Ta bort ${t.namn || t.id}? Medarbetarna blir utan hemteam.`)) return;
         i.team.splice(+el.dataset.n, 1); i.personal.forEach(q => { if (q.team === t.id) delete q.team; });
         if (i.team.length) i.behov = TEAM.summaBehov(i.team); else delete i.team;
+        if (i.forskolepass) GUIDE.forskolaTillampa(i);
         markeraAndrad(true); break;
       }
       case "ny-person": {
         const natt = el.dataset.natt === "1", ids = new Set(st.indata.personal.map(p => p.id));
         let n = st.indata.personal.length + 1; const pre = natt ? "N" : "P"; while (ids.has(pre + n)) n++;
-        st.indata.personal.push(natt ? { id: pre + n, grad: 1, dygnsdelar: ["natt"] } : { id: pre + n, grad: 0.75 });
+        st.indata.personal.push(natt ? { id: pre + n, grad: 1, dygnsdelar: ["natt"] } : { id: pre + n, grad: arForskola(st.indata) ? 1 : 0.75 });  // förskola: 100 %
         markeraAndrad(true); break;
       }
       case "ta-bort-person": {
@@ -1211,11 +1229,11 @@ document.addEventListener("click", e => {
 // ---------------------------------------------------------------- fliken Kompetens (kompetens.js)
 document.addEventListener("change", e => {
   const el = e.target; if (!st.indata || !el.dataset || !(el.dataset.kp || el.dataset.kk !== undefined)) return;
-  if (KOMP.hantera(st.indata, st.kompetenser, el)) markeraAndrad(true);
+  if (KOMP.hantera(st.indata, arForskola(st.indata) ? KOMP.forskolaLista(st.kompetenser) : st.kompetenser, el)) markeraAndrad(true);
 });
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-kk-ny],[data-kk-bort]"); if (!el || !st.indata) return;
-  if (KOMP.hantera(st.indata, st.kompetenser, el)) markeraAndrad(true);
+  if (KOMP.hantera(st.indata, arForskola(st.indata) ? KOMP.forskolaLista(st.kompetenser) : st.kompetenser, el)) markeraAndrad(true);
 });
 
 // ---------------------------------------------------------------- sidan Organisation (organisation.js)

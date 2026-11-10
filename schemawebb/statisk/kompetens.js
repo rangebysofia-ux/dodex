@@ -9,7 +9,7 @@
 const KOMP = (() => {
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DAGAR = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
-const DELAR = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]];
+const DELAR = [["morgon", "Dag"], ["kvall", "Kväll"], ["natt", "Natt"]], DELAR_STD = DELAR;
 const giltig = f => typeof f === "string" && /^#[0-9a-f]{6}$/i.test(f);
 const PASS_PER_VECKA = 4.75;
 
@@ -23,9 +23,14 @@ const STANDARD = [
   { id: "korkort", namn: "Körkort", kort: "KK", farg: "#b08a2e" },
   { id: "fl", namn: "Förskollärare", kort: "FL", farg: "#9a4fa8" },
   { id: "bsk", namn: "Barnskötare", kort: "BSK", farg: "#2b8aa0" },
+  { id: "ped", namn: "Pedagog", kort: "PED", farg: "#5b5bb8" },  // förskola, användarens önskemål 2026-11-10
 ];
+// Förskolans kompetenser: bara förskollärare och pedagog, inte läkemedel med mera (användarens beslut 2026-11-10).
+const FORSKOLA = ["fl", "ped"];
 const PALETT = ["#2f8a6f", "#3f6bb0", "#c0473f", "#b08a2e", "#9a4fa8", "#2b8aa0", "#c46a2b", "#5f8a2f", "#b5487e", "#5b5bb8"];
 const kopia = l => (l && l.length ? l : STANDARD).map(x => ({ ...x }));
+// Organisationens lista för en förskola: förskollärare och pedagog (med organisationens namn och färg om de finns).
+const forskolaLista = org => FORSKOLA.map(id => ({ ...(kopia(org).find(k => k.id === id) || STANDARD.find(k => k.id === id)) }));
 
 function nyttId(l, namn) {
   const bas = String(namn || "k").toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "k";
@@ -85,7 +90,7 @@ function nyttKrav(ind, org) {
   const l = ind.kompetenskrav || (ind.kompetenskrav = []);
   const forsta = (ind.kompetenser && ind.kompetenser[0]) || kopia(org).find(k => k.id === "del") || kopia(org)[0];
   let i = l.length + 1; while (l.some(k => k.id === `K${i}`)) i++;
-  l.push({ id: `K${i}`, kompetens: forsta.id, behov: { alla: { kvall: 1 } } });
+  l.push({ id: `K${i}`, kompetens: forsta.id, behov: FORSKOLA.includes(forsta.id) ? { vardag: { morgon: 1 } } : { alla: { kvall: 1 } } });
   synka(ind, org);
 }
 function taBortKrav(ind, org, n) { (ind.kompetenskrav || []).splice(n, 1); synka(ind, org); }
@@ -158,20 +163,22 @@ function balansKort(ind, org) {
 }
 
 // ---------------------------------------------------------------- fliken Kompetens i en enhet
-function flik(ind, org) {
-  const l = [...new Map([...kopia(org), ...(ind.kompetenser || [])].map(k => [k.id, k])).values()];
+// forskola: kraven gäller vardagar, Tidig och Mellan (dag) och Sen (kväll); listan är förskolans (forskolaLista).
+function flik(ind, org, { forskola = false } = {}) {
+  const l = [...new Map([...kopia(org), ...(ind.kompetenser || []).filter(k => !forskola || FORSKOLA.includes(k.id))].map(k => [k.id, k])).values()];
+  const DELAR = forskola ? [["morgon", "Tidig och Mellan"], ["kvall", "Sen"]] : DELAR_STD, DAGTYPER = forskola ? ["vardag"] : ["vardag", "helg"];
   const pers = ind.personal || [], krav = ind.kompetenskrav || [];
   const kravRad = (k, n) => {
     const per = perDag(k.behov);
     return `<tr><td><select data-kk="${n}" data-kf="kompetens" aria-label="Kompetens">${l.map(x => `<option value="${esc(x.id)}"${x.id === k.kompetens ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></td>
-      ${["vardag", "helg"].map(dag => DELAR.map(([d]) => `<td><input type="number" min="0" max="20" inputmode="numeric" data-kk="${n}" data-kf="${dag}.${d}" value="${per[dag === "vardag" ? 0 : 5][d] || ""}" placeholder="0" style="width:56px" aria-label="${dag} ${DELTEXT[d]}"></td>`).join("")).join("")}
+      ${DAGTYPER.map(dag => DELAR.map(([d]) => `<td><input type="number" min="0" max="20" inputmode="numeric" data-kk="${n}" data-kf="${dag}.${d}" value="${per[dag === "vardag" ? 0 : 5][d] || ""}" placeholder="0" style="width:56px" aria-label="${dag} ${DELTEXT[d]}"></td>`).join("")).join("")}
       <td><button class="liten fara" data-kk-bort="${n}" aria-label="Ta bort kravet">×</button></td></tr>`;
   };
   const avvikande = krav.some(k => Object.keys(k.behov || {}).some(x => DAGAR.includes(x)));
   return `<p class="dampad liten">Vilka kompetenser medarbetarna har, och hur många med en kompetens som behövs på passen. Kraven väger direkt efter behovet: motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass för det. Det som inte går syns som kompetensvakanser. Listan med kompetenser ändras på sidan Organisation.</p>
     <h3>Kompetenskrav</h3>
-    ${krav.length ? `<div class="rull"><table class="form komp-krav"><thead><tr><th rowspan="2">Kompetens</th><th colspan="3">Vardag, minst</th><th colspan="3">Helg, minst</th><th rowspan="2"></th></tr>
-      <tr>${["vardag", "helg"].map(() => DELAR.map(([, t]) => `<th>${t}</th>`).join("")).join("")}</tr></thead><tbody>${krav.map(kravRad).join("")}</tbody></table></div>
+    ${krav.length ? `<div class="rull"><table class="form komp-krav"><thead><tr><th rowspan="2">Kompetens</th>${DAGTYPER.map(d => `<th colspan="${DELAR.length}">${d === "vardag" ? "Vardag" : "Helg"}, minst</th>`).join("")}<th rowspan="2"></th></tr>
+      <tr>${DAGTYPER.map(() => DELAR.map(([, t]) => `<th>${t}</th>`).join("")).join("")}</tr></thead><tbody>${krav.map(kravRad).join("")}</tbody></table></div>
       ${avvikande ? `<p class="dampad liten">Något krav har egna värden för en enskild veckodag. De ligger kvar; tabellen visar vardag och helg.</p>` : ""}` : `<p class="dampad liten">Inga krav än.</p>`}
     <p class="chips"><button data-kk-ny="1">+ Kompetenskrav</button></p>
     ${krav.length ? `<h3>Kompetensbalans</h3>${balansKort(ind, org)}` : ""}
@@ -231,7 +238,7 @@ function tackningKort(res, ind) {
     ${U.length ? `<h3 style="margin-top:12px">Förslag på utbildning</h3><ul class="punkter liten">${U.map(u => `<li><b>${esc(u.namn)}:</b> ${u.forslag.length ? u.forslag.map(f => `${esc(f.pid)} (arbetar ${f.pass} av passen där den saknas)`).join(", ") : "ingen arbetar de passen"}. Med kompetensen hade de kunnat täcka bristen utan att schemat ändras.</li>`).join("")}</ul>` : ""}</section>`;
 }
 
-return { STANDARD, kopia, lagg, andra, taBort, orgKort, enhetsLista, synka, sattPerson, nyttKrav, taBortKrav, andraKrav, perDag, komprimera,
+return { STANDARD, FORSKOLA, forskolaLista, kopia, lagg, andra, taBort, orgKort, enhetsLista, synka, sattPerson, nyttKrav, taBortKrav, andraKrav, perDag, komprimera,
   balans, balansKort, flik, hantera, marke, utbildning, tackningKort, esc };
 })();
 if (typeof module !== "undefined") module.exports = KOMP;

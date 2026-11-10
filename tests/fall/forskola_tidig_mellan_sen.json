@@ -1,0 +1,196 @@
+{
+  "beskrivning": "Förskola med Tidig, Mellan och Sen (användarens beslut 2026-11-10): två avdelningar med en Tidig (börjar 06:00), en Mellan (börjar 08:00) och en Sen (slutar 18:00) var per vardag, inga helger, 40 timmar och 5 pass i veckan, alla på 100 %. Minst en förskollärare på dagen. Indata är som gränssnittet lägger om det (GUIDE.forskolaTillampa). Ska gå att lösa utan vakanser och avtalsbrott.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0,
+    "starttid_saknas": 0,
+    "kompetensvakanser": 0
+  },
+  "enhet": "Test – förskola med Tidig, Mellan och Sen",
+  "veckor": 4,
+  "cykliskt": true,
+  "personal": [
+    {
+      "id": "F1",
+      "grad": 1,
+      "team": "T1",
+      "kompetenser": [
+        "fl"
+      ]
+    },
+    {
+      "id": "F2",
+      "grad": 1,
+      "team": "T2",
+      "kompetenser": [
+        "fl"
+      ]
+    },
+    {
+      "id": "F3",
+      "grad": 1,
+      "team": "T1",
+      "kompetenser": [
+        "fl"
+      ]
+    },
+    {
+      "id": "F4",
+      "grad": 1,
+      "team": "T2",
+      "kompetenser": [
+        "fl"
+      ]
+    },
+    {
+      "id": "F5",
+      "grad": 1,
+      "team": "T1",
+      "kompetenser": [
+        "ped"
+      ]
+    },
+    {
+      "id": "F6",
+      "grad": 1,
+      "team": "T2",
+      "kompetenser": [
+        "ped"
+      ]
+    },
+    {
+      "id": "F7",
+      "grad": 1,
+      "team": "T1",
+      "kompetenser": [
+        "ped"
+      ]
+    },
+    {
+      "id": "F8",
+      "grad": 1,
+      "team": "T2",
+      "kompetenser": [
+        "ped"
+      ]
+    }
+  ],
+  "onskemal": [],
+  "team": [
+    {
+      "id": "T1",
+      "namn": "Avdelning 1",
+      "behov": {
+        "vardag": {
+          "morgon": 2,
+          "kvall": 1,
+          "natt": 0
+        },
+        "helg": {
+          "morgon": 0,
+          "kvall": 0,
+          "natt": 0
+        }
+      },
+      "forskolepass": {
+        "tidig": 1,
+        "mellan": 1,
+        "sen": 1
+      }
+    },
+    {
+      "id": "T2",
+      "namn": "Avdelning 2",
+      "behov": {
+        "vardag": {
+          "morgon": 2,
+          "kvall": 1,
+          "natt": 0
+        },
+        "helg": {
+          "morgon": 0,
+          "kvall": 0,
+          "natt": 0
+        }
+      },
+      "forskolepass": {
+        "tidig": 1,
+        "mellan": 1,
+        "sen": 1
+      }
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  },
+  "forskolepass": {
+    "tider": {
+      "tidig": "06:00",
+      "mellan": "08:00",
+      "sen": "18:00"
+    }
+  },
+  "behov": {
+    "vardag": {
+      "morgon": 4,
+      "kvall": 2,
+      "natt": 0
+    },
+    "helg": {
+      "morgon": 0,
+      "kvall": 0,
+      "natt": 0
+    }
+  },
+  "regler": {
+    "morgon_start": "06:00",
+    "kvall_slut": "18:00",
+    "helgfrekvens": "ingen",
+    "ingen_fredagskvall_fore_ledig_helg": false,
+    "pass_per_vecka": 5,
+    "kant_fran": "09:00"
+  },
+  "avvikelser": [
+    "helgfrekvens"
+  ],
+  "regelverk": "40-timmar",
+  "heltid_minuter_per_vecka": 2400,
+  "starttider": {
+    "morgon": [
+      {
+        "tid": "06:00",
+        "antal": 2
+      },
+      {
+        "tid": "08:00",
+        "antal": 2
+      }
+    ]
+  },
+  "kompetenskrav": [
+    {
+      "id": "K1",
+      "kompetens": "fl",
+      "behov": {
+        "vardag": {
+          "morgon": 1
+        }
+      }
+    }
+  ],
+  "kompetenser": [
+    {
+      "id": "fl",
+      "namn": "Förskollärare",
+      "kort": "FL",
+      "farg": "#9a4fa8"
+    },
+    {
+      "id": "ped",
+      "namn": "Pedagog",
+      "kort": "PED",
+      "farg": "#5b5bb8"
+    }
+  ]
+}

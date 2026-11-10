@@ -49,7 +49,7 @@ function andringar(ind, id) {
   if (!R.regler.pass_per_vecka && (ind.regler || {}).pass_per_vecka) ut.push("4,75 pass per vecka igen.");
   if (R.jour && !ind.jour) ut.push("Jourpass 15:00–08:00 med jour 00:00–06:00, ett per natt. Tider, andel arbetstid och antal ändras under Behov.");
   if (!R.jour && ind.jour) ut.push("Jouren tas bort.");
-  if (R.dagtid) {
+  if (R.dagtid && !ind.forskolepass) {
     const n = (ind.personal || []).filter(p => !(p.dygnsdelar || []).includes("natt") && (p.dygnsdelar || ["morgon", "kvall"]).join() !== "morgon").length;
     if (n) ut.push(`${n} medarbetare får bara dagpass.`);
     const helg = ["helg", "lör", "sön", "alla"].some(k => Object.values((ind.behov || {})[k] || {}).some(v => v > 0));
@@ -72,7 +72,8 @@ function tillampa(ind, id) {
   if (avv.size) ind.avvikelser = [...avv]; else delete ind.avvikelser;
   if (R.heltid === 2220) delete ind.heltid_minuter_per_vecka; else ind.heltid_minuter_per_vecka = R.heltid;
   if (R.dagtid) {
-    (ind.personal || []).forEach(p => { if (!(p.dygnsdelar || []).includes("natt")) p.dygnsdelar = ["morgon"]; });
+    // förskolan (Tidig, Mellan, Sen): Sen är ett pass som slutar vid stängning och ligger kvar (docs/starttider.md)
+    if (!ind.forskolepass) (ind.personal || []).forEach(p => { if (!(p.dygnsdelar || []).includes("natt")) p.dygnsdelar = ["morgon"]; });
     const b = ind.behov || (ind.behov = {});
     for (const k of Object.keys(b)) if (["helg", "lör", "sön"].includes(k)) b[k] = { morgon: 0, kvall: 0, natt: 0 };
     if (b.alla) { b.vardag = b.vardag || { ...b.alla }; delete b.alla; }
@@ -88,7 +89,7 @@ function tillampa(ind, id) {
 function varningar(ind) {
   const R = hitta(ind.regelverk); if (!R) return [];
   const ut = [];
-  if (R.dagtid) {
+  if (R.dagtid && !ind.forskolepass) {
     const kvall = Object.values(ind.behov || {}).some(v => (v.kvall || 0) + (v.natt || 0) > 0);
     if (kvall) ut.push("Behovet har kväll eller natt, men regelverket gäller dagtid måndag–fredag.");
     const ej = (ind.personal || []).filter(p => (p.dygnsdelar || ["morgon", "kvall"]).some(d => d !== "morgon")).map(p => p.id);

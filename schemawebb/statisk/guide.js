@@ -180,6 +180,92 @@ const GUIDE = (() => {
     if (ut.length) ind.starttider = { morgon: ut }; else delete ind.starttider;
   }
 
+  // ---------------------------------------------------------------- förskolans pass: Tidig, Mellan och Sen
+  // Användarens beslut 2026-11-10 (docs/starttider.md): förskolans behov anges som Tidig (dagpass som börjar 06:00),
+  // Mellan (dagpass som börjar 08:00) och Sen (pass som slutar vid stängning 18:00), per avdelning, bara vardagar.
+  // Det läggs om till motorns vanliga fält: dag = Tidig + Mellan med starttider, kväll = Sen. Motorn och reglerna ändras inte.
+  const FSK_STD = { tidig: "06:00", mellan: "08:00", sen: "18:00" };
+  const FSK_DELAR = [["tidig", "Tidig", "börjar"], ["mellan", "Mellan", "börjar"], ["sen", "Sen", "slutar"]];
+  const minuter = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+  const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const fskTider = ind => ({ ...FSK_STD, ...(((ind && ind.forskolepass) || {}).tider || {}) });
+  const fskTal = x => Math.max(0, parseInt(x) || 0);
+  function fskAntal(ind) {
+    const s = { tidig: 0, mellan: 0, sen: 0 }, T = ind.team || [];
+    for (const x of T.length ? T.map(t => t.forskolepass || {}) : [((ind.forskolepass || {}).behov) || {}]) for (const k in s) s[k] += fskTal(x[k]);
+    return s;
+  }
+  // Lägg om Tidig/Mellan/Sen till behov, team, starttider och tider. Passbytet börjar 9 timmar före stängning, så att
+  // Sen kan vara ett helt pass som slutar vid stängning.
+  function forskolaTillampa(ind) {
+    const tider = fskTider(ind);
+    ind.forskolepass = { ...(ind.forskolepass || {}), tider };
+    const rad = x => ({ vardag: { morgon: fskTal(x.tidig) + fskTal(x.mellan), kvall: fskTal(x.sen), natt: 0 }, helg: { morgon: 0, kvall: 0, natt: 0 } });
+    for (const t of ind.team || []) t.behov = rad(t.forskolepass || {});
+    const s = fskAntal(ind);
+    ind.behov = rad(s);
+    const r = ind.regler = { ...(ind.regler || {}) };
+    r.morgon_start = tider.tidig;
+    r.kvall_slut = tider.sen;
+    // Inga helger (användarens val): varannan helg låses upp för förskolan och syns som avvikelse. Sen är inget
+    // kvällspass, så regeln om fredagskväll före ledig helg gäller inte (användarens beslut 2026-11-10). Båda sätts bara
+    // en gång; ändrar användaren dem under Regler ligger ändringen kvar.
+    if (r.helgfrekvens === undefined) {
+      r.helgfrekvens = "ingen";
+      ind.avvikelser = [...new Set([...(ind.avvikelser || []), "helgfrekvens"])];
+    }
+    if (r.ingen_fredagskvall_fore_ledig_helg === undefined) r.ingen_fredagskvall_fore_ledig_helg = false;
+    // Förskolans personal arbetar 40 timmar i veckan: fem arbetsdagar och två lediga (användarens beslut 2026-11-10).
+    // Samma som regelverket 40-timmarsvecka i regelverk.js, men Sen ligger kvar. Sätts bara om inget regelverk är valt.
+    if (!ind.regelverk) {
+      ind.regelverk = "40-timmar";
+      ind.heltid_minuter_per_vecka = 2400;
+      if (r.pass_per_vecka === undefined) r.pass_per_vecka = 5;
+    }
+    const kf = hhmm(Math.max(minuter(tider.tidig) + 60, minuter(tider.sen) - 9 * 60));
+    if (minuter(r.kant_fran || "12:00") > minuter(kf)) r.kant_fran = kf;
+    sattStarttider(ind, minuter(tider.mellan) > minuter(tider.tidig)
+      ? [{ tid: tider.tidig, antal: s.tidig }, { tid: tider.mellan, antal: s.mellan }].filter(x => x.antal)
+      : []);
+    if (s.mellan && minuter(tider.mellan) <= minuter(tider.tidig)) sattStarttider(ind, []);
+    return ind;
+  }
+  // Inmatningen: tiderna och en rad per avdelning (eller en rad för förskolan utan avdelningar).
+  function forskolaHtml(ind, { farg = () => "" } = {}) {
+    const tider = fskTider(ind), T = ind.team || [], s = fskAntal(ind);
+    const falt = (k, v, attr, etikett) => `<td><input type="number" min="0" inputmode="numeric" ${attr} data-fsk="${k}" value="${fskTal(v) || ""}" placeholder="0" style="width:64px" aria-label="${esc(etikett)} ${k}"></td>`;
+    const rader = T.length
+      ? T.map((t, n) => `<tr><th>${farg(t)}${esc(t.namn || t.id)}</th>${FSK_DELAR.map(([k]) => falt(k, (t.forskolepass || {})[k], `data-fsk-team="${n}"`, t.namn || t.id)).join("")}</tr>`).join("")
+      : `<tr><th>Vardag (mån–fre)</th>${FSK_DELAR.map(([k]) => falt(k, (((ind.forskolepass || {}).behov) || {})[k], "", "Vardag")).join("")}</tr>`;
+    return `<p class="dampad liten">Antal pass per vardag. <b>Tidig</b> och <b>Mellan</b> är dagpass som börjar vid tiden, <b>Sen</b> är ett pass som slutar vid stängning.${T.length ? " Förskolans behov är summan av avdelningarna." : ""}</p>
+      <div class="rull"><table class="form fsk"><thead><tr><th>${T.length ? "Avdelning" : ""}</th>${FSK_DELAR.map(([k, namn, ord]) => `<th>${namn}<br><span class="dampad liten">${ord}</span> <input type="time" data-fsk-tid="${k}" value="${esc(tider[k])}" aria-label="${namn} ${ord}" style="width:118px"></th>`).join("")}</tr></thead>
+      <tbody>${rader}${T.length > 1 ? `<tr><th>Hela förskolan</th>${FSK_DELAR.map(([k]) => `<td class="tal"><b>${s[k]}</b></td>`).join("")}</tr>` : ""}</tbody></table></div>
+      <p class="dampad liten">Ingen natt och inga helger${(ind.regler || {}).helgfrekvens === "ingen" ? " (varannan helg är upplåst för förskolan och syns som avvikelse)" : ""}.${(ind.regler || {}).ingen_fredagskvall_fore_ledig_helg === false ? " Sen räknas inte som fredagskväll." : ""} Passbytet för förskolan börjar ${esc((ind.regler || {}).kant_fran || hhmm(minuter(tider.sen) - 9 * 60))}, så att Sen kan vara ett helt pass som slutar ${esc(tider.sen)}.</p>`;
+  }
+  // Ändring i fältet el. Returnerar true om något ändrades.
+  function forskolaAndra(ind, el) {
+    const d = el.dataset;
+    if (d.fskTid) { if (!el.value) return false; ind.forskolepass = { ...(ind.forskolepass || {}), tider: { ...fskTider(ind), [d.fskTid]: el.value } }; }
+    else if (d.fsk) {
+      const v = fskTal(el.value);
+      if (d.fskTeam !== undefined) { const t = (ind.team || [])[+d.fskTeam]; if (!t) return false; t.forskolepass = { ...(t.forskolepass || {}), [d.fsk]: v }; }
+      else { const f = ind.forskolepass = { ...(ind.forskolepass || {}) }; f.behov = { ...(f.behov || {}), [d.fsk]: v }; }
+    } else return false;
+    forskolaTillampa(ind);
+    return true;
+  }
+  // Passets namn i en förskola: Tidig, Mellan eller Sen (för visningen).
+  function forskolaKod(ind, p) {
+    if (!ind || !ind.forskolepass || !p) return null;
+    if (p.dygnsdel === "kvall") return "Sen";
+    if (p.dygnsdel !== "morgon") return null;
+    return minuter(p.start) >= minuter(fskTider(ind).mellan) ? "Mellan" : "Tidig";
+  }
+
+  const FSK_IKON = { Tidig: "🌅", Mellan: "☀️", Sen: "🌇" };
+  // Passets rubrik i schemat för en förskola (🌅T, ☀️M, 🌇S), annars tom sträng.
+  function forskolaMarke(ind, p) { const k = forskolaKod(ind, p); return k ? `<b title="${k}">${FSK_IKON[k]}${k[0]}</b>` : ""; }
+
   // Den tomma enheten som AI-assistenten fyller i tillsammans med användaren.
   function tomIndata(namn) { return { enhet: namn || "Ny enhet", veckor: 4, cykliskt: true, behov: {}, personal: [], onskemal: [] }; }
   const AI_START = "Jag vill lägga in en ny enhet. Fråga mig steg för steg om medarbetare, sysselsättningsgrad, undantag, bemanningsbehov och tider, och föreslå sedan indata som jag kan godkänna.";
@@ -260,7 +346,7 @@ const GUIDE = (() => {
         (k < r.behovTimmar - 0.5 ? tips(`Kontrakterad tid (${sv(k)} h) är mindre än behovet (${sv(r.behovTimmar)} h). Räkna med vakanser.`, true) : ""); break;
       case 6:
         // förskolor: öppet 06:00–18:00 som grundinställning (användarens beslut 2026-11-09)
-        if (g.forskola && !g.forskolaTider) { g.tider.morgon = "06:00"; g.tider.kvall = "18:00"; g.forskolaTider = true; }
+        if (g.forskola && !g.forskolaTider) { g.tider.morgon = "06:00"; g.tider.kvall = "18:00"; if (!g.grad) g.grad = 100; g.forskolaTider = true; }  // förskola: 100 % som standard
         h = fraga("Vilka tider gäller för passen?") +
         `<div class="falt" style="max-width:640px"><div><label for="g-ms">Dagpass börjar</label><input id="g-ms" type="time" data-gt="morgon" value="${g.tider.morgon}"></div>
           <div><label for="g-ks">Kvällspass slutar</label><input id="g-ks" type="time" data-gt="kvall" value="${g.tider.kvall}"></div>
@@ -474,6 +560,6 @@ const GUIDE = (() => {
     return null;
   }
 
-  return { starttiderHtml, starttiderAndra, sattStarttider, HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
+  return { FSK_STD, forskolaTillampa, forskolaHtml, forskolaAndra, forskolaKod, forskolaMarke, starttiderHtml, starttiderAndra, sattStarttider, HUS, OMRADESFARGER, laggOmrade, taBortOmrade, omradesEnheter, ny, nyKlistra, anvandKlistrat, forenklaBehov, html, las, satt, kontrollera, indata, tomIndata, tomtSchema, val, berakna, grader, synka, AI_START, SISTA };
 })();
 if (typeof module !== "undefined") module.exports = GUIDE;
