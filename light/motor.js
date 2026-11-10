@@ -25,6 +25,7 @@ const MOTOR = (() => {
   const WA = 5e4;      // saknad deltagare i en aktivitet (efter vakanser, före block och rättvisa)
   const WH = 500;      // team: pass där ett team inte täcks av sin egen personal (efter nattvilan, före block)
   const WK = 8e4;      // kompetens: saknas någon med en kompetens som krävs (direkt efter vakanser, före aktiviteter)
+  const WE = 300;      // extra helgpass (lör eller sön en ledig helg): används bara när det gör schemat bättre (efter team, före block)
   const JOUR_MAX = 20 * 60; // AB 25 § 13 mom. 5: arbetspass och jour i följd högst 20 timmar sammanlagt
   // jourpassets två halvor (Bilaga J): JA = dag d till midnatt, JB = dag d+1 från midnatt. Räknas som kväll och morgon i behovet.
   const JA = 4, JB = 5;
@@ -122,7 +123,8 @@ const MOTOR = (() => {
       }
       const frek = p.helgfrekvens || r.helgfrekvens;
       const tol = p.tolerans_minuter ?? (natt ? Math.max(r.tolerans_minuter, Math.ceil(nnet / 2)) : r.tolerans_minuter);
-      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []), jourOk: p.jour !== false });
+      pers.push({ id: p.id, natt, typer, P, malMin, L, bas, k, tol, frek, grupp: p.helggrupp === "A" ? 0 : p.helggrupp === "B" ? 1 : null, grad: p.grad, team: p.team || null, komp: new Set(p.kompetenser || []), jourOk: p.jour !== false,
+        extra: Math.max(0, Math.min(4, Math.floor(Number(p.extra_helgpass) || 0))) });
     }
     if (!pers.length) fel.push("Lägg till minst en person.");
 
@@ -332,12 +334,12 @@ const MOTOR = (() => {
   function tillatna(p, d, r, W) {
     const w = Math.floor(d / 7), wd = d % 7;
     if (p.natt) {
-      if (wd >= 5) return p.helg[w] ? [NT] : [];
+      if (wd >= 5) return p.helg[w] || p.extra ? [NT] : [];  // extra helgpass: lör eller sön en ledig helg
       if (wd === 4) return p.helg[w] ? [NT] : [];   // fredagsnatt går in i helgen
       if (wd === 0) return [NT];
       return [NT];
     }
-    if (wd >= 5) return p.helg[w] ? p.typer.slice() : [];
+    if (wd >= 5) return p.helg[w] || p.extra ? p.typer.slice() : [];
     if (wd === 4 && !p.helg[w] && r.ingen_fredagskvall_fore_ledig_helg) return p.typer.filter(t => t !== K);
     return p.typer.slice();
   }
@@ -455,6 +457,15 @@ const MOTOR = (() => {
         if (pr.jour && jourI(d)) continue;
         if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än ${r.dygnsvila_minuter / 60} timmars dygnsvila från ${dt(d)}.`); }
       }
+      // extra helgpass (undantag per person): högst ett pass en ledig helg, och högst p.extra under perioden
+      let ex = 0;
+      for (let w = 0; w < W; w++) {
+        if (p.helg[w]) continue;
+        const n = (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
+        if (n === 2) { hard++; not("HELG", "lokal regel", `Arbetar både lördag och söndag vecka ${w + 1}, en ledig helg.`); }
+        if (n) ex++;
+      }
+      if (ex > p.extra) { hard += ex - p.extra; not("HELG", "lokal regel", `${ex} extra helgpass, högst ${p.extra}.`); }
       // önskemål
       for (const o of per[pi].onsk) {
         for (const d of o.dagar) {
@@ -487,7 +498,7 @@ const MOTOR = (() => {
       // ekonomi: uppskattad OB för personens pass
       let eko = 0;
       if (prof.e) for (let d = 0; d < N; d++) if (x[d]) eko += obKronor(t[x[d]][0], t[x[d]][1], d % 7);
-      return { hard, block, onsk: onskStraff, f, spr, nv, summa: hard * HW + block * WB + onskStraff * WO * prof.o + f * WF * prof.f + spr * ws * prof.s + nv * WNV + eko * prof.e };
+      return { hard, block, onsk: onskStraff, f, spr, nv, ex, summa: hard * HW + block * WB + onskStraff * WO * prof.o + f * WF * prof.f + spr * ws * prof.s + nv * WNV + ex * WE + eko * prof.e };
     }
 
     function bygg() {
@@ -628,6 +639,17 @@ const MOTOR = (() => {
           } else if (x[d] === JA) {
             andrade = [[pi, d, JA], [pi, d1, JB]]; x[d] = K; x[d1] = OFF;
           } else continue;
+        } else if (p.extra && v < 0.2) {  // extra helgpass: flytta ett vardagspass till lör/sön en ledig helg, eller tillbaka
+          const w = Math.floor(rnd() * W); if (p.helg[w]) continue;
+          const d = w * 7 + 5 + (rnd() < 0.5 ? 0 : 1), d2 = Math.floor(rnd() * N);
+          if (d2 % 7 >= 5) continue;
+          if (!x[d] && x[d2] && x[d2] < JA) {
+            const a = per[pi].tillat[d]; if (!a.length) continue;
+            andrade = [[pi, d2, x[d2]], [pi, d, OFF]]; x[d] = a[Math.floor(rnd() * a.length)]; x[d2] = OFF;
+          } else if (x[d] && !x[d2] && x[d] < JA) {
+            const a = per[pi].tillat[d2]; if (!a.length) continue;
+            andrade = [[pi, d, x[d]], [pi, d2, OFF]]; x[d2] = a[Math.floor(rnd() * a.length)]; x[d] = OFF;
+          } else continue;
         } else if (v < 0.5) {  // flytta ett pass mellan två vardagar
           const d1 = Math.floor(rnd() * N), d2 = Math.floor(rnd() * N);
           if (d1 % 7 >= 5 || d2 % 7 >= 5 || !x[d1] || x[d2] || x[d1] >= JA) continue;
@@ -740,6 +762,7 @@ const MOTOR = (() => {
           if (vilaOk(rad, pr, p)) kvar--; else rad[d] = gammal;
         }
       }
+      for (let w = 0; w < W; w++) if (!p.helg[w]) for (const d of [w * 7 + 5, w * 7 + 6]) if (rad[d]) rad[d].extra_helg = true;
       schema[p.id] = rad;
     });
     const golvVak = [];
@@ -784,6 +807,10 @@ const MOTOR = (() => {
       teamKpi.jour_saknas = jourVak.reduce((s, v) => s + v.antal, 0);
       teamKpi.jourpass = Object.values(schema).reduce((s, rad) => s + rad.filter(v => v && v.jourdel === 1).length, 0);
       for (const p of pers) personer[p.id].jour = schema[p.id].filter(v => v && v.jourdel === 1).length;
+    }
+    if (pers.some(p => p.extra)) {
+      teamKpi.extra_helgpass = Object.values(schema).reduce((s, rad) => s + rad.filter(v => v && v.extra_helg).length, 0);
+      for (const p of pers) if (p.extra) { personer[p.id].extra_helg = schema[p.id].filter(v => v && v.extra_helg).length; personer[p.id].extra_helg_max = p.extra; }
     }
     if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
@@ -996,6 +1023,12 @@ const MOTOR = (() => {
     const tillDK = sum(dag, p => p.P), tillN = sum(natt, p => p.P);
     let vakHelg = 0, fredag = 0, helgDK = 0, helgN = 0;
     const helger = [];
+    // extra helgpass (som balans.py): fyller helgdagar som annars blir vakanta, och ersätter vardagspass
+    const ledigAndel = p => 1 - p.helg.filter(Boolean).length / W;
+    const medExtra = dag.filter(p => p.extra && p.frek !== "alla");
+    let extraKvar = sum(medExtra, p => Math.min(p.extra, Math.round(W * ledigAndel(p))));
+    const extraLediga = Math.round(sum(medExtra, ledigAndel));
+    let extraAnvanda = 0;
     for (let w = 0; w < W; w++) {
       const fre = w * 7 + 4, lor = w * 7 + 5, son = w * 7 + 6;
       const bada = dag.filter(p => p.helg[w] && p.typer.length > 1).length;
@@ -1005,11 +1038,17 @@ const MOTOR = (() => {
       const mB = Math.max(b(lor, M), b(son, M)), kB = Math.max(b(lor, K), b(son, K));
       const kF = r.ingen_fredagskvall_fore_ledig_helg ? Math.max(kB, b(fre, K)) : kB;
       const brist = kb => Math.max(0, Math.max(0, kb - kv) + Math.max(0, mB - mo) - bada);
-      const bDK = brist(kF);
-      fredag += bDK - brist(kB);
+      const freDel = brist(kF) - brist(kB);
+      fredag += freDel;
+      // helgdagarna var för sig: den som saknas en helg saknas både lördag och söndag
+      const dagbrist = d => Math.max(0, Math.max(0, b(d, K) - kv) + Math.max(0, b(d, M) - mo) - bada);
+      const helgdagar = dagbrist(lor) + dagbrist(son);
+      const extra = Math.min(helgdagar, extraLediga, extraKvar);
+      extraKvar -= extra; extraAnvanda += extra;
+      const bDK = freDel + helgdagar - extra;
       const nB = Math.max(r.ingen_fredagskvall_fore_ledig_helg ? b(fre, NT) : 0, b(lor, NT), b(son, NT));
       const bN = Math.max(0, nB - nw);
-      vakHelg += bDK + bN; helgDK += 2 * (bada + mo + kv); helgN += 2 * nw;
+      vakHelg += bDK + bN; helgDK += 2 * (bada + mo + kv) + extra; helgN += 2 * nw;
       helger.push({ vecka: w + 1, arbetar: bada + mo + kv, behov: mB + kF, natt: nw, nattbehov: nB, vakanser: bDK + bN });
     }
     const vakVDK = Math.max(0, vardagDK - (tillDK - helgDK)), vakVN = Math.max(0, vardagN - (tillN - helgN));
@@ -1017,8 +1056,9 @@ const MOTOR = (() => {
     if (vakVDK) atgarder.push(`Det saknas cirka ${vakVDK} dag- och kvällspass på vardagar. En person till ger ${String(r.pass_per_vecka * W).replace(".", ",")} pass.`);
     if (vakVN) atgarder.push(`Det saknas cirka ${vakVN} nattpass på vardagar. Utöka nattpersonalen.`);
     if (fredag) atgarder.push(`Fredagskvällarna ger ${fredag} ${fredag === 1 ? "vakant pass" : "vakanta pass"}: den som är ledig helgen arbetar inte fredag kväll, och den som arbetar fredag kväll kan inte ta morgon på lördagen. Sänk behovet fredag kväll eller låt fler arbeta helg.`);
-    if (vakHelg - fredag > 0) atgarder.push(`Helgerna räcker inte till (vecka ${helger.filter(h => h.vakanser).map(h => h.vecka).join(", ")}). Sänk helgbehovet eller utöka personalen.`);
-    return { forvantade_vakanser: vakHelg + vakVDK + vakVN, behovDK, tillDK, behovN, tillN, helger, atgarder };
+    if (vakHelg - fredag > 0) atgarder.push(`Helgerna räcker inte till (vecka ${helger.filter(h => h.vakanser).map(h => h.vecka).join(", ")}). Ge någon extra helgpass, sänk helgbehovet eller utöka personalen.`);
+    if (extraAnvanda) atgarder.push(`Cirka ${extraAnvanda} extra helgpass behövs för att täcka helgerna. De ersätter pass på vardagar.`);
+    return { forvantade_vakanser: vakHelg + vakVDK + vakVN, behovDK, tillDK, behovN, tillN, helger, atgarder, extra_helgpass: extraAnvanda };
   }
 
   return { los, balans, forbered, teamFor, fordelaTeam, kompFor, kompetensTackning, DAGAR };

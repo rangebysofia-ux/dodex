@@ -1,0 +1,84 @@
+{
+  "beskrivning": "Extra helgpass räcker inte: E1 arbetar helgerna vecka 1 och 3 och har ett extra helgpass, men ska som krav arbeta lördag både vecka 2 och 4. Det blir två extra helgpass. Krocken mellan helgreglerna och kravet ska visas.",
+  "forvantat": {
+    "status": "INFEASIBLE",
+    "konflikt_innehaller": [
+      "HELG|E1",
+      "KRAV|O1"
+    ]
+  },
+  "enhet": "Test – extra helgpass",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 3,
+      "kvall": 2
+    }
+  },
+  "personal": [
+    {
+      "id": "E1",
+      "grad": 1.0,
+      "extra_helgpass": 1,
+      "helggrupp": "A"
+    },
+    {
+      "id": "E2",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E3",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E4",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E5",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E6",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E7",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E8",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  },
+  "onskemal": [
+    {
+      "id": "O1",
+      "person": "E1",
+      "typ": "arbetar",
+      "dagar": [
+        "lör"
+      ],
+      "veckor": [
+        2,
+        4
+      ],
+      "krav": true
+    }
+  ]
+}

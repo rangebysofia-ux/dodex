@@ -84,6 +84,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 37. **Jourpass över dygnet.** Jouren läggs som ett jourpass, till exempel 15:00–08:00 med jour 00:00–06:00: ett pass som belastar två arbetsdagar, räknas in i kvällens och morgonens bemanning, och där hälften av jourtiden räknas som arbetstid. Högst 20 timmar och vilan efteråt minst lika lång (AB 25 § 13 mom. 5). Tiderna och andelen ändras per enhet. Ersätter jour efter kvällspasset med ledig dag efter. Se `docs/regelverk.md`. Beslutat av användaren 2026-11-09.
 
+38. **Extra helgpass per person.** En medarbetare kan få 1–4 extra helgpass per schemaperiod (`extra_helgpass` på personen). Ett extra helgpass är en lördag eller en söndag en ledig helg, högst ett pass per helg. Det ersätter ett pass på en vardag: antalet pass och arbetstiden är desamma. Det är ett undantag från varannan helg (beslut 5b) och görs bara per person. Varannan helg ligger kvar som hård regel, och helgen räknas fortfarande som ledig i växlingen. Ingen fredagskväll före den helgen, som före andra lediga helger. Extrapassen är ett mjukt mål direkt efter team (`extra_helg`): lösaren tar dem bara när de gör schemat bättre för målen före, till exempel färre vakanser, och aldrig fler än personens antal. De syns i schemat som *+ helg*. Beslutat av användaren 2026-11-10.
+
 Öppna frågor, alltså inte beslutade:
 - Ersättning för jour enligt Bilaga J räknas inte än; bilagans text ska kontrolleras mot SKR:s publicering först.
 - Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).
@@ -96,6 +98,7 @@ De mjuka målen löses i ordning, och varje nivå låses innan nästa optimeras:
 
 1. Vakanser (pass per dygnsdel och tidpunkter)
 2. Aktiviteter (saknade deltagare, därefter ojämn fördelning mellan personerna)
+   – därefter kompetens, vila mellan nattblock, team (hemteam) och extra helgpass (så få som möjligt), se beslut 30, 34 och 38
 3. Blocklängd (antal tillfällen med fler än 4 dagar i följd)
 4. Passlängd (avvikelse från mållängd per pass och från kontrakterad tid, i minuter)
 5. Rättvisa och jämn bemanning (spridning i antal kvälls- och morgonpass mellan personer, vägd dubbelt, plus skillnaden mellan dag och kväll i över- och underbemanning)

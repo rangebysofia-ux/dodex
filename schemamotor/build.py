@@ -70,8 +70,8 @@ STANDARDREGLER = {
 }
 # Rättvisa mellan personer och jämn bemanning mellan dag och kväll vägs ihop i ett mål (rättvisan dubbelt),
 # så att lösaren kan väga dem mot varandra. Nyckeltalen redovisas var för sig (KPI_MAL).
-MALORDNING = ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
-KPI_MAL = ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
+MALORDNING = ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "extra_helg", "blocklangd", "passlangd", "rattvisa_jamn", "spridning", "onskemal"]
+KPI_MAL = ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "extra_helg", "blocklangd", "passlangd", "rattvisa", "jamn_bemanning", "spridning", "onskemal"]
 
 
 def malordning(r, mal):
@@ -93,11 +93,11 @@ def malordning(r, mal):
 #   ekonomi      – lägsta uppskattade OB-kostnad (AB 25 § 21, utan helgdagar): extra pass där OB är lägst
 PROFILER = {
     "standard": None,
-    "medarbetare": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "rattvisa", "spridning", "onskemal", "jamn_bemanning",
+    "medarbetare": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "extra_helg", "rattvisa", "spridning", "onskemal", "jamn_bemanning",
                     "blocklangd", "passlangd"],
-    "verksamhet": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "jamn_bemanning", "blocklangd", "passlangd", "rattvisa",
+    "verksamhet": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "extra_helg", "jamn_bemanning", "blocklangd", "passlangd", "rattvisa",
                    "spridning", "onskemal"],
-    "ekonomi": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "ekonomi", "passlangd", "blocklangd", "rattvisa_jamn",
+    "ekonomi": ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "extra_helg", "ekonomi", "passlangd", "blocklangd", "rattvisa_jamn",
                 "spridning", "onskemal"],
 }
 
@@ -107,7 +107,7 @@ def profilordning(prob, fas):
     profil = prob.get("profil") or "standard"
     if PROFILER.get(profil) is None:
         if fas == "monster":
-            return malordning(prob["r"], ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"])
+            return malordning(prob["r"], ["vakanser", "kompetens", "aktiviteter", "natt_vila", "hemteam", "extra_helg", "blocklangd", "rattvisa_jamn", "spridning", "onskemal"])
         if fas == "langder":
             return ["vakanser", "kompetens", "aktiviteter", "passlangd", "onskemal"]
         return malordning(prob["r"], MALORDNING)
@@ -333,6 +333,7 @@ def forbered(indata):
             "id": pid, "grad": p["grad"], "dygnsdelar": delar, "natt": natt, "tillatna": tillatna, "band": set(tillatna),
             "pass_delperioder": pass_lista, "mal_minuter": mal_min, "tolerans": tol, "mal_langd": mal_langd,
             "helgfrekvens": p.get("helgfrekvens", r["helgfrekvens"]), "helggrupp": p.get("helggrupp"),
+            "extra_helgpass": int(p.get("extra_helgpass") or 0),
             "team": p.get("team"), "kompetenser": set(p.get("kompetenser") or []), "jour_ok": p.get("jour") is not False,
         })
 
@@ -588,7 +589,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             m.add(sum(fonster) <= bm).only_enforce_if(L)
         # --- helger (lokal regel)
         L = lit(f"HELG|{pid}")
-        jobbar = []
+        jobbar, extra = [], []
         for w in range(W):
             fre, lor, son = w * 7 + 4, w * 7 + 5, w * 7 + 6
             man = nasta(w * 7 + 6)
@@ -598,8 +599,20 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             in_fre = [x[pi, fre, s] for s in T if M[s]["slut"] > hs
                       or (r["ingen_fredagskvall_fore_ledig_helg"] and M[s]["dygnsdel"] in ("kvall", "natt"))]
             in_man = [x[pi, man, s] for s in T if man is not None and M[s]["start"] < he]
-            for v in in_fre + in_man + [work[pi, lor], work[pi, son]]:
+            for v in in_fre + in_man:
                 m.add(v == 0).only_enforce_if([hw.Not()] + L)
+            if p["extra_helgpass"]:
+                # extra helgpass: lördag eller söndag en ledig helg, högst ett pass per helg (undantag per person)
+                el, es = m.new_bool_var(f"extra_lor_{pid}_{w}"), m.new_bool_var(f"extra_son_{pid}_{w}")
+                m.add(el + es + hw <= 1)
+                m.add(el <= work[pi, lor])
+                m.add(es <= work[pi, son])
+                m.add(work[pi, lor] <= el).only_enforce_if([hw.Not()] + L)
+                m.add(work[pi, son] <= es).only_enforce_if([hw.Not()] + L)
+                extra += [el, es]
+            else:
+                for v in (work[pi, lor], work[pi, son]):
+                    m.add(v == 0).only_enforce_if([hw.Not()] + L)
             if r["hel_helg"]:
                 m.add(work[pi, lor] == 1).only_enforce_if([hw] + L)
                 m.add(work[pi, son] == 1).only_enforce_if([hw] + L)
@@ -630,6 +643,9 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 raise IndataFel(f"{pid}: helgfrekvens {f} ger {antal:g} helger på {W} veckor.")
             m.add(sum(jobbar) == round(antal)).only_enforce_if(L)
         p["_helg"] = jobbar
+        p["_extra"] = extra
+        if extra:
+            m.add(sum(extra) <= p["extra_helgpass"]).only_enforce_if(L)
         # --- antal pass per delperiod (kontrakt)
         L = lit(f"ANTAL_PASS|{pid}")
         start = 0
@@ -811,6 +827,9 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                 m.add(sum(egna) + b >= behov_t)
                 hem_brist.append(b)
     mal["hemteam"] = sum(hem_brist) if hem_brist else 0
+    # extra helgpass (mjukt): används bara när de gör schemat bättre för målen före, till exempel färre vakanser
+    alla_extra = [v for p in prob["personer"] for v in p.get("_extra", [])]
+    mal["extra_helg"] = sum(alla_extra) if alla_extra else 0
     # kompetens (mjukt, direkt efter vakanserna): minst så många med kompetensen bland dem som arbetar dygnsdelen.
     # Inga extra pass för kompetensens skull: det som fattas syns som kompetensvakanser (användarens beslut 2026-11-09).
     komp_brist = []
@@ -1152,6 +1171,11 @@ def tolka(prob, solver, var, steg, kpi_mal):
                         if mm.get("jour"):
                             pass_["jour"] = {"start": klocka(mm["jour"][0]), "slut": klocka(mm["jour"][1])}
             rad.append(pass_)
+        # extra helgpass: lördag eller söndag en ledig helg (märks för visningen)
+        for i, v in enumerate(p.get("_extra") or []):
+            d = (i // 2) * 7 + 5 + i % 2
+            if solver.value(v) and rad[d]:
+                rad[d]["extra_helg"] = True
         schema[p["id"]] = rad
     # aktiviteter: läggs på passet som täcker dem och redovisas per tillfälle
     tillfallen = []
@@ -1195,6 +1219,8 @@ def tolka(prob, solver, var, steg, kpi_mal):
     if prob.get("starttider"):
         kpi["starttid_saknas"] = sum(v["antal"] for v in startvak)
     kpi["vakanta_pass"] = sum(v["antal"] for v in vakanser if v["dygnsdel"])
+    if any(p.get("extra_helgpass") for p in prob["personer"]):
+        kpi["extra_helgpass"] = sum(1 for rad in schema.values() for x in rad if x and x.get("extra_helg"))
     kpi["vakanta_tidpunkter"] = sum(v["antal"] for v in vakanser if v["tid"])
     kpi["aktivitet_saknas"] = sum(t["saknas"] for t in tillfallen)
     team_tackning = []
@@ -1217,6 +1243,8 @@ def tolka(prob, solver, var, steg, kpi_mal):
                              "helggrupp": ("A" if solver.value(p["_grupp"]) else "B") if "_grupp" in p else None,
                              "aktiviteter": sum(len(x.get("aktiviteter", [])) for x in rad),
                              **({"jour": sum(1 for x in rad if x.get("jourdel") == 1)} if J else {}),
+                             **({"extra_helg": sum(1 for x in rad if x.get("extra_helg")), "extra_helg_max": p["extra_helgpass"]}
+                                if p.get("extra_helgpass") else {}),
                              **({"team": p.get("team"), "utlanad": sum(1 for x in rad if p.get("team") and x.get("team") not in (None, p["team"]))}
                                 if prob.get("team") else {})}
     return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"], "profil": prob.get("profil", "standard"),

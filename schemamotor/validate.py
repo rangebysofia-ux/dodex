@@ -35,6 +35,23 @@ NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS":
         "TEAM": "verksamhet", "KOMPETENS": "verksamhet", "STARTTID": "verksamhet", "JOUR": "avtal"}
 
 
+
+def helgfel(helger, frek, W, cyk):
+    """Följer mönstret av arbetade helger personens helgfrekvens? Tom lista om det gör det."""
+    antal = sum(helger)
+    if frek == "2/4":
+        if any(helger[w] == helger[(w + 1) % W] for w in range(W if cyk else W - 1)):
+            return ["Helgerna växlar inte varannan: " + "".join("J" if h else "L" for h in helger) + "."]
+    elif frek in ("alla", "4/4") and antal != W:
+        return [f"Ska arbeta alla helger, arbetar {antal} av {W}."]
+    elif frek in ("ingen", "0/4") and antal:
+        return [f"Ska inte arbeta helg, arbetar {antal}."]
+    elif "/" in frek and frek not in ("2/4", "4/4", "0/4"):
+        t, n = map(int, frek.split("/"))
+        if antal != round(W * t / n):
+            return [f"Helgfrekvens {frek} ger {W * t / n:g} helger, arbetar {antal}."]
+    return []
+
 def tid(s):
     h, m = s.strip().split(":")
     return int(h) * 60 + int(m)
@@ -299,31 +316,54 @@ def kontrollera(indata, schema_dok):
                           hard=hard_kv)
         # helger
         hs, he = veckotid(r["helg_start"]), veckotid(r["helg_slut"])
-        helger = []
+        pers = personer.get(pid, {})
+        frek = pers.get("helgfrekvens", r["helgfrekvens"])
+        extra_max = int(pers.get("extra_helgpass") or 0)
+        L = N * DYGN
+        helger, typ = [], []  # typ: "hel" (arbetar helgen), "enkel" (bara lördag eller söndag), "ledig"
         for w in range(W):
             a, b = w * 7 * DYGN + hs, (w + 1) * 7 * DYGN + he
             jobbar = any(e > a and s < b for s, e in iv)
+            lor, son = work[w * 7 + 5], work[w * 7 + 6]
+            # pass från fredag eller måndag som går in i helgfönstret
+            ovrigt = any(e + k > a and s + k < b for d, s, e, _ in lista if d not in (w * 7 + 5, w * 7 + 6)
+                         for k in ((0, L, -L) if cyk else (0,)))
+            typ.append("ledig" if not jobbar else "enkel" if lor != son and not ovrigt else "hel")
             helger.append(jobbar)
-            if jobbar and r["hel_helg"] and not (work[w * 7 + 5] and work[w * 7 + 6]):
+        extra_veckor = []
+        if extra_max:
+            # extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
+            # om det går ihop med helgfrekvensen. Prova vilka enkla helger som är extra.
+            enkla = [w for w in range(W) if typ[w] == "enkel"]
+            val = [set(enkla)] if r["hel_helg"] or len(enkla) > 10 else \
+                [{w for i, w in enumerate(enkla) if m >> i & 1} for m in range(1 << len(enkla))]
+            basta = None
+            for ex in sorted(val, key=len):
+                monster = [typ[w] == "hel" or (typ[w] == "enkel" and w not in ex) for w in range(W)]
+                if not helgfel(monster, frek, W, cyk):
+                    basta = (ex, monster)
+                    break
+            if basta:
+                extra_veckor = sorted(basta[0])
+                helger = basta[1]
+            else:
+                extra_veckor = enkla if r["hel_helg"] else []
+                helger = [typ[w] == "hel" or (typ[w] == "enkel" and w not in extra_veckor) for w in range(W)]
+            if len(extra_veckor) > extra_max:
+                for w in extra_veckor[extra_max:]:
+                    brott("HELG", pid, f"Arbetar bara lördag eller söndag vecka {w + 1}: fler extra helgpass än personens {extra_max}.")
+        for w in range(W):
+            if w in extra_veckor:
+                continue
+            if helger[w] and r["hel_helg"] and not (work[w * 7 + 5] and work[w * 7 + 6]):
                 brott("HELG", pid, f"Arbetar helgen vecka {w + 1} men inte både lördag och söndag.")
-            if not jobbar and r["ingen_fredagskvall_fore_ledig_helg"]:
+        for w in range(W):
+            if not helger[w] and r["ingen_fredagskvall_fore_ledig_helg"]:
                 for d, _, _, p in lista:
                     if d == w * 7 + 4 and p.get("dygnsdel") in ("kvall", "natt"):
                         brott("HELG", pid, f"Kvällspass fredag vecka {w + 1} före ledig helg.")
-        pers = personer.get(pid, {})
-        frek = pers.get("helgfrekvens", r["helgfrekvens"])
-        antal = sum(helger)
-        if frek == "2/4":
-            if any(helger[w] == helger[(w + 1) % W] for w in range(W if cyk else W - 1)):
-                brott("HELG", pid, "Helgerna växlar inte varannan: " + "".join("J" if h else "L" for h in helger) + ".")
-        elif frek in ("alla", "4/4") and antal != W:
-            brott("HELG", pid, f"Ska arbeta alla helger, arbetar {antal} av {W}.")
-        elif frek in ("ingen", "0/4") and antal:
-            brott("HELG", pid, f"Ska inte arbeta helg, arbetar {antal}.")
-        elif "/" in frek and frek not in ("2/4", "4/4", "0/4"):
-            t, n = map(int, frek.split("/"))
-            if antal != round(W * t / n):
-                brott("HELG", pid, f"Helgfrekvens {frek} ger {W * t / n:g} helger, arbetar {antal}.")
+        for text in helgfel(helger, frek, W, cyk):
+            brott("HELG", pid, text)
         # antal pass och tid
         delp = indata.get("delperioder") or [W]
         natt = pers.get("dygnsdelar") == ["natt"]

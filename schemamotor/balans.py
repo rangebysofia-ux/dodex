@@ -7,6 +7,8 @@ Balansen är en snabb uppskattning utan lösare. Den räknar
 - pass för dag/kväll och natt mot behovet över hela perioden,
 - morgon- och kvällskapacitet för den som bara arbetar en dygnsdel,
 - helger: hur många som arbetar varje helg enligt helgfrekvensen, mot behovet lördag och söndag,
+- extra helgpass: den som har extra helgpass kan fylla en lördag eller söndag en ledig helg, i stället för ett
+  vardagspass,
 - fredagskvällar: den som är ledig helgen får inte arbeta fredag kväll eller natt, så fredagens
   kvällsbehov måste täckas av dem som arbetar helgen. Kväll följd av morgon ger bara 9 timmars
   dygnsvila, så den som arbetar fredag kväll arbetar kväll även lördag och söndag.
@@ -67,6 +69,11 @@ def balans(indata):
     vak_helg = 0
     helgpass_dk = helgpass_n = 0
     fredag_orsak = 0
+    # extra helgpass (en lördag eller söndag en ledig helg, per person): fyller helgdagar som annars blir vakanta
+    med_extra = [p for p in dag if p.get("extra_helgpass") and p["helgfrekvens"] not in ("alla", "4/4")]
+    extra_kvar = sum(min(p["extra_helgpass"], round(W * (1 - helgdag(p)))) for p in med_extra)
+    extra_lediga = round(sum(1 - helgdag(p) for p in med_extra))  # lediga den helgen, ungefär
+    extra_anvanda = 0
     for w in range(W):
         fre, lor, son = w * 7 + 4, w * 7 + 5, w * 7 + 6
         bada, mo, kv = per_helg["bada"][w], per_helg["morgon"][w], per_helg["kvall"][w]
@@ -75,12 +82,19 @@ def balans(indata):
         k_behov = max(b(lor, "kvall"), b(son, "kvall"))
         k_med_fre = max(k_behov, b(fre, "kvall")) if fre_regel else k_behov
         brist = lambda kb: max(0, max(0, kb - kv) + max(0, m_behov - mo) - bada)  # noqa: E731
-        brist_dk = brist(k_med_fre)
-        fredag_orsak += brist_dk - brist(k_behov)
+        fre_del = brist(k_med_fre) - brist(k_behov)
+        fredag_orsak += fre_del
+        # helgdagarna var för sig: den som saknas en helg saknas både lördag och söndag
+        dagbrist = lambda d: max(0, max(0, b(d, "kvall") - kv) + max(0, b(d, "morgon") - mo) - bada)  # noqa: E731
+        helgdagar = dagbrist(lor) + dagbrist(son)
+        extra = min(helgdagar, extra_lediga, extra_kvar)
+        extra_kvar -= extra
+        extra_anvanda += extra
+        brist_dk = fre_del + helgdagar - extra
         nb = max(b(fre, "natt") if fre_regel else 0, b(lor, "natt"), b(son, "natt"))
         brist_n = max(0, nb - natt_helg[w])
         vak_helg += brist_dk + brist_n
-        helgpass_dk += 2 * arbetar
+        helgpass_dk += 2 * arbetar + extra  # extra helgpass ersätter vardagspass
         helgpass_n += 2 * natt_helg[w]
         helger.append({"vecka": w + 1, "arbetar_dag_kvall": arbetar, "behov_dag_kvall": m_behov + k_med_fre,
                        "arbetar_natt": natt_helg[w], "behov_natt": nb, "vakanser": brist_dk + brist_n})
@@ -110,7 +124,9 @@ def balans(indata):
         tunna = [h["vecka"] for h in helger if h["vakanser"]]
         atgarder.append(
             f"Helgerna räcker inte till (vecka {', '.join(map(str, tunna))}). Låt någon arbeta 3/4 helger, "
-            f"ändra helgfrekvensen för den som har \"ingen\", sänk helgbehovet eller utöka personalen.")
+            f"ändra helgfrekvensen för den som har \"ingen\", ge någon extra helgpass, sänk helgbehovet eller utöka personalen.")
+    if extra_anvanda:
+        atgarder.append(f"Cirka {extra_anvanda} extra helgpass behövs för att täcka helgerna. De ersätter pass på vardagar.")
     over = (till_dk - helgpass_dk) - vardag_behov_dk
     if over > 0 and not vak_vardag_dk:
         atgarder.append(f"Det finns cirka {over} fler dag- och kvällspass än behovet på vardagar. De läggs som "
@@ -122,7 +138,7 @@ def balans(indata):
     for rad in rader:
         rad["skillnad"] = rad["tillgang"] - rad["behov"]
     return {"forvantade_vakanser": forvantat, "rader": rader, "helger": helger, "atgarder": atgarder,
-            "varningar": varningar, "fredagsregel": fre_regel}
+            "varningar": varningar, "fredagsregel": fre_regel, "extra_helgpass": extra_anvanda}
 
 
 def rapport(res):

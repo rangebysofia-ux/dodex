@@ -406,6 +406,8 @@ h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4p
 .jour-red { margin-top: 4px; }
 
 /* jourpasset över dygnet: kvällsdel och morgondel i full storlek, jourtiden däremellan som ett smalare band */
+/* extra helgpass (undantag per person) */
+.pass .extra-helg { display: block; font: 700 9px/1.2 var(--mono, monospace); font-style: normal; color: var(--varn, #a5631b); letter-spacing: .02em; }
 td:has(> .pass.jourdel-1) { padding-right: 0 !important; }
 td:has(> .pass.jourdel-2) { padding-left: 0 !important; }
 .pass.jourdel-1 { border-top-right-radius: 0; border-bottom-right-radius: 0; min-height: 40px; background: var(--kvall-bg, #d9e6df); color: var(--kvall-text, #173f30); box-shadow: inset 3px 0 0 var(--jour-kant, #a98bd6); }
@@ -674,7 +676,8 @@ function ritaKontroll() {
     <span class="liten">Dag och kväll: behov ${b.behovDK}, finns ${b.tillDK} · Natt: behov ${b.behovN}, finns ${b.tillN}</span></div>
     ${b.atgarder.length ? `<details style="margin-top:8px"><summary>${b.atgarder.length} förslag</summary><ul class="punkter liten" style="margin-top:6px">${b.atgarder.map(a => `<li>${esc(a)}</li>`).join("")}</ul></details>` : ""}
     ${budText}
-    ${und.length ? `<p class="liten" style="margin:8px 0 0;color:var(--varn)">Undantag från varannan helg: ${und.map(p => `${esc(p.id)} (${UNDANTAG[p.helgfrekvens]})`).join(", ")}</p>` : ""}`;
+    ${und.length ? `<p class="liten" style="margin:8px 0 0;color:var(--varn)">Undantag från varannan helg: ${und.map(p => `${esc(p.id)} (${UNDANTAG[p.helgfrekvens]})`).join(", ")}</p>` : ""}
+    ${st.enhet.indata.personal.some(p => p.extra_helgpass) ? `<p class="liten" style="margin:8px 0 0;color:var(--varn)">Extra helgpass: ${st.enhet.indata.personal.filter(p => p.extra_helgpass).map(p => `${esc(p.id)} (högst ${p.extra_helgpass})`).join(", ")}</p>` : ""}`;
 }
 
 function ritaFlik() {
@@ -689,13 +692,14 @@ function ritaFlik() {
         <div><label>Grad %</label><input data-p="${n}" data-f="grad" type="number" inputmode="numeric" min="10" max="100" step="5" value="${Math.round((p.grad ?? 1) * 100)}"></div>
         <div><label>Arbetar</label><select data-p="${n}" data-f="dygnsdelar">${Object.entries(ARBETAR).map(([v, t]) => `<option value="${v}"${v === del ? " selected" : ""}>${t}</option>`).join("")}</select></div>
         <div><label>Helger</label><select data-p="${n}" data-f="helgfrekvens"${p.helgfrekvens && p.helgfrekvens !== "2/4" ? ' class="undantag"' : ""}><option value="">Varannan</option>${Object.entries(UNDANTAG).map(([v, t]) => `<option value="${v}"${v === p.helgfrekvens ? " selected" : ""}>Undantag: ${v === "alla" || v === "ingen" ? t : v}</option>`).join("")}</select></div>
+        <div><label>Extra helgpass</label><select data-p="${n}" data-f="extra_helgpass"${p.extra_helgpass ? ' class="undantag"' : ""}>${[0, 1, 2, 3, 4].map(v => `<option value="${v}"${v === (p.extra_helgpass || 0) ? " selected" : ""}>${v ? `Undantag: ${v}` : "Inga"}</option>`).join("")}</select></div>
         <div><label>Helggrupp</label><select data-p="${n}" data-f="helggrupp"><option value="">Auto</option><option${p.helggrupp === "A" ? " selected" : ""}>A</option><option${p.helggrupp === "B" ? " selected" : ""}>B</option></select></div>
         <div><label>Antal pass</label><input data-p="${n}" data-f="antal_pass" inputmode="numeric" value="${p.antal_pass ?? ""}" placeholder="auto"></div>
         ${(i.team || []).length ? `<div><label>Team</label><select data-p="${n}" data-f="team"><option value="">Inget</option>${i.team.map(t => `<option value="${esc(t.id)}"${t.id === p.team ? " selected" : ""}>${esc(t.namn || t.id)}</option>`).join("")}</select></div>` : ""}
         <button class="liten fara bort" data-g="ta-bort-person" data-n="${n}" aria-label="Ta bort ${esc(p.id)}">×</button></div>`;
       }).join("") +
       `<div class="chips" style="margin-top:10px"><button data-g="ny-person">+ Person</button><button data-g="ny-person" data-natt="1">+ Nattperson</button></div>
-      <p class="dampad liten" style="margin-top:8px">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person. Grupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
+      <p class="dampad liten" style="margin-top:8px">Alla arbetar varannan helg (hård lokal regel). Undantag görs per person. Grupp A arbetar helgerna i vecka 1, 3, 5 … Extra helgpass: så många lördagar eller söndagar på lediga helger får personen ta under perioden, ett pass per helg. De ersätter pass på vardagar och används där schemat behöver dem.</p>`;
   } else if (st.flik === "kompetens") {
     el.innerHTML = KOMP.flik(i, st.kompetenser);
   } else if (st.flik === "team") {
@@ -913,8 +917,9 @@ document.addEventListener("input", ev => {
     else if (f === "grad") { if (v) p.grad = Math.round(+v.replace(",", ".")) / 100; }
     else if (f === "dygnsdelar") { if (v === "morgon,kvall") delete p.dygnsdelar; else p.dygnsdelar = v.split(","); }
     else if (f === "antal_pass") { if (v) p.antal_pass = parseInt(v) || undefined; else delete p.antal_pass; }
+    else if (f === "extra_helgpass") { if (parseInt(v) > 0) p.extra_helgpass = Math.min(4, parseInt(v)); else delete p.extra_helgpass; }
     else { if (v) p[f] = v; else delete p[f]; }
-    andrad(f === "helgfrekvens");
+    andrad(f === "helgfrekvens" || f === "extra_helgpass");
   } else if (el.dataset.b) { i.behov[el.dataset.b][el.dataset.d] = parseInt(el.value) || 0; andrad(false); }
   else if (el.dataset.tm !== undefined) {
     // team: namn eller behov; enhetens behov räknas om som summan av teamens
@@ -1785,7 +1790,7 @@ function dagTabell(res, dagar, period) {
     if (st.red && !x) return `<td ${kl(d)}><button class="tomruta" data-g="red-cell" data-c="${esc(n)}" aria-label="Lägg till pass ${esc(p)} ${DAGAR[d % 7]}">+</button></td>`;
     const r = x && rs.has(p + ":" + d);
     const vv = !x && vvAlla[p].get(d);
-    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}"${x.jourdel ? ` title="${esc(GRAF.jourTitel(x))}"` : ""} data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}">${x.jourdel ? GRAF.jourInnehall(x) : `<b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>`}${period || x.jourdel ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
+    return `<td ${vv ? kl(d).replace('class="', 'class="vvdag ') : kl(d)}>${vv ? GRAF.vvMarke(vv, period) : ""}${x ? `<button class="pass ${x.dygnsdel}${x.jourdel ? " jourdel-" + x.jourdel : ""}${r ? " resurs" : ""}${st.cell === n ? " vald" : ""}${x.manuell ? " manuell" : ""}"${x.jourdel ? ` title="${esc(GRAF.jourTitel(x))}"` : ""} data-g="${st.red ? "red-cell" : "cell"}" data-c="${esc(n)}" aria-label="${esc(p)} ${DAGAR[d % 7]} ${x.start} till ${x.slut}${r ? ", resurspass" : ""}">${x.jourdel ? GRAF.jourInnehall(x) : `<b>${GRAF.passIkon(x.dygnsdel)}${kod[x.dygnsdel]}</b>`}${period || x.jourdel ? "" : `<small>${x.start}–${x.slut}</small>`}${r && !period ? GRAF.resursMarke : ""}${GRAF.extraMarke(x)}${period ? (x.aktiviteter ? `<i class="akt"${GRAF.aktFarg(x.aktiviteter[0]) ? ` style="--ak:${GRAF.aktFarg(x.aktiviteter[0])}"` : ""}>★</i>` : "") : GRAF.aktMarke(x)}${harTeam && x.team && x.team !== hem[p] ? TEAM.lanMarke(ind.team, x.team) : ""}</button>` : ""}</td>`;
   }).join("") + `</tr>`;
   const rader = Math.max(0, ...dagar.map(d => vp[d].length));
   for (let r = 0; r < rader; r++) h += `<tr class="vakantrad"><td>Vakant</td>` + dagar.map(d => {

@@ -55,6 +55,7 @@
 - `antal_pass` – heltal eller lista per delperiod. Utan värde: 4,75 × veckor för dag/kväll, arbetstid ÷ nattpassets längd för natt.
 - `helgfrekvens` – `2/4` (standard, varannan helg), `1/4`, `3/4`, `alla`, `ingen`. Andra värden än `2/4` är undantag för just den personen. Enhetens `regler.helgfrekvens` är låst till `2/4`.
 - `helggrupp` – `A` (arbetar helgerna i vecka 1, 3, 5 …) eller `B`. Utan värde väljer lösaren, med lika många i varje grupp.
+- `extra_helgpass` – 0–4 (standard 0). Så många extra helgpass får personen ta under schemaperioden: en lördag eller söndag en ledig helg, högst ett pass per helg. Ersätter ett vardagspass, så antal pass och arbetstid är desamma. Undantag från varannan helg, bara per person. Lösaren använder dem bara där de gör schemat bättre. I resultatet får passet `"extra_helg": true`, `kpi.extra_helgpass` är antalet och `personer[id].extra_helg` antalet per person.
 - `tolerans_minuter`, `heltid_minuter_per_vecka`, `dygnsbryt` – valfria per person.
 
 **onskemal**

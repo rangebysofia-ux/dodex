@@ -547,6 +547,17 @@
     },
     {
       "ordning": 6,
+      "id": "extra_helg",
+      "namn": "Extra helgpass, så få som möjligt",
+      "niva": "lokal regel",
+      "typ": "mjuk",
+      "styrs_av": null,
+      "standard": null,
+      "beskrivning": "Antal extra helgpass (en lördag eller söndag en ledig helg, undantag per person med extra_helgpass). Används bara när de gör schemat bättre för målen före, och aldrig fler än personens antal. Användarens beslut 2026-11-10.",
+      "granskningskod": "HELG"
+    },
+    {
+      "ordning": 7,
       "id": "blocklangd",
       "namn": "Dagar i följd över rekommenderat",
       "niva": "princip",
@@ -557,7 +568,7 @@
       "granskningskod": "BLOCK_REKOMMENDERAT"
     },
     {
-      "ordning": 7,
+      "ordning": 8,
       "id": "passlangd",
       "namn": "Passlängd",
       "niva": "princip",
@@ -568,7 +579,7 @@
       "granskningskod": "TID"
     },
     {
-      "ordning": 8,
+      "ordning": 9,
       "id": "rattvisa_jamn",
       "namn": "Rättvisa och jämn bemanning",
       "niva": "princip",
@@ -579,7 +590,7 @@
       "granskningskod": "JAMN_BEMANNING"
     },
     {
-      "ordning": 9,
+      "ordning": 10,
       "id": "spridning",
       "namn": "Blandning av morgon och kväll varje vecka",
       "niva": "princip",
@@ -590,7 +601,7 @@
       "granskningskod": "SPRIDNING"
     },
     {
-      "ordning": 10,
+      "ordning": 11,
       "id": "onskemal",
       "namn": "Önskemål",
       "niva": "önskemål",

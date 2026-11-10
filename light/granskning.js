@@ -61,6 +61,20 @@ const GRANSKNING = (() => {
     return [...ut].sort((x, y) => x - y);
   }
 
+  // Följer mönstret av arbetade helger personens helgfrekvens? Tom lista om det gör det.
+  function helgFel(helger, frek, W, cyk) {
+    const antal = helger.filter(Boolean).length;
+    if (frek === "2/4") {
+      for (let w = 0; w < (cyk ? W : W - 1); w++) if (helger[w] === helger[(w + 1) % W]) return ["Helgerna växlar inte varannan: " + helger.map(x => x ? "J" : "L").join("") + "."];
+    } else if (frek === "alla" && antal !== W) return [`Ska arbeta alla helger, arbetar ${antal} av ${W}.`];
+    else if (frek === "ingen" && antal) return [`Ska inte arbeta helg, arbetar ${antal}.`];
+    else if (frek === "1/4" || frek === "3/4") {
+      const [t, n] = frek.split("/").map(Number);
+      if (antal !== Math.round(W * t / n)) return [`Helgfrekvens ${frek} ger ${W * t / n} helger, arbetar ${antal}.`];
+    }
+    return [];
+  }
+
   function kontrollera(indata, dok) {
     const r = { ...STANDARD, ...(indata.regler || {}) };
     r.dygnsvila_minuter = Math.max(660, r.dygnsvila_minuter);  // 11 h kan inte låsas upp (AB 25 § 13 mom. 8; verksamhetens beslut)
@@ -182,24 +196,41 @@ const GRANSKNING = (() => {
           }
         }
       }
-      const hs = veckotid(r.helg_start), he = veckotid(r.helg_slut), helger = [];
+      const hs = veckotid(r.helg_start), he = veckotid(r.helg_slut);
+      const frek = pers.helgfrekvens || r.helgfrekvens, extraMax = Math.floor(Number(pers.extra_helgpass) || 0);
+      let helger = [];
+      const typ = [];  // "hel" (arbetar helgen), "enkel" (bara lördag eller söndag), "ledig"
       for (let w = 0; w < W; w++) {
         const a = w * 7 * DYGN + hs, b = (w + 1) * 7 * DYGN + he;
         const jobbar = iv.some(([s, e]) => e > a && s < b);
+        const lor = work[w * 7 + 5], son = work[w * 7 + 6];
+        const ovrigt = lista.some(([d, s, e]) => d !== w * 7 + 5 && d !== w * 7 + 6 && (cyk ? [0, L, -L] : [0]).some(k => e + k > a && s + k < b));
+        typ.push(!jobbar ? "ledig" : lor !== son && !ovrigt ? "enkel" : "hel");
         helger.push(jobbar);
-        if (jobbar && r.hel_helg && !(work[w * 7 + 5] && work[w * 7 + 6])) brott("HELG", pid, `Arbetar helgen vecka ${w + 1} men inte både lördag och söndag.`);
-        if (!jobbar && r.ingen_fredagskvall_fore_ledig_helg)
-          for (const [d, , , p] of lista) if (d === w * 7 + 4 && (p.dygnsdel === "kvall" || p.dygnsdel === "natt")) brott("HELG", pid, `Kvällspass fredag vecka ${w + 1} före ledig helg.`);
       }
-      const frek = pers.helgfrekvens || r.helgfrekvens, antal = helger.filter(Boolean).length;
-      if (frek === "2/4") {
-        for (let w = 0; w < (cyk ? W : W - 1); w++) if (helger[w] === helger[(w + 1) % W]) { brott("HELG", pid, "Helgerna växlar inte varannan: " + helger.map(x => x ? "J" : "L").join("") + "."); break; }
-      } else if (frek === "alla" && antal !== W) brott("HELG", pid, `Ska arbeta alla helger, arbetar ${antal} av ${W}.`);
-      else if (frek === "ingen" && antal) brott("HELG", pid, `Ska inte arbeta helg, arbetar ${antal}.`);
-      else if (frek === "1/4" || frek === "3/4") {
-        const [t, n] = frek.split("/").map(Number);
-        if (antal !== Math.round(W * t / n)) brott("HELG", pid, `Helgfrekvens ${frek} ger ${W * t / n} helger, arbetar ${antal}.`);
+      let extraVeckor = [];
+      if (extraMax) {
+        // extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
+        const enkla = typ.map((t, w) => t === "enkel" ? w : -1).filter(w => w >= 0);
+        const val = r.hel_helg || enkla.length > 10 ? [new Set(enkla)]
+          : Array.from({ length: 1 << enkla.length }, (_, m) => new Set(enkla.filter((_, i) => m >> i & 1)));
+        val.sort((a, b) => a.size - b.size);
+        let hittad = null;
+        for (const ex of val) {
+          const m = typ.map((t, w) => t === "hel" || (t === "enkel" && !ex.has(w)));
+          if (!helgFel(m, frek, W, cyk).length) { hittad = [ex, m]; break; }
+        }
+        if (hittad) { extraVeckor = [...hittad[0]].sort((a, b) => a - b); helger = hittad[1]; }
+        else { extraVeckor = r.hel_helg ? enkla : []; helger = typ.map((t, w) => t === "hel" || (t === "enkel" && !extraVeckor.includes(w))); }
+        for (const w of extraVeckor.slice(extraMax)) brott("HELG", pid, `Arbetar bara lördag eller söndag vecka ${w + 1}: fler extra helgpass än personens ${extraMax}.`);
       }
+      for (let w = 0; w < W; w++) {
+        if (extraVeckor.includes(w)) continue;
+        if (helger[w] && r.hel_helg && !(work[w * 7 + 5] && work[w * 7 + 6])) brott("HELG", pid, `Arbetar helgen vecka ${w + 1} men inte både lördag och söndag.`);
+      }
+      for (let w = 0; w < W; w++) if (!helger[w] && r.ingen_fredagskvall_fore_ledig_helg)
+        for (const [d, , , p] of lista) if (d === w * 7 + 4 && (p.dygnsdel === "kvall" || p.dygnsdel === "natt")) brott("HELG", pid, `Kvällspass fredag vecka ${w + 1} före ledig helg.`);
+      for (const text of helgFel(helger, frek, W, cyk)) brott("HELG", pid, text);
       const heltid = pers.heltid_minuter_per_vecka || (natt ? indata.heltid_natt_minuter_per_vecka || 2060 : indata.heltid_minuter_per_vecka || 2220);
       const malMin = Math.round(heltid * (pers.grad ?? 1) * W);
       let mal = pers.antal_pass;

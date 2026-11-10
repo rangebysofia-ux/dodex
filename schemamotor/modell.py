@@ -94,6 +94,9 @@ class Person(Strikt):
     antal_pass: Optional[Union[int, list[int]]] = None
     helgfrekvens: Optional[Literal["1/4", "2/4", "3/4", "alla", "ingen"]] = None
     helggrupp: Optional[Literal["A", "B"]] = None
+    # extra helgpass (användarens beslut 2026-11-10): högst så många lördagar eller söndagar på lediga helger per
+    # schemaperiod, ett pass per helg. Ersätter ett vardagspass. Undantag från varannan helg, bara per person.
+    extra_helgpass: int = Field(default=0, ge=0, le=4)
     tolerans_minuter: Optional[int] = Field(default=None, ge=0)
     heltid_minuter_per_vecka: Optional[int] = Field(default=None, gt=0)
     dygnsbryt: Optional[Klocka] = None

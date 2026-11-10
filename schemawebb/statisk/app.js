@@ -274,7 +274,7 @@ function ritaFlik() {
   switch (st.flik) {
     case "personal": return `
       <p class="dampad liten">Använd id-koder, inte namn. Antal pass räknas ut från perioden om fältet är tomt. Alla arbetar varannan helg om inget undantag anges.</p>
-      <div class="rull"><table class="form personal"><thead><tr><th>Id</th><th>Grad %</th><th>Arbetar</th><th>Helger</th><th>Grupp</th><th title="Antal pass under perioden">Pass</th>${(i.team || []).length ? "<th>Team</th>" : ""}<th></th></tr></thead><tbody>
+      <div class="rull"><table class="form personal"><thead><tr><th>Id</th><th>Grad %</th><th>Arbetar</th><th>Helger</th><th title="Extra helgpass: en lördag eller söndag en ledig helg, ersätter ett vardagspass">Extra helg</th><th>Grupp</th><th title="Antal pass under perioden">Pass</th>${(i.team || []).length ? "<th>Team</th>" : ""}<th></th></tr></thead><tbody>
       ${i.personal.map((p, n) => {
         const del = (p.dygnsdelar || ["morgon", "kvall"]).join(",");
         return `<tr>
@@ -282,13 +282,14 @@ function ritaFlik() {
           <td data-l="Grad %"><input data-s="personal.${n}.grad" data-t="procent" type="number" inputmode="numeric" min="10" max="100" step="5" value="${Math.round((p.grad ?? 1) * 100)}" style="width:78px" aria-label="Sysselsättningsgrad"></td>
           <td data-l="Arbetar"><select data-s="personal.${n}.dygnsdelar" data-t="dygnsdelar" aria-label="Arbetar"${del !== "morgon,kvall" && del !== "natt" ? ' class="undantag"' : ""}>${Object.entries(ARBETAR).map(([v, t]) => `<option value="${v}"${v === del ? " selected" : ""}>${t}</option>`).join("")}</select></td>
           <td data-l="Helger"><select data-s="personal.${n}.helgfrekvens" data-t="valfri" aria-label="Helger"${p.helgfrekvens && p.helgfrekvens !== "2/4" ? ' class="undantag"' : ""}><option value="">Varannan</option>${Object.entries(HELGER).filter(([v]) => v !== "2/4").map(([v, t]) => `<option value="${v}"${v === p.helgfrekvens ? " selected" : ""}>Undantag: ${t.toLowerCase()}</option>`).join("")}</select></td>
+          <td data-l="Extra helgpass"><select data-s="personal.${n}.extra_helgpass" data-t="extra" aria-label="Extra helgpass under perioden"${p.extra_helgpass ? ' class="undantag"' : ""} style="width:72px">${[0, 1, 2, 3, 4].map(v => `<option value="${v}"${v === (p.extra_helgpass || 0) ? " selected" : ""}>${v || "Inga"}</option>`).join("")}</select></td>
           <td data-l="Helggrupp"><select data-s="personal.${n}.helggrupp" data-t="valfri" aria-label="Helggrupp"><option value="">Auto</option><option${p.helggrupp === "A" ? " selected" : ""}>A</option><option${p.helggrupp === "B" ? " selected" : ""}>B</option></select></td>
           <td data-l="Antal pass"><input data-s="personal.${n}.antal_pass" data-t="pass" value="${esc(Array.isArray(p.antal_pass) ? p.antal_pass.join(", ") : p.antal_pass ?? "")}" placeholder="auto" style="width:70px" aria-label="Antal pass"></td>
           ${(i.team || []).length ? `<td data-l="Team"><select data-s="personal.${n}.team" data-t="valfri" aria-label="Hemteam"><option value="">Inget</option>${i.team.map(t => `<option value="${esc(t.id)}"${t.id === p.team ? " selected" : ""}>${esc(t.namn || t.id)}</option>`).join("")}</select></td>` : ""}
           <td class="bort"><button class="liten fara" data-g="ta-bort-person" data-n="${n}" aria-label="Ta bort ${esc(p.id)}">×</button></td></tr>`;
       }).join("")}</tbody></table></div>
       <p style="margin-top:12px" class="chips"><button data-g="ny-person">+ Person</button> <button data-g="ny-person" data-natt="1">+ Nattperson</button></p>
-      <p class="dampad liten">Gult betyder undantag: från varannan helg, eller från jämn fördelning mellan morgon och kväll. Helggrupp A arbetar helgerna i vecka 1, 3, 5 …</p>`;
+      <p class="dampad liten">Gult betyder undantag: från varannan helg, eller från jämn fördelning mellan morgon och kväll. Helggrupp A arbetar helgerna i vecka 1, 3, 5 … Extra helg: så många lördagar eller söndagar på lediga helger får personen ta under perioden, ett pass per helg. De ersätter pass på vardagar och används där schemat behöver dem.</p>`;
 
     case "kompetens": return KOMP.flik(i, st.kompetenser);
     case "team": {
@@ -584,7 +585,8 @@ function ritaKontroll() {
   if (b.atgarder.length) h += `<h3>Förslag</h3><ul class="punkter liten">${b.atgarder.map(a => `<li>${esc(a)}</li>`).join("")}</ul>`;
   const und = st.indata.personal.filter(p => p.helgfrekvens && p.helgfrekvens !== "2/4");
   const enbart = st.indata.personal.filter(p => p.dygnsdelar && p.dygnsdelar.length === 1 && p.dygnsdelar[0] !== "natt");
-  if (und.length || enbart.length) h += `<h3>Undantag</h3><ul class="punkter liten">${und.map(p => `<li>${esc(p.id)}: ${HELGER[p.helgfrekvens].toLowerCase()} helger</li>`).join("")}${enbart.map(p => `<li>${esc(p.id)}: bara ${DELAR[p.dygnsdelar[0]].toLowerCase()}</li>`).join("")}</ul>`;
+  const extraH = st.indata.personal.filter(p => p.extra_helgpass);
+  if (und.length || enbart.length || extraH.length) h += `<h3>Undantag</h3><ul class="punkter liten">${und.map(p => `<li>${esc(p.id)}: ${HELGER[p.helgfrekvens].toLowerCase()} helger</li>`).join("")}${extraH.map(p => `<li>${esc(p.id)}: högst ${p.extra_helgpass} extra helgpass</li>`).join("")}${enbart.map(p => `<li>${esc(p.id)}: bara ${DELAR[p.dygnsdelar[0]].toLowerCase()}</li>`).join("")}</ul>`;
   const avv = st.indata.avvikelser || [];
   if (avv.length) h += `<h3>Avvikelser från avtal eller låsta regler</h3><p class="liten" style="color:var(--varn)">${avv.map(a => esc(regelnamn(a))).join(", ")}. <a href="#/e/${st.enhet.id}/installningar">Visa</a></p>`;
   if (k.onskemal.length) h += `<h3>Önskemål</h3><ul class="punkter liten">${k.onskemal.map(w => `<li>${esc(w.varning)}</li>`).join("")}</ul>`;
@@ -686,6 +688,7 @@ function tolka(el) {
     case "valfritt-tal": return v === "" ? undefined : parseInt(v);
     case "check": return el.checked;
     case "valfri": return v || undefined;
+    case "extra": return parseInt(v) > 0 ? Math.min(4, parseInt(v)) : undefined;
     case "dygnsdelar": return v === "morgon,kvall" ? undefined : v.split(",");
     case "lista": { const l = v.split(/[,; ]+/).map(Number).filter(n => n > 0); return l.length ? l : undefined; }
     case "pass": { if (!v) return undefined; const l = v.split(/[,; ]+/).map(Number).filter(n => !isNaN(n)); return l.length > 1 ? l : l[0]; }
@@ -710,7 +713,7 @@ document.addEventListener("input", e => {
   if (el.dataset.s) {
     sattVarde(el.dataset.s, tolka(el));
     if (el.dataset.s.startsWith("team.")) st.indata.behov = TEAM.summaBehov(st.indata.team);  // enhetens behov = summan
-    markeraAndrad(/\.(helgfrekvens|dygnsdelar)$/.test(el.dataset.s));
+    markeraAndrad(/\.(helgfrekvens|dygnsdelar|extra_helgpass)$/.test(el.dataset.s));
   } else if (el.dataset.tp !== undefined) {
     const tp = tidpunktLista(), t = tp[+el.dataset.tp];
     t[el.dataset.f] = el.dataset.f === "antal" ? parseInt(el.value) || 0 : el.value;

@@ -462,6 +462,8 @@ const jourInnehall = p => (p.jourdel === 1
   : `<span class="jour-band" aria-hidden="true">${PASSIKON.jour}</span><span class="jour-morgon"><b>${PASSIKON.morgon}</b><small>${p.jour ? p.jour.slut : ""}–${p.slut}</small></span>`);
 const jourTitel = p => (p.jourdel === 1 ? `Jourpass, arbete ${p.start}–24:00` : `Jourpass: jour ${p.jour ? p.jour.start + "–" + p.jour.slut : ""}, arbete till ${p.slut}`);
 const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
+// Extra helgpass (undantag per person): lördag eller söndag en ledig helg. Syns alltid i schemat.
+const extraMarke = p => (p && p.extra_helg ? `<i class="extra-helg" title="Extra helgpass: lördag eller söndag en ledig helg, i stället för ett vardagspass" aria-label="Extra helgpass">+ helg</i>` : "");
 
 // ---------------------------------------------------------------- aktiviteter
 // Liten markering i passet (stjärna och kod) och text för verktygstips.
@@ -705,6 +707,6 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { behovsdel, jourMarke, jourTitel, jourInnehall, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { behovsdel, jourMarke, jourTitel, jourInnehall, extraMarke, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;
