@@ -67,6 +67,7 @@ python -m schemamotor.validate tests/fall/six_week_basic.json /tmp/s.json
 - Personuppgifter: använd id-koder i testdata och loggar, aldrig namn.
 - Text som användare ser skrivs på svenska med å, ä och ö.
 - Gör en uppgift i taget från `ROADMAP.md` och bocka av den.
+- Testa före publicering (användarens beslut 2026-11-10): ändringar pushas först till grenen `test`. Användaren provar lättversionen på https://raw.githack.com/rangebysofia-ux/dodex/test/light/schema-light.html. Först när användaren säger *publicera* slås `test` ihop med `main` och artefakten på claude.ai uppdateras.
 
 ## Kända begränsningar
 
