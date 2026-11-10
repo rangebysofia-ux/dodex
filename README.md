@@ -31,7 +31,7 @@ uvicorn schemawebb.app:app --port 8000
 
 På Windows räcker det att dubbelklicka på `starta-windows.bat` efter installationen. Webbläsaren öppnas av sig själv, och systemet stängs när fönstret stängs.
 
-Utan miljövariabeln `SCHEMA_LOSENORD` krävs ingen inloggning. Sätt alltid ett lösenord när tjänsten nås av andra. Databasen sparas i `./data`.
+Utan miljövariabeln `SCHEMA_LOSENORD` krävs ingen inloggning. Sätt alltid ett lösenord när tjänsten nås av andra. Databasen sparas i `./data`. Med `starta-windows.bat` sparas den i stället i `%USERPROFILE%\DODEX-data` (till exempel `C:\Users\namn\DODEX-data`), utanför programmappen, så att enheterna ligger kvar när en ny version laddas ner. Första gången flyttas en befintlig `data\schemasystem.db` dit. Mappen styrs med `SCHEMA_DATA`.
 
 ## Kommandoraden
 
