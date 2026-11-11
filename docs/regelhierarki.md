@@ -88,6 +88,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 39. **Förskolans pass: Tidig, Mellan och Sen.** I en förskola anges behovet per avdelning som Tidig (börjar 06:00), Mellan (börjar 08:00) och Sen (slutar vid stängning 18:00), bara vardagar, i stället för dag, kväll och natt. Gränssnittet lägger om det till dagpass med starttider och kvällspass som slutar vid stängning. För förskolan börjar passbytet 09:00 så att Sen kan vara ett helt pass. Inga helger: varannan helg låses upp för förskolan som synlig avvikelse. Regeln *ingen fredagskväll före ledig helg* gäller inte för förskolan, eftersom Sen slutar 18:00 och inte är ett kvällspass. Förskolans personal arbetar 40 timmar i veckan, fem arbetsdagar och två lediga (regelverket 40-timmarsvecka, där Sen ligger kvar), och läggs in på 100 % som standard. Kompetenserna i en förskola är bara förskollärare och pedagog. Se `docs/starttider.md`. Beslutat av användaren 2026-11-10.
 
+40. **Äldreomsorgens områden i grunden.** Områdena inom äldreomsorgen läggs in som grund, som förskolorna: SÄBO med Forellen, Furulund (1, 2, 3 och Natt), Jonsereds-gården och Kullegården; ORDBO med Björndammen, Centrum, Sävedalen (Norra och Södra), Digital hemtjänst och Nattpatrull. Varje område är en enhet och avdelningarna team i områdets gemensamma schema. Se `docs/organisation.md`. Beslutat av användaren 2026-11-10.
+
 Öppna frågor, alltså inte beslutade:
 - Ersättning för jour enligt Bilaga J räknas inte än; bilagans text ska kontrolleras mot SKR:s publicering först.
 - Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).

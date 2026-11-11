@@ -42,6 +42,7 @@ def main():
                 .replace("__GRAFER__", skydda((HAR.parent / "schemawebb" / "statisk" / "grafer.js").read_text(encoding="utf-8")))
                 .replace("__ANALYS__", skydda((HAR / "analys.js").read_text(encoding="utf-8")))
                 .replace("__GRUND__", (HAR.parent / "schemawebb" / "grund_forskola.json").read_text(encoding="utf-8").replace("</", "<\\/"))
+                .replace("__GRUND_ALDRE__", (HAR.parent / "schemawebb" / "grund_aldreomsorg.json").read_text(encoding="utf-8").replace("</", "<\\/"))
                 .replace("__EXEMPEL__", json.dumps(exempel, ensure_ascii=False).replace("</", "<\\/")))
     ut = HAR / "schema-light.html"
     ut.write_text(sida, encoding="utf-8")

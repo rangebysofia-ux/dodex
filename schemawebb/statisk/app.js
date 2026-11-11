@@ -1315,6 +1315,7 @@ document.addEventListener("click", async e => {
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
       case "kom-bort": if (!confirm("Ta bort kompetensen ur listan? Medarbetare och krav i enheterna som redan har den behåller den.")) return; await sparaKompetenser(KOMP.taBort(st.kompetenser, el.dataset.id)); break;
+      case "grund-aldre": { const r = await api("POST", "grund/aldreomsorg"); st.org = null; meddela(r.nya || r.avdelningar ? `Äldreomsorgen är inlagd: ${r.nya} nya områden och ${r.avdelningar} avdelningar.` : "Alla områden och avdelningar finns redan."); break; }
       case "grund": { const r = await api("POST", "grund"); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }

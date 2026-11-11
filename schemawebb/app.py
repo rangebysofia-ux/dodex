@@ -474,6 +474,12 @@ def lagg_in_grund():
     return grund.lagg_in()
 
 
+@app.post("/api/grund/aldreomsorg", dependencies=[Depends(inloggad)])
+def lagg_in_grund_aldre():
+    """Lägger in äldreomsorgens områden och avdelningar som saknas (schemawebb/grund_aldreomsorg.json)."""
+    return grund.lagg_in_aldre()
+
+
 class FlyttaIn(BaseModel):
     org: Optional[str] = None
 

@@ -5713,7 +5713,8 @@ function importKort(noder, imp) {
   if (!imp) return `<section class="kort"><h2>Importera från Excel</h2>
       <p class="dampad liten">En lista med enheter och avdelningar, till exempel en kolumn för förskolan och en för avdelningen, eller områden med kolumnerna Typ, Under och Avdelningar. Du ser allt och väljer vad som ska med innan något sparas. Bara namnen läses.</p>
       <p class="chips"><label class="knapp">Välj Excel-fil<input type="file" id="org-import" accept=".xlsx,.xls,.csv" hidden></label>
-      <button data-os="grund" title="Förskolorna och avdelningarna som finns som grund i verktyget. Bara det som saknas läggs till.">Lägg in förskolorna</button></p></section>`;
+      <button data-os="grund" title="Förskolorna och avdelningarna som finns som grund i verktyget. Bara det som saknas läggs till.">Lägg in förskolorna</button>
+      <button data-os="grund-aldre" title="Äldreomsorgens områden och avdelningar som finns som grund i verktyget. Bara det som saknas läggs till.">Lägg in äldreomsorgen</button></p></section>`;
   return `<section class="kort"><h2>Importera ${esc(imp.fil || "")}</h2>
       <div class="falt" style="max-width:420px"><div><label for="imp-plats">Lägg under</label><select id="imp-plats">${alternativ(noder, imp.forelder, { tom: "Överst i organisationen" })}</select></div></div>
       <p class="dampad liten">Bocka ur det som ska vänta, eller enskilda avdelningar som inte ska med. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas. Avdelningarna blir områden/team i enhetens gemensamma schema.</p>
@@ -6037,6 +6038,168 @@ if (typeof module !== "undefined") module.exports = ORG;
  }
 }
 ;</script>
+<script>const GRUND_ALDRE = {
+ "beskrivning": "Grunden i verktyget: äldreomsorgens områden och avdelningar (användarens underlag och rättelser 2026-11-09, beslutat 2026-11-10). Bara namn, inga personuppgifter. Varje område blir en enhet under vägen i `vag` (grupper skapas om de saknas), och avdelningarna blir team i områdets gemensamma schema. Se docs/organisation.md.",
+ "enheter": [
+  {
+   "namn": "Forellen",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO"
+   ],
+   "avdelningar": [
+    "3A",
+    "3B",
+    "4B",
+    "Natt"
+   ]
+  },
+  {
+   "namn": "Furulund 1",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": [
+    "1A",
+    "1B"
+   ]
+  },
+  {
+   "namn": "Furulund 2",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": [
+    "2A",
+    "2B"
+   ]
+  },
+  {
+   "namn": "Furulund 3",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": [
+    "3A",
+    "3B"
+   ]
+  },
+  {
+   "namn": "Furulund Natt",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": []
+  },
+  {
+   "namn": "Jonsereds-gården",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO"
+   ],
+   "avdelningar": [
+    "Björkelund",
+    "Lindås",
+    "Linnekullen",
+    "Lyckås gul",
+    "Lyckås röd",
+    "Lycktegården",
+    "Natt"
+   ]
+  },
+  {
+   "namn": "Kullegården",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO"
+   ],
+   "avdelningar": [
+    "Lilla teamet",
+    "Team 1",
+    "Team 2",
+    "Team 3",
+    "Team 4"
+   ]
+  },
+  {
+   "namn": "Björndammen",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": [
+    "Björndammen",
+    "Furulund",
+    "Mosaiken",
+    "Öjersjö"
+   ]
+  },
+  {
+   "namn": "Centrum",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": [
+    "Centrum/Lexby",
+    "Jonsered",
+    "Olof/Anneberg"
+   ]
+  },
+  {
+   "namn": "Norra",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO",
+    "Sävedalen"
+   ],
+   "avdelningar": [
+    "Innegruppen",
+    "Orange",
+    "Röd"
+   ]
+  },
+  {
+   "namn": "Södra",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO",
+    "Sävedalen"
+   ],
+   "avdelningar": [
+    "Blå",
+    "Grön",
+    "Lila"
+   ]
+  },
+  {
+   "namn": "Digital hemtjänst",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": [
+    "Larmteam"
+   ]
+  },
+  {
+   "namn": "Nattpatrull",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": []
+  }
+ ]
+};</script>
 <script>"use strict";
 // Team i en arbetsgrupp (docs/team.md): gemensam personal med hemteam, och ett eget behov per team.
 // Delas av webben och lättversionen. Enhetens behov är summan av teamens; det räknas här så att det aldrig
@@ -6820,6 +6983,14 @@ const lager = {
     if (this.db) return this.db.doc(`${this.bas}/grund_tider`).set({ forskola: true, tid: Date.now() });
     const d = this.lokal(); d.grundTider = true; this.lokalSpara(d);
   },
+  async grundAldreKlar() {
+    if (this.db) { try { const d = await medTidsgrans(this.db.doc(`${this.bas}/grund_aldre`).get()); return d.exists; } catch { return true; } }
+    return !!this.lokal().grundAldre;
+  },
+  async sattGrundAldreKlar() {
+    if (this.db) return this.db.doc(`${this.bas}/grund_aldre`).set({ aldreomsorg: true, tid: Date.now() });
+    const d = this.lokal(); d.grundAldre = true; this.lokalSpara(d);
+  },
   async sattGrundKlar() {
     if (this.db) return this.db.doc(`${this.bas}/grund`).set({ forskola: true, tid: Date.now() });
     const d = this.lokal(); d.grund = true; this.lokalSpara(d);
@@ -6903,6 +7074,7 @@ async function visaLista() {
   try { st.enheter = await lager.enheter(); } catch (e) { st.enheter = []; meddela(e.message); }
   try { if (!(await lager.grundKlar())) { await laggInGrund(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
   try { if (!(await lager.grundTiderKlar())) { await grundTider(); st.enheter = await lager.enheter(); } } catch { /* nästa gång */ }
+  try { if (!(await lager.grundAldreKlar())) { await laggInGrundAldre(); st.enheter = await lager.enheter(); } } catch { /* grunden kan läggas in från sidan Organisation */ }
   try { st.org = ORG.kopia(await lager.org()); } catch { st.org = ORG.kopia(); }
   try { st.akttyper = ORG.aktKopia(await lager.akttyper()); } catch { st.akttyper = ORG.aktKopia(); }
   try { st.kompetenser = KOMP.kopia(await lager.kompetenser()); } catch { st.kompetenser = KOMP.kopia(); }
@@ -7556,6 +7728,33 @@ async function laggInGrund() {
   await lager.sattGrundKlar();
   return { nya, avdelningar: avd };
 }
+// Grunden för äldreomsorgen (schemawebb/grund_aldreomsorg.json): områdena blir enheter under sina grupper,
+// avdelningarna team. Grupper skapas om de saknas (ORG.grupp). Lägger bara in det som saknas.
+async function laggInGrundAldre() {
+  let noder = ORG.kopia(await lager.org());
+  const fore = JSON.stringify(noder), fanns = await lager.enheter();
+  let nya = 0, avd = 0;
+  for (const f of GRUND_ALDRE.enheter) {
+    let org = null;
+    for (const namn of f.vag) {
+      const alias = namn.toLowerCase() === "ordbo" ? ORG.barn(noder, org).find(x => x.namn.toLowerCase() === "hemtjänst") : null;
+      if (alias) { org = alias.id; continue; }
+      const g = ORG.grupp(noder, namn, org); noder = g.noder; org = g.id;
+    }
+    const e = fanns.find(x => x.namn.toLowerCase() === f.namn.toLowerCase() && x.org === org);
+    if (!e) {
+      const ind = GUIDE.tomIndata(f.namn); f.avdelningar.forEach(a => TEAM.laggTill(ind, a));
+      await lager.sparaEnhet({ id: nyttId(), namn: f.namn, indata: ind, org }); nya++; avd += f.avdelningar.length;
+    } else {
+      const har = new Set(((e.indata && e.indata.team) || []).map(t => String(t.namn).toLowerCase()));
+      const saknas = f.avdelningar.filter(a => !har.has(a.toLowerCase()));
+      if (saknas.length) { const n = structuredClone(e); saknas.forEach(a => TEAM.laggTill(n.indata, a)); await lager.sparaEnhet(n); avd += saknas.length; }
+    }
+  }
+  if (JSON.stringify(noder) !== fore) { await lager.sparaOrg(noder); st.org = noder; }
+  await lager.sattGrundAldreKlar();
+  return { nya, avdelningar: avd };
+}
 document.addEventListener("click", async e => {
   const el = e.target.closest("[data-os]"); if (!el || st.vy !== "organisation") return;
   e.preventDefault();
@@ -7576,6 +7775,7 @@ document.addEventListener("click", async e => {
       case "import-kor": el.disabled = true; el.textContent = "Importerar …"; await korImport(); break;
       case "import-avbryt": st.imp = null; break;
       case "kom-bort": if (!confirm("Ta bort kompetensen ur listan? Medarbetare och krav i enheterna som redan har den behåller den.")) return; await sparaKompetenser(KOMP.taBort(st.kompetenser, el.dataset.id)); break;
+      case "grund-aldre": { const r = await laggInGrundAldre(); meddela(r.nya || r.avdelningar ? `Äldreomsorgen är inlagd: ${r.nya} nya områden och ${r.avdelningar} avdelningar.` : "Alla områden och avdelningar finns redan."); break; }
       case "grund": { const r = await laggInGrund(); meddela(r.nya || r.avdelningar ? `Förskolorna är inlagda: ${r.nya} nya förskolor och ${r.avdelningar} avdelningar.` : "Alla förskolor och avdelningar finns redan."); break; }
       default: return;
     }

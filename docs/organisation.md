@@ -65,7 +65,7 @@ Förskolorna och deras avdelningar finns som grund i verktyget (användarens bes
 - **Webben** lägger in grunden en gång när tjänsten startar (flaggan `grund_forskola`). En förskola som tas bort kommer alltså inte tillbaka av sig själv. `SCHEMA_GRUND=av` stänger av det (testerna gör det).
 - **Lättversionen** lägger in grunden första gången listan öppnas, i användarens egen lagring.
 - Knappen **Lägg in förskolorna** på sidan Organisation lägger in förskolor och avdelningar som saknas, till exempel efter att något har tagits bort av misstag.
-- Äldreomsorgen ingår inte i grunden än. Den kan importeras från Excel när den är klar.
+- **Äldreomsorgen** finns också som grund (användarens beslut 2026-11-10), från `schemawebb/grund_aldreomsorg.json`: 13 områden med 40 avdelningar. Varje område blir en enhet där vägen (`vag`) anger var: SÄBO (Forellen, Jonsereds-gården, Kullegården), SÄBO › Furulund (Furulund 1–3 och Furulund Natt), ORDBO (Björndammen, Centrum, Digital hemtjänst och Nattpatrull) och ORDBO › Sävedalen (Norra och Södra). Avdelningarna blir team i områdets gemensamma schema. Grupper som saknas skapas, och ORDBO återanvänds även om den heter Hemtjänst. Det läggs in en gång (flaggan `grund_aldreomsorg`); knappen **Lägg in äldreomsorgen** på sidan Organisation lägger in det som saknas igen (`POST /api/grund/aldreomsorg`).
 
 ## Importera från Excel
 

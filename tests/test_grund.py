@@ -1,4 +1,5 @@
-"""Grunden i verktyget: förskolorna och deras avdelningar (schemawebb/grund.py, grund_forskola.json)."""
+"""Grunden i verktyget: förskolorna och deras avdelningar (schemawebb/grund.py, grund_forskola.json) och äldreomsorgens
+områden (grund_aldreomsorg.json)."""
 import json
 from pathlib import Path
 
@@ -26,8 +27,8 @@ def test_underlaget():
 
 
 def test_forskolorna_laggs_in_en_gang(klient):
-    enh = klient.get("/api/enheter").json()
-    assert len(enh) == 29 and all(e["org"] == "forskola" for e in enh)
+    enh = [e for e in klient.get("/api/enheter").json() if e["org"] == "forskola"]
+    assert len(enh) == 29
     kulle = next(e for e in enh if e["namn"] == "Kullegården")
     assert len(kulle["team"]) == 10 and kulle["team"][0]["farg"].startswith("#")
     ind = klient.get(f"/api/enheter/{kulle['id']}").json()["indata"]
@@ -38,7 +39,7 @@ def test_forskolorna_laggs_in_en_gang(klient):
     klient.delete(f"/api/enheter/{kulle['id']}")
     from schemawebb import grund
     assert grund.vid_start() is None
-    assert len(klient.get("/api/enheter").json()) == 28
+    assert len([e for e in klient.get("/api/enheter").json() if e["org"] == "forskola"]) == 28
     r = klient.post("/api/grund").json()
     assert r == {"nya": 1, "avdelningar": 10}
     assert klient.post("/api/grund").json() == {"nya": 0, "avdelningar": 0}
@@ -77,3 +78,39 @@ def test_tider_laggs_in_i_forskolor_som_fanns(tmp_path, monkeypatch):
     assert regler(b) == {"morgon_start": "06:30", "kvall_slut": "18:00"}
     assert regler(c) is None
     assert db.installning("grund_forskola_tider") is True
+
+
+def test_aldreomsorgen_laggs_in(klient):
+    """Äldreomsorgens områden blir enheter under sina grupper, avdelningarna team (användarens beslut 2026-11-10)."""
+    org = klient.get("/api/organisation").json()["noder"]
+    namn = {n["id"]: n for n in org}
+    vag = lambda i: " › ".join(reversed([namn[x]["namn"] for x in _upp(namn, i)]))  # noqa: E731
+    enh = {e["namn"] + "@" + vag(e["org"]): e for e in klient.get("/api/enheter").json() if e["org"] and e["org"] != "forskola"}
+    assert set(enh) == {
+        "Forellen@Äldreomsorg › SÄBO", "Jonsereds-gården@Äldreomsorg › SÄBO", "Kullegården@Äldreomsorg › SÄBO",
+        "Furulund 1@Äldreomsorg › SÄBO › Furulund", "Furulund 2@Äldreomsorg › SÄBO › Furulund",
+        "Furulund 3@Äldreomsorg › SÄBO › Furulund", "Furulund Natt@Äldreomsorg › SÄBO › Furulund",
+        "Björndammen@Äldreomsorg › ORDBO", "Centrum@Äldreomsorg › ORDBO", "Digital hemtjänst@Äldreomsorg › ORDBO",
+        "Nattpatrull@Äldreomsorg › ORDBO", "Norra@Äldreomsorg › ORDBO › Sävedalen", "Södra@Äldreomsorg › ORDBO › Sävedalen"}
+    assert [t["namn"] for t in enh["Forellen@Äldreomsorg › SÄBO"]["team"]] == ["3A", "3B", "4B", "Natt"]
+    assert enh["Nattpatrull@Äldreomsorg › ORDBO"]["team"] == []
+    ind = klient.get(f"/api/enheter/{enh['Norra@Äldreomsorg › ORDBO › Sävedalen']['id']}").json()["indata"]
+    from schemamotor.modell import kontrollera_indata
+    assert kontrollera_indata(ind) == ["personal: får inte vara tom"]
+    assert "regler" not in ind  # förskolornas tider gäller inte äldreomsorgen
+    # ORDBO återanvänds (ingen dubblett), och knappen lägger bara in det som saknas
+    assert sum(1 for n in org if n["namn"] == "ORDBO") == 1
+    assert klient.post("/api/grund/aldreomsorg").json() == {"nya": 0, "avdelningar": 0}
+
+
+def _upp(noder, i):
+    ut = []
+    while i:
+        ut.append(i)
+        i = noder[i].get("forelder")
+    return ut
+
+
+def test_lattversionen_har_aldreomsorgen():
+    s = (ROT / "light" / "schema-light.html").read_text(encoding="utf-8")
+    assert "const GRUND_ALDRE = {" in s and "Jonsereds-gården" in s and "laggInGrundAldre()" in s

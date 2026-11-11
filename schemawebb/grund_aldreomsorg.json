@@ -1,0 +1,162 @@
+{
+ "beskrivning": "Grunden i verktyget: äldreomsorgens områden och avdelningar (användarens underlag och rättelser 2026-11-09, beslutat 2026-11-10). Bara namn, inga personuppgifter. Varje område blir en enhet under vägen i `vag` (grupper skapas om de saknas), och avdelningarna blir team i områdets gemensamma schema. Se docs/organisation.md.",
+ "enheter": [
+  {
+   "namn": "Forellen",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO"
+   ],
+   "avdelningar": [
+    "3A",
+    "3B",
+    "4B",
+    "Natt"
+   ]
+  },
+  {
+   "namn": "Furulund 1",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": [
+    "1A",
+    "1B"
+   ]
+  },
+  {
+   "namn": "Furulund 2",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": [
+    "2A",
+    "2B"
+   ]
+  },
+  {
+   "namn": "Furulund 3",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": [
+    "3A",
+    "3B"
+   ]
+  },
+  {
+   "namn": "Furulund Natt",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO",
+    "Furulund"
+   ],
+   "avdelningar": []
+  },
+  {
+   "namn": "Jonsereds-gården",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO"
+   ],
+   "avdelningar": [
+    "Björkelund",
+    "Lindås",
+    "Linnekullen",
+    "Lyckås gul",
+    "Lyckås röd",
+    "Lycktegården",
+    "Natt"
+   ]
+  },
+  {
+   "namn": "Kullegården",
+   "vag": [
+    "Äldreomsorg",
+    "SÄBO"
+   ],
+   "avdelningar": [
+    "Lilla teamet",
+    "Team 1",
+    "Team 2",
+    "Team 3",
+    "Team 4"
+   ]
+  },
+  {
+   "namn": "Björndammen",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": [
+    "Björndammen",
+    "Furulund",
+    "Mosaiken",
+    "Öjersjö"
+   ]
+  },
+  {
+   "namn": "Centrum",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": [
+    "Centrum/Lexby",
+    "Jonsered",
+    "Olof/Anneberg"
+   ]
+  },
+  {
+   "namn": "Norra",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO",
+    "Sävedalen"
+   ],
+   "avdelningar": [
+    "Innegruppen",
+    "Orange",
+    "Röd"
+   ]
+  },
+  {
+   "namn": "Södra",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO",
+    "Sävedalen"
+   ],
+   "avdelningar": [
+    "Blå",
+    "Grön",
+    "Lila"
+   ]
+  },
+  {
+   "namn": "Digital hemtjänst",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": [
+    "Larmteam"
+   ]
+  },
+  {
+   "namn": "Nattpatrull",
+   "vag": [
+    "Äldreomsorg",
+    "ORDBO"
+   ],
+   "avdelningar": []
+  }
+ ]
+}

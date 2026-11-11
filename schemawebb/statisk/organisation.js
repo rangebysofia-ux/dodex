@@ -280,7 +280,8 @@ function importKort(noder, imp) {
   if (!imp) return `<section class="kort"><h2>Importera från Excel</h2>
       <p class="dampad liten">En lista med enheter och avdelningar, till exempel en kolumn för förskolan och en för avdelningen, eller områden med kolumnerna Typ, Under och Avdelningar. Du ser allt och väljer vad som ska med innan något sparas. Bara namnen läses.</p>
       <p class="chips"><label class="knapp">Välj Excel-fil<input type="file" id="org-import" accept=".xlsx,.xls,.csv" hidden></label>
-      <button data-os="grund" title="Förskolorna och avdelningarna som finns som grund i verktyget. Bara det som saknas läggs till.">Lägg in förskolorna</button></p></section>`;
+      <button data-os="grund" title="Förskolorna och avdelningarna som finns som grund i verktyget. Bara det som saknas läggs till.">Lägg in förskolorna</button>
+      <button data-os="grund-aldre" title="Äldreomsorgens områden och avdelningar som finns som grund i verktyget. Bara det som saknas läggs till.">Lägg in äldreomsorgen</button></p></section>`;
   return `<section class="kort"><h2>Importera ${esc(imp.fil || "")}</h2>
       <div class="falt" style="max-width:420px"><div><label for="imp-plats">Lägg under</label><select id="imp-plats">${alternativ(noder, imp.forelder, { tom: "Överst i organisationen" })}</select></div></div>
       <p class="dampad liten">Bocka ur det som ska vänta, eller enskilda avdelningar som inte ska med. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas. Avdelningarna blir områden/team i enhetens gemensamma schema.</p>
