@@ -1,6 +1,6 @@
 ---
 name: dodex-grundschemaanalys
-description: Analyserar cykliska grundscheman (äldreomsorg, LSS och förskola, Kommunal/AB) mot dygnsvila, veckovila, rast, antal pass, varannan helg och andra regler, räknar vakanser och nyckeltal och föreslår förbättringar. Använd när användaren bifogar eller beskriver ett grundschema, ofta en Excel-export från DODEX Scheduler, eller frågar om vila, helger, vakanser eller passbyten i ett schema.
+description: "Analyserar cykliska grundscheman (äldreomsorg, LSS och förskola, Kommunal/AB) mot dygnsvila, veckovila, rast, antal pass, varannan helg och andra regler, räknar vakanser och nyckeltal och föreslår förbättringar. Använd när användaren bifogar eller beskriver ett grundschema, ofta en Excel-export från DODEX Scheduler, eller frågar om vila, helger, vakanser eller passbyten i ett schema."
 ---
 
 # DODEX Grundschemaanalys

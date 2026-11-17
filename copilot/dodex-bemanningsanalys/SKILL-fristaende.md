@@ -1,6 +1,6 @@
 ---
 name: dodex-bemanningsanalys
-description: Bred bemannings-, ekonomi- och nyttoanalys för svensk kommunal äldreomsorg, LSS och förskola (Kommunal/AB): nulägesanalys av behovet, bemanningsbalans och budget, årsarbetare, kostnad, scenarier, kompetens och utbildning samt beslutsunderlag. Använd när frågan gäller om budget och personal räcker, vad något kostar eller ger, hur många som behövs eller vad verksamheten bör välja. Granskar inte ett schemas regler; det gör dodex-grundschemaanalys.
+description: "Bred bemannings-, ekonomi- och nyttoanalys för svensk kommunal äldreomsorg, LSS och förskola (Kommunal/AB): nulägesanalys av behovet, bemanningsbalans och budget, årsarbetare, kostnad, scenarier, kompetens och utbildning samt beslutsunderlag. Använd när frågan gäller om budget och personal räcker, vad något kostar eller ger, hur många som behövs eller vad verksamheten bör välja. Granskar inte ett schemas regler; det gör dodex-grundschemaanalys."
 ---
 
 

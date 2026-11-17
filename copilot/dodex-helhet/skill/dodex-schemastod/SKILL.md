@@ -1,6 +1,6 @@
 ---
 name: dodex-schemastod
-description: Helhetsstöd för bemanning och grundscheman i svensk kommunal äldreomsorg, LSS och förskola (Kommunal/AB): nulägesanalys av behovet, bemanningsbalans och budget, analys av grundscheman, scenarier, kompetens och utbildning samt beslutsunderlag och handlingsplan. Använd när användaren frågar om bemanningsbehov, budget, årsarbetare, helgbemanning, grundschema, vakanser, kompetenskrav eller vill ha ett underlag för beslut om bemanning eller schema.
+description: "Helhetsstöd för bemanning och grundscheman i svensk kommunal äldreomsorg, LSS och förskola (Kommunal/AB): nulägesanalys av behovet, bemanningsbalans och budget, analys av grundscheman, scenarier, kompetens och utbildning samt beslutsunderlag och handlingsplan. Använd när användaren frågar om bemanningsbehov, budget, årsarbetare, helgbemanning, grundschema, vakanser, kompetenskrav eller vill ha ett underlag för beslut om bemanning eller schema."
 ---
 
 # DODEX Schemastöd
