@@ -24,6 +24,15 @@ Kunskapsfilerna: 1 Regler och nivåer, 2 Analysmetod, 3 Dataformat, 4 Verksamhet
 6. **Startfrågor:** raderna i `startfragor.txt`.
 7. Prova och välj **Skapa**. Dela med dem som behöver den.
 
+## Som färdighet (skill)
+
+Mappen `skill/dodex-schemastod` är samma innehåll som en färdighet enligt standarden Agent Skills: `SKILL.md` (namn och beskrivning överst, sedan instruktionerna) och referensfilerna i `references/`. Använd den när Copilot ber om en skill-fil.
+
+1. Packa mappen som ZIP med mappen överst: `dodex-schemastod.zip` innehåller `dodex-schemastod/SKILL.md` och `dodex-schemastod/references/…`. Ladda inte upp SKILL.md ensam.
+2. **Agent Builder:** i agenten, under **Färdigheter** (Skills), välj **Lägg till** och ladda upp ZIP-filen. Instruktionerna kan då vara korta, till exempel "Använd färdigheten dodex-schemastod för frågor om bemanning och scheman."
+3. **Copilot i PowerPoint och andra appar med personliga färdigheter:** lägg mappen `dodex-schemastod` i den mapp i OneDrive som Copilot anger för färdigheter.
+4. Mappens namn och `name` i SKILL.md måste vara lika (dodex-schemastod).
+
 ## Att tänka på
 
 - Id-koder i stället för namn. Ladda inte upp lön, frånvaro eller hälsouppgifter för enskilda.

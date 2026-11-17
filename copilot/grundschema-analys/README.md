@@ -28,6 +28,15 @@ En Copilot-agent som analyserar cykliska grundscheman (äldreomsorg, LSS och fö
 - Be agenten arbeta vidare: "Föreslå ett byte så att fredagskvällarna täcks", "Gör ett beslutsunderlag".
 - Den exakta kontrollen görs i DODEX: lägg in förslaget där och titta under Regelkontroll.
 
+## Som färdighet (skill)
+
+Mappen `skill/dodex-grundschemaanalys` är samma innehåll som en färdighet enligt standarden Agent Skills: `SKILL.md` (namn och beskrivning överst, sedan instruktionerna) och referensfilerna i `references/`. Använd den när Copilot ber om en skill-fil.
+
+1. Packa mappen som ZIP med mappen överst: `dodex-grundschemaanalys.zip` innehåller `dodex-grundschemaanalys/SKILL.md` och `dodex-grundschemaanalys/references/…`. Ladda inte upp SKILL.md ensam.
+2. **Agent Builder:** i agenten, under **Färdigheter** (Skills), välj **Lägg till** och ladda upp ZIP-filen. Instruktionerna kan då vara korta, till exempel "Använd färdigheten dodex-grundschemaanalys för frågor om bemanning och scheman."
+3. **Copilot i PowerPoint och andra appar med personliga färdigheter:** lägg mappen `dodex-grundschemaanalys` i den mapp i OneDrive som Copilot anger för färdigheter.
+4. Mappens namn och `name` i SKILL.md måste vara lika (dodex-grundschemaanalys).
+
 ## Att tänka på
 
 - Använd id-koder för medarbetarna, inte namn. Ladda inte upp lön, frånvaro eller hälsouppgifter.
