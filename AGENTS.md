@@ -27,7 +27,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemawebb/statisk/enhetsfil.js` – enhetsfil: en enhet med inställningar och scheman som sparas i webben eller lättversionen och öppnas i den andra. Indata förs över orörd; scheman granskas om när filen öppnas. Se `docs/enhetsfil.md`.
 - `schemawebb/statisk/grafer.js` – nyckeltal och grafer (översikt, värmekarta, simulering) och balansmallen (behov, arbetsmiljö, budget, kvalitet; `docs/balansmall.md`), delas av webben och lättversionen. Fristående, inga regler.
 - `schemawebb/statisk/assistent.js` – schemaassistentens verktyg, delas av webben (`chatt.js`, `/api/assistent`) och lättversionen. Assistenten får bara föreslå ändringar; de tillämpas först när användaren godkänner. Den får aldrig ändra regler eller skriva kod som körs i lösaren. Se `docs/assistent.md`.
-- `copilot/grundschema-analys/` – agent för Microsoft 365 Copilot som analyserar grundscheman: instruktioner och kunskapsfiler (Markdown och Word). Bygger på `docs/regelhierarki.md`; uppdatera kunskapsfilerna när en regel eller ett beslut ändras. Se README i mappen.
+- `copilot/grundschema-analys/` och `copilot/dodex-helhet/` – agenter för Microsoft 365 Copilot: analys av grundscheman, och ett helhetsstöd (nulägesanalys, bemanningsbalans och budget, scenarier, kompetens, beslutsunderlag). Instruktioner och kunskapsfiler (Markdown och Word); filerna 1–4 ska vara lika i båda. Bygger på `docs/regelhierarki.md`; uppdatera kunskapsfilerna när en regel eller ett beslut ändras. Se README i mappen.
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.
 - `tests/fall/` – testfall med fältet `forvantat`. `tests/test_motor.py` kör dem.
 
