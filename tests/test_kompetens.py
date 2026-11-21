@@ -101,7 +101,10 @@ process.stdout.write(JSON.stringify(r));""", tmp_path)
 
 
 @nod
-def test_planeringsstodet():
+def test_planeringsstodet(brist, tmp_path):
+    _, resultat = brist
+    resultatfil = tmp_path / "kompetens_resultat.json"
+    resultatfil.write_text(json.dumps(resultat), encoding="utf-8")
     ut = kor_js(r"""
 const K = require("./schemawebb/statisk/kompetens.js"), r = {};
 const ind = JSON.parse(JSON.stringify(require("./tests/fall/kompetens_brist.json")));
@@ -127,7 +130,7 @@ const res = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
 r.utb = K.utbildning(res, require("./tests/fall/kompetens_brist.json"));
 r.kortHtml = K.tackningKort(res, require("./tests/fall/kompetens_brist.json")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 r.marke = K.marke({ personal: [{ id: "A1", kompetenser: ["del"] }], kompetenser: [{ id: "del", namn: "Delegering", kort: "DEL" }] }, "A1");
-process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "data" / "kompetens_resultat.json")
+process.stdout.write(JSON.stringify(r));""", resultatfil)
     b = ut["balans"][0]
     assert b["kravVecka"] == 7 and b["kan"] == ["A1"] and b["fler"] >= 1  # en person räcker inte till sju kvällar
     assert ut["balans4"]["fler"] == 0  # fyra med delegering räcker
@@ -147,9 +150,10 @@ process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "data" / "kompetens
 @pytest.fixture
 def klient(tmp_path, monkeypatch):
     monkeypatch.setenv("SCHEMA_DATA", str(tmp_path / "data"))
-    monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
+    monkeypatch.setenv("SCHEMA_LOSENORD", "syntetiskt-test")
     from schemawebb.app import app
     with TestClient(app) as k:
+        assert k.post("/api/logga-in", json={"losenord": "syntetiskt-test"}).status_code == 200
         yield k
 
 

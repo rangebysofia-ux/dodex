@@ -4,8 +4,8 @@ Starta lokalt:
     uvicorn schemawebb.app:app --port 8000
 
 Miljövariabler:
-    SCHEMA_LOSENORD   gemensamt lösenord (roll schemaläggare). Utan värde och utan konton krävs ingen
-                      inloggning (bara för egen dator). Konton med roller skapas i gränssnittet; det första
+    SCHEMA_LOSENORD   gemensamt lösenord (roll schemaläggare). Krävs för första inloggningen utanför lokalt demoläge.
+    SCHEMA_LOKAL_DEMO 1 tillåter lokal demo utan lösenord när konton saknas. Avstängt på Render. Konton med roller skapas i gränssnittet; det första
                       kontot blir chef. Chefen hanterar kontona (docs/godkant-schema.md).
     SCHEMA_GODKANNARE "alla" (standard): alla inloggade får godkänna och aktivera scheman. "chef": bara chefer.
     SCHEMA_HEMLIGHET  nyckel för att signera inloggningen. Utan värde härleds den från lösenordet.
@@ -119,7 +119,8 @@ def _stammer(losenord: str, lagrat: str) -> bool:
 
 
 def _kravs() -> bool:
-    return bool(_losenord()) or db.antal_anvandare() > 0
+    return (os.environ.get("SCHEMA_LOKAL_DEMO") != "1" or bool(os.environ.get("RENDER"))
+            or bool(_losenord()) or db.antal_anvandare() > 0)
 
 
 def _session(request: Request):
