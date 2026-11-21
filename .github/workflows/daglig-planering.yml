@@ -19,5 +19,7 @@ jobs:
           python-version: '3.11'
       - name: Installera beroenden
         run: python -m pip install -e '.[dev]'
+      - name: Kontrollera JavaScript-syntax
+        run: node --check schemawebb/statisk/daglig_planering.js
       - name: Syntetiska planeringstester
         run: python -m pytest -q tests/test_planering.py tests/test_daglig_planering.py
