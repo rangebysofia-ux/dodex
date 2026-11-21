@@ -2,6 +2,16 @@
 
 Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-verksamhet inom äldreomsorg och funktionsstöd i svenska kommuner (Kommunal, HÖK/AB). Läs den här filen och `docs/regelhierarki.md` innan du ändrar något.
 
+**Övergripande riktning – läs alltid också `docs/vision-hallbar-kompetensforsorjning.md`.**
+Dodex utvecklas inte enbart som schemasystem utan som en sammanhängande
+bemanningsprocess och ett beslutsstöd för **hållbar kompetensförsörjning**,
+med koppling till Partilles målbilder 2026–2035. Behovsanalys,
+kompetensplanering, dimensionering, ekonomi, scenarier, målkonflikter,
+schemaläggning, daglig bemanning, uppföljning och lärande hör ihop.
+Varje större förändring ska ange vilket verksamhetsmål den stödjer och
+hur konsekvenser och faktiska effekter ska kunna följas upp.
+Denna vision är en projektinriktning, inte ett formellt kommunalt beslut.
+
 ## Systemets delar
 
 - `schemamotor/build.py` – lägger schemat med OR-Tools CP-SAT i två faser (mönster, sedan passlängder) och lexikografisk optimering.
