@@ -232,6 +232,10 @@ async def livstid(app):
 
 app = FastAPI(title="Schemasystem", lifespan=livstid, docs_url=None, redoc_url=None)
 
+# Separat, avstängd-demofunktion för daglig bemanning.
+from schemawebb.daglig_planering import skapa_router as skapa_daglig_router
+app.include_router(skapa_daglig_router(inloggad))
+
 
 @app.middleware("http")
 async def sakerhet(request: Request, call_next):
