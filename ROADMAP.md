@@ -3,7 +3,7 @@
 **Strategisk kompass:** `docs/vision-hallbar-kompetensforsorjning.md`.
 Färdplanens uppgifter är tekniska utvecklingssteg inom en **hel bemanningsprocess**
 med hållbar kompetensförsörjning, synliga målkonflikter och uppföljning
-som övergripande mål. Punkt 23/24/26 är en början, inte slutmålet.
+som övergripande mål. Den strategiska uppföljningen ska knytas till Partilles **ARIBUA** (Attrahera, Rekrytera, Introducera, Behålla, Utveckla, Avsluta/Avveckla). Punkt 23/24/26 är en början, inte slutmålet.
 
 Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterierna är uppfyllda och `pytest -q` passerar.
 
