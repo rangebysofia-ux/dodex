@@ -2,7 +2,7 @@
 from copy import deepcopy
 import pytest
 
-from schemamotor.planering import Planeringsfel, generera_daterade_pass, markera_franvaro
+from schemamotor.planering import Planeringsfel, bemanning_for_datum, generera_daterade_pass, markera_franvaro
 
 
 def grundschema(veckor, placerade):
@@ -91,6 +91,13 @@ def test_nattpass_sondag_till_mandag_tillhor_schemat_det_borjade_i():
     assert [p["person_id"] for p in passlista if p["datum"] == "2026-11-09"] == ["N2"]
     # ett intervall som bara omfattar måndagen innehåller inte söndagens nattpass (det hör till söndagen)
     assert [p["person_id"] for p in generera_daterade_pass(aktiveringar, korningar, "2026-11-09", "2026-11-09")] == ["N2"]
+    med_midnattspass = deepcopy(korningar)
+    med_midnattspass[201]["resultat"]["schema"]["A1"] = [None] * 6 + [{"start": "16:00", "slut": "00:00"}]
+    tackning = bemanning_for_datum(aktiveringar, med_midnattspass, "2026-11-09")
+    assert [(p["id"], p["tackning_start"], p["tackning_slut"]) for p in tackning] == [
+        (sondag["id"], "2026-11-09T00:00", "2026-11-09T06:45"),
+        (mandag["id"], "2026-11-09T21:45", "2026-11-10T00:00"),
+    ]
     # frånvaro på passet pekar på det gamla schemats aktivering
     kopia = markera_franvaro(passlista, [{"pass_id": sondag["id"], "orsak": "annan"}])
     assert kopia[0]["id"].startswith("1:2026-11-08:") and kopia[0]["korning_id"] == 201

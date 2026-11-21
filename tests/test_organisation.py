@@ -13,6 +13,8 @@ ROT = Path(__file__).resolve().parent.parent
 @pytest.fixture
 def klient(tmp_path, monkeypatch):
     monkeypatch.setenv("SCHEMA_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("SCHEMA_LOKAL_DEMO", "1")
+    monkeypatch.delenv("RENDER", raising=False)
     monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
     from schemawebb import db
     db.anslut(tmp_path / "data" / "schemasystem.db")

@@ -126,6 +126,24 @@ def generera_daterade_pass(
     return ut
 
 
+def bemanning_for_datum(aktiveringar: list[dict], korningar: Mapping[Any, dict],
+                        datum: str | date) -> list[dict]:
+    """Daterade pass med den del av varje pass som infaller under det valda dygnet."""
+    dag = _datum(datum)
+    foregaende = dag - timedelta(days=1) if dag > date.min else dag
+    passlista = generera_daterade_pass(aktiveringar, korningar, foregaende, dag)
+    midnatt = f"{dag.isoformat()}T00:00"
+    resultat = []
+    for passet in passlista:
+        if passet["slut"] <= midnatt:
+            continue
+        slut = passet["slut"]
+        if slut[:10] > dag.isoformat():
+            slut = slut[:10] + "T00:00"
+        resultat.append({**passet, "tackning_start": max(midnatt, passet["start"]), "tackning_slut": slut})
+    return resultat
+
+
 def markera_franvaro(passlista: list[dict], franvarohandelser: list[dict]) -> list[dict]:
     """Koppla heldags-/helpassfrånvaro till pass utan att ändra originalet.
 

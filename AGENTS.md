@@ -44,7 +44,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 ```bash
 pip install -e ".[dev]"
 pytest -q
-uvicorn schemawebb.app:app --port 8000      # webbtjänsten, utan lösenord lokalt
+SCHEMA_LOKAL_DEMO=1 uvicorn schemawebb.app:app --host 127.0.0.1 --port 8000      # webbtjänsten, utan lösenord lokalt
 python light/bygg.py                         # bygger lättversionen
 ```
 

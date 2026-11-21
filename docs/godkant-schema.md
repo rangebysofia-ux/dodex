@@ -27,7 +27,7 @@ Med miljövariabeln `SCHEMA_GODKANNARE=chef` får bara chefer godkänna och akti
 - Kontona skapas under **Konton** i menyn. Det **första kontot blir chef**, och därefter kan bara en chef skapa konton. Det sista chefskontot kan inte tas bort.
 - Lösenord har minst 10 tecken och sparas som PBKDF2-SHA256 med salt (standardbiblioteket, inget nytt beroende). Var och en kan byta sitt eget lösenord.
 - Det gemensamma lösenordet (`SCHEMA_LOSENORD`) fungerar som tidigare och ger rollen schemaläggare.
-- På egen dator utan lösenord och utan konton krävs ingen inloggning, och man räknas som chef. Så fort ett konto finns krävs inloggning.
+- I uttryckligt lokalt demoläge (`SCHEMA_LOKAL_DEMO=1`) utan lösenord och utan konton krävs ingen inloggning, och man räknas som chef. Så fort ett konto finns krävs inloggning.
 - Användarnamnet kan vara en id-kod. Den som godkände ett schema sparas med användarnamn och tid.
 - Utan `SCHEMA_HEMLIGHET` och utan gemensamt lösenord signeras inloggningen med en slumpad nyckel som sparas i filen `hemlighet` bredvid databasen.
 

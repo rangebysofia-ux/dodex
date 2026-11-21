@@ -6,7 +6,7 @@ Det ska gå att följa processen budget → behov → grundschema → frånvaro 
 täckning → vikariebeställning → bokning → faktiskt utfall → ekonomisk uppföljning.
 
 ## Implementerad grund (detta utkast)
-`schemamotor/planering.py` erbjuder två rena funktioner:
+`schemamotor/planering.py` erbjuder rena funktioner:
 
 - `generera_daterade_pass(aktiveringar, korningar, fran_datum, till_datum)`
   lägger ut ett godkänt cykliskt schema på verkliga kalenderdatum och växlar
@@ -31,8 +31,9 @@ måndagen. Passet behåller hela vägen till 06:45:
 - pass-id `<aktivering>:<startdatum>:<person>`, så att frånvaro och senare händelser pekar på rätt schema.
 
 Det nya schemat börjar med de pass som *startar* på måndagen. Söndagens nattpass läggs inte till en gång till.
-Ett intervall som bara omfattar måndagen innehåller därför inte söndagens nattpass. Den som vill se vem som
-arbetar natten mot måndag tar med söndagen i intervallet. Testet är
+Ett intervall som bara omfattar måndagen innehåller därför inte söndagens nattpass. För måndagens bemanningsbild används `bemanning_for_datum(aktiveringar, korningar, datum)`.
+Den visar söndagspassets täckning 00:00–06:45 med dess ursprungliga pass-id samt måndagens egna pass.
+Fälten `tackning_start` och `tackning_slut` avgränsar närvaron inom dygnet, med exklusiv sluttid. Testet är
 `test_nattpass_sondag_till_mandag_tillhor_schemat_det_borjade_i` i `tests/test_planering.py`.
 
 ## Från aktiverat schema till frånvaro (test)

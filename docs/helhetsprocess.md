@@ -104,8 +104,7 @@ Befintlig rollmodell är ännu inte tillräcklig för detta.
 
 ## Kända hinder som ska hanteras innan verkliga personuppgifter
 
-- \`schemawebb/app.py\` tillåter körning utan autentisering om inga konton
-  och inget lösenord konfigurerats. Kräver produktionssäker standard.
+- Webbtjänsten kräver inloggning som standard. Lokalt demoläge väljs uttryckligen och är avstängt på Render.
 - Konton har två roller och saknar enhetsavgränsad behörighet. Enhets- och
   objektnivåkontroll behövs.
 - Det publika kodrepositoryt får **aldrig** innehålla autentiseringsnycklar,

@@ -18,7 +18,8 @@ Planen `starter` behövs eftersom gratisplanen saknar disk: utan disk försvinne
 
 | Variabel | Betydelse |
 |---|---|
-| `SCHEMA_LOSENORD` | Gemensamt lösenord (rollen schemaläggare). Tomt och inga konton = ingen inloggning (bara för egen dator). Konton med roller skapas under Konton; det första blir chef (docs/godkant-schema.md). |
+| `SCHEMA_LOSENORD` | Gemensamt lösenord (rollen schemaläggare). Om både lösenord och konton saknas nekas åtkomst till skyddade anrop. Konton med roller skapas under Konton; det första blir chef (docs/godkant-schema.md). |
+| `SCHEMA_LOKAL_DEMO` | Sätt till `1` endast för demo på egen dator, bunden till 127.0.0.1. Ignoreras på Render och när lösenord eller konton finns. |
 | `SCHEMA_HEMLIGHET` | Nyckel som signerar inloggningen. Render skapar en slumpad. Byts den loggas alla ut. |
 | `SCHEMA_DATA` | Katalog för databasen, `/var/data` på disken. |
 | `SCHEMA_MAX_TID` | Högsta antal sekunder per optimeringssteg (standard 60). |

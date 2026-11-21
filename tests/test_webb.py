@@ -195,3 +195,21 @@ def test_krav_som_krockar_ger_schema_anda(klient):
     assert k["forklaring"]["konflikt"]
     # enhetens egna indata ändras inte
     assert klient.get(f"/api/enheter/{eid}").json()["indata"]["onskemal"][0]["krav"] is True
+
+
+@pytest.mark.parametrize("render", [False, True])
+def test_tom_autentisering_nekar_atkomst(tmp_path, monkeypatch, render):
+    monkeypatch.setenv("SCHEMA_DATA", str(tmp_path))
+    monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
+    monkeypatch.delenv("SCHEMA_LOKAL_DEMO", raising=False)
+    monkeypatch.delenv("RENDER", raising=False)
+    if render:
+        monkeypatch.setenv("RENDER", "true")
+        monkeypatch.setenv("SCHEMA_LOKAL_DEMO", "1")
+    from schemawebb.app import app
+    with TestClient(app) as klient:
+        session = klient.get("/api/session").json()
+        assert session["kravs"] and not session["inloggad"]
+        assert klient.get("/api/enheter").status_code == 401
+        assert klient.post("/api/logga-in", json={"losenord": ""}).status_code == 401
+        assert klient.post("/api/anvandare", json={"namn": "A1", "losenord": "syntetiskt-test"}).status_code == 401
