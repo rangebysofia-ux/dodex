@@ -32,7 +32,7 @@ async function visaOversikt(id) {
   const okLista = st.korningar.filter(x => x.status === "klar" && x.losning === "OK");
   const foregaende = k ? okLista.find(x => x.id !== k.id && x.id < k.id) : null;
   const ind = st.indata, kt = kontrakteradTid(ind);
-  let h = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>${esc(st.enhet.namn)}</h1>
+  let h = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>${st.org ? ORG.ikon(st.org, st.enhet, GUIDE.HUS) : ""}${esc(st.enhet.namn)}</h1>${st.org && st.enhet.org && ORG.finns(st.org, st.enhet.org) ? `<span class="org-etikett" style="--ef:${ORG.enhetsfarg(st.org, st.enhet)}">${esc(ORG.sokvag(st.org, st.enhet.org))}</span>` : ""}
       <p class="dampad" style="margin:4px 0 0">${ind.personal.length} medarbetare · ${ind.veckor} veckor${ind.cykliskt !== false ? ", cykliskt" : ""} · ${sv(kt, 1)} h kontrakterat per vecka${ind.budget_timmar_vecka ? ` av budget ${sv(ind.budget_timmar_vecka, 1)} h` : ""}${k ? ` · senaste schema ${datum(k.skapad)}` : ""}</p></div>
       <div>${k ? `<a class="knapp liten" href="#/e/${id}/schema/${k.id}">${IKON.schema} Öppna schemat</a>` : ""}</div></div></section>
     ${nyckeltalskort(k, foregaende)}`;
@@ -151,13 +151,15 @@ async function visaMedarbetare(id, kid, q) {
   await laddaEnhet(id);
   ritaMeny();
   sokvag([["Enheter", "#/"], [st.enhet.namn, `#/e/${id}/oversikt`], ["Medarbetare"]]);
-  const flik = ["onskemal", "aktiviteter"].includes(q.get("flik")) ? q.get("flik") : "personal";
+  const flik = ["onskemal", "aktiviteter", "team", "kompetens"].includes(q.get("flik")) ? q.get("flik") : "personal";
   st.flik = flik; st.redigeraOnsk = null;
   vy().innerHTML = `<section class="kort"><div class="rubrikrad"><div style="display:block"><h1>Medarbetare</h1>
       <p class="dampad" style="margin:6px 0 0">Sysselsättningsgrad, vilka pass var och en arbetar, helgundantag, önskemål och aktiviteter som APT. Använd id-koder i stället för namn.</p></div>
       <div><a class="knapp" href="#/e/${id}/personer">${IKON.person} Schema per person</a></div></div></section>
     <div class="redigera"><section class="kort">
       <div class="flikar" role="tablist"><button role="tab" data-g="mflik" data-f="personal" aria-selected="${flik === "personal"}">Medarbetare (${st.indata.personal.length})</button>
+        <button role="tab" data-g="mflik" data-f="team" aria-selected="${flik === "team"}">Team (${(st.indata.team || []).length})</button>
+        <button role="tab" data-g="mflik" data-f="kompetens" aria-selected="${flik === "kompetens"}">Kompetens (${(st.indata.kompetenskrav || []).length} krav)</button>
         <button role="tab" data-g="mflik" data-f="onskemal" aria-selected="${flik === "onskemal"}">Önskemål (${(st.indata.onskemal || []).length})</button>
         <button role="tab" data-g="mflik" data-f="aktiviteter" aria-selected="${flik === "aktiviteter"}">Aktiviteter (${(st.indata.aktiviteter || []).length})</button></div>
       <div id="flik">${ritaFlik()}</div></section>

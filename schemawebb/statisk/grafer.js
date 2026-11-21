@@ -23,7 +23,7 @@ function bemanning(res, indata) {
   const N = res.veckor * 7, behov = behovPerDag(indata);
   return Array.from({ length: N }, (_, d) => {
     const n = { morgon: 0, kvall: 0, natt: 0 };
-    for (const rad of Object.values(res.schema)) { const p = rad[d]; if (p && n[p.dygnsdel] !== undefined) n[p.dygnsdel]++; }
+    for (const rad of Object.values(res.schema)) { const p = rad[d]; if (p && n[behovsdel(p)] !== undefined) n[behovsdel(p)]++; }
     const b = behov[d % 7], vak = {}, over = {};
     for (const k of ["morgon", "kvall", "natt"]) { vak[k] = Math.max(0, b[k] - n[k]); over[k] = Math.max(0, n[k] - b[k]); }
     return { d, n, b, vak, over };
@@ -447,13 +447,32 @@ function resurs(res, indata) {
   }
   return ut;
 }
+// Dygnsdelen ett pass räknas i för behovet: jourpassets första halva är kväll och andra halva morgon.
+const behovsdel = p => (p ? (p.jourdel === 1 ? "kvall" : p.jourdel === 2 ? "morgon" : p.dygnsdel) : null);
+// Symboler för passen (användarens önskemål): sol för dag, måne för kväll, natthimmel för natt.
+const PASSIKON = { morgon: "☀️", kvall: "🌙", natt: "🌃", jour: "🛏️" };
+const passIkon = del => PASSIKON[del] ? `<span class="passikon" aria-hidden="true">${PASSIKON[del]}</span>` : "";
+// Jour efter passet (Bilaga J): ett J med tiderna som verktygstips.
+// Jourpassets andra halva: jourtiden som en lägre del av passet (docs/regelverk.md).
+// Jourpasset i schemat: tiderna visas bara som verktygstips (docs/regelverk.md); jourtiden är ett tunnare band.
+const jourMarke = () => "";
+// Rutans innehåll: kvällsdelen (dag 1) och jourbandet + morgondelen (dag 2).
+const jourInnehall = p => (p.jourdel === 1
+  ? `<b>${PASSIKON.kvall}J</b><small>${p.start}–24:00</small>`
+  : `<span class="jour-band" aria-hidden="true">${PASSIKON.jour}</span><span class="jour-morgon"><b>${PASSIKON.morgon}</b><small>${p.jour ? p.jour.slut : ""}–${p.slut}</small></span>`);
+const jourTitel = p => (p.jourdel === 1 ? `Jourpass, arbete ${p.start}–24:00` : `Jourpass: jour ${p.jour ? p.jour.start + "–" + p.jour.slut : ""}, arbete till ${p.slut}`);
 const resursMarke = `<i class="res" aria-label="Resurspass, utöver behovet">◼ R</i>`;
+// Extra helgpass (undantag per person): lördag eller söndag en ledig helg. Syns alltid i schemat.
+const extraMarke = p => (p && p.extra_helg ? `<i class="extra-helg" title="Extra helgpass: lördag eller söndag en ledig helg, i stället för ett vardagspass" aria-label="Extra helgpass">+ helg</i>` : "");
 
 // ---------------------------------------------------------------- aktiviteter
 // Liten markering i passet (stjärna och kod) och text för verktygstips.
+// Färg per aktivitet: egen, annars kategorins standardfärg (samma som organisationens standardtyper).
+const AKTFARG = { apt: "#3f6bb0", utbildning: "#2f8a6f", mote: "#b08a2e", studier: "#9a4fa8", dokumentation: "#2b8aa0", handledning: "#c46a2b", annat: "#7a6a55" };
+const aktFarg = a => (a && /^#[0-9a-f]{6}$/i.test(a.farg || "") ? a.farg : a && AKTFARG[a.typ]) || "";
 function aktMarke(p) {
-  const l = (p && p.aktiviteter) || [];
-  return l.length ? `<i class="akt" aria-label="${esc(l.map(a => `${a.namn || a.id} ${a.start}–${a.slut}`).join(", "))}">★${esc(l.map(a => a.id).join(" "))}</i>` : "";
+  const l = (p && p.aktiviteter) || [], f = aktFarg(l[0]);
+  return l.length ? `<i class="akt"${f ? ` style="--ak:${f}"` : ""} aria-label="${esc(l.map(a => `${a.namn || a.id} ${a.start}–${a.slut}`).join(", "))}">★${esc(l.map(a => a.id).join(" "))}</i>` : "";
 }
 function aktText(p) {
   const l = (p && p.aktiviteter) || [];
@@ -467,7 +486,7 @@ function aktivitetKort(res) {
   return `<section class="kort"><h2>Aktiviteter</h2>
     <p class="dampad liten">Den som deltar arbetar hela aktivitetstiden. Tiden räknas som arbetstid och ingår i passet, så den påverkar passlängd, vila, OB och bemanning.${saknas ? "" : " Alla tillfällen har så många deltagare som behövs."}</p>
     <div class="rull"><table class="lista"><thead><tr><th>Aktivitet</th><th>När</th><th>Deltar</th><th class="tal">Antal</th></tr></thead><tbody>
-    ${l.map(t => `<tr><td><b>★ ${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
+    ${l.map(t => `<tr><td><b>${(() => { const f = aktFarg(t); return f ? `<span class="team-prick" style="--tf:${f}"></span>` : "★ "; })()}${esc(t.namn)}</b></td><td class="nw">V${t.vecka} ${esc(t.veckodag)} <span class="mono">${esc(t.start)}–${esc(t.slut)}</span></td>
       <td>${esc(t.deltagare.join(", ")) || "–"}</td><td class="tal nw${t.saknas ? " fel" : ""}">${t.deltagare.length} av ${t.behov}${t.saknas ? ` · ${t.saknas} saknas` : ""}</td></tr>`).join("")}
     </tbody></table></div>${(() => {
       // dag- och kvällspersonal som inte kan delta alls, för att inget av deras pass kan täcka tiden
@@ -688,6 +707,6 @@ function kalender(perioder, { start = null, manader = 6, idag = dagstr(new Date(
   return { html: h, lista, nu, kommande };
 }
 
-return { arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
+return { behovsdel, jourMarke, jourTitel, jourInnehall, extraMarke, AKTFARG, aktFarg, PASSIKON, passIkon, arbetstid, kalender, isoVecka, balans, balansKort, PERSPEKTIV, veckovilaDagar, vvMarke, resursKort, summaTabell, radSumma, summaKol, summaHuvud, summaCeller, summaTotal, resurs, resursMarke, aktMarke, aktText, aktivitetKort, vila, vilaKort, vilaTabell, obFor, obKort, obPassText, analysstaplar, nulage, DAGAR, PASSNAMN, REGELGRUPPER, bemanning, nyckeltalFor, kr, linjegraf, ringdiagram, varmekarta, behovsstaplar, passring, grafkort };
 })();
 if (typeof module !== "undefined") module.exports = GRAF;

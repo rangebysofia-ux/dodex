@@ -1,0 +1,56 @@
+{
+ "beskrivning": "Regelverk 40-timmarsvecka (AB 25 § 13 mom. 2): heltid 40 timmar per helgfri vecka, bara dagpass måndag–fredag och ingen helgtjänstgöring (varannan helg upplåst för enheten som avvikelse). Tre heltidare täcker ett dagbehov på tre, fem pass i veckan. Ska gå att lösa utan avtalsbrott och utan vakanser.",
+ "forvantat": {
+  "status": "OK",
+  "validering_utan_fel": true,
+  "vakanta_pass": 0
+ },
+ "enhet": "Test – 40-timmarsvecka",
+ "veckor": 4,
+ "cykliskt": true,
+ "regelverk": "40-timmar",
+ "heltid_minuter_per_vecka": 2400,
+ "regler": {
+  "helgfrekvens": "ingen",
+  "pass_per_vecka": 5
+ },
+ "avvikelser": [
+  "helgfrekvens"
+ ],
+ "behov": {
+  "vardag": {
+   "morgon": 3
+  },
+  "helg": {
+   "morgon": 0,
+   "kvall": 0,
+   "natt": 0
+  }
+ },
+ "personal": [
+  {
+   "id": "A1",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A2",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  },
+  {
+   "id": "A3",
+   "grad": 1,
+   "dygnsdelar": [
+    "morgon"
+   ]
+  }
+ ],
+ "losare": {
+  "tid_per_steg_s": 8
+ }
+}

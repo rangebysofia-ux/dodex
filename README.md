@@ -52,7 +52,7 @@ Det första man möter är **Vad vill du göra?**:
 - **Skapa ny enhet** öppnar en frågeguide med en fråga i taget: vad gruppen heter, hur många medarbetare (dag och kväll, natt), sysselsättning (samma, olika per person eller en budget som fördelas), undantag (bara dag, bara kväll, natt, andra helger), behovet i veckan (dag, kväll och natt för vardag och helg), tider för passen, och period. Guiden visar hur många timmar behovet motsvarar och hur många som behövs för helgerna. Sist väljer man **🤖 Låt AI lägga schemat** (motorn lägger det) eller **✋ Lägg schemat själv** (ett tomt schema i redigeringsläge, där varje pass granskas direkt; `POST /api/enheter/{id}/manuell`).
 - **Klistra in från Excel** – klistra in personal (grad, dag/kväll/natt, helger) och behov (per vardag/helg, veckodag eller pass med tider), se förhandsvisningen och gå vidare i guiden. Namn blir id-koder och sparas aldrig (`docs/inklistring.md`).
 - **Få hjälp av AI-assistenten** skapar en tom enhet och öppnar 🤖 med en förifylld fråga. Assistenten föreslår indata som användaren godkänner.
-- **Börja från ett exempel** och **Fortsätt med en enhet**.
+- **Börja från ett exempel** och **Fortsätt med en enhet**. Enheterna ordnas under verksamheter, och varje verksamhet har en färg som enheterna under den får, så att man ser vad det är för enhet. På sidan **Organisation** byggs verksamheter, enheter, områden/team och aktivitetstyper med färger upp innan något schema läggs (`docs/organisation.md`).
 - **Spara som fil** och **Öppna fil** – en enhet med alla inställningar och färdiga scheman flyttas mellan webben och telefonen (Schema light). Inga inställningar försvinner, och scheman granskas om när filen öppnas (`docs/enhetsfil.md`).
 
 Guiden finns i `schemawebb/statisk/guide.js` och delas med lättversionen.
@@ -60,7 +60,7 @@ Guiden finns i `schemawebb/statisk/guide.js` och delas med lättversionen.
 Webbgränssnittet har en sidomeny med:
 
 - **Översikt** – fyra nyckeltal (bemanningsgrad, personalkostnad, obemannade pass, planerad övertid), bemanningsgrad och kostnad per vecka, behov mot planerad bemanning per dag, passfördelning och en värmekarta över under- och överbemanning.
-- **Schemaplanering** – schemat med medarbetare i rader och datum i kolumner, per vecka, hela perioden eller klockslag. Behovet visas i raden längst ned. Med **Redigera schemat** kan pass dras till en annan dag eller person, ändras, läggas till och tas bort. Varje ändring räknas om och granskas direkt, och resultatet sparas som en ny körning; originalet finns kvar (`schemamotor/justera.py`, `POST /api/korningar/{id}/justera`).
+- **Schemaplanering** – schemat med medarbetare i rader och datum i kolumner, per vecka, hela perioden eller klockslag. Varje pass har en symbol: ☀️ dag, 🌙 kväll och 🌃 natt, bredvid bokstaven D, K eller N (`GRAF.passIkon` i `grafer.js`). Behovet visas i raden längst ned. Med **Redigera schemat** kan pass dras till en annan dag eller person, ändras, läggas till och tas bort. Varje ändring räknas om och granskas direkt, och resultatet sparas som en ny körning; originalet finns kvar (`schemamotor/justera.py`, `POST /api/korningar/{id}/justera`).
 - **Bemanningsbehov**, **Medarbetare** – indata, med kontroll och bemanningsbalans vid sidan.
 - **Analys och nyckeltal** – graferna och fördelningen per medarbetare.
 - **Simulering** – konsekvensanalysen nedan, med kostnad och nuläge mot alternativ.
@@ -89,7 +89,11 @@ Se `docs/drift.md` för hur tjänsten läggs på Render med lösenord och sparad
 - `docs/styrning/dodex-regelverk.md` och `.json` – alla hårda regler och mjuka mål med standardvärden, som styrdokument för andra system (genereras med `python -m schemamotor.regelverk`)
 - `docs/avtal-regler.md` – vila, rast och dygnsbryt
 - `docs/indata-schema.md` – format för indata och schema
-- `docs/organisation.md` – organisationsstrukturen: enheter under Äldreomsorg (SÄBO, Hemtjänst), LSS, Förskola och egna grupper
+- `docs/team.md` – team i en arbetsgrupp: eget behov per team, hemteam och lån mellan team
+- `docs/regelverk.md` – regelverk per enhet: dag/kväll/helg, 40-timmarsvecka och funktionsstöd med Bilaga J
+- `docs/starttider.md` – olika starttider för dagpassen, och förskolornas tider 06:00–18:00
+- `docs/kompetens.md` – kompetensbaserade behov: kompetenser, krav per pass, kompetensbalans och utbildningsförslag
+- `docs/organisation.md` – organisationsstrukturen: enheter under Äldreomsorg (SÄBO, ORDBO), LSS, Förskola och egna grupper
 - `docs/godkant-schema.md` – godkänt och aktiverat schema, konton och roller (chef, schemaläggare)
 - `docs/balansmall.md` – balansmallen: schemat i fyra perspektiv (behov, arbetsmiljö, budget, kvalitet)
 - `docs/inklistring.md` – vad som går att klistra in för personal och behov

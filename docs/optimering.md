@@ -83,5 +83,5 @@ Grupperna fixeras som av eller på i stället för att ges som antaganden. Det l
 ## Begränsningar
 
 - Behovet anges per dygnsdel och tidpunkt, inte per kvart. Rasternas placering optimeras inte.
-- Kompetenskrav och samplanering mellan enheter finns inte än.
+- Kompetenskrav finns som mjukt mål direkt efter behovet (`docs/kompetens.md`). Samplanering mellan enheter finns inte än.
 - Veckovilan i modellen är ett tillräckligt villkor per kalendervecka; granskningen räknar exakt.

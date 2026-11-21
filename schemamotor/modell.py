@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 DAGNAMN = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"]
 DAGNYCKLAR = ["vardag", "helg", "alla"] + DAGNAMN
 DYGNSDELAR = ["morgon", "kvall", "natt"]
+DELNAMN_TEXT = {"morgon": "dag", "kvall": "kväll", "natt": "natt"}
 HELGFREKVENSER = ["1/4", "2/4", "3/4", "alla", "ingen"]
 ONSKEMALSTYPER = ["ledig", "arbetar", "tidigast_start", "senast_slut", "endast_dygnsdel"]
 STANDARD_PASS_PER_VECKA = 4.75
@@ -93,9 +94,18 @@ class Person(Strikt):
     antal_pass: Optional[Union[int, list[int]]] = None
     helgfrekvens: Optional[Literal["1/4", "2/4", "3/4", "alla", "ingen"]] = None
     helggrupp: Optional[Literal["A", "B"]] = None
+    # extra helgpass (användarens beslut 2026-11-10): högst så många lördagar eller söndagar på lediga helger per
+    # schemaperiod, ett pass per helg. Ersätter ett vardagspass. Undantag från varannan helg, bara per person.
+    extra_helgpass: int = Field(default=0, ge=0, le=4)
     tolerans_minuter: Optional[int] = Field(default=None, ge=0)
     heltid_minuter_per_vecka: Optional[int] = Field(default=None, gt=0)
     dygnsbryt: Optional[Klocka] = None
+    # hemteam (id i indata.team); personen kan ändå lånas ut till ett annat team när det behövs
+    team: Optional[str] = Field(default=None, min_length=1, max_length=40)
+    # kompetenser (id i indata.kompetenser), till exempel undersköterska eller läkemedelsdelegering (docs/kompetens.md)
+    kompetenser: list[str] = Field(default_factory=list)
+    # jour efter kvällspasset (när enheten har jour); false = den här personen har inte jour
+    jour: Optional[bool] = None
 
     @field_validator("dygnsdelar")
     @classmethod
@@ -105,6 +115,107 @@ class Person(Strikt):
                 raise ValueError("ange minst en dygnsdel")
             if "natt" in v and len(v) > 1:
                 raise ValueError("nattpersonal kan bara ha dygnsdelen natt")
+        return v
+
+
+class Team(Strikt):
+    """Ett team i arbetsgruppen med eget behov. Personalen är gemensam men har ett hemteam (se docs/team.md)."""
+    id: str = Field(min_length=1, max_length=40)
+    namn: str = Field(default="", max_length=80)
+    farg: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")  # bara för visning
+    behov: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+    @field_validator("behov")
+    @classmethod
+    def dagnycklar(cls, v):
+        for nyckel, varde in v.items():
+            if nyckel not in DAGNYCKLAR:
+                raise ValueError(f"okänd dag: {nyckel} (använd vardag, helg, alla eller {', '.join(DAGNAMN)})")
+            for del_, antal in varde.items():
+                if del_ not in DYGNSDELAR:
+                    raise ValueError(f"okänd dygnsdel: {del_} (använd morgon, kvall eller natt)")
+                if antal < 0:
+                    raise ValueError(f"behovet för {nyckel} {del_} kan inte vara negativt")
+        return v
+
+
+class Jour(Strikt):
+    """Jourpass över dygnet (Bilaga J, AB 25 § 13 mom. 5; docs/regelverk.md): arbete från `start` till midnatt, jour
+    `jour_fran`–`jour_till` och arbete till `slut` dagen efter. Ett pass som belastar två arbetsdagar. Högst 20 timmar.
+    `andel_arbetstid` = hur stor del av jourtiden som räknas som arbetstid. `behov` = jourpass per natt."""
+    start: Klocka = "15:00"
+    slut: Klocka = "08:00"
+    jour_fran: Klocka = "00:00"
+    jour_till: Klocka = "06:00"
+    andel_arbetstid: float = Field(default=0.5, ge=0, le=1)
+    behov: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def tider(self):
+        t = lambda s: int(s[:2]) * 60 + int(s[3:])
+        if t(self.start) < 12 * 60:
+            raise ValueError("jourpasset ska börja på eftermiddagen eller kvällen (efter kl. 12)")
+        if not (t(self.jour_fran) < t(self.jour_till) <= t(self.slut) < 12 * 60):
+            raise ValueError("jouren ska ligga efter midnatt och före passets slut på morgonen")
+        if 24 * 60 - t(self.start) + t(self.slut) > 20 * 60:
+            raise ValueError("arbete och jour i följd får vara högst 20 timmar (AB 25 § 13 mom. 5)")
+        return self
+
+    @field_validator("behov")
+    @classmethod
+    def dagnycklar(cls, v):
+        for nyckel, antal in v.items():
+            if nyckel not in DAGNYCKLAR:
+                raise ValueError(f"okänd dag: {nyckel} (använd vardag, helg, alla eller {', '.join(DAGNAMN)})")
+            if antal < 0:
+                raise ValueError(f"jourbehovet för {nyckel} kan inte vara negativt")
+        return v
+
+
+class Starttid(Strikt):
+    """Så många av dagpassen som börjar vid en viss tid (docs/starttider.md)."""
+    tid: Klocka
+    antal: int = Field(ge=1, le=50)
+
+
+class Starttider(Strikt):
+    morgon: list[Starttid] = Field(default_factory=list)
+
+    @field_validator("morgon")
+    @classmethod
+    def unika(cls, v):
+        tider = [s.tid for s in v]
+        if len(set(tider)) != len(tider):
+            raise ValueError("samma starttid finns flera gånger")
+        return v
+
+
+class Kompetens(Strikt):
+    """En kompetens i enheten, till exempel undersköterska eller läkemedelsdelegering (docs/kompetens.md)."""
+    id: str = Field(min_length=1, max_length=40)
+    namn: str = Field(default="", max_length=80)
+    kort: Optional[str] = Field(default=None, max_length=6)  # märkning i schemat, till exempel SSK
+    farg: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")  # bara för visning
+
+
+class Kompetenskrav(Strikt):
+    """Minst så många med kompetensen i tjänst per dag och dygnsdel. Mjukt, direkt efter behovet (vakanserna):
+    motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass för det."""
+    id: Optional[str] = Field(default=None, max_length=40)
+    kompetens: str = Field(min_length=1, max_length=40)
+    behov: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+    @field_validator("behov")
+    @classmethod
+    def dagnycklar(cls, v):
+        for nyckel, varde in v.items():
+            if nyckel not in DAGNYCKLAR:
+                raise ValueError(f"okänd dag: {nyckel} (använd vardag, helg, alla eller {', '.join(DAGNAMN)})")
+            for del_, antal in varde.items():
+                if del_ not in DYGNSDELAR:
+                    raise ValueError(f"okänd dygnsdel: {del_} (använd morgon, kvall eller natt)")
+                if antal < 0:
+                    raise ValueError(f"kravet för {nyckel} {del_} kan inte vara negativt")
         return v
 
 
@@ -156,6 +267,7 @@ class Aktivitet(Strikt):
     # minsta antal i tjänst på golvet under aktiviteten; andras pass förlängs vid behov
     minst_pa_golvet: Optional[int] = Field(default=None, ge=0)
     typ: Optional[Literal["apt", "utbildning", "mote", "studier", "dokumentation", "handledning", "annat"]] = None
+    farg: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")  # bara för visning
     krav: bool = False
     kommentar: Optional[str] = None
 
@@ -218,8 +330,17 @@ class Indata(BaseModel):
     personal: list[Person] = Field(min_length=1)
     onskemal: list[Onskemal] = Field(default_factory=list)
     aktiviteter: list[Aktivitet] = Field(default_factory=list)
+    team: list[Team] = Field(default_factory=list)
+    kompetenser: list[Kompetens] = Field(default_factory=list)
+    # jour efter kvällspasset (AB 25 § 13 mom. 5, Bilaga J; docs/regelverk.md)
+    jour: Optional[Jour] = None
+    # olika starttider för dagpassen: av dagbehovet börjar så många vid varje tid (docs/starttider.md)
+    starttider: Optional[Starttider] = None
+    kompetenskrav: list[Kompetenskrav] = Field(default_factory=list)
     bemanningsbalans: Optional[Bemanningsbalans] = None
     losare: dict = Field(default_factory=dict)
+    # valt regelverk (docs/regelverk.md); värdena står i regler, heltid och avvikelser, namnet visas för användaren
+    regelverk: Optional[Literal["dag-kvall-helg", "40-timmar", "bilaga-j"]] = None
     # låsta regler (avtal, lag, varannan helg) som användaren uttryckligen har godkänt avvikelser från
     avvikelser: list[str] = Field(default_factory=list)
     budget_timmar_vecka: Optional[float] = Field(default=None, gt=0)
@@ -268,6 +389,43 @@ def _helhet(d: dict) -> list[str]:
     dubbla = sorted({i for i in ids if ids.count(i) > 1})
     if dubbla:
         fel.append(f"Samma id finns flera gånger: {', '.join(dubbla)}.")
+    # team: unika id, personernas hemteam finns, och teamens behov ryms i enhetens behov
+    team = [t for t in d.get("team") or [] if isinstance(t, dict)]
+    tid_ = [str(t.get("id")) for t in team]
+    if len(set(tid_)) != len(tid_):
+        fel.append("Samma team finns flera gånger.")
+    okanda_team = sorted({str(p["team"]) for p in personal if p.get("team") and str(p["team"]) not in tid_})
+    if okanda_team:
+        fel.append(f"Medarbetare har ett team som inte finns: {', '.join(okanda_team)}.")
+    if team and isinstance(d.get("behov"), dict):
+        def per_dag(spec):
+            ut = [{} for _ in range(7)]
+            for k, v in (spec or {}).items():
+                idx = {"vardag": range(5), "helg": range(5, 7), "alla": range(7)}.get(k, [DAGNAMN.index(k)] if k in DAGNAMN else [])
+                for i in idx:
+                    if isinstance(v, dict):
+                        ut[i] = v
+            return ut
+        enhet = per_dag(d.get("behov"))
+        summa = [{x: sum(int((per_dag(t.get("behov"))[i] or {}).get(x, 0) or 0) for t in team) for x in DYGNSDELAR} for i in range(7)]
+        for i in range(7):
+            for x in DYGNSDELAR:
+                if summa[i][x] > int(enhet[i].get(x, 0) or 0):
+                    fel.append(f"Teamens behov {DAGNAMN[i]} {DELNAMN_TEXT[x]} ({summa[i][x]}) är större än enhetens behov ({int(enhet[i].get(x, 0) or 0)}).")
+                    break
+            else:
+                continue
+            break
+    # kompetenser: unika id, och medarbetarnas kompetenser och kraven finns i enhetens lista
+    komp = [str(k.get("id")) for k in d.get("kompetenser") or [] if isinstance(k, dict)]
+    if len(set(komp)) != len(komp):
+        fel.append("Samma kompetens finns flera gånger.")
+    okanda_komp = sorted({str(k) for p in personal for k in (p.get("kompetenser") or []) if str(k) not in komp})
+    if okanda_komp:
+        fel.append(f"Medarbetare har en kompetens som inte finns i enhetens lista: {', '.join(okanda_komp)}.")
+    okanda_krav = sorted({str(k.get("kompetens")) for k in d.get("kompetenskrav") or [] if isinstance(k, dict) and str(k.get("kompetens")) not in komp})
+    if okanda_krav:
+        fel.append(f"Ett kompetenskrav gäller en kompetens som inte finns i enhetens lista: {', '.join(okanda_krav)}.")
     regler = d.get("regler") if isinstance(d.get("regler"), dict) else {}
     okanda = sorted(set(regler) - set(STANDARDREGLER))
     if okanda:

@@ -55,6 +55,7 @@
 - `antal_pass` – heltal eller lista per delperiod. Utan värde: 4,75 × veckor för dag/kväll, arbetstid ÷ nattpassets längd för natt.
 - `helgfrekvens` – `2/4` (standard, varannan helg), `1/4`, `3/4`, `alla`, `ingen`. Andra värden än `2/4` är undantag för just den personen. Enhetens `regler.helgfrekvens` är låst till `2/4`.
 - `helggrupp` – `A` (arbetar helgerna i vecka 1, 3, 5 …) eller `B`. Utan värde väljer lösaren, med lika många i varje grupp.
+- `extra_helgpass` – 0–4 (standard 0). Så många extra helgpass får personen ta under schemaperioden: en lördag eller söndag en ledig helg, högst ett pass per helg. Ersätter ett vardagspass, så antal pass och arbetstid är desamma. Undantag från varannan helg, bara per person. Lösaren använder dem bara där de gör schemat bättre. I resultatet får passet `"extra_helg": true`, `kpi.extra_helgpass` är antalet och `personer[id].extra_helg` antalet per person.
 - `tolerans_minuter`, `heltid_minuter_per_vecka`, `dygnsbryt` – valfria per person.
 
 **onskemal**
@@ -68,6 +69,7 @@
 - Hur många per tillfälle: `antal`, eller `andel` av deltagargruppen (0.5 = hälften, avrundat uppåt). Anges bara `varje_person` (till exempel 1) fördelas gruppen × `varje_person` platser jämnt på tillfällena; de första tillfällena får en plats extra när det inte går jämnt ut (13 personer på 2 tillfällen: 7 och 6). Den vars vanliga pass inte täcker aktiviteten får ett längre pass just den dagen (arbetstiden i perioden stämmer ändå), och den som ändå inte kan delta visas i resultatet (`utanfor`). Utan något av dem deltar alla.
 - `deltagare` – lista med id-koder. Utan lista är gruppen alla som har pass som kan täcka tiden (för 14–16 är det dag- och kvällspersonal).
 - `typ` – `apt`, `utbildning`, `mote`, `studier`, `dokumentation`, `handledning` eller `annat`. Bara för visning och sortering; reglerna är desamma.
+- `farg` – färg (`#rrggbb`) för markeringen i schemat, vanligen från organisationens aktivitetstyp. Bara för visning; följer med till passens `aktiviteter` tillsammans med `typ`.
 - `fran_golvet` (standard sant) – deltagarna räknas inte som i tjänst vid `tidpunkter` under aktiviteten. Behovet per dygnsdel påverkas inte: passet finns ju kvar.
 - `minst_pa_golvet` – minsta antal i tjänst på golvet varje kvart under aktiviteten, deltagarna oräknade. De som inte deltar får längre pass (morgonpass som slutar senare, kvällspass som börjar tidigare) så att nivån hålls. Är det ändå för få blir det vakans vid klockslaget, på samma nivå som behovet. Gränssnittet föreslår den lägsta av morgonens och kvällens behov på vardagar.
 - `krav` (standard falskt) – aktiviteten måste genomföras med fullt antal. Annars läggs den så långt det går, efter behovet.
@@ -121,3 +123,13 @@ Exempel: APT tisdag 14–16 vecka 2 och 4, där var och en går en gång (ungef�
 ## Schema från andra system
 
 schemamotor/validate.py läser samma `schema`-format, antingen hela utdatafilen eller en fil med bara `{"schema": {...}}`. Ett schema från ett annat system kan granskas genom att räkna om det till detta format. `dygnsdel` behövs för fönsterkontrollen och för behovet; `rast` för rastkontrollen.
+
+**jour** – jourpass över dygnet (Bilaga J): `{"start": "15:00", "jour_fran": "00:00", "jour_till": "06:00", "slut": "08:00", "andel_arbetstid": 0.5, "behov": {"alla": 1}}`. Ett pass i två halvor (dag d till midnatt, dag d+1 från midnatt) som räknas som ett pass, belastar två arbetsdagar och räknas in som kväll och morgon i behovet. Högst 20 timmar och vilan efteråt minst lika lång (AB 25 § 13 mom. 5). `personal[].jour: false` undantar en person. I schemat har halvorna `dygnsdel: "jour"` och `jourdel` 1 eller 2, och den andra halvan `jour` med jourtiden. Se `docs/regelverk.md`.
+
+**regelverk** – valt regelverk: `dag-kvall-helg`, `40-timmar` eller `bilaga-j`. Värdena står i `regler`, `heltid_minuter_per_vecka` och `avvikelser`. Se `docs/regelverk.md`.
+
+**starttider** – olika starttider för dagpassen: `{"morgon": [{"tid": "06:00", "antal": 1}, {"tid": "07:00", "antal": 1}]}`. Av dagbehovet börjar så många vid varje tid. Mjukt, på samma nivå som behovet. Se `docs/starttider.md`.
+
+**kompetenser**, **kompetenskrav** och `personal[].kompetenser` – kompetenser i enheten (`id`, `namn`, `kort`, `farg`), krav på minst så många med en kompetens per dag och dygnsdel (`kompetens`, `behov` i samma format som enhetens behov), och vilka kompetenser var och en har. Kravet är mjukt, direkt efter behovet. Se `docs/kompetens.md`.
+
+**team** – valfria team i arbetsgruppen: `id`, `namn`, `behov` (som enhetens) och `farg` (valfri, bara för visning). `personal[].team` anger hemteamet. Enhetens behov är summan av teamens. Se `docs/team.md`.

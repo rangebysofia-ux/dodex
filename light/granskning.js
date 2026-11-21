@@ -12,13 +12,15 @@ const GRANSKNING = (() => {
     block_rekommenderat: 4, natt_max_i_rad: 3, natt_vila_mellan_block_minuter: 2880, morgon_starter: [], kvall_max_i_rad: 3, kvall_i_rad_typ: "mjuk", helg_start: "fre 22:00", helg_slut: "mån 06:00", hel_helg: true,
     helgfrekvens: "2/4", ingen_fredagskvall_fore_ledig_helg: true, tolerans_minuter: 60, min_passlangd_minuter: 300, spridning_kvallar: "mjuk", spridning_tolerans: 1, jamn_bemanning: "mjuk",
   };
-  const NIVA = { DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
+  const NIVA = { JOUR: "avtal", TEAM: "verksamhet", KOMPETENS: "verksamhet", STARTTID: "verksamhet", DYGNSVILA: "avtal", VECKOVILA: "avtal", RAST: "lag", ANTAL_PASS: "kontrakt", TID: "kontrakt",
     HELG: "lokal regel", BLOCK_MIN: "lokal regel", BLOCK_MAX: "lokal regel", NATT_I_RAD: "lokal regel", NATT_VILA: "lokal regel", KVALL_I_RAD: "lokal regel", PASSFONSTER: "princip",
     BLOCK_REKOMMENDERAT: "princip", BEHOV: "verksamhet", SPRIDNING: "princip" , JAMN_BEMANNING: "princip", AKTIVITET: "verksamhet" };
 
   const tid = s => { const [h, m] = s.trim().split(":").map(Number); return h * 60 + m; };
   const klocka = m => { m = ((m % DYGN) + DYGN) % DYGN; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
   const veckotid = s => { const [d, k] = s.split(" "); return DAGNAMN.indexOf(d) * DYGN + tid(k); };
+  // dygnsdelen ett pass räknas i för behovet: jourpassets första halva är kväll och andra halva morgon
+  const behovsdel = p => (p.jourdel === 1 ? "kvall" : p.jourdel === 2 ? "morgon" : p.dygnsdel);
   const dagText = d => `vecka ${Math.floor(d / 7) + 1} ${DAGNAMN[d % 7]}`;
   const h = m => (m / 60).toFixed(1).replace(".", ",");
 
@@ -59,6 +61,20 @@ const GRANSKNING = (() => {
     return [...ut].sort((x, y) => x - y);
   }
 
+  // Följer mönstret av arbetade helger personens helgfrekvens? Tom lista om det gör det.
+  function helgFel(helger, frek, W, cyk) {
+    const antal = helger.filter(Boolean).length;
+    if (frek === "2/4") {
+      for (let w = 0; w < (cyk ? W : W - 1); w++) if (helger[w] === helger[(w + 1) % W]) return ["Helgerna växlar inte varannan: " + helger.map(x => x ? "J" : "L").join("") + "."];
+    } else if (frek === "alla" && antal !== W) return [`Ska arbeta alla helger, arbetar ${antal} av ${W}.`];
+    else if (frek === "ingen" && antal) return [`Ska inte arbeta helg, arbetar ${antal}.`];
+    else if (frek === "1/4" || frek === "3/4") {
+      const [t, n] = frek.split("/").map(Number);
+      if (antal !== Math.round(W * t / n)) return [`Helgfrekvens ${frek} ger ${W * t / n} helger, arbetar ${antal}.`];
+    }
+    return [];
+  }
+
   function kontrollera(indata, dok) {
     const r = { ...STANDARD, ...(indata.regler || {}) };
     r.dygnsvila_minuter = Math.max(660, r.dygnsvila_minuter);  // 11 h kan inte låsas upp (AB 25 § 13 mom. 8; verksamhetens beslut)
@@ -95,8 +111,9 @@ const GRANSKNING = (() => {
       }
       const sort = lista.slice().sort((a, b) => a[1] - b[1]);
       const par = sort.slice(1).map((v, i) => [sort[i], v]);
-      if (cyk && sort.length > 1) par.push([sort.at(-1), [sort[0][0] + N, sort[0][1] + L, sort[0][2] + L]]);
-      for (const [[d1, , e1], [d2, s2]] of par) {
+      if (cyk && sort.length > 1) par.push([sort.at(-1), [sort[0][0] + N, sort[0][1] + L, sort[0][2] + L, sort[0][3]]]);
+      for (const [[d1, , e1, p1], [d2, s2, , p2]] of par) {
+        if (p1 && p1.jourdel === 1 && p2 && p2.jourdel === 2 && s2 === e1) continue;  // jourpassets två halvor
         if (s2 < e1) brott("DYGNSVILA", pid, `Pass överlappar (${dagText(d1)} och ${dagText(d2 % N)}).`);
         else if (s2 - e1 < r.dygnsvila_minuter) brott("DYGNSVILA", pid, `Bara ${h(s2 - e1)} h vila mellan passet ${dagText(d1)} och passet ${dagText(d2 % N)}.`);
       }
@@ -105,24 +122,48 @@ const GRANSKNING = (() => {
         for (const [[d1, , e1], [d2, s2]] of par)
           if (d2 - d1 >= 2 && s2 - e1 < r.natt_vila_mellan_block_minuter)
             brott("NATT_VILA", pid, `Bara ${h(s2 - e1)} h vila mellan nattblocken (${dagText(d1)} och ${dagText(d2 % N)}); minst ${r.natt_vila_mellan_block_minuter / 60} h eftersträvas.`, false);
+      let jspann = lista.filter(([, , , p]) => p.jourdel === 1).map(([, s]) => [s, s + 20 * 60]);
+      if (cyk) jspann = jspann.concat(jspann.map(([s, e]) => [s - L, e - L]), jspann.map(([s, e]) => [s + L, e + L]));
       for (let d = 0; d < (cyk ? N : N - 1); d++) {
         const a = d * DYGN + db;
+        if (jspann.some(([s, e]) => s < a + DYGN && e > a)) continue;  // undantaget gäller perioder med jourpass
         if (langstaLucka(iv, a, a + DYGN) < r.dygnsvila_minuter) brott("DYGNSVILA", pid, `Ingen sammanhängande dygnsvila på 11 h i perioden från ${dagText(d)} kl ${klocka(db)}.`);
       }
+      // jourpass (Bilaga J, AB 25 § 13 mom. 5): två halvor, dag d till midnatt och dag d+1 från midnatt, som räknas som ett
+      // pass. Hela passet högst 20 timmar, och vilan efteråt minst lika lång som passet.
+      sort.forEach(([d, s, e, p]) => {
+        if (p.jourdel === 2 && !lista.some(([dd, , , q]) => q.jourdel === 1 && (dd === d - 1 || (cyk && dd === (d - 1 + N) % N))))
+          brott("JOUR", pid, `${dagText(d)}: andra halvan av ett jourpass utan första halvan dagen före.`);
+        if (p.jourdel !== 1) return;
+        if (!indata.jour) brott("JOUR", pid, `${dagText(d)}: jourpass i schemat, men enheten har ingen jour.`);
+        const andra = lista.find(([dd, , , q]) => q.jourdel === 2 && (dd === d + 1 || (cyk && dd === (d + 1) % N)));
+        if (!andra) { brott("JOUR", pid, `${dagText(d)}: jourpasset fortsätter inte dagen efter.`); return; }
+        const forsk = andra[0] < d ? L : 0, slut = andra[2] + forsk;
+        if (andra[1] + forsk !== e) brott("JOUR", pid, `${dagText(d)}: jourpassets halvor hänger inte ihop.`);
+        const span = slut - s;
+        if (span > 20 * 60) brott("JOUR", pid, `${dagText(d)}: jourpasset är ${h(span)} h (högst 20 h).`);
+        const efter = lista.map(([, ss]) => ss).concat(cyk ? lista.map(([, ss]) => ss + L) : []).filter(x => x >= slut);
+        if (efter.length && Math.min(...efter) - slut < span) brott("JOUR", pid, `${dagText(d)}: bara ${h(Math.min(...efter) - slut)} h vila efter jourpasset; minst lika lång som passet (${h(span)} h).`);
+      });
+      const ivV = iv;
       for (let w = 0; w < (cyk ? W : W - 1); w++) {
-        const a = w * 7 * DYGN + vb, l = langstaLucka(iv, a, a + 7 * DYGN);
+        const a = w * 7 * DYGN + vb, l = langstaLucka(ivV, a, a + 7 * DYGN);
         if (l < r.veckovila_minuter) brott("VECKOVILA", pid, `Längsta vila vecka ${w + 1} är ${h(l)} h (minst 36 h).`);
       }
       const arbetstider = [];
       for (const [d, s, e, p] of lista) {
-        const paPlats = e - s, rast = p.rast || 0;
-        const arb = p.maltidsuppehall ? paPlats : paPlats - rast;
+        let paPlats = e - s, rast = p.rast || 0, jourArb = 0;
+        if (p.jour) {  // jourtiden: bara en andel är arbetstid, och den är inte arbete som kräver rast
+          const jl = ((tid(p.jour.slut) - tid(p.jour.start)) % DYGN + DYGN) % DYGN;
+          paPlats -= jl; jourArb = Math.round(jl * ((indata.jour || {}).andel_arbetstid ?? 0.5));
+        }
+        const arb = (p.maltidsuppehall ? paPlats : paPlats - rast) + jourArb;
         arbetstider.push(arb);
         if (!p.maltidsuppehall && paPlats - rast > r.rast_grans_minuter) {
           if (rast < r.rast_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: över 5 h arbete utan rast.`);
           else if (paPlats - rast > 2 * r.rast_grans_minuter) brott("RAST", pid, `${dagText(d)} ${p.start}–${p.slut}: rasten kan inte placeras så att ingen del blir över 5 h.`);
         }
-        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid)]);
+        const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid), ...(((indata.starttider || {}).morgon) || []).map(x => tid(x.tid))]);
         if (p.dygnsdel === "morgon" && (!starter.has(s % DYGN) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: morgonpass ${p.start}–${p.slut} följer inte fönstret.`);
         if (p.dygnsdel === "kvall" && (e % DYGN !== tid(r.kvall_slut) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
@@ -155,24 +196,41 @@ const GRANSKNING = (() => {
           }
         }
       }
-      const hs = veckotid(r.helg_start), he = veckotid(r.helg_slut), helger = [];
+      const hs = veckotid(r.helg_start), he = veckotid(r.helg_slut);
+      const frek = pers.helgfrekvens || r.helgfrekvens, extraMax = Math.floor(Number(pers.extra_helgpass) || 0);
+      let helger = [];
+      const typ = [];  // "hel" (arbetar helgen), "enkel" (bara lördag eller söndag), "ledig"
       for (let w = 0; w < W; w++) {
         const a = w * 7 * DYGN + hs, b = (w + 1) * 7 * DYGN + he;
         const jobbar = iv.some(([s, e]) => e > a && s < b);
+        const lor = work[w * 7 + 5], son = work[w * 7 + 6];
+        const ovrigt = lista.some(([d, s, e]) => d !== w * 7 + 5 && d !== w * 7 + 6 && (cyk ? [0, L, -L] : [0]).some(k => e + k > a && s + k < b));
+        typ.push(!jobbar ? "ledig" : lor !== son && !ovrigt ? "enkel" : "hel");
         helger.push(jobbar);
-        if (jobbar && r.hel_helg && !(work[w * 7 + 5] && work[w * 7 + 6])) brott("HELG", pid, `Arbetar helgen vecka ${w + 1} men inte både lördag och söndag.`);
-        if (!jobbar && r.ingen_fredagskvall_fore_ledig_helg)
-          for (const [d, , , p] of lista) if (d === w * 7 + 4 && (p.dygnsdel === "kvall" || p.dygnsdel === "natt")) brott("HELG", pid, `Kvällspass fredag vecka ${w + 1} före ledig helg.`);
       }
-      const frek = pers.helgfrekvens || r.helgfrekvens, antal = helger.filter(Boolean).length;
-      if (frek === "2/4") {
-        for (let w = 0; w < (cyk ? W : W - 1); w++) if (helger[w] === helger[(w + 1) % W]) { brott("HELG", pid, "Helgerna växlar inte varannan: " + helger.map(x => x ? "J" : "L").join("") + "."); break; }
-      } else if (frek === "alla" && antal !== W) brott("HELG", pid, `Ska arbeta alla helger, arbetar ${antal} av ${W}.`);
-      else if (frek === "ingen" && antal) brott("HELG", pid, `Ska inte arbeta helg, arbetar ${antal}.`);
-      else if (frek === "1/4" || frek === "3/4") {
-        const [t, n] = frek.split("/").map(Number);
-        if (antal !== Math.round(W * t / n)) brott("HELG", pid, `Helgfrekvens ${frek} ger ${W * t / n} helger, arbetar ${antal}.`);
+      let extraVeckor = [];
+      if (extraMax) {
+        // extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
+        const enkla = typ.map((t, w) => t === "enkel" ? w : -1).filter(w => w >= 0);
+        const val = r.hel_helg || enkla.length > 10 ? [new Set(enkla)]
+          : Array.from({ length: 1 << enkla.length }, (_, m) => new Set(enkla.filter((_, i) => m >> i & 1)));
+        val.sort((a, b) => a.size - b.size);
+        let hittad = null;
+        for (const ex of val) {
+          const m = typ.map((t, w) => t === "hel" || (t === "enkel" && !ex.has(w)));
+          if (!helgFel(m, frek, W, cyk).length) { hittad = [ex, m]; break; }
+        }
+        if (hittad) { extraVeckor = [...hittad[0]].sort((a, b) => a - b); helger = hittad[1]; }
+        else { extraVeckor = r.hel_helg ? enkla : []; helger = typ.map((t, w) => t === "hel" || (t === "enkel" && !extraVeckor.includes(w))); }
+        for (const w of extraVeckor.slice(extraMax)) brott("HELG", pid, `Arbetar bara lördag eller söndag vecka ${w + 1}: fler extra helgpass än personens ${extraMax}.`);
       }
+      for (let w = 0; w < W; w++) {
+        if (extraVeckor.includes(w)) continue;
+        if (helger[w] && r.hel_helg && !(work[w * 7 + 5] && work[w * 7 + 6])) brott("HELG", pid, `Arbetar helgen vecka ${w + 1} men inte både lördag och söndag.`);
+      }
+      for (let w = 0; w < W; w++) if (!helger[w] && r.ingen_fredagskvall_fore_ledig_helg)
+        for (const [d, , , p] of lista) if (d === w * 7 + 4 && (p.dygnsdel === "kvall" || p.dygnsdel === "natt")) brott("HELG", pid, `Kvällspass fredag vecka ${w + 1} före ledig helg.`);
+      for (const text of helgFel(helger, frek, W, cyk)) brott("HELG", pid, text);
       const heltid = pers.heltid_minuter_per_vecka || (natt ? indata.heltid_natt_minuter_per_vecka || 2060 : indata.heltid_minuter_per_vecka || 2220);
       const malMin = Math.round(heltid * (pers.grad ?? 1) * W);
       let mal = pers.antal_pass;
@@ -182,7 +240,7 @@ const GRANSKNING = (() => {
         mal = Math.abs(x - Math.round(x)) < 1e-9 ? Math.round(x) : (vaxel[pid] % 2 === 0 ? Math.floor(x) : Math.ceil(x));
         if (r.min_passlangd_minuter && malMin / mal < r.min_passlangd_minuter) mal = Math.max(1, Math.floor(malMin / r.min_passlangd_minuter));
       }
-      const faktiskt = work.reduce((a, b) => a + b, 0);
+      const faktiskt = work.reduce((a, b) => a + b, 0) - lista.filter(([, , , p]) => p.jourdel === 2).length;  // jourpass = ett pass
       if (mal != null && faktiskt !== mal) brott("ANTAL_PASS", pid, `${faktiskt} pass, ska vara ${mal}.`);
       const delar = pers.dygnsdelar || ["morgon", "kvall"];
       if (r.spridning_kvallar !== "av" && delar.includes("morgon") && delar.includes("kvall") && W >= 2) {
@@ -249,6 +307,57 @@ const GRANSKNING = (() => {
       }
     }
 
+    // team (docs/team.md): varje pass hör till ett team som finns, och teamens behov täcks. Lån mellan team är
+    // tillåtet; ett team som saknar personal när ett annat har fler än sitt behov samma pass noteras.
+    const team = indata.team || [];
+    if (team.length) {
+      const tids = team.map(t => t.id), namnT = Object.fromEntries(team.map(t => [t.id, t.namn || t.id]));
+      const DELT = { morgon: "dag", kvall: "kväll", natt: "natt" };
+      const tbehov = (t, wd, del) => {
+        let v = 0;
+        for (const [k, x] of Object.entries(t.behov || {})) {
+          if (k === DAGNAMN[wd]) return Number(x[del] || 0);
+          if (k === "alla" || (k === "vardag" && wd < 5) || (k === "helg" && wd >= 5)) v = Number(x[del] || 0);
+        }
+        return v;
+      };
+      for (const [pid, rad] of Object.entries(schema)) rad.slice(0, N).forEach((x, d) => {
+        if (x && x.team != null && !tids.includes(x.team)) brott("TEAM", pid, `${dagText(d)}: passet hör till teamet ${x.team}, som inte finns.`);
+      });
+      for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+        const antal = {};
+        for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === del) antal[x.team] = (antal[x.team] || 0) + 1; }
+        const brist = Object.fromEntries(team.map(t => [t.id, tbehov(t, d % 7, del) - (antal[t.id] || 0)]));
+        for (const [t, b] of Object.entries(brist)) if (b > 0) {
+          const over = Object.entries(brist).filter(([, bu]) => bu < 0).map(([u]) => namnT[u]);
+          brott("TEAM", null, `${dagText(d)} ${DELT[del]}: ${namnT[t]} har ${antal[t] || 0} av ${b + (antal[t] || 0)}${over.length ? `, fast ${over.join(", ")} har fler än sitt behov.` : "."}`, false);
+        }
+      }
+    }
+
+    // kompetens (docs/kompetens.md): minst så många med kompetensen i tjänst per dag och dygnsdel. Mjukt: det som
+    // fattas är en varning (kompetensvakans), aldrig ett brott.
+    const krav = indata.kompetenskrav || [];
+    if (krav.length) {
+      const knamn = Object.fromEntries((indata.kompetenser || []).map(k => [k.id, k.namn || k.id]));
+      const har = Object.fromEntries((indata.personal || []).map(p => [p.id, p.kompetenser || []]));
+      const DELK = { morgon: "dag", kvall: "kväll", natt: "natt" };
+      const kbehov = (k, wd, del) => {
+        let v = 0;
+        for (const [nyckel, x] of Object.entries(k.behov || {})) {
+          if (nyckel === DAGNAMN[wd]) return Number(x[del] || 0);
+          if (nyckel === "alla" || (nyckel === "vardag" && wd < 5) || (nyckel === "helg" && wd >= 5)) v = Number(x[del] || 0);
+        }
+        return v;
+      };
+      for (const k of krav) for (let d = 0; d < N; d++) for (const del of ["morgon", "kvall", "natt"]) {
+        const b = kbehov(k, d % 7, del); if (!b) continue;
+        let n = 0;
+        for (const [pid, rad] of Object.entries(schema)) { const x = rad[d]; if (x && x.dygnsdel === del && (har[pid] || []).includes(k.kompetens)) n++; }
+        if (n < b) brott("KOMPETENS", null, `${dagText(d)} ${DELK[del]}: ${n} av ${b} med ${knamn[k.kompetens] || k.kompetens} i tjänst.`, false);
+      }
+    }
+
     const behov = Array.from({ length: 7 }, () => ({}));
     for (const [k, v] of Object.entries(indata.behov || {})) {
       const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGNAMN.indexOf(k)];
@@ -259,7 +368,7 @@ const GRANSKNING = (() => {
       const s = { over: { morgon: 0, kvall: 0 }, under: { morgon: 0, kvall: 0 } };
       for (let d = w * 7; d < w * 7 + 7; d++) for (const del of ["morgon", "kvall"]) {
         const antal = behov[d % 7][del] || 0;
-        let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
+        let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && behovsdel(p) === del) n++;
         s.over[del] += Math.max(0, n - antal); s.under[del] += Math.max(0, antal - n);
       }
       for (const [sort, text] of [["over", "över behovet"], ["under", "vakanta"]])
@@ -267,8 +376,30 @@ const GRANSKNING = (() => {
     }
     let vakanser = 0;
     for (let d = 0; d < N; d++) for (const [del, antal] of Object.entries(behov[d % 7])) {
-      let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && p.dygnsdel === del) n++;
+      let n = 0; for (const l of Object.values(alla)) for (const [dd, , , p] of l) if (dd === d && behovsdel(p) === del) n++;
       if (n < antal) { vakanser += antal - n; brott("BEHOV", null, `${dagText(d)}: ${antal - n} vakant ${del === "kvall" ? "kvälls" : del}pass.`, false); }
+    }
+    // jour (docs/regelverk.md): så många jourer per natt som behovet. Mjukt: det som saknas är en varning.
+    if (indata.jour) {
+      const jb = [0, 0, 0, 0, 0, 0, 0];
+      for (const [k, v] of Object.entries(indata.jour.behov || {})) {
+        const idx = k === "vardag" ? [0, 1, 2, 3, 4] : k === "helg" ? [5, 6] : k === "alla" ? [0, 1, 2, 3, 4, 5, 6] : [DAGNAMN.indexOf(k)];
+        for (const i of idx) if (i >= 0) jb[i] = Number(v) || 0;
+      }
+      for (let d = 0; d < N; d++) {
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.jourdel === 1) n++; }
+        if (n < jb[d % 7]) brott("BEHOV", null, `${dagText(d)}: ${jb[d % 7] - n} vakant jourpass.`, false);
+      }
+    }
+    // starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid. Mjukt: en varning.
+    const stL = (((indata.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0]).sort((a, b) => a[0] - b[0]);
+    if (stL.length) for (let d = 0; d < N; d++) {
+      let kvar = Number(behov[d % 7].morgon || 0);
+      for (const [t, antal] of stL) {
+        const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "morgon" && tid(x.start) === t) n++; }
+        if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} dagpass börjar kl ${klocka(t)}.`, false);
+      }
     }
     // minsta bemanning på golvet under aktiviteter (behov, mjukt)
     for (const a of Object.values(akt)) {

@@ -92,7 +92,7 @@ function behov(text) {
     const klockor = celler.filter(arKlock);
     if (klockor.length >= 2 && !celler.some(c => pass(c))) {
       const etikett = celler.find(c => !arTal(c) && !arKlock(c) && !dagar(c));
-      if (etikett) grupp = etikett;
+      if (etikett && !del(etikett)) grupp = etikett;  // "Dag"/"Kväll" som rubrik är ingen grupp
       const n = celler.filter(arTal).map(tal), antal = n.length ? n[n.length - 1] : 0;
       if (klockor[0] === klockor[1] || !antal) continue;  // tomma rader (00:00–00:00) och pass utan personal
       const pp = pass(`${klockor[0]}-${klockor[1]}`), dl = blockDag || (celler.map(dagar).find(Boolean)) || GRUPPER.alla;
@@ -213,12 +213,19 @@ function helg(rad) {
 
 // Returnerar { personer: [{id, grad (procent), arbetar, helg, rad (det inklistrade, sparas inte)}], varningar: [] }.
 function personal(text) {
-  const R = rader(text), varningar = [], ut = [];
-  let timmar = false, rubrik = null;
+  const R = rader(text), varningar = [], ut = [], team = [];
+  let timmar = false, rubrik = null, aktTeam = null;
   for (const [nr, r] of R.entries()) {
     const rad = r.join(" "), t = liten(rad);
+    // rubrikrad för ett team: "team 1", "Team A", "Lag 2", "Arbetslag norr" – personerna under hör till teamet
+    const hel = r.filter(c => c !== "").join(" ").trim();
+    if (/^(team|lag|arbetslag|grupp|arbetsgrupp)\b[\wåäöÅÄÖ .-]{0,30}$/i.test(hel) && !/%|\d+[.,]\d/.test(hel)) {
+      aktTeam = hel.replace(/\s+/g, " ").replace(/^\w/, c => c.toUpperCase());
+      if (!team.includes(aktTeam)) team.push(aktTeam);
+      continue;
+    }
     const harTal = /\d/.test(rad.replace(/\b[a-zåäö]+\d+\b/gi, ""));
-    if (!harTal && /(namn|grad|syssels|tjänstgöring|procent|arbetar|helg|timmar|tim\b|anställ|medarbetare|id\b)/.test(t) && ut.length === 0 && nr === 0) {
+    if (!harTal && /(namn|grad|syssels|ssg|tjänstgöring|procent|arbetar|helg|timmar|tim\b|anställ|medarbetare|id\b)/.test(t) && ut.length === 0 && (nr === 0 || !team.length)) {
       rubrik = r; timmar = /(timmar|tim\b|h\/v|tim\/v)/.test(t); continue;
     }
     if (/^(summa|totalt|total)\b/.test(t)) continue;
@@ -239,11 +246,11 @@ function personal(text) {
     if (grad === null) { grad = 100; varningar.push(`Rad ${nr + 1}: ingen sysselsättningsgrad hittades, satt till 100 %.`); }
     grad = Math.round(grad / 5) * 5;
     if (grad < 10 || grad > 100) { varningar.push(`Rad ${nr + 1}: sysselsättningsgraden ${grad} % är utanför 10–100 % och ändrades.`); grad = Math.min(100, Math.max(10, grad)); }
-    ut.push({ grad, arbetar: a, helg: h || "2/4", rad: r.filter(c => c && !arTal(c) && !/%$/.test(c)).slice(0, 2).join(" ") || `Rad ${nr + 1}` });
+    ut.push({ grad, arbetar: a, helg: h || "2/4", rad: r.filter(c => c && !arTal(c) && !/%$/.test(c)).slice(0, 2).join(" ") || `Rad ${nr + 1}`, ...(aktTeam ? { team: aktTeam } : {}) });
   }
   let nd = 0, nn = 0;
   for (const p of ut) p.id = p.arbetar === "natt" ? `N${++nn}` : `A${++nd}`;
-  return { personer: ut, varningar, rubrik: !!rubrik };
+  return { personer: ut, varningar, rubrik: !!rubrik, team };
 }
 
 return { personal, behov, dagar, kurva, DAGAR };

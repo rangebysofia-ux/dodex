@@ -38,6 +38,20 @@ def test_fall(fall, tmp_path):
             assert kpi["vakanta_pass"] == forv["vakanta_pass"], kpi
         if "natt_vila_max" in forv:
             assert kpi["natt_vila"] <= forv["natt_vila_max"], kpi
+        if "jour_saknas" in forv:
+            assert kpi.get("jour_saknas", 0) == forv["jour_saknas"], kpi
+        if "jourpass_min" in forv:
+            assert kpi["jourpass"] >= forv["jourpass_min"], kpi
+        if "starttid_saknas" in forv:
+            assert kpi.get("starttid_saknas", 0) == forv["starttid_saknas"], kpi
+        if "kompetensvakanser" in forv:
+            assert kpi.get("kompetensvakanser", 0) == forv["kompetensvakanser"], kpi
+        if "kompetensvakanser_min" in forv:
+            # kravet är mjukt: det som inte går att täcka blir kompetensvakanser, aldrig avtalsbrott
+            assert kpi["kompetensvakanser"] >= forv["kompetensvakanser_min"], kpi
+            assert any(v["regel"] == "KOMPETENS" for v in res["varningar"]), res["varningar"][:3]
+        if "extra_helgpass" in forv:
+            assert kpi.get("extra_helgpass", 0) == forv["extra_helgpass"], kpi
         if "aktivitet_saknas" in forv:
             assert kpi["aktivitet_saknas"] == forv["aktivitet_saknas"], kpi
         if "jamn_dag_kvall_max_skillnad" in forv:

@@ -1,0 +1,67 @@
+{
+  "beskrivning": "Extra helgpass: helgen behöver fem på morgon och kväll men varannan helg ger fyra. Var och en får ett extra helgpass (en lördag eller söndag en ledig helg) som ersätter ett vardagspass. Ska gå att lösa utan vakanser med åtta extra helgpass, och granskningen ska godkänna dem.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0,
+    "extra_helgpass": 8
+  },
+  "enhet": "Test – extra helgpass",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 3,
+      "kvall": 2
+    }
+  },
+  "personal": [
+    {
+      "id": "E1",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E2",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E3",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E4",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E5",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E6",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E7",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E8",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  }
+}

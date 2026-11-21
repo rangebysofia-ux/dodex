@@ -41,7 +41,7 @@ from schemamotor.build import IndataFel, forbered, los
 from schemamotor.justera import justera
 from schemamotor.modell import kontrollera_indata
 from schemamotor.onskemal import beskriv, kontrollera as kontrollera_onskemal
-from schemawebb import db
+from schemawebb import db, grund
 
 STATISK = Path(__file__).resolve().parent / "statisk"
 FALL = next((f for f in (Path(os.environ.get("SCHEMA_EXEMPEL", "")),
@@ -226,6 +226,7 @@ def _forhandskontroll(indata):
 async def livstid(app):
     global korare
     db.anslut()
+    grund.vid_start()  # förskolorna som grund, en gång (schemawebb/grund.py)
     korare = ThreadPoolExecutor(max_workers=1, thread_name_prefix="losare")
     yield
     korare.shutdown(wait=False, cancel_futures=True)
@@ -348,6 +349,7 @@ class EnhetIn(BaseModel):
     namn: str
     indata: dict
     org: Optional[str] = None  # plats i organisationsstrukturen; utelämnad = behåll vid ändring
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")  # enhetens egen färg, annars verksamhetens
 
 
 @app.get("/api/enheter", dependencies=[Depends(inloggad)])
@@ -357,7 +359,7 @@ def lista_enheter():
 
 @app.post("/api/enheter", dependencies=[Depends(inloggad)], status_code=201)
 def ny_enhet(e: EnhetIn):
-    return {"id": db.skapa_enhet(e.namn.strip() or "Ny enhet", e.indata, e.org)}
+    return {"id": db.skapa_enhet(e.namn.strip() or "Ny enhet", e.indata, e.org, e.farg)}
 
 
 @app.get("/api/enheter/{eid}", dependencies=[Depends(inloggad)])
@@ -386,6 +388,7 @@ class OrgNod(BaseModel):
     id: str = Field(min_length=1, max_length=60, pattern=r"^[a-z0-9-]+$")
     namn: str = Field(min_length=1, max_length=80)
     forelder: Optional[str] = None
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")  # gruppens färg; enheterna under ärver den
 
 
 class OrganisationIn(BaseModel):
@@ -418,6 +421,60 @@ def spara_organisation(o: OrganisationIn):
     return {"ok": True}
 
 
+class AktTyp(BaseModel):
+    id: str = Field(min_length=1, max_length=60, pattern=r"^[a-z0-9-]+$")
+    namn: str = Field(min_length=1, max_length=60)
+    typ: Literal["apt", "utbildning", "mote", "studier", "dokumentation", "handledning", "annat"] = "annat"
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class AktTyperIn(BaseModel):
+    typer: list[AktTyp] = Field(max_length=200)
+
+
+@app.get("/api/aktivitetstyper", dependencies=[Depends(inloggad)])
+def hamta_aktivitetstyper():
+    return {"typer": db.installning("aktivitetstyper")}  # None = standardtyperna i organisation.js
+
+
+@app.put("/api/aktivitetstyper", dependencies=[Depends(inloggad)])
+def spara_aktivitetstyper(a: AktTyperIn):
+    if len({t.id for t in a.typer}) != len(a.typer):
+        raise HTTPException(422, "Samma aktivitetstyp finns två gånger.")
+    db.satt_installning("aktivitetstyper", [t.model_dump() for t in a.typer])
+    return {"ok": True}
+
+
+class KompetensIn(BaseModel):
+    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9-]+$")
+    namn: str = Field(min_length=1, max_length=80)
+    kort: Optional[str] = Field(None, max_length=6)
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class KompetenserIn(BaseModel):
+    kompetenser: list[KompetensIn] = Field(max_length=200)
+
+
+@app.get("/api/kompetenser", dependencies=[Depends(inloggad)])
+def hamta_kompetenser():
+    return {"kompetenser": db.installning("kompetenser")}  # None = startlistan i kompetens.js
+
+
+@app.put("/api/kompetenser", dependencies=[Depends(inloggad)])
+def spara_kompetenser(k: KompetenserIn):
+    if len({x.id for x in k.kompetenser}) != len(k.kompetenser):
+        raise HTTPException(422, "Samma kompetens finns två gånger.")
+    db.satt_installning("kompetenser", [x.model_dump() for x in k.kompetenser])
+    return {"ok": True}
+
+
+@app.post("/api/grund", dependencies=[Depends(inloggad)])
+def lagg_in_grund():
+    """Lägger in förskolorna och avdelningarna som saknas (schemawebb/grund_forskola.json)."""
+    return grund.lagg_in()
+
+
 class FlyttaIn(BaseModel):
     org: Optional[str] = None
 
@@ -425,6 +482,17 @@ class FlyttaIn(BaseModel):
 @app.post("/api/enheter/{eid}/flytta", dependencies=[Depends(inloggad)])
 def flytta_enhet(eid: int, f: FlyttaIn):
     if not db.flytta_enhet(eid, f.org):
+        raise HTTPException(404, "Enheten finns inte.")
+    return {"ok": True}
+
+
+class FargIn(BaseModel):
+    farg: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")  # None = verksamhetens färg
+
+
+@app.post("/api/enheter/{eid}/farg", dependencies=[Depends(inloggad)])
+def farga_enhet(eid: int, f: FargIn):
+    if not db.farga_enhet(eid, f.farg):
         raise HTTPException(404, "Enheten finns inte.")
     return {"ok": True}
 

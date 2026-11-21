@@ -68,7 +68,27 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 29. **Godkänt grundschema är låst.** Ett valt schema godkänns och aktiveras från en måndag. Därefter är det låst: ändringar görs som en ny version som godkänns och aktiveras från ett nytt datum, och tillfälliga ändringar görs i planeringen. I webbtjänsten kan bara en chef, inloggad med eget konto, godkänna. Ett schema med brott mot hårda regler kan inte godkännas. Det godkända schemat visas med guldram och märket ✓ Godkänt. Se `docs/godkant-schema.md`. Beslutat av användaren 2026-11-08. **Ändrat samma dag:** alla inloggade får godkänna och aktivera (chefen hanterar kontona). Det sparas vem som godkände. `SCHEMA_GODKANNARE=chef` begränsar godkännandet till chefer igen.
 
+30. **Team med eget behov och gemensam personal.** En arbetsgrupp kan ha flera team. Varje team har ett eget behov, och varje medarbetare ett hemteam. Personalen är gemensam: där ett team har för få lånas personal in från ett team som har fler. Enhetens behov är summan av teamens. Behovet (vakanser) går först. Därefter, direkt efter aktiviteter och vila mellan nattblock, kommer det mjuka målet att varje team täcks av sin egen personal (`hemteam`). Lån syns i schemat (→T2) och i teamkortet. Se `docs/team.md`. Beslutat av användaren 2026-11-08.
+
+31. **Områden direkt när en enhet skapas.** Guiden frågar om enheten har områden, avdelningar eller team, med namn och färg. Båda sätten ska gå: *ett gemensamt schema* där områdena är team (beslut 30), eller *eget schema per område* där varje område blir en egen enhet under en grupp i organisationen. Personal och behov delas jämnt som ett förslag. Färger är bara för visning och påverkar inte schemaläggningen. Se `docs/team.md`. Beslutat av användaren 2026-11-08.
+
+32. **Organisationen byggs upp utan schema.** Verksamheter, enheter, områden och team, och organisationens aktivitetstyper med namn och färg, läggs upp på sidan Organisation innan något schema läggs. En aktivitet i en enhet får sin typs namn, kategori och färg. Se `docs/organisation.md`. Beslutat av användaren 2026-11-08.
+
+33. **Förskolorna är grunden i verktyget.** De 29 förskolorna med sina avdelningar finns från start under Förskola (avdelningarna som team). Äldreomsorgen avvaktar. Hemtjänstgruppen under Äldreomsorg heter ORDBO. Se `docs/organisation.md`. Beslutat av användaren 2026-11-09.
+
+34. **Kompetensbaserade behov.** En enhet kan kräva minst så många med en kompetens per dag och dygnsdel, till exempel läkemedelsdelegering på kvällen. Kravet är mjukt och ligger direkt efter behovet (vakanser → kompetens → …): motorn väljer vilka som arbetar, gör aldrig behovet sämre och lägger aldrig ett extra pass för kompetensens skull. Det som inte går syns som kompetensvakanser (användarens beslut). Till planeringen hör organisationens kompetenslista, kompetensbalans före schemat, kompetens i schemat och förslag på utbildning. Se `docs/kompetens.md`. Beslutat av användaren 2026-11-09.
+
+35. **Starttider för dagpassen och förskolornas tider.** När behovet läggs in kan man ange hur många av dagpassen som börjar vid varje tid (till exempel 1 kl. 06, 1 kl. 07 och 2 kl. 08), så att hela dagen täcks. Tiderna blir tillåtna starter (som beslut 24). Kravet är mjukt och på samma nivå som behovet: det som saknas blir startvakanser. Förskolornas grundinställning är öppet 06:00–18:00 (`morgon_start` 06:00, `kvall_slut` 18:00). Se `docs/starttider.md`. Beslutat av användaren 2026-11-09.
+
+36. **Regelverk för en enhet.** Tre färdiga regelverk väljs per enhet under Regler: *Dag, kväll och helgrotation* (heltid 37 h, användarens val), *40-timmarsvecka, dagtid mån–fre* (heltid 40 h per helgfri vecka enligt AB 25 § 13 mom. 2, bara dagpass, inga helger, 5 pass per vecka; varannan helg upplåst som synlig avvikelse) och *Funktionsstöd med Bilaga J* (som dag/kväll/helg, och arbetspass och jour i följd enligt AB 25 § 13 mom. 5: högst 20 timmar sammanlagt och minst lika lång vila efteråt). Avtal och lag ändras aldrig. Se `docs/regelverk.md`. Beslutat av användaren 2026-11-09.
+
+37. **Jourpass över dygnet.** Jouren läggs som ett jourpass, till exempel 15:00–08:00 med jour 00:00–06:00: ett pass som belastar två arbetsdagar, räknas in i kvällens och morgonens bemanning, och där hälften av jourtiden räknas som arbetstid. Högst 20 timmar och vilan efteråt minst lika lång (AB 25 § 13 mom. 5). Tiderna och andelen ändras per enhet. Ersätter jour efter kvällspasset med ledig dag efter. Se `docs/regelverk.md`. Beslutat av användaren 2026-11-09.
+
+38. **Extra helgpass per person.** En medarbetare kan få 1–4 extra helgpass per schemaperiod (`extra_helgpass` på personen). Ett extra helgpass är en lördag eller en söndag en ledig helg, högst ett pass per helg. Det ersätter ett pass på en vardag: antalet pass och arbetstiden är desamma. Det är ett undantag från varannan helg (beslut 5b) och görs bara per person. Varannan helg ligger kvar som hård regel, och helgen räknas fortfarande som ledig i växlingen. Ingen fredagskväll före den helgen, som före andra lediga helger. Extrapassen är ett mjukt mål direkt efter team (`extra_helg`): lösaren tar dem bara när de gör schemat bättre för målen före, till exempel färre vakanser, och aldrig fler än personens antal. De syns i schemat som *+ helg*. Beslutat av användaren 2026-11-10.
+
 Öppna frågor, alltså inte beslutade:
+- Ersättning för jour enligt Bilaga J räknas inte än; bilagans text ska kontrolleras mot SKR:s publicering först.
+- Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).
 - Om rapportöverlapp mellan morgon och kväll ska vara en regel.
 - Om nattpersonalens antal pass ska räknas från nattpassets längd (så gör skillen nu) eller enligt en annan princip.
 
@@ -78,6 +98,7 @@ De mjuka målen löses i ordning, och varje nivå låses innan nästa optimeras:
 
 1. Vakanser (pass per dygnsdel och tidpunkter)
 2. Aktiviteter (saknade deltagare, därefter ojämn fördelning mellan personerna)
+   – därefter kompetens, vila mellan nattblock, team (hemteam) och extra helgpass (så få som möjligt), se beslut 30, 34 och 38
 3. Blocklängd (antal tillfällen med fler än 4 dagar i följd)
 4. Passlängd (avvikelse från mållängd per pass och från kontrakterad tid, i minuter)
 5. Rättvisa och jämn bemanning (spridning i antal kvälls- och morgonpass mellan personer, vägd dubbelt, plus skillnaden mellan dag och kväll i över- och underbemanning)

@@ -1,18 +1,20 @@
 # Organisationsstruktur
 
-Enheterna ordnas under verksamheter på startsidan, i webben och i telefonen. Strukturen är bara ordning och rubriker. Den påverkar inte schemaläggningen. Användarens önskemål 2026-11-08.
+Enheterna ordnas under verksamheter på startsidan, i webben och i telefonen. Strukturen är bara ordning och rubriker. Den påverkar inte schemaläggningen. Användarens önskemål 2026-11-08. Ett undantag i inställningarna: regelverket Funktionsstöd med Bilaga J (jourpass) erbjuds bara för enheter under LSS (`ORG.arLss`, se `docs/regelverk.md`).
 
 ## Startstruktur
 
 ```
 Äldreomsorg
   SÄBO
-  Hemtjänst
+  ORDBO        (ordinärt boende, hemtjänst)
 LSS
 Förskola
 ```
 
-Strukturen kan ändras fritt under **Ändra organisation**, med valfritt antal nivåer:
+Gruppen för hemtjänst heter ORDBO (användarens beslut 2026-11-09). En sparad struktur där den fortfarande heter Hemtjänst får det nya namnet när den läses in, om användaren inte har döpt om den själv.
+
+Strukturen kan ändras fritt på sidan **Organisation**, med valfritt antal nivåer:
 - *Byt namn* på en grupp.
 - *+ Undergrupp*, till exempel ett område under SÄBO.
 - *Ta bort* en grupp. Det går bara när gruppen saknar undergrupper, och dess enheter flyttas upp ett steg.
@@ -30,6 +32,53 @@ Strukturen kan ändras fritt under **Ändra organisation**, med valfritt antal n
 
 DODEX är byggt för verksamhet dygnet runt. För förskolan anger man bara dagbehov. Regler som varannan helg kan behöva ändras för de enheterna under Regler, som en avvikelse som syns.
 
+## Färger
+
+Varje verksamhet och grupp har en färg, så att man ser direkt vilken sorts enhet det är. Enheterna under en grupp får gruppens färg: huset 🏠 framför enhetens namn, en kant på enhetskortet och en etikett med verksamheten (till exempel Äldreomsorg › SÄBO) överst på enhetens sida.
+
+- Startfärgerna: Äldreomsorg guld, SÄBO orange, ORDBO grön, LSS blå och Förskola lila.
+- En undergrupp utan egen färg ärver färgen från närmaste grupp ovanför.
+- Färgen ändras under **Ändra struktur**, med den runda färgrutan framför gruppens namn.
+- En enhet kan också ha en egen färg (väljs vid enheten i listan, ↺ går tillbaka till verksamhetens). Områden som skapas i guiden får var sin färg.
+- Enheter utan placering blir grå.
+
+Färgen är bara till för att hitta rätt och påverkar inte schemaläggningen.
+
+## Sidan Organisation
+
+Alla grupper i trädet är stängda tills man öppnar dem (användarens önskemål 2026-11-09), både på startsidan och på sidan Organisation. Det man har öppnat förblir öppet när man byter sida. När en enhet läggs till öppnas gruppen där den hamnade. Enheterna står i bokstavsordning på sidan Organisation.
+
+Hela organisationen kan byggas upp innan något schema läggs (användarens önskemål 2026-11-08, beslut 32 i `regelhierarki.md`). Sidan nås via **Organisation** i sidomenyn i webben och via knappen **Organisation** vid Mina enheter i telefonen.
+
+- **Struktur:** verksamheter och grupper i fritt antal nivåer, med färg, *+ Enhet*, *+ Undergrupp*, *Byt namn* och *Ta bort*.
+  - *+ Enhet* skapar en tom enhet med bara namn. Personal, behov och regler fylls i sedan, i enheten.
+  - Varje enhet visas med färg, namn och områden/team. *+ Område/team* delar upp enheten i team med ett gemensamt schema (`docs/team.md`). Det första teamet tar över enhetens behov, så att inget behov försvinner.
+  - Ska ett område ha eget schema blir det en egen enhet under en undergrupp, till exempel Hemtjänst Centrum › Öst.
+- **Aktivitetstyper:** organisationens typer av aktiviteter med namn, färg och kategori (APT, utbildning, möte, studier, dokumentation, handledning, annat). Typerna går att ändra, ta bort och lägga till, till exempel Brandövning.
+  - När en aktivitet läggs in i en enhet väljs typen. Aktiviteten får då typens namn, kategori och färg.
+  - I schemat visas aktivitetens markering i dess färg, och i aktivitetslistan med en färgprick. En aktivitet utan färg får kategorins standardfärg.
+
+## Grunden: förskolorna
+
+Förskolorna och deras avdelningar finns som grund i verktyget (användarens beslut 2026-11-09): 29 förskolor med 113 avdelningar under Förskola, från `schemawebb/grund_forskola.json`. Förskolorna har öppet 06:00–18:00 som grundinställning (`docs/starttider.md`). Varje förskola blir en enhet, och avdelningarna blir områden/team i förskolans gemensamma schema. Personal, behov och regler fylls i sedan.
+
+- **Webben** lägger in grunden en gång när tjänsten startar (flaggan `grund_forskola`). En förskola som tas bort kommer alltså inte tillbaka av sig själv. `SCHEMA_GRUND=av` stänger av det (testerna gör det).
+- **Lättversionen** lägger in grunden första gången listan öppnas, i användarens egen lagring.
+- Knappen **Lägg in förskolorna** på sidan Organisation lägger in förskolor och avdelningar som saknas, till exempel efter att något har tagits bort av misstag.
+- Äldreomsorgen ingår inte i grunden än. Den kan importeras från Excel när den är klar.
+
+## Importera från Excel
+
+Överst på sidan Organisation finns **Importera från Excel**. Bara namn läses, inga personuppgifter. Filen kan se ut på tre sätt (första raden är rubriker):
+
+1. **Par:** en kolumn för enheten och en för avdelningen, en rad per avdelning (till exempel *Förskola* och *Avdelning*).
+2. **Sammanställning:** enheten och en kolumn *Avdelningar* med namnen åtskilda av komma.
+3. **Hierarki:** *Område*, *Typ*, *Under* och *Avdelningar*. *Under* anger vägen, till exempel "SÄBO / Furulund". En rad med avdelningar blir en enhet. En rad som andra ligger under blir en grupp. En rad utan avdelningar och utan något under blir en enhet utan team.
+
+Förhandsvisningen visar allt som ett träd med kryssrutor. Bocka ur det som ska vänta: en bortvald grupp tar med sig allt under. Enskilda avdelningar går också att bocka ur, till exempel dubbletter i underlaget. Välj också var det ska läggas. Förslaget är Förskola eller Äldreomsorg, efter vad filen innehåller.
+
+Avdelningarna blir områden/team i enhetens gemensamma schema. Grupper och enheter som redan finns på samma plats återanvänds, och avdelningar läggs bara till om de saknas, så importen kan köras om. Excel-filen läses i webbläsaren med SheetJS, samma bibliotek som Excel-exporten i lättversionen (`ORG.importPlan`, `importVal`, `importera`).
+
 ## Teknik
 
 - `schemawebb/statisk/organisation.js` (ORG) delas av webben och lättversionen och innehåller startstrukturen, ändringarna, valrutan och trädet.
@@ -39,4 +88,10 @@ DODEX är byggt för verksamhet dygnet runt. För förskolan anger man bara dagb
   - `POST /api/enheter/{id}/flytta`.
   - `org` på enheten, i tabellen `enheter` (kolumnen läggs till i äldre databaser).
 - **Lättversionen:** strukturen sparas i dokumentet `org` i användarens lagring, och `org` sparas på varje enhet.
-- Tester: `tests/test_organisation.py`.
+- `farg` på en grupp (`#rrggbb`, kan saknas). `ORG.farg` räknar fram den ärvda färgen och `ORG.ikon` ritar huset.
+- `farg` på en enhet: kolumnen `farg` i `enheter` (webben, `POST /api/enheter/{id}/farg`) och fältet `farg` på enheten i lättversionen. `ORG.enhetsfarg` ger enhetens egen färg eller verksamhetens.
+- `ORG.grupp(noder, namn, forelder)` hittar eller skapar gruppen som områdena i guiden samlas under.
+- `ORG.stod` ritar sidan Organisation. `TEAM.laggTill`, `TEAM.bytNamn` och `TEAM.taBort` ändrar en enhets team.
+- Aktivitetstyper: `ORG.AKT_STANDARD`, `aktLagg`, `aktAndra`, `aktTaBort`, `aktAlternativ`, `aktFalt` och `aktFarg`. Webben: `GET` och `PUT /api/aktivitetstyper`, där `null` betyder standardtyperna. Lättversionen: dokumentet `akttyper` i användarens lagring.
+- `GET /api/enheter` innehåller enhetens team (id, namn och färg).
+- Tester: `tests/test_organisation.py`, `tests/test_omraden.py`, `tests/test_organisationsstod.py` och `tests/test_grund.py`.

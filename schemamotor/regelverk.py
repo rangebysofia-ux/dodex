@@ -105,16 +105,30 @@ KALLOR = {
     "SCHEMA_14_DAGAR": ("AB 25 § 13 mom. 5: schemat ska meddelas arbetstagaren senast 14 dagar innan det börjar gälla.", "–"),
     "KRAV": ("Medarbetarens önskemål som verksamheten har gjort till krav.", "–"),
     "AKTIVITET": ("Verksamhetens beslut (till exempel APT enligt lokal samverkan). Aktiviteten är arbetstid.", "–"),
+    "KOMPETENS": ("Verksamhetens beslut om kompetens i tjänst (till exempel delegering enligt verksamhetens rutin).", "–"),
+    "STARTTID": ("Verksamhetens beslut om starttider för dagpassen (till exempel förskolans öppettider).", "–"),
+    "JOUR": ("AB 25 § 13 mom. 5: undantag från dygnsvilan vid arbete och jour i direkt anslutning, högst 20 timmar sammanlagt och efterföljande vila minst lika lång. Bilaga J (viss jourtjänstgörande personal).", "Bara vid särskilda skäl; MBL-förhandling före införande."),
 }
 
 MJUKA = {
     "vakanser": ("Vakanser", "verksamhet", None, "Antal pass och klockslag där behovet inte täcks. Högsta mjuka nivå: behovet görs aldrig hårt.", "BEHOV"),
+    "kompetens": ("Kompetens i tjänst", "verksamhet", None,
+                  "Antal gånger det saknas någon med en kompetens som krävs, till exempel läkemedelsdelegering på kvällen. "
+                  "Direkt efter behovet: motorn väljer vilka som arbetar så att kraven täcks, men lägger aldrig ett extra pass "
+                  "för det och gör aldrig en vakans för det. Det som fattas syns som kompetensvakans. Verksamhetens beslut 2026-11-09.", "KOMPETENS"),
     "aktiviteter": ("Aktiviteter under arbetstid", "verksamhet", None,
                     "Saknade deltagare i aktiviteter som APT, därefter ojämn fördelning mellan personerna. Deltagarna arbetar hela "
                     "aktivitetstiden. Aktiviteter markerade som krav är hårda.", "AKTIVITET"),
     "natt_vila": ("Nattpersonal: vila mellan nattblock", "lokal regel", "natt_vila_mellan_block_minuter",
                   "Antal gånger vilan mellan två nattblock är kortare än gränsen (2880 = 48 h, minst två lediga nätter). Mjuk: "
                   "bryts bara när schemat annars inte går ihop. Verksamhetens beslut 2026-11-07.", "NATT_VILA"),
+    "hemteam": ("Team: täckning med egen personal", "verksamhet", None,
+                "När arbetsgruppen har team med eget behov: antal pass där ett team inte täcks av sin egen personal, så att "
+                "någon måste lånas in från ett annat team. Lån är tillåtet; behovet går före. Verksamhetens beslut 2026-11-08.", "TEAM"),
+    "extra_helg": ("Extra helgpass, så få som möjligt", "lokal regel", None,
+                   "Antal extra helgpass (en lördag eller söndag en ledig helg, undantag per person med extra_helgpass). "
+                   "Används bara när de gör schemat bättre för målen före, och aldrig fler än personens antal. "
+                   "Användarens beslut 2026-11-10.", "HELG"),
     "blocklangd": ("Dagar i följd över rekommenderat", "princip", "block_rekommenderat", "Antal tillfällen med fler arbetsdagar i följd än rekommenderat.", "BLOCK_REKOMMENDERAT"),
     "passlangd": ("Passlängd", "princip", None, "Minuter från personens snittlängd per pass och från kontrakterad tid.", "TID"),
     "rattvisa_jamn": ("Rättvisa och jämn bemanning", "princip", "jamn_bemanning",

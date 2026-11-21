@@ -184,6 +184,7 @@ table.schema thead th { padding-bottom: 6px; }
 .pass { border: 0; width: 100%; border-radius: 8px; padding: 5px 1px; line-height: 1.15; font: inherit; cursor: pointer; display: block; }
 .pass b { display: block; font-size: 12.5px; font-weight: 800; }
 .pass small { font: 10.5px var(--mono); }
+.passikon { font-size: 10.5px; margin-right: 2px; line-height: 1; }
 .pass.morgon { background: var(--morgon-bg); color: var(--morgon-text); box-shadow: inset 3px 0 0 var(--morgon-kant); }
 .pass.kvall { background: var(--kvall-bg); color: var(--kvall-text); box-shadow: inset 3px 0 0 var(--kvall-kant); }
 .pass.natt { background: var(--natt-bg); color: var(--natt-text); box-shadow: inset 3px 0 0 var(--natt-kant); }
@@ -199,6 +200,7 @@ table.schema td.summa.res { color: var(--text); font-weight: 800; }
 .pass .res { display: block; font: 800 9.5px/1.1 var(--mono); font-style: normal; color: #fff; background: var(--resurs); border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; }
 .schema.period .pass.resurs { background: var(--resurs); color: #fff; }
 .pass .akt { display: block; font: 700 9.5px/1.1 var(--mono); font-style: normal; color: #5a1f0c; background: #f4c9b6; border-radius: 4px; margin: 2px 2px 0; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pass .akt[style] { color: #fff; background: var(--ak); }
 tr.bem td { font-size: 11.5px; color: var(--dampad); border-top: 2px solid var(--linje); line-height: 1.3; font-variant-numeric: tabular-nums; }
 tr.bem td.vakans { color: var(--kritisk); font-weight: 800; background: var(--kritisk-bg); border-radius: 8px; }
 .info { margin: 10px 0 0; font-size: 14px; min-height: 1.5em; }
@@ -403,13 +405,21 @@ span.battre { color: var(--bra); font-weight: 700; } span.samre { color: var(--k
 
 /* ---------- Startguiden ---------- */
 .valkommen .logga svg { width: 54px; height: 54px; }
+/* stor logotyp: urtavlan med text, som i den grafiska profilen */
+.logga.stor { gap: 22px; }
+.logga.stor svg, .valkommen .logga.stor svg { width: 112px; height: 112px; filter: drop-shadow(0 4px 12px rgba(20, 19, 16, .25)); }
+.logga.stor b { font-size: 40px; letter-spacing: .12em; }
+.logga.stor small { font-size: 11px; letter-spacing: .5em; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+.logga.stor small::before { content: ""; width: 28px; height: 1px; background: currentColor; opacity: .7; }
+.logga.stor em { display: block; font: italic 12px/1 var(--sans); color: var(--dampad); margin-top: 10px; letter-spacing: .04em; }
+@media (max-width: 560px) { .logga.stor svg, .valkommen .logga.stor svg { width: 76px; height: 76px; } .logga.stor b { font-size: 28px; } }
 .valrutor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
-.valruta { display: grid; gap: 6px; text-align: left; align-content: start; padding: 18px; border-radius: 18px; border: 1px solid var(--linje); background: var(--yta2); cursor: pointer; font: inherit; color: var(--text); min-height: 150px; }
+.valruta { display: grid; gap: 10px; text-align: left; align-content: start; padding: 16px; border-radius: 18px; border: 1px solid var(--linje); background: var(--yta2); cursor: pointer; font: inherit; color: var(--text); min-height: 0; }
 .valruta:hover { border-color: var(--salvia); background: var(--accent-svag); }
 .valruta.huvud { background: var(--accent-svag); border-color: var(--salvia); }
-.valruta b { font-size: 17px; } .valruta > span:last-child { color: var(--dampad); font-size: 13.5px; line-height: 1.45; }
 .valikon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--yta); font-size: 22px; color: var(--skog); }
 .valruta.huvud .valikon { background: var(--guld); color: var(--text); }
+.valruta b { font-size: 17px; } .valruta > span:last-child { color: var(--dampad); font-size: 13.5px; line-height: 1.45; }
 .nyttigt { margin-top: 14px; } .nyttigt summary { cursor: pointer; font-weight: 700; color: var(--skog); }
 .guide h2 { margin-top: 6px; }
 .guidesteg { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--dampad); }
@@ -538,3 +548,87 @@ tr.kal-ingen td { background: transparent; }
 .arbetstid-dagar > div { display: grid; justify-items: center; align-content: end; gap: 2px; height: 96px; }
 .arbetstid-dagar i { width: 70%; max-width: 34px; border-radius: 5px 5px 2px 2px; background: var(--guld, #c9a03a); min-height: 2px; }
 .arbetstid-dagar b { font-size: 12.5px; } .arbetstid-dagar span { font-size: 11.5px; color: var(--dampad); }
+
+/* team */
+.team-hem { display: block; font-size: 10.5px; font-weight: 700; color: var(--dampad); }
+.pass .team-lan { display: block; font: 800 9.5px/1.1 var(--mono, monospace); font-style: normal; color: #fff; background: #4d6488; border-radius: 4px; margin: 2px 2px 0; padding: 0 2px; }
+
+/* enhet = hus */
+
+/* enhetens färg = verksamhetens (organisation.js) */
+.enhet-ikon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; margin-right: 8px; vertical-align: -6px; font-size: 16px; line-height: 1; background: color-mix(in srgb, var(--ef, #8b8f8a) 22%, transparent); box-shadow: inset 0 0 0 2px var(--ef, #8b8f8a); }
+h1 .enhet-ikon { width: 38px; height: 38px; font-size: 20px; vertical-align: -4px; }
+.kort.enhet, .org-enhet { border-left: 5px solid var(--ef, transparent); }
+.org-prick { width: 12px; height: 12px; border-radius: 50%; background: var(--ef); flex: none; }
+.org-etikett { display: inline-block; margin: 4px 0 0; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--text); background: color-mix(in srgb, var(--ef) 18%, transparent); border: 1px solid var(--ef); }
+.org-farg { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; vertical-align: middle; margin-right: 6px; }
+.org-farg::-webkit-color-swatch-wrapper { padding: 0; } .org-farg::-webkit-color-swatch { border: 1px solid var(--linje); border-radius: 50%; } .org-farg::-moz-color-swatch { border-radius: 50%; }
+
+/* team och områden i egna färger (team.js, guide.js) */
+.team-hem { color: var(--tf, var(--dampad)) !important; }
+.team-hem::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--tf, var(--dampad)); margin-right: 3px; vertical-align: 1px; }
+.pass .team-lan { background: var(--tf, #4d6488) !important; }
+.team-prick { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--tf); margin-right: 6px; vertical-align: -1px; }
+.omraden { display: grid; gap: 8px; margin-top: 12px; max-width: 460px; }
+.omrade-rad { display: flex; gap: 8px; align-items: center; }
+.omrade-rad input:not([type=color]) { flex: 1; }
+.omraden > button { justify-self: start; }
+.omrade-chip { display: inline-block; padding: 1px 10px; border-radius: 999px; font-weight: 700; background: color-mix(in srgb, var(--ef) 18%, transparent); border: 1px solid var(--ef); }
+
+/* sidan Organisation (organisation.js) */
+.os-trad { display: grid; gap: 10px; }
+.os-verktyg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 2px 0 10px; }
+.os-innehall { display: grid; gap: 8px; padding-bottom: 10px; }
+.os-enhet { border: 1px solid var(--linje); border-left: 5px solid var(--ef); border-radius: 12px; padding: 8px 10px; background: var(--yta); }
+.os-rad { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.os-namn { font-size: 15.5px; } .os-namn a { color: inherit; }
+.os-hus { font-size: 18px; }
+.os-knappar { margin-left: auto; } .os-verktyg .os-knappar { margin-left: 0; }
+.os-team { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px 34px; }
+.os-teamchip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--tf) 16%, transparent); border: 1px solid var(--tf); }
+.os-teamchip .lank { color: var(--text); font-weight: 700; }
+.os-x { border: 0; background: none; color: var(--dampad); font-size: 16px; line-height: 1; padding: 0 6px; cursor: pointer; }
+.os-typer { display: grid; gap: 8px; }
+.os-typ { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; max-width: 560px; }
+.os-typ select { width: auto; }
+
+.imp-lista { max-height: 420px; overflow: auto; border: 1px solid var(--linje); border-radius: 12px; padding: 8px 12px; }
+.imp-lista li { padding: 3px 0 3px calc(var(--niva, 0) * 18px); list-style: none; }
+.imp-avd { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 4px 0 2px 26px; }
+.imp-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 1px 8px; border: 1px solid var(--linje); border-radius: 999px; cursor: pointer; }
+.imp-chip:has(input:not(:checked)) { opacity: .5; text-decoration: line-through; }
+
+/* kompetens (kompetens.js) */
+.komp-chip { display: inline-block; font: 800 9.5px/1.3 var(--sans); letter-spacing: .02em; color: #fff; background: var(--kf, #7a6a55); border-radius: 4px; padding: 0 4px; margin: 1px 2px 0 0; }
+.komp-marke { display: block; line-height: 1.2; }
+.komp-matris th, .komp-matris td { text-align: center; padding: 4px 6px; }
+.komp-matris tbody th { text-align: left; }
+.komp-matris tr.summa td, .komp-matris tr.summa th { font-weight: 700; color: var(--dampad); }
+.komp-krav select { width: auto; min-width: 150px; }
+.komp-balans { display: grid; gap: 8px; }
+.komp-rad { border: 1px solid var(--linje); border-left: 5px solid var(--bra, #2f8a6f); border-radius: 10px; padding: 8px 10px; }
+.komp-rad.brist { border-left-color: var(--dalig, #c0473f); }
+.komp-rad.knappt { border-left-color: var(--guld, #c9a03a); }
+.os-komp .os-typ { grid-template-columns: auto 1fr auto auto; }
+
+/* starttider för dagpassen (guide.js) */
+.starttid-rad { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+.starttid-rad input[type=time] { width: 120px; }
+
+/* regelverk (regelverk.js) */
+.regelverk-kort { border: 1px solid var(--linje); border-radius: 14px; padding: 12px 14px; background: var(--yta2, transparent); }
+.regelverk-kort select { width: auto; min-width: 260px; }
+
+/* jour (Bilaga J) */
+.jour-red { margin-top: 4px; }
+
+/* jourpasset över dygnet: kvällsdel och morgondel i full storlek, jourtiden däremellan som ett smalare band */
+/* extra helgpass (undantag per person) */
+.pass .extra-helg { display: block; font: 700 9px/1.2 var(--mono, monospace); font-style: normal; color: var(--varn, #a5631b); letter-spacing: .02em; }
+td:has(> .pass.jourdel-1) { padding-right: 0 !important; }
+td:has(> .pass.jourdel-2) { padding-left: 0 !important; }
+.pass.jourdel-1 { border-top-right-radius: 0; border-bottom-right-radius: 0; min-height: 40px; background: var(--kvall-bg, #d9e6df); color: var(--kvall-text, #173f30); box-shadow: inset 3px 0 0 var(--jour-kant, #a98bd6); }
+.pass.jourdel-2 { border-radius: 0 8px 8px 0; box-shadow: none; padding: 0; min-height: 40px; background: transparent; display: flex; align-items: stretch; overflow: hidden; }
+.pass.jourdel-2 .jour-band { flex: 4; align-self: center; height: 50%; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--jour-kant, #a98bd6) 35%, var(--jour-bg, #ece2f6)); font-size: 11px; line-height: 1; }
+.pass.jourdel-2 .jour-morgon { flex: 5; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--morgon-bg, #f6eac8); box-shadow: inset 0 0 0 1px var(--morgon-kant, #d5b46a); border-radius: 0 8px 8px 0; color: var(--morgon-text, #5e4710); }
+.pass.jourdel-2 .jour-morgon small { font-size: 10px; letter-spacing: -.02em; }

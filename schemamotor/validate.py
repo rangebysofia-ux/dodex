@@ -27,11 +27,30 @@ STANDARD = {
     "helgfrekvens": "2/4", "ingen_fredagskvall_fore_ledig_helg": True, "tolerans_minuter": 60,
     "min_passlangd_minuter": 300, "spridning_kvallar": "mjuk", "spridning_tolerans": 1, "jamn_bemanning": "mjuk",
 }
+DELTEXT = {"morgon": "dag", "kvall": "kväll", "natt": "natt"}
 NIVA = {"DYGNSVILA": "avtal", "VECKOVILA": "avtal", "RAST": "lag", "ANTAL_PASS": "kontrakt", "TID": "kontrakt",
         "HELG": "lokal regel", "BLOCK_MIN": "lokal regel", "BLOCK_MAX": "lokal regel",
         "PASSFONSTER": "princip", "BLOCK_REKOMMENDERAT": "princip", "BEHOV": "verksamhet", "SPRIDNING": "princip",
-        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel"}
+        "JAMN_BEMANNING": "princip", "AKTIVITET": "verksamhet", "NATT_I_RAD": "lokal regel", "NATT_VILA": "lokal regel", "KVALL_I_RAD": "lokal regel",
+        "TEAM": "verksamhet", "KOMPETENS": "verksamhet", "STARTTID": "verksamhet", "JOUR": "avtal"}
 
+
+
+def helgfel(helger, frek, W, cyk):
+    """Följer mönstret av arbetade helger personens helgfrekvens? Tom lista om det gör det."""
+    antal = sum(helger)
+    if frek == "2/4":
+        if any(helger[w] == helger[(w + 1) % W] for w in range(W if cyk else W - 1)):
+            return ["Helgerna växlar inte varannan: " + "".join("J" if h else "L" for h in helger) + "."]
+    elif frek in ("alla", "4/4") and antal != W:
+        return [f"Ska arbeta alla helger, arbetar {antal} av {W}."]
+    elif frek in ("ingen", "0/4") and antal:
+        return [f"Ska inte arbeta helg, arbetar {antal}."]
+    elif "/" in frek and frek not in ("2/4", "4/4", "0/4"):
+        t, n = map(int, frek.split("/"))
+        if antal != round(W * t / n):
+            return [f"Helgfrekvens {frek} ger {W * t / n:g} helger, arbetar {antal}."]
+    return []
 
 def tid(s):
     h, m = s.strip().split(":")
@@ -51,6 +70,11 @@ def veckotid(s):
 def dagindex(nyckel):
     grupper = {"vardag": range(5), "helg": range(5, 7), "alla": range(7)}
     return grupper[nyckel] if nyckel in grupper else [DAGNAMN.index(nyckel)]
+
+
+def behovsdel(p):
+    """Dygnsdelen ett pass räknas i för behovet: jourpassets första halva är kväll och andra halva morgon."""
+    return {1: "kvall", 2: "morgon"}.get(p.get("jourdel"), p.get("dygnsdel"))
 
 
 def dag_text(d):
@@ -171,8 +195,10 @@ def kontrollera(indata, schema_dok):
         sorterade = sorted(lista, key=lambda t: t[1])
         par = list(zip(sorterade, sorterade[1:]))
         if cyk and len(sorterade) > 1:
-            par.append((sorterade[-1], (sorterade[0][0] + N, sorterade[0][1] + L, sorterade[0][2] + L, None)))
-        for (d1, s1, e1, _), (d2, s2, e2, _) in par:
+            par.append((sorterade[-1], (sorterade[0][0] + N, sorterade[0][1] + L, sorterade[0][2] + L, sorterade[0][3])))
+        for (d1, s1, e1, p1), (d2, s2, e2, p2) in par:
+            if (p1 or {}).get("jourdel") == 1 and (p2 or {}).get("jourdel") == 2 and s2 == e1:
+                continue  # jourpassets två halvor
             if s2 < e1:
                 brott("DYGNSVILA", pid, f"Pass överlappar ({dag_text(d1)} och {dag_text(d2 % N)}).")
             elif s2 - e1 < r["dygnsvila_minuter"]:
@@ -186,11 +212,39 @@ def kontrollera(indata, schema_dok):
                     brott("NATT_VILA", pid, f"Bara {(s2 - e1) / 60:.1f} h vila mellan nattblocken ({dag_text(d1)} och "
                                             f"{dag_text(d2 % N)}); minst {nvila / 60:g} h eftersträvas.", hard=False)
         # dygnsvila per 24-timmarsperiod från dygnsbrytet
+        jourspann = [(s, s + 20 * 60) for _, s, _, p in lista if p.get("jourdel") == 1]
+        jourspann += [(a - L, b - L) for a, b in jourspann] + [(a + L, b + L) for a, b in jourspann] if cyk else []
         for d in range(N if cyk else N - 1):
             a = d * DYGN + db
+            if any(js < a + DYGN and je > a for js, je in jourspann):
+                continue  # undantaget gäller perioder med jourpass; vilan efter passet kontrolleras under JOUR
             if langsta_lucka(iv, a, a + DYGN) < r["dygnsvila_minuter"]:
                 brott("DYGNSVILA", pid, f"Ingen sammanhängande dygnsvila på {r['dygnsvila_minuter'] / 60:g} h i "
                                         f"perioden från {dag_text(d)} kl {klocka(db)}.")
+        # jourpass (Bilaga J, AB 25 § 13 mom. 5; docs/regelverk.md): två halvor, dag d till midnatt och dag d+1 från
+        # midnatt, som räknas som ett pass. Hela passet högst 20 timmar, och vilan efteråt minst lika lång som passet.
+        # Undantaget från dygnsvilan gäller bara inom jourpasset (kontrolleras ovan och i perioderna nedan).
+        for i, (d, s, e, p) in enumerate(sorterade):
+            if p.get("jourdel") == 2 and not any(dd == d - 1 or (cyk and dd == (d - 1) % N) for dd, _, _, q in lista if q.get("jourdel") == 1):
+                brott("JOUR", pid, f"{dag_text(d)}: andra halvan av ett jourpass utan första halvan dagen före.")
+            if p.get("jourdel") != 1:
+                continue
+            if not indata.get("jour"):
+                brott("JOUR", pid, f"{dag_text(d)}: jourpass i schemat, men enheten har ingen jour.")
+            andra = next(((dd, ss, ee, q) for dd, ss, ee, q in lista if q.get("jourdel") == 2 and (dd == d + 1 or (cyk and dd == (d + 1) % N))), None)
+            if andra is None:
+                brott("JOUR", pid, f"{dag_text(d)}: jourpasset fortsätter inte dagen efter.")
+                continue
+            slut = andra[2] + (L if andra[0] < d else 0)
+            if slut - e > 1 and andra[1] + (L if andra[0] < d else 0) != e:
+                brott("JOUR", pid, f"{dag_text(d)}: jourpassets halvor hänger inte ihop.")
+            span = slut - s
+            if span > 20 * 60:
+                brott("JOUR", pid, f"{dag_text(d)}: jourpasset är {span / 60:.1f} h (högst 20 h).")
+            efter = [ss for _, ss, _, _ in lista if ss >= slut] + ([ss + L for _, ss, _, _ in lista] if cyk else [])
+            efter = [x for x in efter if x >= slut]
+            if efter and min(efter) - slut < span:
+                brott("JOUR", pid, f"{dag_text(d)}: bara {(min(efter) - slut) / 60:.1f} h vila efter jourpasset; minst lika lång som passet ({span / 60:.1f} h).")
         # veckovila per sjudagarsperiod från veckobrytet
         for w in range(W if cyk else W - 1):
             a = w * 7 * DYGN + vb
@@ -203,6 +257,11 @@ def kontrollera(indata, schema_dok):
             pa_plats = e - s
             rast = p.get("rast", 0) or 0
             arbetstid = pa_plats if p.get("maltidsuppehall") else pa_plats - rast
+            if p.get("jour"):  # jourtiden: bara en andel är arbetstid, och den är inte arbete som kräver rast
+                jl = (tid(p["jour"]["slut"]) - tid(p["jour"]["start"])) % DYGN
+                andel = float(((indata.get("jour") or {}).get("andel_arbetstid", 0.5)))
+                pa_plats -= jl
+                arbetstid = pa_plats - rast + round(jl * andel)
             if not p.get("maltidsuppehall") and pa_plats - rast > r["rast_grans_minuter"]:
                 if rast < r["rast_minuter"]:
                     brott("RAST", pid, f"{dag_text(d)} {p['start']}–{p['slut']}: över {r['rast_grans_minuter'] / 60:g} h "
@@ -211,7 +270,8 @@ def kontrollera(indata, schema_dok):
                     brott("RAST", pid, f"{dag_text(d)} {p['start']}–{p['slut']}: rasten kan inte placeras så att "
                                        f"ingen del blir längre än {r['rast_grans_minuter'] / 60:g} h.")
             del_ = p.get("dygnsdel")
-            starter = {tid(r["morgon_start"])} | {tid(t) for t in r.get("morgon_starter") or []}
+            starter = ({tid(r["morgon_start"])} | {tid(t) for t in r.get("morgon_starter") or []}
+                       | {tid(x["tid"]) for x in ((indata.get("starttider") or {}).get("morgon") or [])})  # docs/starttider.md
             if del_ == "morgon" and (s % DYGN not in starter or not
                                      tid(r["kant_fran"]) <= e % DYGN <= tid(r["kant_till"])):
                 brott("PASSFONSTER", pid, f"{dag_text(d)}: morgonpass {p['start']}–{p['slut']} följer inte fönstret.")
@@ -256,31 +316,54 @@ def kontrollera(indata, schema_dok):
                           hard=hard_kv)
         # helger
         hs, he = veckotid(r["helg_start"]), veckotid(r["helg_slut"])
-        helger = []
+        pers = personer.get(pid, {})
+        frek = pers.get("helgfrekvens", r["helgfrekvens"])
+        extra_max = int(pers.get("extra_helgpass") or 0)
+        L = N * DYGN
+        helger, typ = [], []  # typ: "hel" (arbetar helgen), "enkel" (bara lördag eller söndag), "ledig"
         for w in range(W):
             a, b = w * 7 * DYGN + hs, (w + 1) * 7 * DYGN + he
             jobbar = any(e > a and s < b for s, e in iv)
+            lor, son = work[w * 7 + 5], work[w * 7 + 6]
+            # pass från fredag eller måndag som går in i helgfönstret
+            ovrigt = any(e + k > a and s + k < b for d, s, e, _ in lista if d not in (w * 7 + 5, w * 7 + 6)
+                         for k in ((0, L, -L) if cyk else (0,)))
+            typ.append("ledig" if not jobbar else "enkel" if lor != son and not ovrigt else "hel")
             helger.append(jobbar)
-            if jobbar and r["hel_helg"] and not (work[w * 7 + 5] and work[w * 7 + 6]):
+        extra_veckor = []
+        if extra_max:
+            # extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
+            # om det går ihop med helgfrekvensen. Prova vilka enkla helger som är extra.
+            enkla = [w for w in range(W) if typ[w] == "enkel"]
+            val = [set(enkla)] if r["hel_helg"] or len(enkla) > 10 else \
+                [{w for i, w in enumerate(enkla) if m >> i & 1} for m in range(1 << len(enkla))]
+            basta = None
+            for ex in sorted(val, key=len):
+                monster = [typ[w] == "hel" or (typ[w] == "enkel" and w not in ex) for w in range(W)]
+                if not helgfel(monster, frek, W, cyk):
+                    basta = (ex, monster)
+                    break
+            if basta:
+                extra_veckor = sorted(basta[0])
+                helger = basta[1]
+            else:
+                extra_veckor = enkla if r["hel_helg"] else []
+                helger = [typ[w] == "hel" or (typ[w] == "enkel" and w not in extra_veckor) for w in range(W)]
+            if len(extra_veckor) > extra_max:
+                for w in extra_veckor[extra_max:]:
+                    brott("HELG", pid, f"Arbetar bara lördag eller söndag vecka {w + 1}: fler extra helgpass än personens {extra_max}.")
+        for w in range(W):
+            if w in extra_veckor:
+                continue
+            if helger[w] and r["hel_helg"] and not (work[w * 7 + 5] and work[w * 7 + 6]):
                 brott("HELG", pid, f"Arbetar helgen vecka {w + 1} men inte både lördag och söndag.")
-            if not jobbar and r["ingen_fredagskvall_fore_ledig_helg"]:
+        for w in range(W):
+            if not helger[w] and r["ingen_fredagskvall_fore_ledig_helg"]:
                 for d, _, _, p in lista:
                     if d == w * 7 + 4 and p.get("dygnsdel") in ("kvall", "natt"):
                         brott("HELG", pid, f"Kvällspass fredag vecka {w + 1} före ledig helg.")
-        pers = personer.get(pid, {})
-        frek = pers.get("helgfrekvens", r["helgfrekvens"])
-        antal = sum(helger)
-        if frek == "2/4":
-            if any(helger[w] == helger[(w + 1) % W] for w in range(W if cyk else W - 1)):
-                brott("HELG", pid, "Helgerna växlar inte varannan: " + "".join("J" if h else "L" for h in helger) + ".")
-        elif frek in ("alla", "4/4") and antal != W:
-            brott("HELG", pid, f"Ska arbeta alla helger, arbetar {antal} av {W}.")
-        elif frek in ("ingen", "0/4") and antal:
-            brott("HELG", pid, f"Ska inte arbeta helg, arbetar {antal}.")
-        elif "/" in frek and frek not in ("2/4", "4/4", "0/4"):
-            t, n = map(int, frek.split("/"))
-            if antal != round(W * t / n):
-                brott("HELG", pid, f"Helgfrekvens {frek} ger {W * t / n:g} helger, arbetar {antal}.")
+        for text in helgfel(helger, frek, W, cyk):
+            brott("HELG", pid, text)
         # antal pass och tid
         delp = indata.get("delperioder") or [W]
         natt = pers.get("dygnsdelar") == ["natt"]
@@ -299,7 +382,7 @@ def kontrollera(indata, schema_dok):
             if len(mal_lista) == len(delp):
                 start = 0
                 for v, m_ in zip(delp, mal_lista):
-                    faktiskt = sum(work[start * 7:(start + v) * 7])
+                    faktiskt = sum(work[start * 7:(start + v) * 7]) - sum(1 for dd, _, _, q in lista if q.get("jourdel") == 2 and start * 7 <= dd < (start + v) * 7)
                     if faktiskt != m_:
                         brott("ANTAL_PASS", pid, f"{faktiskt} pass veckorna {start + 1}–{start + v}, ska vara {m_}.")
                     start += v
@@ -396,6 +479,62 @@ def kontrollera(indata, schema_dok):
                 if n != a["varje_person"]:
                     brott("AKTIVITET", q, f"Deltar {n} gånger i {namn}, ska vara {a['varje_person']}.", hard=False)
 
+    # team (docs/team.md): varje pass hör till ett team som finns, och teamens behov täcks. Lån mellan team är
+    # tillåtet; ett team som saknar personal när ett annat har fler än sitt behov samma pass noteras.
+    team = indata.get("team") or []
+    if team:
+        tids = [t["id"] for t in team]
+        namn_t = {t["id"]: t.get("namn") or t["id"] for t in team}
+
+        def tbehov(t, wd, del_):
+            v = 0
+            for k, x in (t.get("behov") or {}).items():
+                if k == "alla" or (k == "vardag" and wd < 5) or (k == "helg" and wd >= 5) or k == DAGNAMN[wd]:
+                    if k in DAGNAMN:
+                        return int(x.get(del_, 0) or 0)
+                    v = int(x.get(del_, 0) or 0)
+            return v
+        for pid, rad in schema.items():
+            for d, x in enumerate(rad[:N]):
+                if x and x.get("team") is not None and x["team"] not in tids:
+                    brott("TEAM", pid, f"{dag_text(d)}: passet hör till teamet {x['team']}, som inte finns.")
+        for d in range(N):
+            for del_ in ("morgon", "kvall", "natt"):
+                antal = Counter(x.get("team") for rad in schema.values() if d < len(rad) and (x := rad[d]) and x["dygnsdel"] == del_)
+                brist = {t: tbehov(tt, d % 7, del_) - antal.get(t, 0) for tt in team for t in [tt["id"]]}
+                for t, b in brist.items():
+                    if b > 0:
+                        over = [u for u, bu in brist.items() if bu < 0]
+                        brott("TEAM", None, f"{dag_text(d)} {DELTEXT.get(del_, del_)}: {namn_t[t]} har {antal.get(t, 0)} av {b + antal.get(t, 0)}"
+                              + (f", fast {', '.join(namn_t[u] for u in over)} har fler än sitt behov." if over else "."), hard=False)
+
+    # kompetens (docs/kompetens.md): minst så många med kompetensen i tjänst per dag och dygnsdel. Mjukt: det som
+    # fattas är en varning (kompetensvakans), aldrig ett brott. En medarbetare med en okänd kompetens är ett indatafel.
+    krav = indata.get("kompetenskrav") or []
+    if krav:
+        knamn = {k.get("id"): k.get("namn") or k.get("id") for k in indata.get("kompetenser") or []}
+        har = {p["id"]: set(p.get("kompetenser") or []) for p in indata.get("personal", [])}
+
+        def kbehov(k, wd, del_):
+            v = 0
+            for nyckel, x in (k.get("behov") or {}).items():
+                if nyckel == "alla" or (nyckel == "vardag" and wd < 5) or (nyckel == "helg" and wd >= 5) or nyckel == DAGNAMN[wd]:
+                    if nyckel in DAGNAMN:
+                        return int(x.get(del_, 0) or 0)
+                    v = int(x.get(del_, 0) or 0)
+            return v
+        for k in krav:
+            namn_k = knamn.get(k.get("kompetens"), k.get("kompetens"))
+            for d in range(N):
+                for del_ in ("morgon", "kvall", "natt"):
+                    b = kbehov(k, d % 7, del_)
+                    if not b:
+                        continue
+                    n = sum(1 for pid, rad in schema.items() if d < len(rad) and (x := rad[d]) and x.get("dygnsdel") == del_
+                            and k.get("kompetens") in har.get(pid, ()))
+                    if n < b:
+                        brott("KOMPETENS", None, f"{dag_text(d)} {DELTEXT.get(del_, del_)}: {n} av {b} med {namn_k} i tjänst.", hard=False)
+
     # behov
     behov = [{} for _ in range(7)]
     tidp = [[] for _ in range(7)]
@@ -412,7 +551,7 @@ def kontrollera(indata, schema_dok):
             for d in range(w * 7, w * 7 + 7):
                 for del_ in ("morgon", "kvall"):
                     antal = behov[d % 7].get(del_, 0)
-                    n = sum(1 for lista in alla.values() for dd, _, _, p in lista if dd == d and p.get("dygnsdel") == del_)
+                    n = sum(1 for lista in alla.values() for dd, _, _, p in lista if dd == d and behovsdel(p) == del_)
                     summa["over", del_] += max(0, n - antal)
                     summa["under", del_] += max(0, antal - n)
             for sort, text in (("over", "över behovet"), ("under", "vakanta")):
@@ -424,7 +563,7 @@ def kontrollera(indata, schema_dok):
     vakanser = 0
     for d in range(N):
         for del_, antal in behov[d % 7].items():
-            n = sum(1 for lista in alla.values() for dd, _, _, p in lista if dd == d and p.get("dygnsdel") == del_)
+            n = sum(1 for lista in alla.values() for dd, _, _, p in lista if dd == d and behovsdel(p) == del_)
             if n < antal:
                 vakanser += antal - n
                 brott("BEHOV", None, f"{dag_text(d)}: {antal - n} vakant {del_}pass.", hard=False)
@@ -437,6 +576,30 @@ def kontrollera(indata, schema_dok):
             if n < tp["antal"]:
                 vakanser += tp["antal"] - n
                 brott("BEHOV", None, f"{dag_text(d)} kl {tp['tid']}: {n} i tjänst, behov {tp['antal']}.", hard=False)
+    # jour (docs/regelverk.md): så många jourer per natt som behovet. Mjukt: det som saknas är en varning.
+    if indata.get("jour"):
+        jb = [0] * 7
+        for nyckel, v in (indata["jour"].get("behov") or {}).items():
+            for i in dagindex(nyckel):
+                jb[i] = int(v or 0)
+        for d in range(N):
+            n = sum(1 for rad in schema.values() if d < len(rad) and (x := rad[d]) and x.get("jourdel") == 1)
+            if n < jb[d % 7]:
+                brott("BEHOV", None, f"{dag_text(d)}: {jb[d % 7] - n} vakant jourpass.", hard=False)
+    # starttider (docs/starttider.md): av dagbehovet ska så många börja vid varje tid, i tidsordning och högst dagens
+    # dagbehov. Mjukt: det som saknas är en varning.
+    st_lista = sorted(((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("morgon") or [])))
+    if st_lista:
+        for d in range(N):
+            kvar = int(behov[d % 7].get("morgon", 0) or 0)
+            for t, antal in st_lista:
+                a = min(antal, kvar)
+                kvar -= a
+                if a <= 0:
+                    continue
+                n = sum(1 for rad in schema.values() if d < len(rad) and (x := rad[d]) and x.get("dygnsdel") == "morgon" and tid(x["start"]) == t)
+                if n < a:
+                    brott("STARTTID", None, f"{dag_text(d)}: {n} av {a} dagpass börjar kl {klocka(t)}.", hard=False)
     # minsta bemanning på golvet under aktiviteter (behov, mjukt)
     for a in akt.values():
         minst = a.get("minst_pa_golvet") or 0
