@@ -1,6 +1,6 @@
-# Schemasystem för vård och omsorg
+# DODEX – bemanningsstyrning för hållbar kompetensförsörjning
 
-Cykliska grundscheman för dygnet runt-verksamhet enligt Kommunals avtalsområde (HÖK/AB), med optimeringslösaren Google OR-Tools CP-SAT.
+Den befintliga schemamotorn skapar cykliska grundscheman för dygnet runt-verksamhet enligt Kommunals avtalsområde (HÖK/AB), med Google OR-Tools CP-SAT. **Projektets vision är större än schemaoptimering:** verksamhetsbehov, kompetens- och bemanningsplanering, dimensionering, målkonflikter, ekonomi, daglig bemanning och systematisk uppföljning ska bilda ett sammanhängande stöd för hållbar kompetensförsörjning. Se [den långsiktiga visionen](docs/vision-hallbar-kompetensforsorjning.md). Detta är en utvecklingsinriktning, inte ett beslutat kommunalt IT-uppdrag.
 
 Systemet har två delar:
 
