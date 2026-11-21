@@ -20,6 +20,31 @@ Vid arbete i GitHub-projektet: läs först `docs/vision-hallbar-kompetensforsorj
 
 Koppla varje större funktion till en eller flera relevanta ARIBUA-delar. Ange om påverkan är direkt, indirekt eller en möjlig långsiktig effekt.
 
+## Demografisk nulägesanalys – börja med faktiskt utfall från SCB
+
+Vid kommunal behovsanalys ska **SCB:s senast publicerade utfall** vara
+standardkälla för befolkningens storlek och förändring. Redovisa alltid:
+- Folkmängd per ålder/ettårsklass och område där statistiken medger det.
+- **Levande födda och avlidna** samt födelseöverskott.
+- **Inflyttade och utflyttade** samt flyttningsnetto.
+- Flyttningar efter ålder, från/till geografiska områden och inom/utanför
+  kommunen där statistik finns och integritetsskyddet tillåter det.
+- Tidserie (kvartal och helår) för att skilja korta variationer från trend.
+- Datum för senaste statistikperiod, publiceringsdatum, preliminär/slutlig
+  status, källa och eventuella korrigeringsposter.
+
+Skilj **observerade händelser**, **befolkningsprognoser** och **beräknat
+verksamhetsbehov**. Jämställ aldrig befolkningsökning med en lika stor procentuell
+ökning av personal eller insatser. Väg in insatsgrad, servicenivå,
+vårdtyngd/komplexitet, politiska beslut, produktivitet, kompetensmix och lokala
+bostadsplaner. Lägg inte ihop SCB:s skyddade statistikvärden utan att
+redovisa att de kan ha små differenser på grund av röjandekontroll.
+
+Källor:
+- SCB befolkningsstatistik: https://www.scb.se/BE0101
+- SCB kvartal 1–3, 2026 (exempel på datumstämplad tabell):
+  https://www.scb.se/hitta-statistik/statistik-efter-amne/befolkning-och-levnadsforhallanden/befolkningens-sammansattning-och-utveckling/befolkningsstatistik/pong/tabell-och-diagram/folkmangd-och-befolkningsforandringar---manad-kvartal-och-halvar/folkmangd-och-befolkningsforandringar---kvartal-13-2026/
+
 ## Sammanhängande arbetsprocess
 
 1. **Behovsanalys:** faktiska och framtida verksamhetsvolymer, aktiviteter, kompetenskrav och timvisa bemanningskurvor.
