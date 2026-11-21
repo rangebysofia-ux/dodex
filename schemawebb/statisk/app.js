@@ -112,6 +112,7 @@ function ritaMeny() {
     <div class="enhetsval"><label for="enhetsval">Enhet</label><select id="enhetsval"><option value="">Alla enheter …</option>${lista.map(x => `<option value="${x.id}"${e && x.id === e.id ? " selected" : ""}>${esc(x.namn)}</option>`).join("")}</select></div>
     ${lank(["schema"], "schema", "Schemaplanering", `${bas}/schema${kk}`, !e)}
     ${lank(["kalender"], "kalender", "Kalender", `${bas}/kalender`, !e)}
+    ${lank(["daglig-planering"], "kalender", "Daglig bemanning", `${bas}/daglig-planering`, !e)}
     ${lank(["oversikt", "hem"], "oversikt", "Översikt", e ? `${bas}/oversikt` : "#/")}
     ${lank(["behov"], "behov", "Bemanningsbehov", `${bas}/behov`, !e)}
     ${lank(["bemanningsbalans"], "kostnad", "Bemanningsbalans", `${bas}/bemanningsbalans`, !e)}
@@ -1166,6 +1167,7 @@ async function route() {
       else if (vyn === "analys") await visaAnalys(id);
       else if (vyn === "oversikt") await visaOversikt(id);
       else if (vyn === "kalender") await visaKalender(id);
+      else if (vyn === "daglig-planering") await visaDagligPlanering(id);
       else if (vyn === "behov") await visaBehov(id);
       else if (vyn === "bemanningsbalans") await visaBemanningsbalans(id);
       else if (vyn === "medarbetare") await visaMedarbetare(id, kid, q);
