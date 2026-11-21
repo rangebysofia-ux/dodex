@@ -53,6 +53,60 @@ Lösningen ska vara anpassningsbar till olika verksamheter, initialt bland annat
 SÄBO, hemtjänst, funktionsstöd och förskola. Samma process, men olika
 verksamhetsbehov, kompetenskrav, regelprofiler, arbetstider och mått.
 
+## 2b. ARIBUA – Partilles modell för hela medarbetarresan
+
+**ARIBUA är ett strategiskt ramverk ovanför Dodex bemanningsprocess.**
+Partille beskriver kompetensförsörjning utifrån perspektiven
+**Attrahera, Rekrytera, Introducera, Behålla, Utveckla och Avsluta/Avveckla**.
+Följ Partilles ordning (A–R–I–B–U–A), inte den närliggande externa
+förkortningen ARIUBA eller den förenklade modellen ARUBA.
+
+Primärkällor från Partille:
+- Delårsbokslut 2022 (Partille kommuns formulering av de sex perspektiven):
+  https://www.partille.se/siteassets/kommun--politik/dokument/br_ksf_delarsbokslut_2022.pdf
+- Social- och arbetsnämndens protokoll 2023-10-17, § 86 (bekräftar att
+  kommunen använder ARIBUA):
+  https://www.partille.se/siteassets/kommun--politik/protokoll-och-kallelser/san-2023/pr_san_2023_10_17.pdf
+- Hållbarhetsprogram 2024, uppmaning att utveckla processer knutna till ARIBUA:
+  https://www.partille.se/siteassets/kommun--politik/styrdokument/hallbarhet/ffs_ksf_hallbarhetsprogram_2024.pdf
+
+### Föreslagna kopplingar till Dodex – inte redan byggda funktioner
+
+| ARIBUA | Kompetensförsörjningsfråga | Dodex tänkta bidrag |
+| --- | --- | --- |
+| **Attrahera** | Varför vill personer arbeta och stanna i verksamheten? | Synliggöra schemastabilitet, rättvisa, arbetsmiljö och förutsägbarhet; ge underlag till arbetsgivarutveckling, inte automatisera arbetsgivarvarumärket |
+| **Rekrytera** | Vilka kompetenser behöver vi och när? | Prognostisera bemannings- och kompetensgap och tydliggöra rekryteringsbehov utifrån behov, inte bara budget eller dagens vakanta pass |
+| **Introducera** | Hur får nya medarbetare en trygg start och rätt förutsättningar? | Reservera bemanning för handledning, introduktion, utbildning och gradvis kompetensutveckling utan att dölja bortfall i grundbemanningen |
+| **Behålla** | Hur skapar vi hållbara villkor över tid? | Visa belastning, återhämtning, ändrade pass, kontinuitet, regeluppfyllelse och riskfyllda bemanningsmönster, med integritetsskydd |
+| **Utveckla** | Hur tas kompetensen tillvara och stärks? | Kompetensmatris, kompetensmix, utvecklingsutrymme, lärande i arbetet, specialistroller och möjlig intern rörlighet |
+| **Avsluta/Avveckla** | Hur hanteras avgångar och omställning utan kunskapsförlust? | Visa framtida kapacitetsgap, behov av kompetensöverföring, succession och planerade ersättningar på aggregerad nivå; inte automatisera individärenden |
+
+ARIBUA handlar om *människors hela anställnings- och kompetenslivscykel*;
+Dodex bemanningsprocess handlar om *hur resurser, arbetstider och kompetenser
+planeras och används*. De är **två sammanlänkade perspektiv**, inte samma sak.
+Dodex ska möjliggöra analys och stöd till relevanta HR-processer utan att
+försöka ersätta kommunens system eller beslut i rekrytering, personalärenden
+eller avslut av anställning.
+
+### Exempel: när ramverken möts
+
+Anta att en enhet redovisar återkommande vikariebehov trots ett regelrätt
+grundschema. Dodex ska kunna pröva om orsaken är strukturell underdimensionering
+(**Rekrytera**), brist på viss kompetens (**Utveckla**), brist på handlednings-
+eller introduktionstid (**Introducera**), eller en arbetsorganisation med
+återkommande sena ändringar och belastning (**Behålla**). Systemet ska
+synliggöra osäkerhet, relevanta målkonflikter och möjliga åtgärder utan att
+påstå att en enskild orsak är bevisad.
+
+### Uppföljning av ARIBUA
+
+Knyt uppföljningsmått och datakällor till varje ARIBUA-steg.
+Jämför bemanningens operativa utfall med längre trender som introduktion,
+kompetensutveckling, arbetsmiljö och personalomsättning där kommunen har
+rättsligt och organisatoriskt godkända, lämpligt aggregerade data.
+Visa skillnaden mellan **direkta Dodex-effekter**, **bidragande faktorer**
+och **långsiktiga effekter som inte kan tillskrivas systemet ensamt**.
+
 ## 3. Dodex sammanhängande bemanningsprocess
 
 Varje steg ska ha **indata → analys → rekommenderat alternativ →
