@@ -107,6 +107,29 @@ rättsligt och organisatoriskt godkända, lämpligt aggregerade data.
 Visa skillnaden mellan **direkta Dodex-effekter**, **bidragande faktorer**
 och **långsiktiga effekter som inte kan tillskrivas systemet ensamt**.
 
+## 2c. Aktuella demografiska fakta – SCB som nulägeskälla
+
+För en trovärdig behovsanalys ska Dodex hämta **faktiskt, daterat utfall**
+från SCB: antal invånare efter ålder, **födda, avlidna, inflyttade,
+utflyttade** och deras netto, helst med kvartalsvisa uppdateringar.
+Dessa är *flödesdata* och ska kombineras med åldersfördelning och
+verksamhetsspecifik insatsstatistik före någon bemanningsberäkning.
+
+Exempel, Partille, **januari–september 2026**, preliminära siffror
+publicerade **11 november 2026**: 352 födda, 212 avlidna,
+2 312 inflyttade, 2 302 utflyttade, 41 318 invånare den
+30 september (+154 sedan årsskiftet). Detta är en **daterad ögonblicksbild**,
+inte aktuella värden för evigt. Källa:
+https://www.scb.se/hitta-statistik/statistik-efter-amne/befolkning-och-levnadsforhallanden/befolkningens-sammansattning-och-utveckling/befolkningsstatistik/pong/tabell-och-diagram/folkmangd-och-befolkningsforandringar---manad-kvartal-och-halvar/folkmangd-och-befolkningsforandringar---kvartal-13-2026/
+
+**Krav på framtida datainläsning:** visa statistikperiod, senast publicerad,
+källa, preliminär/slutlig status och eventuella rättningar. Dra inte
+slutsatser om personalbehov från antalet inflyttade eller födda ensamt.
+Åldersspecifik flyttningsprofil, befolkningens förändrade sammansättning,
+insatsgrad och förändrad vårdtyngd behöver prövas i scenarier.
+SCB:s cellskydd kan göra att redovisade delsummor skiljer sig något
+från totalsummor; gör inte skillnader till påstådda datakvalitetsfel.
+
 ## 3. Dodex sammanhängande bemanningsprocess
 
 Varje steg ska ha **indata → analys → rekommenderat alternativ →
