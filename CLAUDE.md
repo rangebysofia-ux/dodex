@@ -10,6 +10,8 @@ inte bara schemaoptimering eller vikariehantering. Behovsanalys, kompetensprogno
 dimensionering, bemanningsekonomi, synliga målkonflikter, schemaoptimering, daglig
 bemanning, uppföljning och lärande ska hänga ihop.
 
+**ARIBUA** är Partilles modell för hela kompetensförsörjningsresan: Attrahera, Rekrytera, Introducera, Behålla, Utveckla, Avsluta/Avveckla. Bedöm nya funktioners nytta mot dessa perspektiv, inte bara schema och vikariehantering.
+
 Partilles utvecklingsprogram för vård och omsorg 2026–2035 är relevant som
 strategisk inriktning, men Dodex är ännu ett utvecklingsförslag och inte ett
 kommunalt beslutat system. Säg aldrig att projektet är godkänt för kommunal drift.
