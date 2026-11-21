@@ -16,6 +16,11 @@ Partilles utvecklingsprogram för vård och omsorg 2026–2035 är relevant som
 strategisk inriktning, men Dodex är ännu ett utvecklingsförslag och inte ett
 kommunalt beslutat system. Säg aldrig att projektet är godkänt för kommunal drift.
 
+## Återanvändbar färdighet
+
+Projektets gemensamma metod finns i `.claude/skills/dodex-helhet/SKILL.md`.
+Använd `/dodex-helhet` för krav, analys, målkonflikter, nyttoanalys och granskning av nya funktioner. Färdigheten kopplar varje del tillbaka till helhetsvision, ARIBUA och uppföljningsbar verksamhetsnytta.
+
 ## Innan en ny funktion byggs
 
 1. Redovisa vilken del av hela bemanningsprocessen funktionen stödjer.
