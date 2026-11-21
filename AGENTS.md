@@ -5,7 +5,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 **Övergripande riktning – läs alltid också `docs/vision-hallbar-kompetensforsorjning.md`.**
 Dodex utvecklas inte enbart som schemasystem utan som en sammanhängande
 bemanningsprocess och ett beslutsstöd för **hållbar kompetensförsörjning**,
-med koppling till Partilles målbilder 2026–2035. Behovsanalys,
+med koppling till Partilles målbilder 2026–2035 och **ARIBUA** (Attrahera, Rekrytera, Introducera, Behålla, Utveckla, Avsluta/Avveckla). Behovsanalys,
 kompetensplanering, dimensionering, ekonomi, scenarier, målkonflikter,
 schemaläggning, daglig bemanning, uppföljning och lärande hör ihop.
 Varje större förändring ska ange vilket verksamhetsmål den stödjer och
