@@ -1,5 +1,10 @@
 # Färdplan
 
+**Strategisk kompass:** `docs/vision-hallbar-kompetensforsorjning.md`.
+Färdplanens uppgifter är tekniska utvecklingssteg inom en **hel bemanningsprocess**
+med hållbar kompetensförsörjning, synliga målkonflikter och uppföljning
+som övergripande mål. Punkt 23/24/26 är en början, inte slutmålet.
+
 Ge kodagenten en uppgift i taget. Varje uppgift är klar när acceptanskriterierna är uppfyllda och `pytest -q` passerar.
 
 ## Fas 1 – Stabil kärna
