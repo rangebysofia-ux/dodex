@@ -146,9 +146,6 @@ def _kontrollera_vikarie(kod, p, kompetenser, eid, pid):
     if saknas:
         raise HTTPException(422, "Kompetens saknas: " + ", ".join(sorted(saknas)))
     start, slut = _tid(p)
-    per_pass = _per_pass(_alla_handelser())
-    for (e2, p2), x in per_pass.items():
-        pass  # nycklarna byggs om nedan, se rad efter
     # Flera enheter kan finnas. Läs aktiva bokningar och deras bevarade tider.
     grupper = defaultdict(list)
     for h in _alla_handelser():
