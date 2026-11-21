@@ -67,3 +67,32 @@ def test_ogiltigt_intervall_och_schemadata_avvisas():
     with pytest.raises(Planeringsfel, match="olika enheter"):
         generera_daterade_pass([*AKTIVERINGAR, {**AKTIVERINGAR[0], "enhet_id": 20}],
                                KORNINGAR, "2026-11-02", "2026-11-02")
+
+
+def test_nattpass_sondag_till_mandag_tillhor_schemat_det_borjade_i():
+    """Ett nattpass söndag 21:45–måndag 06:45 när ett nytt schema aktiveras på måndagen (docs/planering.md).
+    Passet hör till dagen det börjar, och därmed till det gamla grundschemat, hela vägen till 06:45."""
+    aktiveringar = [
+        {"id": 1, "enhet_id": 10, "korning_id": 201, "fran_datum": "2026-11-02"},
+        {"id": 2, "enhet_id": 10, "korning_id": 202, "fran_datum": "2026-11-09"},
+    ]
+    korningar = {
+        201: grundschema(1, {"N1": [(6, "21:45", "06:45", "natt")]}),           # söndag natt i gamla schemat
+        202: grundschema(1, {"N2": [(0, "21:45", "06:45", "natt")]}),           # måndag natt i nya schemat
+    }
+    original = deepcopy(korningar)
+    passlista = generera_daterade_pass(aktiveringar, korningar, "2026-11-08", "2026-11-09")
+    sondag, mandag = passlista
+    assert (sondag["person_id"], sondag["datum"], sondag["start"], sondag["slut"]) == (
+        "N1", "2026-11-08", "2026-11-08T21:45", "2026-11-09T06:45")
+    assert (sondag["aktivering_id"], sondag["korning_id"], sondag["grundschema_vecka"], sondag["dagindex"]) == (1, 201, 1, 6)
+    assert (mandag["person_id"], mandag["aktivering_id"], mandag["korning_id"], mandag["dagindex"]) == ("N2", 2, 202, 0)
+    # passet får inte dyka upp en gång till i det nya schemat på måndagen
+    assert [p["person_id"] for p in passlista if p["datum"] == "2026-11-09"] == ["N2"]
+    # ett intervall som bara omfattar måndagen innehåller inte söndagens nattpass (det hör till söndagen)
+    assert [p["person_id"] for p in generera_daterade_pass(aktiveringar, korningar, "2026-11-09", "2026-11-09")] == ["N2"]
+    # frånvaro på passet pekar på det gamla schemats aktivering
+    kopia = markera_franvaro(passlista, [{"pass_id": sondag["id"], "orsak": "annan"}])
+    assert kopia[0]["id"].startswith("1:2026-11-08:") and kopia[0]["korning_id"] == 201
+    assert kopia[0]["tackning"] == "ej_bedomd" and kopia[1]["status"] == "planerad"
+    assert korningar == original
