@@ -2,8 +2,8 @@
 
 **Status:** första läsbara och interaktiva demonstrationsmodulen.
 **Plats i gränssnittet:** menyn **Bemanningsprocess & regelstöd**.
-**Integrerad färdighet:** \`.claude/skills/bemanningscontroller/SKILL.md\`.
-**Huvudvision:** \`docs/vision-hallbar-kompetensforsorjning.md\`.
+**Integrerad färdighet:** `.claude/skills/bemanningscontroller/SKILL.md`.
+**Huvudvision:** `docs/vision-hallbar-kompetensforsorjning.md`.
 
 ## Varför modulen finns
 
@@ -29,8 +29,8 @@ ett nytt godkänt kommunalt styrdokument.
 - En Claude Code-färdighet som strukturerar controlleranalys,
   regelstatus, målkonflikter och uppföljning.
 
-Regelkatalogen ligger i \`schemawebb/statisk/regelstod_data.js\` och den
-interaktiva vyn i \`schemawebb/statisk/process_regelstod.js\`.
+Regelkatalogen ligger i `schemawebb/statisk/regelstod_data.js` och den
+interaktiva vyn i `schemawebb/statisk/process_regelstod.js`.
 
 ## Viktiga begränsningar
 
@@ -52,10 +52,10 @@ interaktiva vyn i \`schemawebb/statisk/process_regelstod.js\`.
 ## Regelregister: nästa utvecklingssteg
 
 En produktionsduglig lösning behöver lagra:
-\`regel_id\`, \`regeltext\`, \`klassning\`, \`kalla\`, \`kallversion\`,
-\`giltig_fran\`, \`giltig_till\`, \`avtalsomrade\`, \`verksamhet\`,
-\`lokalt_beslut\`, \`status\`, \`verifierad_av\`, \`verifierad_datum\`,
-\`motor_regel_id\`, \`forvaltning\` och \`auditlogg\`.
+`regel_id`, `regeltext`, `klassning`, `kalla`, `kallversion`,
+`giltig_fran`, `giltig_till`, `avtalsomrade`, `verksamhet`,
+`lokalt_beslut`, `status`, `verifierad_av`, `verifierad_datum`,
+`motor_regel_id`, `forvaltning` och `auditlogg`.
 Därefter måste behörigheter, källuppdatering, sökning, granskning,
 godkännande och olika versioner finnas innan ett regelbyte kan påverka
 schemagenerering eller den oberoende valideringen.
