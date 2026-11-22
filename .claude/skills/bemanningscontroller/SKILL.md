@@ -12,10 +12,10 @@ Identifiera **varför** ett bemanningsproblem uppstår och **i vilket led** av
 processen det ska åtgärdas. Uppgiften är bredare än schemaläggning.
 
 Läs alltid:
-- \`AGENTS.md\` och \`docs/regelhierarki.md\` innan kodändringar.
-- \`docs/vision-hallbar-kompetensforsorjning.md\` för Dodex helhetsvision.
-- \`CLAUDE.md\` och \`ROADMAP.md\` för process, säkerhet och arbetssätt.
-- \`docs/bemanningsprocess-regelstod.md\` för modulens begränsningar.
+- `AGENTS.md` och `docs/regelhierarki.md` innan kodändringar.
+- `docs/vision-hallbar-kompetensforsorjning.md` för Dodex helhetsvision.
+- `CLAUDE.md` och `ROADMAP.md` för process, säkerhet och arbetssätt.
+- `docs/bemanningsprocess-regelstod.md` för modulens begränsningar.
 - Handboken 2.0 **endast om användaren tillhandahåller den i en godkänd,
   behörighetsstyrd kontext**. Den finns avsiktligt inte i detta offentliga repo.
 
@@ -106,19 +106,19 @@ Vid en analys:
 - Personuppgifter ska inte kopieras till AI eller analysloggar utan
   rättsligt stöd och godkända förutsättningar.
 - Grundschema, ändringshändelser och utfall ska hållas isär.
-- Den publika regeldemonstratorn i \`schemawebb/statisk/regelstod_data.js\`
+- Den publika regeldemonstratorn i `schemawebb/statisk/regelstod_data.js`
   är **inte** ett automatiskt regelverk och får inte importeras till
-  \`schemamotor/validate.py\` som en juridiskt godkänd regelkälla.
-- Ändra aldrig \`main\`, publicera aldrig skarpa data och gör aldrig
+  `schemamotor/validate.py` som en juridiskt godkänd regelkälla.
+- Ändra aldrig `main`, publicera aldrig skarpa data och gör aldrig
   produktionsintegrationer utan användarens uttryckliga beslut.
 
 ## Exempelkommandon
 
-- \`/bemanningscontroller Granska varför vi får återkommande timvakanser.\`
-- \`/bemanningscontroller Analysera kompetensgap och introduktionstid.\`
-- \`/bemanningscontroller Jämför behov, kapacitet och budget för en enhet.\`
-- \`/bemanningscontroller Föreslå målkonflikter och KPI:er för processen.\`
-- \`/bemanningscontroller Granska denna kodändring mot handbok och ARIBUA.\`
+- `/bemanningscontroller Granska varför vi får återkommande timvakanser.`
+- `/bemanningscontroller Analysera kompetensgap och introduktionstid.`
+- `/bemanningscontroller Jämför behov, kapacitet och budget för en enhet.`
+- `/bemanningscontroller Föreslå målkonflikter och KPI:er för processen.`
+- `/bemanningscontroller Granska denna kodändring mot handbok och ARIBUA.`
 
 ## Vägledande princip
 
