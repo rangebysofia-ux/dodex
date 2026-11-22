@@ -104,7 +104,7 @@ function sokvag(delar) {
 let kravsInloggning = false;
 function ritaMeny() {
   const e = st.enhet, k = st.korning && st.enhet && st.korning.enhet_id === st.enhet.id ? st.korning.id : "";
-  const KORT = { Schemaplanering: "Schema", Bemanningsbehov: "Behov", Bemanningsbalans: "Balans", "Analys och nyckeltal": "Nyckeltal", Regelkontroll: "Regler", Inställningar: "Inställn." };
+  const KORT = { Schemaplanering: "Schema", Bemanningsbehov: "Behov", Bemanningsbalans: "Balans", "Analys och nyckeltal": "Nyckeltal", Regelkontroll: "Regler", "Bemanningsprocess & regelstöd": "Process", Inställningar: "Inställn." };
   const lank = (vyer, ikon, text, href, av) => `<a class="post" href="${href}" aria-label="${text}"${vyer.includes(st.vy) ? ' aria-current="page"' : ""}${av ? ' aria-disabled="true" tabindex="-1"' : ""}>${IKON[ikon]}<span class="lang">${text}</span><span class="kortnamn">${KORT[text] || text}</span></a>`;
   const bas = e ? `#/e/${e.id}` : "#/", kk = k ? "/" + k : "";
   const lista = st.enhetLista || [];
@@ -121,6 +121,7 @@ function ritaMeny() {
     ${lank(["nyckeltal", "bemanning"], "graf", "Analys och nyckeltal", `${bas}/nyckeltal${kk}`, !e)}
     ${lank(["analys"], "simulering", "Simulering", `${bas}/analys`, !e)}
     ${lank(["regelkontroll"], "kontroll", "Regelkontroll", `${bas}/regelkontroll${kk}`, !e)}
+    ${lank(["process"], "kontroll", "Bemanningsprocess & regelstöd", "#/process")}
     ${lank(["rapporter"], "rapport", "Rapporter", `${bas}/rapporter`, !e)}
     ${lank(["installningar"], "installning", "Inställningar", `${bas}/installningar`, !e)}
     <div class="fyll"></div>
@@ -1177,6 +1178,7 @@ async function route() {
       else if (vyn === "rapporter") await visaRapporter(id);
       else await visaKorningsvy(id, vyn, kid, q);
     } else if (d[0] === "jamfor") await visaJamfor(d[1].split(",").map(Number));
+    else if (d[0] === "process") await visaProcessRegelstod();
     else if (d[0] === "konton") await visaKonton();
     else await visaEnheter();
     vy().focus({ preventScroll: true });
