@@ -14,9 +14,10 @@ GRUND = json.loads((ROT / "schemawebb" / "grund_forskola.json").read_text(encodi
 def klient(tmp_path, monkeypatch):
     monkeypatch.setenv("SCHEMA_DATA", str(tmp_path / "data"))
     monkeypatch.setenv("SCHEMA_GRUND", "")  # på, som i drift
-    monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
+    monkeypatch.setenv("SCHEMA_LOSENORD", "syntetiskt-test")
     from schemawebb.app import app
     with TestClient(app) as k:
+        assert k.post("/api/logga-in", json={"losenord": "syntetiskt-test"}).status_code == 200
         yield k
 
 

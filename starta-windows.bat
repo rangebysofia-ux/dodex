@@ -12,7 +12,9 @@ echo Startar schemasystemet ...
 echo Enheterna sparas i %SCHEMA_DATA%
 echo Lat det har fonstret vara oppet. Stang det for att stanga systemet.
 start "" http://127.0.0.1:8000
-py -m uvicorn schemawebb.app:app --port 8000
+setlocal
+set "SCHEMA_LOKAL_DEMO=1"
+py -m uvicorn schemawebb.app:app --host 127.0.0.1 --port 8000
 if errorlevel 1 (
   echo.
   echo Det gick inte att starta. Kor forst:  py -m pip install -e ".[dev]"

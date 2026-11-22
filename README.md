@@ -26,12 +26,14 @@ pytest -q
 Starta webbtjänsten och öppna http://127.0.0.1:8000:
 
 ```bash
-uvicorn schemawebb.app:app --port 8000
+SCHEMA_LOKAL_DEMO=1 uvicorn schemawebb.app:app --host 127.0.0.1 --port 8000
 ```
 
 På Windows räcker det att dubbelklicka på `starta-windows.bat` efter installationen. Webbläsaren öppnas av sig själv, och systemet stängs när fönstret stängs.
 
-Utan miljövariabeln `SCHEMA_LOSENORD` krävs ingen inloggning. Sätt alltid ett lösenord när tjänsten nås av andra. Databasen sparas i `./data`. Med `starta-windows.bat` sparas den i stället i `%USERPROFILE%\DODEX-data` (till exempel `C:\Users\namn\DODEX-data`), utanför programmappen, så att enheterna ligger kvar när en ny version laddas ner. Första gången flyttas en befintlig `data\schemasystem.db` dit. Mappen styrs med `SCHEMA_DATA`.
+Kommandot ovan och Windows-startfilen väljer lokalt demoläge (`SCHEMA_LOKAL_DEMO=1`): på egen dator utan lösenord och utan konton krävs då ingen inloggning. Vid vanlig start, och alltid på Render, krävs inloggning. Sätt alltid ett lösenord när tjänsten nås av andra.
+
+Databasen sparas i `./data`. Med `starta-windows.bat` sparas den i stället i `%USERPROFILE%\DODEX-data` (till exempel `C:\Users\namn\DODEX-data`), utanför programmappen, så att enheterna ligger kvar när en ny version laddas ner. Första gången flyttas en befintlig `data\schemasystem.db` dit. Mappen styrs med `SCHEMA_DATA`.
 
 ## Kommandoraden
 

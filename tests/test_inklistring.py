@@ -103,7 +103,7 @@ def test_otydligt_ger_varning_inte_gissning(tmp_path):
 def test_bemanningsmall_med_block_per_veckodag(tmp_path):
     """Verksamhetens mall: ett block per veckodag med Från, Till, Rast, Arbetstid och antal per pass,
     tomma rader (00:00) och summarader. Grupper som Avdelningar och Löpare räknas ihop."""
-    mall = (ROT / "tests" / "data" / "bemanningsmall_veckodagar.txt").read_text(encoding="utf-8")
+    mall = (ROT / "tests" / "fixtures" / "bemanningsmall_veckodagar.txt").read_text(encoding="utf-8")
     d = tolka(tmp_path, personal="P1 100%\nP2 75%", behov=mall)
     b = d["behov"]
     assert b["behov"]["mån"] == {"morgon": 14, "kvall": 12, "natt": 0}
@@ -127,7 +127,7 @@ def test_bemanningsmall_med_block_per_veckodag(tmp_path):
 
 def test_bemanningskurva(tmp_path):
     """Kurvan: antal i tjänst varje kvart. Vardag 26 när dag- och kvällspass överlappar, helg 18."""
-    mall = (ROT / "tests" / "data" / "bemanningsmall_veckodagar.txt").read_text(encoding="utf-8")
+    mall = (ROT / "tests" / "fixtures" / "bemanningsmall_veckodagar.txt").read_text(encoding="utf-8")
     f = tmp_path / "m.txt"
     f.write_text(mall, encoding="utf-8")
     kod = ("const K=require(process.argv[1]);const b=K.behov(require('fs').readFileSync(process.argv[2],'utf8'));"
