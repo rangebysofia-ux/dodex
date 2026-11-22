@@ -123,6 +123,8 @@ def test_schema_med_brott_kan_inte_godkannas(klient, schema):
 
 def test_lokalt_utan_losenord_och_konton_ar_man_chef(tmp_path, monkeypatch, schema):
     monkeypatch.setenv("SCHEMA_DATA", str(tmp_path / "d2"))
+    monkeypatch.setenv("SCHEMA_LOKAL_DEMO", "1")
+    monkeypatch.delenv("RENDER", raising=False)
     monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
     from schemawebb import db
     db.anslut(tmp_path / "d2" / "schemasystem.db")

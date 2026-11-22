@@ -1,0 +1,1864 @@
+{
+  "status": "OK",
+  "enhet": "Test – kompetens",
+  "veckor": 4,
+  "cykliskt": true,
+  "profil": "standard",
+  "steg": [
+    {
+      "fas": "mönster",
+      "mal": "vakanser",
+      "varde": 0,
+      "status": "OPTIMAL",
+      "grans": 0
+    },
+    {
+      "fas": "mönster",
+      "mal": "kompetens",
+      "varde": 11,
+      "status": "OPTIMAL",
+      "grans": 11
+    },
+    {
+      "fas": "mönster",
+      "mal": "blocklangd",
+      "varde": 3,
+      "status": "OPTIMAL",
+      "grans": 3
+    },
+    {
+      "fas": "mönster",
+      "mal": "rattvisa_jamn",
+      "varde": 64,
+      "status": "OPTIMAL",
+      "grans": 64
+    },
+    {
+      "fas": "mönster",
+      "mal": "spridning",
+      "varde": 16,
+      "status": "FEASIBLE",
+      "grans": 12
+    },
+    {
+      "fas": "längder",
+      "mal": "vakanser",
+      "varde": 0,
+      "status": "OPTIMAL",
+      "grans": 0
+    },
+    {
+      "fas": "längder",
+      "mal": "kompetens",
+      "varde": 11,
+      "status": "OPTIMAL",
+      "grans": 11
+    },
+    {
+      "fas": "längder",
+      "mal": "passlangd",
+      "varde": 1080,
+      "status": "OPTIMAL",
+      "grans": 1080
+    }
+  ],
+  "kpi": {
+    "vakanser": 0,
+    "kompetens": 11,
+    "aktiviteter": 0,
+    "natt_vila": 0,
+    "hemteam": 0,
+    "blocklangd": 3,
+    "passlangd": 1080,
+    "rattvisa": 24,
+    "spridning": 16,
+    "jamn_bemanning": 16,
+    "onskemal": 0,
+    "vakanta_pass": 0,
+    "vakanta_tidpunkter": 0,
+    "aktivitet_saknas": 0,
+    "kompetensvakanser": 11,
+    "ob_kr_vecka": 5145
+  },
+  "personer": {
+    "A1": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 17,
+      "helggrupp": "A",
+      "aktiviteter": 0
+    },
+    "A2": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 10,
+      "helggrupp": "B",
+      "aktiviteter": 0
+    },
+    "A3": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 9,
+      "helggrupp": "B",
+      "aktiviteter": 0
+    },
+    "A4": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 8,
+      "helggrupp": "B",
+      "aktiviteter": 0
+    },
+    "A5": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 11,
+      "helggrupp": "B",
+      "aktiviteter": 0
+    },
+    "A6": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 5,
+      "helggrupp": "A",
+      "aktiviteter": 0
+    },
+    "A7": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 8,
+      "helggrupp": "A",
+      "aktiviteter": 0
+    },
+    "A8": {
+      "pass": 19,
+      "minuter": 6660,
+      "mal_minuter": 6660,
+      "kvallspass": 8,
+      "helggrupp": "A",
+      "aktiviteter": 0
+    }
+  },
+  "vakanser": [],
+  "aktiviteter": [],
+  "schema": {
+    "A1": [
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:30-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:30",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:30-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:30",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      {
+        "mall": "K15:30-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:30",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:30-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:30",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:30-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:30",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      null
+    ],
+    "A2": [
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      }
+    ],
+    "A3": [
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      }
+    ],
+    "A4": [
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      }
+    ],
+    "A5": [
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      }
+    ],
+    "A6": [
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null
+    ],
+    "A7": [
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null
+    ],
+    "A8": [
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      null,
+      null,
+      {
+        "mall": "M07:00-13:30",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:30",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      {
+        "mall": "M07:00-13:15",
+        "dygnsdel": "morgon",
+        "start": "07:00",
+        "slut": "13:15",
+        "rast": 30,
+        "netto": 345
+      },
+      {
+        "mall": "K15:30-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:30",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 360
+      },
+      {
+        "mall": "K15:45-22:00",
+        "dygnsdel": "kvall",
+        "start": "15:45",
+        "slut": "22:00",
+        "rast": 30,
+        "netto": 345
+      },
+      null,
+      null,
+      null
+    ]
+  },
+  "kompetenskrav": [
+    {
+      "id": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering"
+    }
+  ],
+  "kompetens_tackning": [
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 0,
+      "vecka": 1,
+      "veckodag": "mån",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 1,
+      "vecka": 1,
+      "veckodag": "tis",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 2,
+      "vecka": 1,
+      "veckodag": "ons",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 3,
+      "vecka": 1,
+      "veckodag": "tor",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 4,
+      "vecka": 1,
+      "veckodag": "fre",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 5,
+      "vecka": 1,
+      "veckodag": "lör",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 6,
+      "vecka": 1,
+      "veckodag": "sön",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 7,
+      "vecka": 2,
+      "veckodag": "mån",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 8,
+      "vecka": 2,
+      "veckodag": "tis",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 9,
+      "vecka": 2,
+      "veckodag": "ons",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 10,
+      "vecka": 2,
+      "veckodag": "tor",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 11,
+      "vecka": 2,
+      "veckodag": "fre",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 12,
+      "vecka": 2,
+      "veckodag": "lör",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 13,
+      "vecka": 2,
+      "veckodag": "sön",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 14,
+      "vecka": 3,
+      "veckodag": "mån",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 15,
+      "vecka": 3,
+      "veckodag": "tis",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 16,
+      "vecka": 3,
+      "veckodag": "ons",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 17,
+      "vecka": 3,
+      "veckodag": "tor",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 18,
+      "vecka": 3,
+      "veckodag": "fre",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 19,
+      "vecka": 3,
+      "veckodag": "lör",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 20,
+      "vecka": 3,
+      "veckodag": "sön",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 21,
+      "vecka": 4,
+      "veckodag": "mån",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 22,
+      "vecka": 4,
+      "veckodag": "tis",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 23,
+      "vecka": 4,
+      "veckodag": "ons",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 24,
+      "vecka": 4,
+      "veckodag": "tor",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 1,
+      "med": [
+        "A1"
+      ],
+      "saknas": 0
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 25,
+      "vecka": 4,
+      "veckodag": "fre",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 26,
+      "vecka": 4,
+      "veckodag": "lör",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    },
+    {
+      "krav": "K1",
+      "kompetens": "del",
+      "namn": "Läkemedelsdelegering",
+      "dag": 27,
+      "vecka": 4,
+      "veckodag": "sön",
+      "dygnsdel": "kvall",
+      "behov": 1,
+      "i_tjanst": 0,
+      "med": [],
+      "saknas": 1
+    }
+  ]
+}

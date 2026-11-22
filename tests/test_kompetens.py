@@ -127,7 +127,7 @@ const res = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
 r.utb = K.utbildning(res, require("./tests/fall/kompetens_brist.json"));
 r.kortHtml = K.tackningKort(res, require("./tests/fall/kompetens_brist.json")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 r.marke = K.marke({ personal: [{ id: "A1", kompetenser: ["del"] }], kompetenser: [{ id: "del", namn: "Delegering", kort: "DEL" }] }, "A1");
-process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "data" / "kompetens_resultat.json")
+process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "fixtures" / "kompetens_resultat.json")
     b = ut["balans"][0]
     assert b["kravVecka"] == 7 and b["kan"] == ["A1"] and b["fler"] >= 1  # en person räcker inte till sju kvällar
     assert ut["balans4"]["fler"] == 0  # fyra med delegering räcker
@@ -147,6 +147,8 @@ process.stdout.write(JSON.stringify(r));""", ROT / "tests" / "data" / "kompetens
 @pytest.fixture
 def klient(tmp_path, monkeypatch):
     monkeypatch.setenv("SCHEMA_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("SCHEMA_LOKAL_DEMO", "1")
+    monkeypatch.delenv("RENDER", raising=False)
     monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
     from schemawebb.app import app
     with TestClient(app) as k:

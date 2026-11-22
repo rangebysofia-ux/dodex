@@ -13,6 +13,8 @@ GRUND = json.loads((ROT / "schemawebb" / "grund_forskola.json").read_text(encodi
 def klient(tmp_path, monkeypatch):
     monkeypatch.setenv("SCHEMA_DATA", str(tmp_path / "data"))
     monkeypatch.setenv("SCHEMA_GRUND", "")  # på, som i drift
+    monkeypatch.setenv("SCHEMA_LOKAL_DEMO", "1")
+    monkeypatch.delenv("RENDER", raising=False)
     monkeypatch.delenv("SCHEMA_LOSENORD", raising=False)
     from schemawebb.app import app
     with TestClient(app) as k:
