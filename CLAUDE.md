@@ -21,6 +21,16 @@ kommunalt beslutat system. Säg aldrig att projektet är godkänt för kommunal 
 Projektets gemensamma metod finns i `.claude/skills/dodex-helhet/SKILL.md`.
 Använd `/dodex-helhet` för krav, analys, målkonflikter, nyttoanalys och granskning av nya funktioner. Färdigheten kopplar varje del tillbaka till helhetsvision, ARIBUA och uppföljningsbar verksamhetsnytta.
 
+## Bemanningscontroller och handbok
+
+Använd färdigheten `.claude/skills/bemanningscontroller/SKILL.md` för att
+analysera hela bemanningsprocessen och identifiera om ett problem uppstår i
+behovsanalys, kompetens, dimensionering, schema, daglig planering eller utfall.
+Den publika testvyn beskrivs i `docs/bemanningsprocess-regelstod.md`.
+Handbok 2.0 är ett arbetsutkast och får inte kopieras till detta offentliga
+repo. Äldre lokala rutiner får aldrig bli automatiska hårda regler utan
+giltigt beslut, källkontroll och test.
+
 ## Innan en ny funktion byggs
 
 1. Redovisa vilken del av hela bemanningsprocessen funktionen stödjer.
