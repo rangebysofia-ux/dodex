@@ -16,6 +16,22 @@ Schemat är navet. När du öppnar en enhet kommer du direkt till det senaste sc
 
 `light/` är en lättversion som körs helt i webbläsaren, utan server: `motor.js` lägger schemat med en heuristik (simulerad glödgning) i stället för OR-Tools, och `granskning.js` är en fristående översättning av `schemamotor/validate.py`. `python light/bygg.py` sätter ihop `light/schema-light.html`. Samma hårda regler gäller, men lättversionen kan inte bevisa att ett schema är olösbart och saknar behov vid klockslag och delperioder. Lättversionen har samma översikt (nyckeltal och grafer), regelkontroll och simulering som webben: graferna kommer från `schemawebb/statisk/grafer.js` och simuleringen från `light/analys.js`, en översättning av `schemamotor/analys.py`.
 
+## Bemanningsprocess & regelstöd (ny testmodul)
+
+En ny sida i Dodex-menyn visar **hela bemanningsprocessen** i åtta steg med
+ARIBUA-koppling, ett sökbart regelbibliotek med källstatus och en enkel
+lokal controlleranalys av aggregerade timmar. Se
+[modulens dokumentation](docs/bemanningsprocess-regelstod.md).
+
+Claude Code-färdigheten finns i
+[`/bemanningscontroller`](.claude/skills/bemanningscontroller/SKILL.md).
+Den kompletterar `/dodex-helhet`, men är inriktad på processkontroll,
+orsaksanalys, ekonomi, regler, målkonflikter och uppföljning.
+
+**Ingen intern handbok har publicerats i GitHub.** Bemanningshandbok 2.0 är
+ett arbetsutkast och lokala regler kräver verifiering. Sidan innehåller
+bara allmänna processbeskrivningar och källhänvisningar.
+
 ## Strategisk idé och färdighet
 
 - [Hela Dodex-visionen: hållbar kompetensförsörjning, ARIBUA och helhetsprocessen](docs/vision-hallbar-kompetensforsorjning.md)
