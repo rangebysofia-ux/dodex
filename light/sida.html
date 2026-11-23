@@ -429,6 +429,7 @@ td:has(> .pass.jourdel-2) { padding-left: 0 !important; }
 </aside>
 
 <script type="text/plain" id="motor-kod">__MOTOR__</script>
+<script>__TVASTEG__</script>
 <script>__GRANSKNING__</script>
 <script>__MOTOR_HUVUDTRAD__</script>
 <script>__ASSISTENT__</script>
@@ -1631,9 +1632,11 @@ document.addEventListener("change", e => {
 });
 
 // Fyra nyckeltal och graferna (samma som i webben, från grafer.js).
+TVASTEG.installera(() => st.korning, (k,s) => GRANSKNING.kontrollera(k.indata, {...k.resultat, schema:s}));
+
 function ritaOversikt(k, brott) {
   const n = GRAF.nyckeltalFor(k), krs = GRAF.kr;
-  let h = `<div class="nyckeltal">
+  let h = TVASTEG.kort() + `<div class="nyckeltal">
     <div class="nyckel"><span>Bemanningsgrad</span><b>${sv(Math.round(n.grad * 10) / 10)} %</b><small>${n.tackt} av ${n.behov} pass täckta</small></div>
     <div class="nyckel"><span>Personalkostnad</span>${n.kostnadVecka != null ? `<b>${krs(n.kostnadVecka * 52 / 12)}</b><small>per månad (uppskattat)</small>` : `<b>${sv(Math.round(n.timmarVecka * 10) / 10)} h</b><small>per vecka · ange timkostnad under Period för kronor</small>`}</div>
     <div class="nyckel"><span>Obemannade pass</span><b class="${n.vak ? "minus" : ""}">${n.vak}</b><small>vakanta pass</small></div>

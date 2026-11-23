@@ -1,0 +1,30 @@
+const assert = require("node:assert/strict");
+const T = require("../../schemawebb/statisk/tvasteg.js"), G = require("../../light/granskning.js");
+const K={dygnsdel:"kvall",start:"12:00",slut:"20:00",netto:450,rast:30};
+const M={dygnsdel:"morgon",start:"08:00",slut:"16:00",netto:450,rast:30};
+const rad = pass => Array.from({length:42},(_,d)=>d%7<4?pass:null);
+const ind = {veckor:6, cykliskt:true, personal:["P01","P02"].map(id=>({id,grad:1800/2220,antal_pass:24,helgfrekvens:"ingen"})),
+  behov:{},regler:{morgon_start:"08:00",kvall_slut:"20:00",dygnsbryt:"20:00"}};
+const res={status:"OK",schema:{P01:rad(K),P02:rad(M)}};
+const check = s=>G.kontrollera(ind,{...res,schema:s});
+const k={indata:ind,resultat:res,granskning:check(res.schema)};
+(async()=>{
+  assert.deepEqual(k.granskning.brott,[]);
+  const snapshot=JSON.stringify(k);
+  const {alternativ}=await T.sok(k,check);
+  assert.equal(alternativ.length,2);
+  assert.deepEqual(alternativ.map(x=>x.byten.length),[1,2]);
+  assert.equal(T.matt(alternativ[1].schema.P01,true)[0],4);
+  for(const x of alternativ) assert.equal(check(x.schema).giltigt,true);
+  assert.equal(JSON.stringify(k),snapshot);
+  assert.equal((await T.sok(k,()=>({giltigt:false}))).alternativ.length,0);
+  const protectedCase=structuredClone(k);
+  protectedCase.indata.personal[0].kompetenser=["K1"];
+  assert.equal((await T.sok(protectedCase,check)).alternativ.length,0);
+  const jour=structuredClone(k);
+  jour.resultat.schema.P01=rad({...K,jourdel:1});
+  assert.equal((await T.sok(jour,check)).alternativ.length,0);
+  assert.equal(T.matt([K,K,null,null,null,K,K],true)[0],1);
+  assert.equal(T.matt([K,K,null,null,null,K,K],false)[0],0);
+  console.log("Sex veckor: 6 → 5 → 4 fyrakvällsföljder, två regelgranskade alternativ.");
+})().catch(e=>{console.error(e);process.exitCode=1;});

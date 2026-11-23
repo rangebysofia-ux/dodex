@@ -27,6 +27,7 @@ def main():
     motor = (HAR / "motor.js").read_text(encoding="utf-8")
     sida = (HAR / "sida.html").read_text(encoding="utf-8")
     sida = (sida.replace("__MOTOR__", skydda(motor))
+                .replace("__TVASTEG__", skydda((HAR.parent / "schemawebb/statisk/tvasteg.js").read_text(encoding="utf-8")))
                 .replace("__GRANSKNING__", skydda((HAR / "granskning.js").read_text(encoding="utf-8")))
                 .replace("__MOTOR_HUVUDTRAD__", skydda(motor) + "\nconst MOTOR_HUVUD = MOTOR;")
                 .replace("__ASSISTENT__", skydda((HAR.parent / "schemawebb" / "statisk" / "assistent.js").read_text(encoding="utf-8")))

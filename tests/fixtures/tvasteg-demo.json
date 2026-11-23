@@ -1,0 +1,609 @@
+{
+  "format": "dodex-enhet",
+  "version": 1,
+  "kalla": "webb",
+  "sparad": "2026-11-23T05:43:42.424Z",
+  "enhet": {
+    "namn": "Exempel – tvåstegsplanering",
+    "indata": {
+      "enhet": "Exempel – tvåstegsplanering",
+      "veckor": 6,
+      "cykliskt": true,
+      "regler": {
+        "morgon_start": "08:00",
+        "kvall_slut": "20:00",
+        "dygnsbryt": "20:00"
+      },
+      "behov": {
+        "mån": {
+          "morgon": 1,
+          "kvall": 1
+        },
+        "tis": {
+          "morgon": 1,
+          "kvall": 1
+        },
+        "ons": {
+          "morgon": 1,
+          "kvall": 1
+        },
+        "tor": {
+          "morgon": 1,
+          "kvall": 1
+        }
+      },
+      "personal": [
+        {
+          "id": "P01",
+          "grad": 0.8108108108108109,
+          "antal_pass": 24,
+          "helgfrekvens": "ingen"
+        },
+        {
+          "id": "P02",
+          "grad": 0.8108108108108109,
+          "antal_pass": 24,
+          "helgfrekvens": "ingen"
+        }
+      ]
+    }
+  },
+  "korningar": [
+    {
+      "namn": "Grundschema med fyra kvällar i rad",
+      "skapad": "2026-11-23T05:43:42.424Z",
+      "indata": {
+        "enhet": "Exempel – tvåstegsplanering",
+        "veckor": 6,
+        "cykliskt": true,
+        "regler": {
+          "morgon_start": "08:00",
+          "kvall_slut": "20:00",
+          "dygnsbryt": "20:00"
+        },
+        "behov": {
+          "mån": {
+            "morgon": 1,
+            "kvall": 1
+          },
+          "tis": {
+            "morgon": 1,
+            "kvall": 1
+          },
+          "ons": {
+            "morgon": 1,
+            "kvall": 1
+          },
+          "tor": {
+            "morgon": 1,
+            "kvall": 1
+          }
+        },
+        "personal": [
+          {
+            "id": "P01",
+            "grad": 0.8108108108108109,
+            "antal_pass": 24,
+            "helgfrekvens": "ingen"
+          },
+          {
+            "id": "P02",
+            "grad": 0.8108108108108109,
+            "antal_pass": 24,
+            "helgfrekvens": "ingen"
+          }
+        ]
+      },
+      "resultat": {
+        "status": "OK",
+        "enhet": "Exempel – tvåstegsplanering",
+        "veckor": 6,
+        "cykliskt": true,
+        "steg": [],
+        "kpi": {
+          "vakanta_pass": 0,
+          "vakanta_tidpunkter": 0,
+          "manuella_pass": 0,
+          "vakanser": 0,
+          "aktivitet_saknas": 0
+        },
+        "personer": {
+          "P01": {
+            "pass": 24,
+            "minuter": 10800,
+            "mal_minuter": 10800,
+            "kvallspass": 24,
+            "helggrupp": null,
+            "aktiviteter": 0
+          },
+          "P02": {
+            "pass": 24,
+            "minuter": 10800,
+            "mal_minuter": 10800,
+            "kvallspass": 0,
+            "helggrupp": null,
+            "aktiviteter": 0
+          }
+        },
+        "vakanser": [],
+        "aktiviteter": [],
+        "schema": {
+          "P01": [
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "K",
+              "dygnsdel": "kvall",
+              "start": "12:00",
+              "slut": "20:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null
+          ],
+          "P02": [
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null,
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            {
+              "mall": "M",
+              "dygnsdel": "morgon",
+              "start": "08:00",
+              "slut": "16:00",
+              "rast": 30,
+              "netto": 450,
+              "_arbetstid": 450
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        "justerat": true
+      },
+      "forvantade_vakanser": null
+    }
+  ]
+}

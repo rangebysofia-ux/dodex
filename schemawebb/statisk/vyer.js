@@ -127,6 +127,13 @@ function huvud() {
     ${installningsrad()}</section>`;
 }
 
+TVASTEG.installera(() => st.korning,
+  async (k,schema) => (await api("POST", `korningar/${k.id}/justera`, {schema})).granskning,
+  async (k,schema,i) => {
+    const {id}=await api("POST", `korningar/${k.id}/justera`, {schema,spara:true,namn:k.namn+" – alternativ "+(i?"B":"A")});
+    location.hash=`#/e/${st.enhet.id}/schema/${id}`;
+  });
+
 function sammanfattning() {
   const k = st.korning, res = k.resultat, g = k.granskning, ind = k.indata;
   const brott = g ? g.brott.length : 0;
@@ -136,7 +143,7 @@ function sammanfattning() {
   const avv = ind.avvikelser || [];
   const andradeAvv = avv.filter(a => ind.regler && ind.regler[a] !== undefined);
   const ok = !brott && !res.kpi.vakanser;
-  return `${godkannandeRuta(k, brott)}<section class="kort">
+  return `${godkannandeRuta(k, brott)}${TVASTEG.kort()}<section class="kort">
     <div class="banner ${brott ? "dalig" : res.kpi.vakanser ? "varn" : "ok"}">${brott ? IKON.stopp : res.kpi.vakanser ? IKON.varning : IKON.ok}<div><strong>${
       brott ? `${brott} brott mot hårda regler` : res.kpi.vakanser ? `Schema klart, med ${vakText(res.kpi.vakanser)}` : "Schema klart, utan vakanser och regelbrott"}</strong>
       <span class="liten">${res.veckor} veckor${res.cykliskt ? ", cykliskt" : ""} · ${Object.keys(res.schema).length} personer · beräknat på ${sv(k.sekunder || 0, 1)} s${k.balans ? ` · bemanningsbalansen förutsåg ${vakText(k.balans.forvantade_vakanser)}` : ""}</span></div></div>
