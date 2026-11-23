@@ -1,0 +1,81 @@
+{
+  "beskrivning": "Extra helgpass, båda dagarna samma lediga helg (användarens beslut 2026-11-23, beslut 38): E1 arbetar helgerna vecka 1 och 3 och har två extra helgpass. Som krav arbetar E1 både lördag och söndag vecka 2, en ledig helg. Ska gå att lösa utan brott.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true
+  },
+  "enhet": "Test – extra helgpass",
+  "veckor": 4,
+  "cykliskt": true,
+  "behov": {
+    "vardag": {
+      "morgon": 2,
+      "kvall": 2
+    },
+    "helg": {
+      "morgon": 3,
+      "kvall": 2
+    }
+  },
+  "personal": [
+    {
+      "id": "E1",
+      "grad": 1.0,
+      "extra_helgpass": 2,
+      "helggrupp": "A"
+    },
+    {
+      "id": "E2",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E3",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E4",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E5",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E6",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E7",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    },
+    {
+      "id": "E8",
+      "grad": 1.0,
+      "extra_helgpass": 1
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 10
+  },
+  "onskemal": [
+    {
+      "id": "O1",
+      "person": "E1",
+      "typ": "arbetar",
+      "dagar": [
+        "lör",
+        "sön"
+      ],
+      "veckor": [
+        2
+      ],
+      "krav": true
+    }
+  ]
+}

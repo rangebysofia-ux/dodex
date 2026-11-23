@@ -120,7 +120,7 @@ En lägre nivå köps aldrig på bekostnad av en högre. Ett femte arbetspass i 
 ### Särskilda pass
 
 - **Jourpass (funktionsstöd, Bilaga J):** till exempel 15:00–08:00 med jour 00:00–06:00. Ett pass som belastar två arbetsdagar. Högst 20 timmar, och vilan efteråt minst lika lång som passet (AB § 13 mom. 5). Erbjuds bara enheter under LSS.
-- **Extra helgpass:** en person kan ha 1–4 per period: en lördag eller söndag en ledig helg, högst ett per helg, i stället för ett vardagspass.
+- **Extra helgpass:** en person kan ha 1–4 per period: lördag, söndag eller båda en ledig helg, i stället för ett vardagspass.
 - **Resurspass:** pass utöver behovet (överbemanning), visas svart.
 
 ### Om något är oklart

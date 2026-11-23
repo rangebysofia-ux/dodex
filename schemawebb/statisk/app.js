@@ -278,7 +278,7 @@ function ritaFlik() {
   switch (st.flik) {
     case "personal": return `
       <p class="dampad liten">Använd id-koder, inte namn. Antal pass räknas ut från perioden om fältet är tomt. Alla arbetar varannan helg om inget undantag anges.</p>
-      <div class="rull"><table class="form personal"><thead><tr><th>Id</th><th>Grad %</th><th>Arbetar</th><th>Helger</th><th title="Extra helgpass: en lördag eller söndag en ledig helg, ersätter ett vardagspass">Extra helg</th><th>Grupp</th><th title="Antal pass under perioden">Pass</th>${(i.team || []).length ? "<th>Team</th>" : ""}<th></th></tr></thead><tbody>
+      <div class="rull"><table class="form personal"><thead><tr><th>Id</th><th>Grad %</th><th>Arbetar</th><th>Helger</th><th title="Extra helgpass: lördag, söndag eller båda en ledig helg, ersätter vardagspass">Extra helg</th><th>Grupp</th><th title="Antal pass under perioden">Pass</th>${(i.team || []).length ? "<th>Team</th>" : ""}<th></th></tr></thead><tbody>
       ${i.personal.map((p, n) => {
         const del = (p.dygnsdelar || ["morgon", "kvall"]).join(",");
         return `<tr>

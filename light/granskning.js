@@ -206,24 +206,28 @@ const GRANSKNING = (() => {
         const jobbar = iv.some(([s, e]) => e > a && s < b);
         const lor = work[w * 7 + 5], son = work[w * 7 + 6];
         const ovrigt = lista.some(([d, s, e]) => d !== w * 7 + 5 && d !== w * 7 + 6 && (cyk ? [0, L, -L] : [0]).some(k => e + k > a && s + k < b));
-        typ.push(!jobbar ? "ledig" : lor !== son && !ovrigt ? "enkel" : "hel");
+        typ.push(!jobbar ? "ledig" : lor !== son && !ovrigt ? "enkel" : lor && son && !ovrigt ? "dubbel" : "hel");
         helger.push(jobbar);
       }
       let extraVeckor = [];
       if (extraMax) {
-        // extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
-        const enkla = typ.map((t, w) => t === "enkel" ? w : -1).filter(w => w >= 0);
-        const val = r.hel_helg || enkla.length > 10 ? [new Set(enkla)]
-          : Array.from({ length: 1 << enkla.length }, (_, m) => new Set(enkla.filter((_, i) => m >> i & 1)));
-        val.sort((a, b) => a.size - b.size);
+        // extra helgpass (undantag per person): lördag, söndag eller båda en ledig helg räknas inte som arbetad helg
+        // om det går ihop med helgfrekvensen (beslut 38). Så få extra pass som möjligt.
+        const kand = typ.map((t, w) => t === "enkel" || t === "dubbel" ? w : -1).filter(w => w >= 0);
+        const passI = w => typ[w] === "enkel" ? 1 : 2;
+        const val = kand.length > 12 ? [new Set(kand.filter(w => typ[w] === "enkel"))]
+          : Array.from({ length: 1 << kand.length }, (_, m) => new Set(kand.filter((_, i) => m >> i & 1)));
+        const vikt = e => [...e].reduce((s, w) => s + passI(w), 0) * 100 + e.size;
+        val.sort((a, b) => vikt(a) - vikt(b));
         let hittad = null;
         for (const ex of val) {
-          const m = typ.map((t, w) => t === "hel" || (t === "enkel" && !ex.has(w)));
+          const m = typ.map((t, w) => t !== "ledig" && !ex.has(w));
           if (!helgFel(m, frek, W, cyk).length) { hittad = [ex, m]; break; }
         }
         if (hittad) { extraVeckor = [...hittad[0]].sort((a, b) => a - b); helger = hittad[1]; }
-        else { extraVeckor = r.hel_helg ? enkla : []; helger = typ.map((t, w) => t === "hel" || (t === "enkel" && !extraVeckor.includes(w))); }
-        for (const w of extraVeckor.slice(extraMax)) brott("HELG", pid, `Arbetar bara lördag eller söndag vecka ${w + 1}: fler extra helgpass än personens ${extraMax}.`);
+        else { extraVeckor = r.hel_helg ? kand.filter(w => typ[w] === "enkel") : []; helger = typ.map((t, w) => t !== "ledig" && !extraVeckor.includes(w)); }
+        const antalExtra = extraVeckor.reduce((s, w) => s + passI(w), 0);
+        if (antalExtra > extraMax) brott("HELG", pid, `${antalExtra} extra helgpass (veckor ${extraVeckor.map(w => w + 1).join(", ")}), fler än personens ${extraMax}.`);
       }
       for (let w = 0; w < W; w++) {
         if (extraVeckor.includes(w)) continue;

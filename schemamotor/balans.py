@@ -7,7 +7,7 @@ Balansen är en snabb uppskattning utan lösare. Den räknar
 - pass för dag/kväll och natt mot behovet över hela perioden,
 - morgon- och kvällskapacitet för den som bara arbetar en dygnsdel,
 - helger: hur många som arbetar varje helg enligt helgfrekvensen, mot behovet lördag och söndag,
-- extra helgpass: den som har extra helgpass kan fylla en lördag eller söndag en ledig helg, i stället för ett
+- extra helgpass: den som har extra helgpass kan fylla lördag, söndag eller båda en ledig helg, i stället för ett
   vardagspass,
 - fredagskvällar: den som är ledig helgen får inte arbeta fredag kväll eller natt, så fredagens
   kvällsbehov måste täckas av dem som arbetar helgen. Kväll följd av morgon ger bara 9 timmars
@@ -69,10 +69,11 @@ def balans(indata):
     vak_helg = 0
     helgpass_dk = helgpass_n = 0
     fredag_orsak = 0
-    # extra helgpass (en lördag eller söndag en ledig helg, per person): fyller helgdagar som annars blir vakanta
+    # extra helgpass (lördag, söndag eller båda en ledig helg, per person; beslut 38): fyller helgdagar som annars
+    # blir vakanta
     med_extra = [p for p in dag if p.get("extra_helgpass") and p["helgfrekvens"] not in ("alla", "4/4")]
-    extra_kvar = sum(min(p["extra_helgpass"], round(W * (1 - helgdag(p)))) for p in med_extra)
-    extra_lediga = round(sum(1 - helgdag(p) for p in med_extra))  # lediga den helgen, ungefär
+    extra_kvar = sum(min(p["extra_helgpass"], 2 * round(W * (1 - helgdag(p)))) for p in med_extra)
+    extra_lediga = 2 * round(sum(1 - helgdag(p) for p in med_extra))  # pass de lediga den helgen kan ta, ungefär
     extra_anvanda = 0
     for w in range(W):
         fre, lor, son = w * 7 + 4, w * 7 + 5, w * 7 + 6

@@ -126,7 +126,7 @@ MJUKA = {
                 "När arbetsgruppen har team med eget behov: antal pass där ett team inte täcks av sin egen personal, så att "
                 "någon måste lånas in från ett annat team. Lån är tillåtet; behovet går före. Verksamhetens beslut 2026-11-08.", "TEAM"),
     "extra_helg": ("Extra helgpass, så få som möjligt", "lokal regel", None,
-                   "Antal extra helgpass (en lördag eller söndag en ledig helg, undantag per person med extra_helgpass). "
+                   "Antal extra helgpass (lördag, söndag eller båda en ledig helg, undantag per person med extra_helgpass). "
                    "Används bara när de gör schemat bättre för målen före, och aldrig fler än personens antal. "
                    "Användarens beslut 2026-11-10.", "HELG"),
     "blocklangd": ("Dagar i följd över rekommenderat", "princip", "block_rekommenderat", "Antal tillfällen med fler arbetsdagar i följd än rekommenderat.", "BLOCK_REKOMMENDERAT"),

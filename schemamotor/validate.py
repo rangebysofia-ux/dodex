@@ -330,18 +330,21 @@ def kontrollera(indata, schema_dok):
             # pass från fredag eller måndag som går in i helgfönstret
             ovrigt = any(e + k > a and s + k < b for d, s, e, _ in lista if d not in (w * 7 + 5, w * 7 + 6)
                          for k in ((0, L, -L) if cyk else (0,)))
-            typ.append("ledig" if not jobbar else "enkel" if lor != son and not ovrigt else "hel")
+            typ.append("ledig" if not jobbar else "enkel" if lor != son and not ovrigt else "dubbel" if lor and son and not ovrigt
+                       else "hel")
             helger.append(jobbar)
         extra_veckor = []
         if extra_max:
-            # extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
-            # om det går ihop med helgfrekvensen. Prova vilka enkla helger som är extra.
-            enkla = [w for w in range(W) if typ[w] == "enkel"]
-            val = [set(enkla)] if r["hel_helg"] or len(enkla) > 10 else \
-                [{w for i, w in enumerate(enkla) if m >> i & 1} for m in range(1 << len(enkla))]
+            # extra helgpass (undantag per person): lördag, söndag eller båda en ledig helg räknas inte som arbetad helg
+            # om det går ihop med helgfrekvensen (beslut 38). Prova vilka helger som är extra, med så få extra pass
+            # som möjligt.
+            kand = [w for w in range(W) if typ[w] in ("enkel", "dubbel")]
+            pass_i = {w: 1 if typ[w] == "enkel" else 2 for w in kand}
+            val = [set(w for w in kand if typ[w] == "enkel")] if len(kand) > 12 else \
+                [{w for i, w in enumerate(kand) if m >> i & 1} for m in range(1 << len(kand))]
             basta = None
-            for ex in sorted(val, key=len):
-                monster = [typ[w] == "hel" or (typ[w] == "enkel" and w not in ex) for w in range(W)]
+            for ex in sorted(val, key=lambda e: (sum(pass_i[w] for w in e), len(e))):
+                monster = [typ[w] in ("hel", "enkel", "dubbel") and w not in ex for w in range(W)]
                 if not helgfel(monster, frek, W, cyk):
                     basta = (ex, monster)
                     break
@@ -349,11 +352,12 @@ def kontrollera(indata, schema_dok):
                 extra_veckor = sorted(basta[0])
                 helger = basta[1]
             else:
-                extra_veckor = enkla if r["hel_helg"] else []
-                helger = [typ[w] == "hel" or (typ[w] == "enkel" and w not in extra_veckor) for w in range(W)]
-            if len(extra_veckor) > extra_max:
-                for w in extra_veckor[extra_max:]:
-                    brott("HELG", pid, f"Arbetar bara lördag eller söndag vecka {w + 1}: fler extra helgpass än personens {extra_max}.")
+                extra_veckor = [w for w in kand if typ[w] == "enkel"] if r["hel_helg"] else []
+                helger = [typ[w] != "ledig" and w not in extra_veckor for w in range(W)]
+            antal_extra = sum(pass_i[w] for w in extra_veckor)
+            if antal_extra > extra_max:
+                brott("HELG", pid, f"{antal_extra} extra helgpass (veckor {', '.join(str(w + 1) for w in extra_veckor)}), "
+                                   f"fler än personens {extra_max}.")
         for w in range(W):
             if w in extra_veckor:
                 continue

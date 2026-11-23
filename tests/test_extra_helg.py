@@ -82,3 +82,27 @@ const M = require("./light/motor.js"), fall = require("./tests/fall/extra_helgpa
 const utan = JSON.parse(JSON.stringify(fall)); utan.personal.forEach(p => delete p.extra_helgpass);
 process.stdout.write(JSON.stringify([M.balans(fall), M.balans(utan)]));""")
     assert ut[0]["forvantade_vakanser"] == 0 and ut[0]["extra_helgpass"] == 8 and ut[1]["forvantade_vakanser"] == 8
+
+
+BADA = json.loads((ROT / "tests" / "fall" / "extra_helgpass_bada_dagarna.json").read_text(encoding="utf-8"))
+
+
+@nod
+def test_bada_dagarna_samma_lediga_helg():
+    # beslut 38, ändrat 2026-11-23: lördag och söndag samma lediga helg är två extra helgpass
+    from schemamotor.build import forbered, los
+    res = los(forbered(copy.deepcopy(BADA)), tid_per_steg=6, arbetare=4, tyst=True)
+    e1 = res["schema"]["E1"]
+    assert e1[12] and e1[13] and e1[12].get("extra_helg") and e1[13].get("extra_helg")  # vecka 2 lör och sön
+    assert granska(BADA, res)["giltigt"]
+    ind = copy.deepcopy(BADA)
+    ind["personal"][0]["extra_helgpass"] = 1
+    py = granska(ind, res)
+    js = kor(r"""
+const G = require("./light/granskning.js"), ind = %s, s = %s;
+process.stdout.write(JSON.stringify(G.kontrollera(ind, s)));""" % (json.dumps(ind), json.dumps(res)))
+    texter = lambda r: sorted((b["person"], b["text"]) for b in r["brott"] if b["regel"] == "HELG")  # noqa: E731
+    assert texter(py) == texter(js) == [("E1", "2 extra helgpass (veckor 2), fler än personens 1.")]
+    assert kor(r"""
+const G = require("./light/granskning.js"), ind = %s, s = %s;
+process.stdout.write(JSON.stringify(G.kontrollera(ind, s).giltigt));""" % (json.dumps(BADA), json.dumps(res)))

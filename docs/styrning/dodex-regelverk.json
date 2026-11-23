@@ -553,7 +553,7 @@
       "typ": "mjuk",
       "styrs_av": null,
       "standard": null,
-      "beskrivning": "Antal extra helgpass (en lördag eller söndag en ledig helg, undantag per person med extra_helgpass). Används bara när de gör schemat bättre för målen före, och aldrig fler än personens antal. Användarens beslut 2026-11-10.",
+      "beskrivning": "Antal extra helgpass (lördag, söndag eller båda en ledig helg, undantag per person med extra_helgpass). Används bara när de gör schemat bättre för målen före, och aldrig fler än personens antal. Användarens beslut 2026-11-10.",
       "granskningskod": "HELG"
     },
     {

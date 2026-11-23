@@ -891,13 +891,11 @@ const MOTOR = (() => {
         if (pr.jour && jourI(d)) continue;
         if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än ${r.dygnsvila_minuter / 60} timmars dygnsvila från ${dt(d)}.`); }
       }
-      // extra helgpass (undantag per person): högst ett pass en ledig helg, och högst p.extra under perioden
+      // extra helgpass (undantag per person): lördag, söndag eller båda en ledig helg, högst p.extra pass under perioden
       let ex = 0;
       for (let w = 0; w < W; w++) {
         if (p.helg[w]) continue;
-        const n = (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
-        if (n === 2) { hard++; not("HELG", "lokal regel", `Arbetar både lördag och söndag vecka ${w + 1}, en ledig helg.`); }
-        if (n) ex++;
+        ex += (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
       }
       if (ex > p.extra) { hard += ex - p.extra; not("HELG", "lokal regel", `${ex} extra helgpass, högst ${p.extra}.`); }
       // önskemål
@@ -1507,8 +1505,8 @@ const MOTOR = (() => {
     // extra helgpass (som balans.py): fyller helgdagar som annars blir vakanta, och ersätter vardagspass
     const ledigAndel = p => 1 - p.helg.filter(Boolean).length / W;
     const medExtra = dag.filter(p => p.extra && p.frek !== "alla");
-    let extraKvar = sum(medExtra, p => Math.min(p.extra, Math.round(W * ledigAndel(p))));
-    const extraLediga = Math.round(sum(medExtra, ledigAndel));
+    let extraKvar = sum(medExtra, p => Math.min(p.extra, 2 * Math.round(W * ledigAndel(p))));  // lör, sön eller båda (beslut 38)
+    const extraLediga = 2 * Math.round(sum(medExtra, ledigAndel));
     let extraAnvanda = 0;
     for (let w = 0; w < W; w++) {
       const fre = w * 7 + 4, lor = w * 7 + 5, son = w * 7 + 6;
@@ -1880,24 +1878,28 @@ const GRANSKNING = (() => {
         const jobbar = iv.some(([s, e]) => e > a && s < b);
         const lor = work[w * 7 + 5], son = work[w * 7 + 6];
         const ovrigt = lista.some(([d, s, e]) => d !== w * 7 + 5 && d !== w * 7 + 6 && (cyk ? [0, L, -L] : [0]).some(k => e + k > a && s + k < b));
-        typ.push(!jobbar ? "ledig" : lor !== son && !ovrigt ? "enkel" : "hel");
+        typ.push(!jobbar ? "ledig" : lor !== son && !ovrigt ? "enkel" : lor && son && !ovrigt ? "dubbel" : "hel");
         helger.push(jobbar);
       }
       let extraVeckor = [];
       if (extraMax) {
-        // extra helgpass (undantag per person): en lördag eller söndag en ledig helg räknas inte som arbetad helg
-        const enkla = typ.map((t, w) => t === "enkel" ? w : -1).filter(w => w >= 0);
-        const val = r.hel_helg || enkla.length > 10 ? [new Set(enkla)]
-          : Array.from({ length: 1 << enkla.length }, (_, m) => new Set(enkla.filter((_, i) => m >> i & 1)));
-        val.sort((a, b) => a.size - b.size);
+        // extra helgpass (undantag per person): lördag, söndag eller båda en ledig helg räknas inte som arbetad helg
+        // om det går ihop med helgfrekvensen (beslut 38). Så få extra pass som möjligt.
+        const kand = typ.map((t, w) => t === "enkel" || t === "dubbel" ? w : -1).filter(w => w >= 0);
+        const passI = w => typ[w] === "enkel" ? 1 : 2;
+        const val = kand.length > 12 ? [new Set(kand.filter(w => typ[w] === "enkel"))]
+          : Array.from({ length: 1 << kand.length }, (_, m) => new Set(kand.filter((_, i) => m >> i & 1)));
+        const vikt = e => [...e].reduce((s, w) => s + passI(w), 0) * 100 + e.size;
+        val.sort((a, b) => vikt(a) - vikt(b));
         let hittad = null;
         for (const ex of val) {
-          const m = typ.map((t, w) => t === "hel" || (t === "enkel" && !ex.has(w)));
+          const m = typ.map((t, w) => t !== "ledig" && !ex.has(w));
           if (!helgFel(m, frek, W, cyk).length) { hittad = [ex, m]; break; }
         }
         if (hittad) { extraVeckor = [...hittad[0]].sort((a, b) => a - b); helger = hittad[1]; }
-        else { extraVeckor = r.hel_helg ? enkla : []; helger = typ.map((t, w) => t === "hel" || (t === "enkel" && !extraVeckor.includes(w))); }
-        for (const w of extraVeckor.slice(extraMax)) brott("HELG", pid, `Arbetar bara lördag eller söndag vecka ${w + 1}: fler extra helgpass än personens ${extraMax}.`);
+        else { extraVeckor = r.hel_helg ? kand.filter(w => typ[w] === "enkel") : []; helger = typ.map((t, w) => t !== "ledig" && !extraVeckor.includes(w)); }
+        const antalExtra = extraVeckor.reduce((s, w) => s + passI(w), 0);
+        if (antalExtra > extraMax) brott("HELG", pid, `${antalExtra} extra helgpass (veckor ${extraVeckor.map(w => w + 1).join(", ")}), fler än personens ${extraMax}.`);
       }
       for (let w = 0; w < W; w++) {
         if (extraVeckor.includes(w)) continue;
@@ -2566,13 +2568,11 @@ const MOTOR = (() => {
         if (pr.jour && jourI(d)) continue;
         if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än ${r.dygnsvila_minuter / 60} timmars dygnsvila från ${dt(d)}.`); }
       }
-      // extra helgpass (undantag per person): högst ett pass en ledig helg, och högst p.extra under perioden
+      // extra helgpass (undantag per person): lördag, söndag eller båda en ledig helg, högst p.extra pass under perioden
       let ex = 0;
       for (let w = 0; w < W; w++) {
         if (p.helg[w]) continue;
-        const n = (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
-        if (n === 2) { hard++; not("HELG", "lokal regel", `Arbetar både lördag och söndag vecka ${w + 1}, en ledig helg.`); }
-        if (n) ex++;
+        ex += (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
       }
       if (ex > p.extra) { hard += ex - p.extra; not("HELG", "lokal regel", `${ex} extra helgpass, högst ${p.extra}.`); }
       // önskemål
@@ -3182,8 +3182,8 @@ const MOTOR = (() => {
     // extra helgpass (som balans.py): fyller helgdagar som annars blir vakanta, och ersätter vardagspass
     const ledigAndel = p => 1 - p.helg.filter(Boolean).length / W;
     const medExtra = dag.filter(p => p.extra && p.frek !== "alla");
-    let extraKvar = sum(medExtra, p => Math.min(p.extra, Math.round(W * ledigAndel(p))));
-    const extraLediga = Math.round(sum(medExtra, ledigAndel));
+    let extraKvar = sum(medExtra, p => Math.min(p.extra, 2 * Math.round(W * ledigAndel(p))));  // lör, sön eller båda (beslut 38)
+    const extraLediga = 2 * Math.round(sum(medExtra, ledigAndel));
     let extraAnvanda = 0;
     for (let w = 0; w < W; w++) {
       const fre = w * 7 + 4, lor = w * 7 + 5, son = w * 7 + 6;

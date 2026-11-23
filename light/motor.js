@@ -461,13 +461,11 @@ const MOTOR = (() => {
         if (pr.jour && jourI(d)) continue;
         if (lucka(a, a + DYGN, d - 1, d + 2) < r.dygnsvila_minuter) { hard++; not("DYGNSVILA", "avtal", `Mindre än ${r.dygnsvila_minuter / 60} timmars dygnsvila från ${dt(d)}.`); }
       }
-      // extra helgpass (undantag per person): högst ett pass en ledig helg, och högst p.extra under perioden
+      // extra helgpass (undantag per person): lördag, söndag eller båda en ledig helg, högst p.extra pass under perioden
       let ex = 0;
       for (let w = 0; w < W; w++) {
         if (p.helg[w]) continue;
-        const n = (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
-        if (n === 2) { hard++; not("HELG", "lokal regel", `Arbetar både lördag och söndag vecka ${w + 1}, en ledig helg.`); }
-        if (n) ex++;
+        ex += (x[w * 7 + 5] ? 1 : 0) + (x[w * 7 + 6] ? 1 : 0);
       }
       if (ex > p.extra) { hard += ex - p.extra; not("HELG", "lokal regel", `${ex} extra helgpass, högst ${p.extra}.`); }
       // önskemål
@@ -1077,8 +1075,8 @@ const MOTOR = (() => {
     // extra helgpass (som balans.py): fyller helgdagar som annars blir vakanta, och ersätter vardagspass
     const ledigAndel = p => 1 - p.helg.filter(Boolean).length / W;
     const medExtra = dag.filter(p => p.extra && p.frek !== "alla");
-    let extraKvar = sum(medExtra, p => Math.min(p.extra, Math.round(W * ledigAndel(p))));
-    const extraLediga = Math.round(sum(medExtra, ledigAndel));
+    let extraKvar = sum(medExtra, p => Math.min(p.extra, 2 * Math.round(W * ledigAndel(p))));  // lör, sön eller båda (beslut 38)
+    const extraLediga = 2 * Math.round(sum(medExtra, ledigAndel));
     let extraAnvanda = 0;
     for (let w = 0; w < W; w++) {
       const fre = w * 7 + 4, lor = w * 7 + 5, son = w * 7 + 6;

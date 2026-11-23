@@ -606,9 +606,11 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             for v in in_fre + in_man:
                 m.add(v == 0).only_enforce_if([hw.Not()] + L)
             if p["extra_helgpass"]:
-                # extra helgpass: lördag eller söndag en ledig helg, högst ett pass per helg (undantag per person)
+                # extra helgpass: lördag, söndag eller båda en ledig helg (undantag per person; användarens beslut
+                # 2026-11-23, beslut 38). Ingen fredagskväll före helgen, eftersom den fortfarande är ledig.
                 el, es = m.new_bool_var(f"extra_lor_{pid}_{w}"), m.new_bool_var(f"extra_son_{pid}_{w}")
-                m.add(el + es + hw <= 1)
+                m.add(el + hw <= 1)
+                m.add(es + hw <= 1)
                 m.add(el <= work[pi, lor])
                 m.add(es <= work[pi, son])
                 m.add(work[pi, lor] <= el).only_enforce_if([hw.Not()] + L)
