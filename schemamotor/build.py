@@ -930,19 +930,34 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
         + sum(x[pi, d, s] * 30 for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"]
               if M[s].get("annan_start") or M[s].get("annat_slut"))  # annan start/sluttid bara när täckningen kräver det
 
+    # rättvisa: kvälls- och morgonpassen fördelas i förhållande till hur många pass var och en har (docs/optimering.md).
+    # Antalet räknas om till en genomsnittlig persons antal pass, så en 50 % med 14 pass och 7 kvällar väger lika med
+    # en heltid med 28 pass och 14 kvällar. Har alla lika många pass är det samma som att jämföra antalet.
     rattvisa = []
+    grupp = [pi for pi, p in enumerate(prob["personer"]) if "morgon" in p["dygnsdelar"] and "kvall" in p["dygnsdelar"]]
+    antal_pass = {pi: max(1, sum(prob["personer"][pi].get("pass_delperioder") or [1])) for pi in grupp}
+    skala = round(sum(antal_pass.values()) / len(grupp)) if grupp else 1
+    lika = len(set(antal_pass.values())) <= 1
     for del_ in ("kvall", "morgon"):
-        grupp = [pi for pi, p in enumerate(prob["personer"]) if "morgon" in p["dygnsdelar"] and "kvall" in p["dygnsdelar"]]
         if len(grupp) >= 2:
             antal = []
             for pi in grupp:
-                a = m.new_int_var(0, N, "")
-                m.add(a == sum(x[pi, d, s] for d in range(N) for s in prob["personer"][pi]["tillatna"]
-                               if M[s]["dygnsdel"] == del_))
-                antal.append(a)
-            hi, lo = m.new_int_var(0, N, ""), m.new_int_var(0, N, "")
-            m.add_max_equality(hi, antal)
-            m.add_min_equality(lo, antal)
+                summa = sum(x[pi, d, s] for d in range(N) for s in prob["personer"][pi]["tillatna"] if M[s]["dygnsdel"] == del_)
+                antal.append((summa, antal_pass[pi]))
+            if lika:
+                hi, lo = m.new_int_var(0, N, ""), m.new_int_var(0, N, "")
+                vars_ = []
+                for summa, _ in antal:
+                    a = m.new_int_var(0, N, "")
+                    m.add(a == summa)
+                    vars_.append(a)
+                m.add_max_equality(hi, vars_)
+                m.add_min_equality(lo, vars_)
+            else:  # hi och lo omsluter summa * skala / antal pass (avrundat) för var och en
+                hi, lo = m.new_int_var(0, 2 * N, ""), m.new_int_var(0, 2 * N, "")
+                for summa, P in antal:
+                    m.add(2 * P * hi >= 2 * skala * summa - P)
+                    m.add(2 * P * lo <= 2 * skala * summa + P)
             rattvisa.append(hi - lo)
     mal["rattvisa"] = sum(rattvisa) if rattvisa else 0
     mal["rattvisa_jamn"] = 2 * mal["rattvisa"] + mal["jamn_bemanning"]

@@ -45,6 +45,8 @@ Mjukt mål efter vakanser och aktiviteter: **natt_vila**, antal gånger vilan me
 | verksamhet | jämn bemanning, blocklängd, passlängd, rättvisa, spridning, önskemål |
 | ekonomi | OB-kostnad (kr, `ob_kronor`), passlängd, blocklängd, rättvisa och jämn bemanning, spridning, önskemål |
 
+**Rättvisa** är skillnaden mellan personerna i antal kvälls- och morgonpass, räknad i förhållande till hur många pass var och en har (användarens önskemål 2026-11-23 om jämn fördelning av dag och kväll). Antalet räknas om till en genomsnittlig persons antal pass, så en deltid med 14 pass och 7 kvällar väger lika med en heltid med 28 pass och 14 kvällar. Har alla lika många pass är det samma som att jämföra antalen, som tidigare.
+
 Resultatet har `kpi.ob_kr_vecka`, uppskattad OB per vecka för alla profiler, för jämförelsen.
 
 ## Två faser

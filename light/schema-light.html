@@ -1211,7 +1211,7 @@ const MOTOR = (() => {
       const rad = schema[p.id];
       const minuter = rad.reduce((s, v) => s + (v ? v.netto : 0), 0);
       const kv = rad.filter(v => v && v.dygnsdel === "kvall").length;
-      if (p.typer.length > 1) kvallar.push(kv);
+      if (p.typer.length > 1) kvallar.push([kv, Math.max(1, rad.filter(v => v && v.jourdel !== 2).length)]);
       passlangd += rad.reduce((s, v) => s + (v ? Math.abs(v.netto - p.L) : 0), 0) + Math.abs(minuter - p.malMin);
       personer[p.id] = { pass: rad.filter(v => v && v.jourdel !== 2).length, minuter, mal_minuter: p.malMin, kvallspass: kv,
         helggrupp: p.frek === "2/4" ? (p.grupp === 0 ? "A" : "B") : null, helgfrekvens: p.frek,
@@ -1257,7 +1257,7 @@ const MOTOR = (() => {
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
-        rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
+        rattvisa: rattvisaFor(kvallar), spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
       personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel, ...startDel,
     };
@@ -1296,6 +1296,15 @@ const MOTOR = (() => {
       }
     }
     return ut;
+  }
+
+  // Rättvisa (docs/optimering.md): skillnaden i kvällar mellan personerna, i förhållande till hur många pass var och en
+  // har, uttryckt i en genomsnittlig persons antal pass. Har alla lika många pass är det skillnaden i antal.
+  function rattvisaFor(kvallar) {
+    if (!kvallar.length) return 0;
+    const skala = Math.round(kvallar.reduce((s, [, P]) => s + P, 0) / kvallar.length);
+    const v = kvallar.map(([k, P]) => Math.round(k * skala / P));
+    return Math.max(...v) - Math.min(...v);
   }
 
   // Sluttider (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Kvällspassen läggs med slut
@@ -2875,7 +2884,7 @@ const MOTOR = (() => {
       const rad = schema[p.id];
       const minuter = rad.reduce((s, v) => s + (v ? v.netto : 0), 0);
       const kv = rad.filter(v => v && v.dygnsdel === "kvall").length;
-      if (p.typer.length > 1) kvallar.push(kv);
+      if (p.typer.length > 1) kvallar.push([kv, Math.max(1, rad.filter(v => v && v.jourdel !== 2).length)]);
       passlangd += rad.reduce((s, v) => s + (v ? Math.abs(v.netto - p.L) : 0), 0) + Math.abs(minuter - p.malMin);
       personer[p.id] = { pass: rad.filter(v => v && v.jourdel !== 2).length, minuter, mal_minuter: p.malMin, kvallspass: kv,
         helggrupp: p.frek === "2/4" ? (p.grupp === 0 ? "A" : "B") : null, helgfrekvens: p.frek,
@@ -2921,7 +2930,7 @@ const MOTOR = (() => {
     return {
       status: hardTotalt ? "BROTT" : "OK", motor: "light", enhet: pr.enhet, veckor: W, cykliskt: cyk, sekunder: Math.round(sekunder * 10) / 10,
       kpi: { vakanser: vak + golv, vakanta_pass: vak, vakanta_tidpunkter: golv, blocklangd: block, passlangd: Math.round(passlangd),
-        rattvisa: kvallar.length ? Math.max(...kvallar) - Math.min(...kvallar) : 0, spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
+        rattvisa: rattvisaFor(kvallar), spridning, onskemal: onskStraff, hardregelbrott: hardTotalt,
         aktivitet_saknas: tillfallen.reduce((s, t) => s + t.saknas, 0), natt_vila: nattVila, ...teamKpi },
       personer, vakanser, aktiviteter: tillfallen.map(({ krav, ...t }) => t), schema, brott, ...teamUt, ...kompDel, ...startDel,
     };
@@ -2960,6 +2969,15 @@ const MOTOR = (() => {
       }
     }
     return ut;
+  }
+
+  // Rättvisa (docs/optimering.md): skillnaden i kvällar mellan personerna, i förhållande till hur många pass var och en
+  // har, uttryckt i en genomsnittlig persons antal pass. Har alla lika många pass är det skillnaden i antal.
+  function rattvisaFor(kvallar) {
+    if (!kvallar.length) return 0;
+    const skala = Math.round(kvallar.reduce((s, [, P]) => s + P, 0) / kvallar.length);
+    const v = kvallar.map(([k, P]) => Math.round(k * skala / P));
+    return Math.max(...v) - Math.min(...v);
   }
 
   // Sluttider (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Kvällspassen läggs med slut

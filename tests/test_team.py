@@ -46,9 +46,13 @@ def test_varje_pass_far_ett_team_och_teamen_tacks(losning):
 def test_granskningen_hittar_fel_fordelning(losning):
     ind, res = losning
     res = copy.deepcopy(res)
+    def morgon(d, t):
+        return sum(1 for rad in res["schema"].values() if rad[d] and rad[d]["dygnsdel"] == "morgon" and rad[d]["team"] == t)
+    # en vardag där team 1 har precis sitt behov (2) och team 2 minst sitt: flytta en från team 1 till team 2
+    d = next(d for d in range(len(next(iter(res["schema"].values())))) if d % 7 < 5 and morgon(d, "T1") == 2 and morgon(d, "T2") >= 2)
     for rad in res["schema"].values():
-        if rad[0] and rad[0]["dygnsdel"] == "morgon" and rad[0]["team"] == "T1":
-            rad[0]["team"] = "T2"
+        if rad[d] and rad[d]["dygnsdel"] == "morgon" and rad[d]["team"] == "T1":
+            rad[d]["team"] = "T2"
             break
     g = validate.kontrollera(copy.deepcopy(ind), res)
     assert any("Team 1 har 1 av 2, fast Team 2 har fler" in v["text"] for v in g["varningar"])
