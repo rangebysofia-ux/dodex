@@ -90,6 +90,8 @@ Dessa beslut ligger till grund för skillen. Ändra dem inte utan att fråga anv
 
 40. **Äldreomsorgens områden i grunden.** Områdena inom äldreomsorgen läggs in som grund, som förskolorna: SÄBO med Forellen, Furulund (1, 2, 3 och Natt), Jonsereds-gården och Kullegården; ORDBO med Björndammen, Centrum, Sävedalen (Norra och Södra), Digital hemtjänst och Nattpatrull. Varje område är en enhet och avdelningarna team i områdets gemensamma schema. Se `docs/organisation.md`. Beslutat av användaren 2026-11-10.
 
+41. **Olika sluttider för kvällspassen (ändrar princip 4 när den används).** En enhet får ange fler sluttider för kvällspassen än `kvall_slut`, med hur många av kvällsbehovet som slutar vid varje tid (`starttider.kvall`), till exempel 21:00, 21:30 och 22:00 när avdelningarna slutar olika. Mjukt på samma nivå som behovet. Standard är fast slut. Se `docs/starttider.md`. Beslutat av användaren 2026-11-23.
+
 Öppna frågor, alltså inte beslutade:
 - Ersättning för jour enligt Bilaga J räknas inte än; bilagans text ska kontrolleras mot SKR:s publicering först.
 - Om ett kompetenskrav ska kunna väga lika tungt som behovet, så att ett pass kan lämnas vakant för att få in en kompetens på ett annat (i dag: direkt efter behovet, se beslut 34 och `docs/kompetens.md`).

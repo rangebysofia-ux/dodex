@@ -190,8 +190,10 @@ class Forskolepass(Strikt):
 
 class Starttider(Strikt):
     morgon: list[Starttid] = Field(default_factory=list)
+    # sluttider för kvällspassen: av kvällsbehovet slutar så många vid varje tid (användarens beslut 2026-11-23)
+    kvall: list[Starttid] = Field(default_factory=list)
 
-    @field_validator("morgon")
+    @field_validator("morgon", "kvall")
     @classmethod
     def unika(cls, v):
         tider = [s.tid for s in v]

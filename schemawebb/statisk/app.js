@@ -315,7 +315,8 @@ function ritaFlik() {
         const s = TEAM.summaBehov(i.team);
         return `<div class="banner info">${IKON.grupp}<div><strong>Behovet anges per team</strong>Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under Medarbetare → Team.</div></div>
           <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
-          <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}`;
+          <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      <h3>Sluttider för kvällspassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).kvall) || [], { start: (i.regler || {}).kvall_slut || "22:00", behov: TEAM.perDag(i.behov), attr: "sl", knapp: "sl", del: "kvall" })}`;
       }
       const b = i.behov || {};
       const tp = [];
@@ -332,6 +333,7 @@ function ritaFlik() {
       <h3>Arbetstiden som behovet ger</h3>
       <div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
       <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      <h3>Sluttider för kvällspassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).kvall) || [], { start: (i.regler || {}).kvall_slut || "22:00", behov: TEAM.perDag(i.behov), attr: "sl", knapp: "sl", del: "kvall" })}
       ${i.jour ? `<h3>Jour</h3>${RV.jourHtml(i)}` : ""}
       <h3>Täckning vid klockslag</h3>
       <p class="dampad liten">Minst så många i tjänst vid klockslaget, till exempel tidigt på morgonen eller mitt på dagen när dag och kväll överlappar. Passens längd anpassas efter det, och med rörlig starttid (Regler, Dagpass får också börja) även dagpassens start. Täckningsgraden syns i vyn Klockslag.</p>
@@ -1193,6 +1195,20 @@ document.addEventListener("toggle", e => {
 }, true);
 
 
+// sluttider för kvällspassen (guide.js, docs/starttider.md): i enhetens behov (data-sl)
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-sl-ny],[data-sl-bort]"); if (!el) return;
+  e.preventDefault();
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).kvall) || [], el, { attr: "sl", knapp: "sl", start: (ind.regler || {}).kvall_slut || "22:00" });
+  if (l) { GUIDE.sattStarttider(ind, l, "kvall"); markeraAndrad(true); }
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.sl === undefined) return;
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).kvall) || [], el, { attr: "sl", knapp: "sl", start: (ind.regler || {}).kvall_slut || "22:00" });
+  if (l) { GUIDE.sattStarttider(ind, l, "kvall"); markeraAndrad(true); }
+});
 // starttider för dagpassen (guide.js): i guiden (data-gst) och i enhetens behov (data-st)
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-gst-ny],[data-gst-bort],[data-st-ny],[data-st-bort]"); if (!el) return;

@@ -166,7 +166,8 @@ const GRANSKNING = (() => {
         const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid), ...(((indata.starttider || {}).morgon) || []).map(x => tid(x.tid))]);
         if (p.dygnsdel === "morgon" && (!starter.has(s % DYGN) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: morgonpass ${p.start}–${p.slut} följer inte fönstret.`);
-        if (p.dygnsdel === "kvall" && (e % DYGN !== tid(r.kvall_slut) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
+        const slutar = new Set([tid(r.kvall_slut), ...(((indata.starttider || {}).kvall) || []).map(x => tid(x.tid))]);  // docs/starttider.md
+        if (p.dygnsdel === "kvall" && (!slutar.has(e % DYGN) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: kvällspass ${p.start}–${p.slut} följer inte fönstret.`);
       }
       const work = Array(N).fill(0); lista.forEach(([d]) => (work[d] = 1));
@@ -399,6 +400,16 @@ const GRANSKNING = (() => {
         const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
         let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "morgon" && tid(x.start) === t) n++; }
         if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} dagpass börjar kl ${klocka(t)}.`, false);
+      }
+    }
+    // sluttider för kvällspassen (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Mjukt.
+    const slL = (((indata.starttider || {}).kvall) || []).map(x => [tid(x.tid), Number(x.antal) || 0]).sort((a, b) => a[0] - b[0]);
+    if (slL.length) for (let d = 0; d < N; d++) {
+      let kvar = Number(behov[d % 7].kvall || 0);
+      for (const [t, antal] of slL) {
+        const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "kvall" && tid(x.slut) % DYGN === t % DYGN) n++; }
+        if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} kvällspass slutar kl ${klocka(t)}.`, false);
       }
     }
     // minsta bemanning på golvet under aktiviteter (behov, mjukt)

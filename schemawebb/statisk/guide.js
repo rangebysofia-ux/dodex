@@ -145,13 +145,19 @@ const GUIDE = (() => {
   // ---------------------------------------------------------------- starttider för dagpassen (docs/starttider.md)
   // Av dagbehovet: hur många som börjar vid varje tid. attr = attributnamnet för fälten (data-st i enheten, data-gst i
   // guiden), knapp = prefix för knapparna. Delas av webben, lättversionen och guiden.
-  function starttiderHtml(lista, { start = "07:00", behov = null, attr = "st", knapp = "st" } = {}) {
+  // del = "kvall": sluttider för kvällspassen i stället (användarens beslut 2026-11-23), attr/knapp "sl".
+  function starttiderHtml(lista, { start = "07:00", behov = null, attr = "st", knapp = "st", del = "morgon" } = {}) {
+    const kv = del === "kvall";
     const summa = lista.reduce((s, x) => s + (Number(x.antal) || 0), 0);
-    const maxBehov = behov ? Math.max(0, ...Object.values(behov).map(v => (v && v.morgon) || 0)) : null;
-    return `<div class="starttider"><p class="dampad liten" style="margin:0 0 8px">Hur många av dagpassen som börjar vid varje tid, till exempel 1 kl. 06:00, 1 kl. 07:00 och 2 kl. 08:00, så att hela dagen täcks. Övriga börjar kl. ${esc(start)}. Passen blir lika långa som annars, så den som börjar senare slutar senare.</p>
-      ${lista.map((x, i) => `<div class="starttid-rad"><input type="time" data-${attr}="${i}" data-sf="tid" value="${esc(x.tid)}" aria-label="Starttid ${i + 1}"><input type="number" min="1" max="50" inputmode="numeric" data-${attr}="${i}" data-sf="antal" value="${esc(x.antal)}" aria-label="Antal som börjar då" style="width:70px"><span class="dampad liten">börjar då</span><button class="liten fara" data-${knapp}-bort="${i}" aria-label="Ta bort starttiden">×</button></div>`).join("")}
-      <p class="chips" style="margin:6px 0 0"><button class="liten" data-${knapp}-ny="1">+ Starttid</button></p>
-      ${lista.length && maxBehov !== null ? `<p class="liten ${summa > maxBehov ? "minus" : "dampad"}" style="margin:4px 0 0">${summa} av dagbehovet (högst ${maxBehov}) har en angiven starttid.${summa > maxBehov ? " Fler än behovet: de senare tiderna räknas bara så långt behovet räcker." : ""}</p>` : ""}</div>`;
+    const maxBehov = behov ? Math.max(0, ...Object.values(behov).map(v => (v && v[del]) || 0)) : null;
+    const intro = kv
+      ? `Hur många av kvällspassen som slutar vid varje tid, till exempel 2 kl. 21:00 och 2 kl. 22:00. Övriga slutar kl. ${esc(start)}. Passen blir lika långa som annars, så den som slutar senare börjar senare.`
+      : `Hur många av dagpassen som börjar vid varje tid, till exempel 1 kl. 06:00, 1 kl. 07:00 och 2 kl. 08:00, så att hela dagen täcks. Övriga börjar kl. ${esc(start)}. Passen blir lika långa som annars, så den som börjar senare slutar senare.`;
+    const ord = kv ? ["Sluttid", "slutar", "sluttiden", "kvällsbehovet", "sluttid"] : ["Starttid", "börjar", "starttiden", "dagbehovet", "starttid"];
+    return `<div class="starttider"><p class="dampad liten" style="margin:0 0 8px">${intro}</p>
+      ${lista.map((x, i) => `<div class="starttid-rad"><input type="time" data-${attr}="${i}" data-sf="tid" value="${esc(x.tid)}" aria-label="${ord[0]} ${i + 1}"><input type="number" min="1" max="50" inputmode="numeric" data-${attr}="${i}" data-sf="antal" value="${esc(x.antal)}" aria-label="Antal som ${ord[1]} då" style="width:70px"><span class="dampad liten">${ord[1]} då</span><button class="liten fara" data-${knapp}-bort="${i}" aria-label="Ta bort ${ord[2]}">×</button></div>`).join("")}
+      <p class="chips" style="margin:6px 0 0"><button class="liten" data-${knapp}-ny="1">+ ${ord[0]}</button></p>
+      ${lista.length && maxBehov !== null ? `<p class="liten ${summa > maxBehov ? "minus" : "dampad"}" style="margin:4px 0 0">${summa} av ${ord[3]} (högst ${maxBehov}) har en angiven ${ord[4]}.${summa > maxBehov ? " Fler än behovet: de senare tiderna räknas bara så långt behovet räcker." : ""}</p>` : ""}</div>`;
   }
   // Ändra listan efter en händelse. Returnerar den nya listan (eller null om elementet inte hör hit).
   function starttiderAndra(lista, el, { attr = "st", knapp = "st", start = "07:00" } = {}) {
@@ -173,11 +179,14 @@ const GUIDE = (() => {
     return null;
   }
   // Skriv listan till indata: sorterad, utan dubbletter (samma tid slås ihop), eller bort om den är tom.
-  function sattStarttider(ind, lista) {
+  // del = "kvall" skriver sluttiderna för kvällspassen; den andra listan lämnas orörd.
+  function sattStarttider(ind, lista, del = "morgon") {
     const per = new Map();
     for (const x of lista || []) if (x.tid) per.set(x.tid, (per.get(x.tid) || 0) + (Number(x.antal) || 0));
     const ut = [...per].filter(([, a]) => a > 0).sort((a, b) => a[0].localeCompare(b[0])).map(([tid, antal]) => ({ tid, antal }));
-    if (ut.length) ind.starttider = { morgon: ut }; else delete ind.starttider;
+    const st = { ...(ind.starttider || {}) };
+    if (ut.length) st[del] = ut; else delete st[del];
+    if (Object.keys(st).length) ind.starttider = st; else delete ind.starttider;
   }
 
   // ---------------------------------------------------------------- förskolans pass: Tidig, Mellan och Sen

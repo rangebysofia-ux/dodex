@@ -20,6 +20,20 @@ Användarens beslut 2026-11-09 (beslut 35 i `regelhierarki.md`). När behovet l�
 
 Regeln **STARTTID** (nivå verksamhet) i `validate.py` och `light/granskning.js`, skrivna var för sig. En dag där färre dagpass börjar vid en tid än vad som ska blir en varning. Starttiderna i listan godtas i kontrollen av passfönstret (PASSFONSTER).
 
+## Olika sluttider för kvällspassen
+
+Användarens beslut 2026-11-23 (beslut 41 i `regelhierarki.md`). Kvällspassen kan sluta vid olika tider, till exempel 21:00 på en avdelning, 21:30 på en annan och 22:00 på en tredje. Det fungerar som starttiderna för dagpassen, spegelvänt:
+
+- `starttider.kvall` = `[{"tid": "21:00", "antal": 2}, {"tid": "22:00", "antal": 2}]`. Tiderna blir tillåtna sluttider för kvällspassen utöver `kvall_slut`. De som inte har en angiven sluttid slutar vid `kvall_slut`.
+- Varje dag fördelas kvällsbehovet på tiderna i tidsordning, högst så långt behovet räcker. Kravet är mjukt på samma nivå som behovet (`slutvakanser`, nyckeltalet `sluttid_saknas`). Avtal, lag och lokala regler går alltid före. Den som slutar 22:00 har en halvtimme mindre vila till nästa pass än den som slutar 21:30, och dygnsvilan (11 h) är hård som vanligt.
+- Passen blir lika långa som annars, så den som slutar senare börjar senare. Starten ska ligga i fönstret `kant_fran`–`kant_till`.
+- Motorn väljer en annan sluttid än `kvall_slut` bara när täckningen kräver det, som för starttiderna.
+- Lättversionen lägger först kvällspassen med `kvall_slut` och flyttar sedan så många som behövs till de andra sluttiderna, med samma längd, om starten ryms i fönstret och vilan räcker, och aldrig ett pass med en aktivitet.
+- Granskningen (regel STARTTID, nivå verksamhet, i `validate.py` och `light/granskning.js`) varnar för en dag där färre kvällspass slutar vid en tid än vad som ska. Sluttiderna i listan godtas i kontrollen av passfönstret (PASSFONSTER). En sluttid som inte finns i listan är ett brott mot passfönstret.
+- I gränssnittet: fliken **Behov**, avsnittet *Sluttider för kvällspassen*, i webben och i telefonen.
+
+Sluttiderna gäller enheten, inte ett visst team. Med team räknas de på enhetens kvällsbehov.
+
 ## Förskolor
 
 Förskolornas grundinställning är öppet 06:00–18:00: `morgon_start` 06:00 och `kvall_slut` 18:00 (`schemawebb/grund_forskola.json`). Det gäller förskolorna i grunden, förskolor som redan fanns och saknade egna tider, och en ny enhet som skapas i guiden under Förskola. En tid som användaren själv har satt ändras inte.

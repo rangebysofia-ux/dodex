@@ -129,7 +129,7 @@ schemamotor/validate.py läser samma `schema`-format, antingen hela utdatafilen 
 
 **regelverk** – valt regelverk: `dag-kvall-helg`, `40-timmar` eller `bilaga-j`. Värdena står i `regler`, `heltid_minuter_per_vecka` och `avvikelser`. Se `docs/regelverk.md`.
 
-**starttider** – olika starttider för dagpassen: `{"morgon": [{"tid": "06:00", "antal": 1}, {"tid": "07:00", "antal": 1}]}`. Av dagbehovet börjar så många vid varje tid. Mjukt, på samma nivå som behovet. Se `docs/starttider.md`.
+**starttider** – olika starttider för dagpassen: `{"morgon": [{"tid": "06:00", "antal": 1}, {"tid": "07:00", "antal": 1}]}`. Av dagbehovet börjar så många vid varje tid. Mjukt, på samma nivå som behovet. Se `docs/starttider.md`. `"kvall": [{"tid": "21:00", "antal": 2}]` = sluttider för kvällspassen: av kvällsbehovet slutar så många vid varje tid (beslut 41).
 
 **kompetenser**, **kompetenskrav** och `personal[].kompetenser` – kompetenser i enheten (`id`, `namn`, `kort`, `farg`), krav på minst så många med en kompetens per dag och dygnsdel (`kompetens`, `behov` i samma format som enhetens behov), och vilka kompetenser var och en har. Kravet är mjukt, direkt efter behovet. Se `docs/kompetens.md`.
 

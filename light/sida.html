@@ -733,7 +733,8 @@ function ritaFlik() {
     const s = TEAM.summaBehov(i.team);
     el.innerHTML = `<div class="banner info"><strong>Behovet anges per team</strong><span class="liten">Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under fliken Team.</span></div>
       <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
-      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}`;
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      <h3>Sluttider för kvällspassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).kvall) || [], { start: (i.regler || {}).kvall_slut || "22:00", behov: TEAM.perDag(i.behov), attr: "sl", knapp: "sl", del: "kvall" })}`;
   } else if (st.flik === "behov") {
     const b = i.behov || (i.behov = {});
     el.innerHTML = `<p class="dampad liten">Antal pass per dygnsdel. Rader längre ned gäller före rader ovanför.</p>
@@ -742,6 +743,7 @@ function ritaFlik() {
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
       <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
       <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      <h3>Sluttider för kvällspassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).kvall) || [], { start: (i.regler || {}).kvall_slut || "22:00", behov: TEAM.perDag(i.behov), attr: "sl", knapp: "sl", del: "kvall" })}
       ${i.jour ? `<h3>Jour</h3>${RV.jourHtml(i)}` : ""}
       <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>
       <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
@@ -1331,6 +1333,20 @@ document.addEventListener("submit", async e => {
   try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
 });
 
+// sluttider för kvällspassen (guide.js, docs/starttider.md): i enhetens behov (data-sl)
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-sl-ny],[data-sl-bort]"); if (!el) return;
+  e.preventDefault();
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).kvall) || [], el, { attr: "sl", knapp: "sl", start: (ind.regler || {}).kvall_slut || "22:00" });
+  if (l) { GUIDE.sattStarttider(ind, l, "kvall"); andrad(true); }
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.sl === undefined) return;
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).kvall) || [], el, { attr: "sl", knapp: "sl", start: (ind.regler || {}).kvall_slut || "22:00" });
+  if (l) { GUIDE.sattStarttider(ind, l, "kvall"); andrad(true); }
+});
 // starttider för dagpassen (guide.js): i guiden (data-gst) och i enhetens behov (data-st)
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-gst-ny],[data-gst-bort],[data-st-ny],[data-st-bort]"); if (!el) return;

@@ -1,0 +1,116 @@
+{
+  "beskrivning": "Olika sluttider för kvällspassen (docs/starttider.md): kvällspassen slutar 21:30, men av kvällsbehovet ska 1 sluta 21:00 och 1 sluta 22:00. Ska gå att lösa utan avtalsbrott och med alla sluttider täckta.",
+  "forvantat": {
+    "status": "OK",
+    "validering_utan_fel": true,
+    "vakanta_pass": 0,
+    "sluttid_saknas": 0
+  },
+  "enhet": "Test – sluttider för kvällspass",
+  "veckor": 6,
+  "cykliskt": true,
+  "regler": {
+    "kvall_slut": "21:30"
+  },
+  "behov": {
+    "vardag": {
+      "morgon": 3,
+      "kvall": 3,
+      "natt": 1
+    },
+    "helg": {
+      "morgon": 2,
+      "kvall": 2,
+      "natt": 1
+    }
+  },
+  "starttider": {
+    "kvall": [
+      {
+        "tid": "21:00",
+        "antal": 1
+      },
+      {
+        "tid": "22:00",
+        "antal": 1
+      }
+    ]
+  },
+  "tidpunkter": {
+    "vardag": [
+      {
+        "tid": "14:00",
+        "antal": 3
+      }
+    ]
+  },
+  "personal": [
+    {
+      "id": "A1",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A2",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "A3",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A4",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "A5",
+      "grad": 1.0,
+      "antal_pass": 28
+    },
+    {
+      "id": "A6",
+      "grad": 1.0,
+      "antal_pass": 29
+    },
+    {
+      "id": "B1",
+      "grad": 0.8,
+      "antal_pass": 28
+    },
+    {
+      "id": "B2",
+      "grad": 0.8,
+      "antal_pass": 29
+    },
+    {
+      "id": "C1",
+      "grad": 0.75,
+      "antal_pass": 28
+    },
+    {
+      "id": "C2",
+      "grad": 0.75,
+      "antal_pass": 29
+    },
+    {
+      "id": "N1",
+      "grad": 1.0,
+      "dygnsdelar": [
+        "natt"
+      ]
+    },
+    {
+      "id": "N2",
+      "grad": 1.0,
+      "dygnsdelar": [
+        "natt"
+      ]
+    }
+  ],
+  "losare": {
+    "tid_per_steg_s": 15
+  }
+}

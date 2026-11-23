@@ -685,7 +685,9 @@ const MOTOR = (() => {
     }
     // starttider för dagpassen (docs/starttider.md): [minut, antal] i tidsordning
     const starttider = ((((ind.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, jour, enhet: ind.enhet || "" };
+    // sluttider för kvällspassen (docs/starttider.md): [minut, antal] i tidsordning
+    const sluttider = ((((ind.starttider || {}).kvall) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, sluttider, jour, enhet: ind.enhet || "" };
   }
 
   // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
@@ -1198,6 +1200,7 @@ const MOTOR = (() => {
     const golvVak = [];
     const tillfallen = aktiviteter(pr, schema, brott, golvVak);
     const startVak = starttiderFor(pr, schema);
+    const slutVak = sluttiderFor(pr, schema);
     const jourVak = [];
     if (pr.jour) for (let d = 0; d < N; d++) {
       const b = pr.jour.behov[d % 7], n = pers.filter((p, pi) => X[pi][d] === JA).length;
@@ -1232,6 +1235,7 @@ const MOTOR = (() => {
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
     const startDel = pr.starttider && pr.starttider.length ? { startvakanser: startVak } : {};
+    if (pr.sluttider && pr.sluttider.length) startDel.slutvakanser = slutVak;
     if (pr.jour) {
       startDel.jourvakanser = jourVak;
       teamKpi.jour_saknas = jourVak.reduce((s, v) => s + v.antal, 0);
@@ -1243,6 +1247,7 @@ const MOTOR = (() => {
       for (const p of pers) if (p.extra) { personer[p.id].extra_helg = schema[p.id].filter(v => v && v.extra_helg).length; personer[p.id].extra_helg_max = p.extra; }
     }
     if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
+    if (pr.sluttider && pr.sluttider.length) teamKpi.sluttid_saknas = slutVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
     if (pr.kompetens && pr.kompetens.length) {
       const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
@@ -1288,6 +1293,41 @@ const MOTOR = (() => {
       for (const [t, a] of krav.filter(([t]) => t === pr.ms)) {
         const n = pa(t).length;
         if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+    }
+    return ut;
+  }
+
+  // Sluttider (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Kvällspassen läggs med slut
+  // kvall_slut; här flyttas så många som behövs till de andra sluttiderna, med samma längd. Ett pass flyttas bara om
+  // starten ryms i fönstret och vilan räcker, och aldrig ett pass med en aktivitet. Det som inte går blir slutvakanser.
+  function sluttiderFor(pr, schema) {
+    const ut = [], L = pr.sluttider || [];
+    if (!L.length) return ut;
+    const kf = tid(pr.r.kant_fran), kt = tid(pr.r.kant_till), idx = Object.fromEntries(pr.pers.map(p => [p.id, p]));
+    for (let d = 0; d < pr.N; d++) {
+      let kvar = pr.behov[d % 7][K] || 0;
+      const krav = [];
+      for (const [t, antal] of L) { const a = Math.min(antal, kvar); kvar -= a; if (a > 0) krav.push([t, a]); }
+      if (!krav.length) continue;
+      const pa = t => Object.keys(schema).filter(pid => { const v = schema[pid][d]; return v && v.dygnsdel === "kvall" && tid(v.slut) === t; });
+      // de tidigare sluttiderna först (de ger mest vila till nästa dag), med de kortaste passen först
+      for (const [t, a] of krav.filter(([t]) => t !== pr.ks)) {
+        let n = pa(t).length;
+        const kand = pa(pr.ks).filter(pid => !schema[pid][d].aktiviteter).sort((x, y) => schema[x][d].netto - schema[y][d].netto);
+        for (const pid of kand) {
+          if (n >= a) break;
+          const v = schema[pid][d], o = tid(v.slut) - tid(v.start), start = t - o;
+          if (start < kf || start > kt) continue;
+          const ny = { ...v, start: klocka(start), slut: klocka(t), mall: "K" + klocka(start) + "-" + klocka(t) };
+          schema[pid][d] = ny;
+          if (vilaOk(schema[pid], pr, idx[pid])) n++; else schema[pid][d] = v;
+        }
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], slut: klocka(t), antal: a - n });
+      }
+      for (const [t, a] of krav.filter(([t]) => t === pr.ks)) {
+        const n = pa(t).length;
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], slut: klocka(t), antal: a - n });
       }
     }
     return ut;
@@ -1789,7 +1829,8 @@ const GRANSKNING = (() => {
         const starter = new Set([tid(r.morgon_start), ...(r.morgon_starter || []).map(tid), ...(((indata.starttider || {}).morgon) || []).map(x => tid(x.tid))]);
         if (p.dygnsdel === "morgon" && (!starter.has(s % DYGN) || e % DYGN < tid(r.kant_fran) || e % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: morgonpass ${p.start}–${p.slut} följer inte fönstret.`);
-        if (p.dygnsdel === "kvall" && (e % DYGN !== tid(r.kvall_slut) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
+        const slutar = new Set([tid(r.kvall_slut), ...(((indata.starttider || {}).kvall) || []).map(x => tid(x.tid))]);  // docs/starttider.md
+        if (p.dygnsdel === "kvall" && (!slutar.has(e % DYGN) || s % DYGN < tid(r.kant_fran) || s % DYGN > tid(r.kant_till)))
           brott("PASSFONSTER", pid, `${dagText(d)}: kvällspass ${p.start}–${p.slut} följer inte fönstret.`);
       }
       const work = Array(N).fill(0); lista.forEach(([d]) => (work[d] = 1));
@@ -2022,6 +2063,16 @@ const GRANSKNING = (() => {
         const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
         let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "morgon" && tid(x.start) === t) n++; }
         if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} dagpass börjar kl ${klocka(t)}.`, false);
+      }
+    }
+    // sluttider för kvällspassen (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Mjukt.
+    const slL = (((indata.starttider || {}).kvall) || []).map(x => [tid(x.tid), Number(x.antal) || 0]).sort((a, b) => a[0] - b[0]);
+    if (slL.length) for (let d = 0; d < N; d++) {
+      let kvar = Number(behov[d % 7].kvall || 0);
+      for (const [t, antal] of slL) {
+        const a = Math.min(antal, kvar); kvar -= a; if (a <= 0) continue;
+        let n = 0; for (const rad of Object.values(schema)) { const x = rad[d]; if (x && x.dygnsdel === "kvall" && tid(x.slut) % DYGN === t % DYGN) n++; }
+        if (n < a) brott("STARTTID", null, `${dagText(d)}: ${n} av ${a} kvällspass slutar kl ${klocka(t)}.`, false);
       }
     }
     // minsta bemanning på golvet under aktiviteter (behov, mjukt)
@@ -2298,7 +2349,9 @@ const MOTOR = (() => {
     }
     // starttider för dagpassen (docs/starttider.md): [minut, antal] i tidsordning
     const starttider = ((((ind.starttider || {}).morgon) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
-    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, jour, enhet: ind.enhet || "" };
+    // sluttider för kvällspassen (docs/starttider.md): [minut, antal] i tidsordning
+    const sluttider = ((((ind.starttider || {}).kvall) || []).map(x => [tid(x.tid), Number(x.antal) || 0])).sort((a, b) => a[0] - b[0]);
+    return { fel, r, W, N, cyk, behov, pers, onsk, akt, ms, ks, ns, ne, nnet, nRast, db, nattDb, team, kompetens, starttider, sluttider, jour, enhet: ind.enhet || "" };
   }
 
   // kompetenskraven per veckodag: [0, dag, kväll, natt] som behovet
@@ -2811,6 +2864,7 @@ const MOTOR = (() => {
     const golvVak = [];
     const tillfallen = aktiviteter(pr, schema, brott, golvVak);
     const startVak = starttiderFor(pr, schema);
+    const slutVak = sluttiderFor(pr, schema);
     const jourVak = [];
     if (pr.jour) for (let d = 0; d < N; d++) {
       const b = pr.jour.behov[d % 7], n = pers.filter((p, pi) => X[pi][d] === JA).length;
@@ -2845,6 +2899,7 @@ const MOTOR = (() => {
     }
     const { _kpi: teamKpi = {}, ...teamUt } = teamDel;
     const startDel = pr.starttider && pr.starttider.length ? { startvakanser: startVak } : {};
+    if (pr.sluttider && pr.sluttider.length) startDel.slutvakanser = slutVak;
     if (pr.jour) {
       startDel.jourvakanser = jourVak;
       teamKpi.jour_saknas = jourVak.reduce((s, v) => s + v.antal, 0);
@@ -2856,6 +2911,7 @@ const MOTOR = (() => {
       for (const p of pers) if (p.extra) { personer[p.id].extra_helg = schema[p.id].filter(v => v && v.extra_helg).length; personer[p.id].extra_helg_max = p.extra; }
     }
     if (pr.starttider && pr.starttider.length) teamKpi.starttid_saknas = startVak.reduce((s, v) => s + v.antal, 0);
+    if (pr.sluttider && pr.sluttider.length) teamKpi.sluttid_saknas = slutVak.reduce((s, v) => s + v.antal, 0);
     let kompDel = {};
     if (pr.kompetens && pr.kompetens.length) {
       const tack = kompetensTackning(schema, pr.kompetens, Object.fromEntries(pers.map(p => [p.id, p.komp])), N);
@@ -2901,6 +2957,41 @@ const MOTOR = (() => {
       for (const [t, a] of krav.filter(([t]) => t === pr.ms)) {
         const n = pa(t).length;
         if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], start: klocka(t), antal: a - n });
+      }
+    }
+    return ut;
+  }
+
+  // Sluttider (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Kvällspassen läggs med slut
+  // kvall_slut; här flyttas så många som behövs till de andra sluttiderna, med samma längd. Ett pass flyttas bara om
+  // starten ryms i fönstret och vilan räcker, och aldrig ett pass med en aktivitet. Det som inte går blir slutvakanser.
+  function sluttiderFor(pr, schema) {
+    const ut = [], L = pr.sluttider || [];
+    if (!L.length) return ut;
+    const kf = tid(pr.r.kant_fran), kt = tid(pr.r.kant_till), idx = Object.fromEntries(pr.pers.map(p => [p.id, p]));
+    for (let d = 0; d < pr.N; d++) {
+      let kvar = pr.behov[d % 7][K] || 0;
+      const krav = [];
+      for (const [t, antal] of L) { const a = Math.min(antal, kvar); kvar -= a; if (a > 0) krav.push([t, a]); }
+      if (!krav.length) continue;
+      const pa = t => Object.keys(schema).filter(pid => { const v = schema[pid][d]; return v && v.dygnsdel === "kvall" && tid(v.slut) === t; });
+      // de tidigare sluttiderna först (de ger mest vila till nästa dag), med de kortaste passen först
+      for (const [t, a] of krav.filter(([t]) => t !== pr.ks)) {
+        let n = pa(t).length;
+        const kand = pa(pr.ks).filter(pid => !schema[pid][d].aktiviteter).sort((x, y) => schema[x][d].netto - schema[y][d].netto);
+        for (const pid of kand) {
+          if (n >= a) break;
+          const v = schema[pid][d], o = tid(v.slut) - tid(v.start), start = t - o;
+          if (start < kf || start > kt) continue;
+          const ny = { ...v, start: klocka(start), slut: klocka(t), mall: "K" + klocka(start) + "-" + klocka(t) };
+          schema[pid][d] = ny;
+          if (vilaOk(schema[pid], pr, idx[pid])) n++; else schema[pid][d] = v;
+        }
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], slut: klocka(t), antal: a - n });
+      }
+      for (const [t, a] of krav.filter(([t]) => t === pr.ks)) {
+        const n = pa(t).length;
+        if (n < a) ut.push({ dag: d, vecka: Math.floor(d / 7) + 1, veckodag: DAGAR[d % 7], slut: klocka(t), antal: a - n });
       }
     }
     return ut;
@@ -5055,13 +5146,19 @@ const GUIDE = (() => {
   // ---------------------------------------------------------------- starttider för dagpassen (docs/starttider.md)
   // Av dagbehovet: hur många som börjar vid varje tid. attr = attributnamnet för fälten (data-st i enheten, data-gst i
   // guiden), knapp = prefix för knapparna. Delas av webben, lättversionen och guiden.
-  function starttiderHtml(lista, { start = "07:00", behov = null, attr = "st", knapp = "st" } = {}) {
+  // del = "kvall": sluttider för kvällspassen i stället (användarens beslut 2026-11-23), attr/knapp "sl".
+  function starttiderHtml(lista, { start = "07:00", behov = null, attr = "st", knapp = "st", del = "morgon" } = {}) {
+    const kv = del === "kvall";
     const summa = lista.reduce((s, x) => s + (Number(x.antal) || 0), 0);
-    const maxBehov = behov ? Math.max(0, ...Object.values(behov).map(v => (v && v.morgon) || 0)) : null;
-    return `<div class="starttider"><p class="dampad liten" style="margin:0 0 8px">Hur många av dagpassen som börjar vid varje tid, till exempel 1 kl. 06:00, 1 kl. 07:00 och 2 kl. 08:00, så att hela dagen täcks. Övriga börjar kl. ${esc(start)}. Passen blir lika långa som annars, så den som börjar senare slutar senare.</p>
-      ${lista.map((x, i) => `<div class="starttid-rad"><input type="time" data-${attr}="${i}" data-sf="tid" value="${esc(x.tid)}" aria-label="Starttid ${i + 1}"><input type="number" min="1" max="50" inputmode="numeric" data-${attr}="${i}" data-sf="antal" value="${esc(x.antal)}" aria-label="Antal som börjar då" style="width:70px"><span class="dampad liten">börjar då</span><button class="liten fara" data-${knapp}-bort="${i}" aria-label="Ta bort starttiden">×</button></div>`).join("")}
-      <p class="chips" style="margin:6px 0 0"><button class="liten" data-${knapp}-ny="1">+ Starttid</button></p>
-      ${lista.length && maxBehov !== null ? `<p class="liten ${summa > maxBehov ? "minus" : "dampad"}" style="margin:4px 0 0">${summa} av dagbehovet (högst ${maxBehov}) har en angiven starttid.${summa > maxBehov ? " Fler än behovet: de senare tiderna räknas bara så långt behovet räcker." : ""}</p>` : ""}</div>`;
+    const maxBehov = behov ? Math.max(0, ...Object.values(behov).map(v => (v && v[del]) || 0)) : null;
+    const intro = kv
+      ? `Hur många av kvällspassen som slutar vid varje tid, till exempel 2 kl. 21:00 och 2 kl. 22:00. Övriga slutar kl. ${esc(start)}. Passen blir lika långa som annars, så den som slutar senare börjar senare.`
+      : `Hur många av dagpassen som börjar vid varje tid, till exempel 1 kl. 06:00, 1 kl. 07:00 och 2 kl. 08:00, så att hela dagen täcks. Övriga börjar kl. ${esc(start)}. Passen blir lika långa som annars, så den som börjar senare slutar senare.`;
+    const ord = kv ? ["Sluttid", "slutar", "sluttiden", "kvällsbehovet", "sluttid"] : ["Starttid", "börjar", "starttiden", "dagbehovet", "starttid"];
+    return `<div class="starttider"><p class="dampad liten" style="margin:0 0 8px">${intro}</p>
+      ${lista.map((x, i) => `<div class="starttid-rad"><input type="time" data-${attr}="${i}" data-sf="tid" value="${esc(x.tid)}" aria-label="${ord[0]} ${i + 1}"><input type="number" min="1" max="50" inputmode="numeric" data-${attr}="${i}" data-sf="antal" value="${esc(x.antal)}" aria-label="Antal som ${ord[1]} då" style="width:70px"><span class="dampad liten">${ord[1]} då</span><button class="liten fara" data-${knapp}-bort="${i}" aria-label="Ta bort ${ord[2]}">×</button></div>`).join("")}
+      <p class="chips" style="margin:6px 0 0"><button class="liten" data-${knapp}-ny="1">+ ${ord[0]}</button></p>
+      ${lista.length && maxBehov !== null ? `<p class="liten ${summa > maxBehov ? "minus" : "dampad"}" style="margin:4px 0 0">${summa} av ${ord[3]} (högst ${maxBehov}) har en angiven ${ord[4]}.${summa > maxBehov ? " Fler än behovet: de senare tiderna räknas bara så långt behovet räcker." : ""}</p>` : ""}</div>`;
   }
   // Ändra listan efter en händelse. Returnerar den nya listan (eller null om elementet inte hör hit).
   function starttiderAndra(lista, el, { attr = "st", knapp = "st", start = "07:00" } = {}) {
@@ -5083,11 +5180,14 @@ const GUIDE = (() => {
     return null;
   }
   // Skriv listan till indata: sorterad, utan dubbletter (samma tid slås ihop), eller bort om den är tom.
-  function sattStarttider(ind, lista) {
+  // del = "kvall" skriver sluttiderna för kvällspassen; den andra listan lämnas orörd.
+  function sattStarttider(ind, lista, del = "morgon") {
     const per = new Map();
     for (const x of lista || []) if (x.tid) per.set(x.tid, (per.get(x.tid) || 0) + (Number(x.antal) || 0));
     const ut = [...per].filter(([, a]) => a > 0).sort((a, b) => a[0].localeCompare(b[0])).map(([tid, antal]) => ({ tid, antal }));
-    if (ut.length) ind.starttider = { morgon: ut }; else delete ind.starttider;
+    const st = { ...(ind.starttider || {}) };
+    if (ut.length) st[del] = ut; else delete st[del];
+    if (Object.keys(st).length) ind.starttider = st; else delete ind.starttider;
   }
 
   // ---------------------------------------------------------------- förskolans pass: Tidig, Mellan och Sen
@@ -7320,7 +7420,8 @@ function ritaFlik() {
     const s = TEAM.summaBehov(i.team);
     el.innerHTML = `<div class="banner info"><strong>Behovet anges per team</strong><span class="liten">Enhetens behov är summan av teamens: vardag ${s.vardag.morgon}/${s.vardag.kvall}/${s.vardag.natt}, helg ${s.helg.morgon}/${s.helg.kvall}/${s.helg.natt} (dag/kväll/natt). Ändra under fliken Team.</span></div>
       <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>
-      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}`;
+      <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      <h3>Sluttider för kvällspassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).kvall) || [], { start: (i.regler || {}).kvall_slut || "22:00", behov: TEAM.perDag(i.behov), attr: "sl", knapp: "sl", del: "kvall" })}`;
   } else if (st.flik === "behov") {
     const b = i.behov || (i.behov = {});
     el.innerHTML = `<p class="dampad liten">Antal pass per dygnsdel. Rader längre ned gäller före rader ovanför.</p>
@@ -7329,6 +7430,7 @@ function ritaFlik() {
         <td>${["vardag", "helg"].includes(k) ? "" : `<button class="liten fara" data-g="ta-bort-behov" data-k="${k}" aria-label="Ta bort">×</button>`}</td></tr>`).join("")}</tbody></table></div>
       <div class="chips" style="margin-top:10px;align-items:center"><select id="ny-dag" style="width:auto">${Object.keys(DAGNYCKEL).filter(k => !b[k]).map(k => `<option value="${k}">${DAGNYCKEL[k]}</option>`).join("")}</select><button data-g="ny-behov">Lägg till rad</button></div>
       <h3>Starttider för dagpassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).morgon) || [], { start: (i.regler || {}).morgon_start || "07:00", behov: TEAM.perDag(i.behov) })}
+      <h3>Sluttider för kvällspassen</h3>${GUIDE.starttiderHtml(((i.starttider || {}).kvall) || [], { start: (i.regler || {}).kvall_slut || "22:00", behov: TEAM.perDag(i.behov), attr: "sl", knapp: "sl", del: "kvall" })}
       ${i.jour ? `<h3>Jour</h3>${RV.jourHtml(i)}` : ""}
       <p class="dampad liten" style="margin-top:8px">Behov vid enskilda klockslag finns bara i det fullständiga systemet.</p>
       <h3>Arbetstiden som behovet ger</h3><div id="arbetstid" class="grafyta">${GRAF.arbetstid(i)}</div>`;
@@ -7918,6 +8020,20 @@ document.addEventListener("submit", async e => {
   try { await sparaAkttyper(ORG.aktLagg(st.akttyper, $("#akt-ny-namn").value)); visaOrganisation(); } catch (err) { meddela(err.message); }
 });
 
+// sluttider för kvällspassen (guide.js, docs/starttider.md): i enhetens behov (data-sl)
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-sl-ny],[data-sl-bort]"); if (!el) return;
+  e.preventDefault();
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).kvall) || [], el, { attr: "sl", knapp: "sl", start: (ind.regler || {}).kvall_slut || "22:00" });
+  if (l) { GUIDE.sattStarttider(ind, l, "kvall"); andrad(true); }
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.dataset || el.dataset.sl === undefined) return;
+  const ind = st.indata; if (!ind) return;
+  const l = GUIDE.starttiderAndra(((ind.starttider || {}).kvall) || [], el, { attr: "sl", knapp: "sl", start: (ind.regler || {}).kvall_slut || "22:00" });
+  if (l) { GUIDE.sattStarttider(ind, l, "kvall"); andrad(true); }
+});
 // starttider för dagpassen (guide.js): i guiden (data-gst) och i enhetens behov (data-st)
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-gst-ny],[data-gst-bort],[data-st-ny],[data-st-bort]"); if (!el) return;

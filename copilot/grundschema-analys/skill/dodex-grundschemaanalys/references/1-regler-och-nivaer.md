@@ -31,7 +31,7 @@ Säg "bryter mot avtalet" bara för nivåerna lag och avtal. Lokala regler får 
 | Block | Lokal regel | 2–5 arbetsdagar i följd | Inga enstaka arbetsdagar, högst 5 i följd. |
 | Nätter i rad | Lokal regel | Högst 3 | Nattpersonal. |
 | Minsta passlängd | Lokal regel | 5 timmar | |
-| Passfönster | Princip | Dagpass börjar fast (07:00) och slutar 12–18; kvällspass slutar fast (22:00) och börjar 12–18 | Enheten kan ha andra starttider. |
+| Passfönster | Princip | Dagpass börjar fast (07:00) och slutar 12–18; kvällspass slutar fast (22:00) och börjar 12–18 | Enheten kan ha andra starttider för dagpassen och andra sluttider för kvällspassen, till exempel 21:00, 21:30 och 22:00 (beslut 41). |
 
 ## Mjuka mål, i prioritetsordning
 

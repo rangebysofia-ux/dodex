@@ -217,6 +217,9 @@ def forbered(indata):
     starttider = sorted((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("morgon") or []))
     if starttider:
         r["morgon_starter"] = sorted(set(r.get("morgon_starter") or []) | {klocka(t) for t, _ in starttider})
+    # sluttider för kvällspassen (docs/starttider.md, användarens beslut 2026-11-23): av kvällsbehovet slutar så många
+    # vid varje tid. Tiderna blir tillåtna sluttider utöver kvall_slut; motorn ser till att så många slutar då (mjukt).
+    sluttider = sorted((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("kvall") or []))
     W = indata["veckor"]
     N = W * 7
     cykliskt = indata.get("cykliskt", True)
@@ -234,11 +237,12 @@ def forbered(indata):
             if n:
                 mallar.append({"id": f"M{klocka(m_start)}-{klocka(slut)}", "dygnsdel": "morgon", "start": m_start, "slut": slut,
                                "netto": n, "rast": (slut - m_start) - n, "annan_start": m_start != ms})
-    for start in range(kf, kt + 1, steg):
-        n = netto_for(ks - start, rg, rl)
-        if n:
-            mallar.append({"id": f"K{klocka(start)}-{klocka(ks)}", "dygnsdel": "kvall", "start": start, "slut": ks,
-                           "netto": n, "rast": (ks - start) - n})
+    for k_slut in sorted({t for t, _ in sluttider} | {ks}):
+        for start in range(kf, kt + 1, steg):
+            n = netto_for(k_slut - start, rg, rl)
+            if n:
+                mallar.append({"id": f"K{klocka(start)}-{klocka(k_slut)}", "dygnsdel": "kvall", "start": start, "slut": k_slut,
+                               "netto": n, "rast": (k_slut - start) - n, "annat_slut": k_slut != ks})
     for np_ in indata.get("nattpass", [{"id": "N", "start": "21:45", "slut": "06:45", "maltidsuppehall": True}]):
         s, e = tid(np_["start"]), tid(np_["slut"])
         if e <= s:
@@ -441,7 +445,7 @@ def forbered(indata):
             p["tillatna"] = sorted(set(p["tillatna"]) | {jA, jB})
             p["band"] = set(p["band"]) | {jA, jB}
 
-    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team, "starttider": starttider, "jour": jour,
+    return {"r": r, "W": W, "N": N, "cykliskt": cykliskt, "mallar": mallar, "behov": behov, "team": team, "starttider": starttider, "sluttider": sluttider, "jour": jour,
             "kompetenskrav": kompetenskrav, "kompetensnamn": knamn,
             "tidpunkter": tidpunkter, "delperioder": delp, "personer": personer, "onskemal": onskemal,
             "aktiviteter": aktiviteter, "enhet": indata.get("enhet", ""),
@@ -775,6 +779,18 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
             v = m.new_int_var(0, a, f"vaks_{d}_{t}")
             m.add(sum(tack) + v >= a)
             vak.append((v, d, None, "start " + klocka(t)))
+        # sluttider: så många av kvällspassen slutar vid varje tid, i tidsordning och högst dagens kvällsbehov
+        kvar = prob["behov"][wd].get("kvall", 0) or 0
+        for t, antal in prob.get("sluttider") or []:
+            a = min(antal, kvar)
+            kvar -= a
+            if a <= 0:
+                continue
+            tack = [x[pi, d, s] for pi, p in enumerate(prob["personer"]) for s in p["tillatna"]
+                    if M[s]["dygnsdel"] == "kvall" and M[s]["slut"] == t and (pi, d, s) in x]
+            v = m.new_int_var(0, a, f"vaksl_{d}_{t}")
+            m.add(sum(tack) + v >= a)
+            vak.append((v, d, None, "slut " + klocka(t)))
         for tp in prob["tidpunkter"][wd]:
             t = tid(tp["tid"])
             tack = []
@@ -912,7 +928,7 @@ def bygg_modell(prob, antaganden=False, cykliskt=None, utan_tid=False):
                            for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"]) \
         + sum(p["_avv"] for p in prob["personer"] if p.get("_avv") is not None) \
         + sum(x[pi, d, s] * 30 for pi, p in enumerate(prob["personer"]) for d in range(N) for s in p["tillatna"]
-              if M[s].get("annan_start"))  # annan starttid än morgon_start bara när täckningen kräver det
+              if M[s].get("annan_start") or M[s].get("annat_slut"))  # annan start/sluttid bara när täckningen kräver det
 
     rattvisa = []
     for del_ in ("kvall", "morgon"):
@@ -987,6 +1003,11 @@ def monsterproblem(prob):
                 if del_ == "morgon":  # en passmall per starttid, så att mönstret kan fyllas med rätt starter
                     for t, _ in enkel.get("starttider") or []:
                         egna = [s for s in kand if M[s]["start"] == t]
+                        if egna:
+                            val.add(min(egna, key=lambda s: abs(M[s]["netto"] - p["mal_langd"])))
+                if del_ == "kvall":  # en passmall per sluttid
+                    for t, _ in enkel.get("sluttider") or []:
+                        egna = [s for s in kand if M[s]["slut"] == t]
                         if egna:
                             val.add(min(egna, key=lambda s: abs(M[s]["netto"] - p["mal_langd"])))
         val.update(p.get("aktivitetspass", {}))  # pass som täcker en aktivitet (bara på dess dagar)
@@ -1202,7 +1223,7 @@ def tolka(prob, solver, var, steg, kpi_mal):
                                "utanfor": a["_utanfor"]})
     vakanser = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "dygnsdel": del_, "tid": t,
                  "antal": solver.value(v)} for v, d, del_, t in var["vak"]
-                if solver.value(v) and not str(t).startswith("start ") and del_ != "jour"]
+                if solver.value(v) and not str(t).startswith(("start ", "slut ")) and del_ != "jour"]
     # jour efter kvällspasset (docs/regelverk.md): på passet, och nätter som saknar jour
     J = prob.get("jour")
     jourvak = []
@@ -1212,7 +1233,11 @@ def tolka(prob, solver, var, steg, kpi_mal):
     # starttider som inte fick så många som skulle börja då (docs/starttider.md)
     startvak = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "start": t[6:], "antal": solver.value(v)}
                 for v, d, _, t in var["vak"] if str(t).startswith("start ") and solver.value(v)]
+    slutvak = [{"dag": d, "vecka": d // 7 + 1, "veckodag": DAGNAMN[d % 7], "slut": t[5:], "antal": solver.value(v)}
+               for v, d, _, t in var["vak"] if str(t).startswith("slut ") and solver.value(v)]
     kpi = dict(kpi_mal)
+    if prob.get("sluttider"):
+        kpi["sluttid_saknas"] = sum(v["antal"] for v in slutvak)
     if J:
         kpi["jour_saknas"] = sum(v["antal"] for v in jourvak)
         kpi["jourpass"] = sum(1 for rad in schema.values() for p in rad if p and p.get("jourdel") == 1)
@@ -1250,6 +1275,7 @@ def tolka(prob, solver, var, steg, kpi_mal):
     return {"status": "OK", "enhet": prob["enhet"], "veckor": prob["W"], "cykliskt": prob["cykliskt"], "profil": prob.get("profil", "standard"),
             "steg": steg, "kpi": kpi, "personer": personer, "vakanser": vakanser, "aktiviteter": tillfallen,
             **({"startvakanser": startvak} if prob.get("starttider") else {}),
+            **({"slutvakanser": slutvak} if prob.get("sluttider") else {}),
             **({"jourvakanser": jourvak} if J else {}),
             "schema": schema, **({"team": [{"id": t["id"], "namn": t["namn"]} for t in prob["team"]], "team_tackning": team_tackning}
                                  if prob.get("team") else {}),

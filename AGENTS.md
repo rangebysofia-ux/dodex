@@ -38,7 +38,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 1. Dygnsvila 11 h och veckovila 36 h (avtal) samt rast efter 5 h arbete (lag) är hårda.
 2. Behovet är högsta *mjuka* nivå. Gör det aldrig hårt: en vakans är bättre än ett avtalsbrott.
 3. Antal pass väger tyngre än passlängd. 4,75 pass per vecka för dag och kväll.
-4. Morgonpass har fast start, kvällspass fast slut, längden anpassas i fönstret 12–18. Användaren har beslutat att en enhet får ange fler starttider för dagpass (`morgon_starter`, beslut 24 i regelhierarki.md); standard är fast start.
+4. Morgonpass har fast start, kvällspass fast slut, längden anpassas i fönstret 12–18. Användaren har beslutat att en enhet får ange fler starttider för dagpass (`morgon_starter`, beslut 24 i regelhierarki.md); standard är fast start. På samma sätt får en enhet ange fler sluttider för kvällspass (`starttider.kvall`, beslut 41); standard är fast slut.
 5. Ingen fredagskväll före ledig helg.
 5b. Varannan helg är hård och låst för enheten. Undantag får bara göras per person.
 6. Lokala regler (varannan helg, block 2–5 dagar, 4,75 pass) får aldrig kallas avtalsregler i text eller gränssnitt.

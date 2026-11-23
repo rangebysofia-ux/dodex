@@ -275,7 +275,9 @@ def kontrollera(indata, schema_dok):
             if del_ == "morgon" and (s % DYGN not in starter or not
                                      tid(r["kant_fran"]) <= e % DYGN <= tid(r["kant_till"])):
                 brott("PASSFONSTER", pid, f"{dag_text(d)}: morgonpass {p['start']}–{p['slut']} följer inte fönstret.")
-            if del_ == "kvall" and (e % DYGN != tid(r["kvall_slut"]) or not
+            slutar = ({tid(r["kvall_slut"])}
+                      | {tid(x["tid"]) for x in ((indata.get("starttider") or {}).get("kvall") or [])})  # docs/starttider.md
+            if del_ == "kvall" and (e % DYGN not in slutar or not
                                     tid(r["kant_fran"]) <= s % DYGN <= tid(r["kant_till"])):
                 brott("PASSFONSTER", pid, f"{dag_text(d)}: kvällspass {p['start']}–{p['slut']} följer inte fönstret.")
             p["_arbetstid"] = arbetstid
@@ -600,6 +602,20 @@ def kontrollera(indata, schema_dok):
                 n = sum(1 for rad in schema.values() if d < len(rad) and (x := rad[d]) and x.get("dygnsdel") == "morgon" and tid(x["start"]) == t)
                 if n < a:
                     brott("STARTTID", None, f"{dag_text(d)}: {n} av {a} dagpass börjar kl {klocka(t)}.", hard=False)
+    # sluttider för kvällspassen (docs/starttider.md): av kvällsbehovet ska så många sluta vid varje tid. Mjukt.
+    sl_lista = sorted(((tid(x["tid"]), int(x.get("antal") or 0)) for x in ((indata.get("starttider") or {}).get("kvall") or [])))
+    if sl_lista:
+        for d in range(N):
+            kvar = int(behov[d % 7].get("kvall", 0) or 0)
+            for t, antal in sl_lista:
+                a = min(antal, kvar)
+                kvar -= a
+                if a <= 0:
+                    continue
+                n = sum(1 for rad in schema.values() if d < len(rad) and (x := rad[d]) and x.get("dygnsdel") == "kvall"
+                        and tid(x["slut"]) % DYGN == t % DYGN)
+                if n < a:
+                    brott("STARTTID", None, f"{dag_text(d)}: {n} av {a} kvällspass slutar kl {klocka(t)}.", hard=False)
     # minsta bemanning på golvet under aktiviteter (behov, mjukt)
     for a in akt.values():
         minst = a.get("minst_pa_golvet") or 0
