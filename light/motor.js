@@ -318,7 +318,9 @@ const MOTOR = (() => {
             const over = tids.filter(u => plats[u].length > behov[u]);
             if (over.length) {
               const u = over.reduce((a, b) => (plats[b].length - behov[b] > plats[a].length - behov[a] ? b : a));
-              const kand = plats[u].filter(q => hem[q] === u); g = minst(kand.length ? kand : plats[u]); plats[u].splice(plats[u].indexOf(g), 1);
+              // först den som har ett extra helgpass (grundhelgen arbetar man hemma), sedan den som lånats ut minst
+              const kand = plats[u].filter(q => hem[q] === u), bas = kand.length ? kand : plats[u], extra = bas.filter(q => schema[q][d].extra_helg);
+              g = minst(extra.length ? extra : bas); plats[u].splice(plats[u].indexOf(g), 1);
             }
           }
           if (g === null) break;

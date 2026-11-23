@@ -21,7 +21,7 @@ Användarens beslut 2026-11-08 (beslut 30 i `regelhierarki.md`): en arbetsgrupp 
 
 - **Behovet (vakanser) går först** och räknas på hela enheten.
 - **Mjukt mål `hemteam`**, direkt efter vakanser, aktiviteter och vila mellan nattblock: antal pass där ett team inte täcks av sin egen personal, alltså där någon måste lånas in. Motorn lägger dagarna så att det behövs så få lån som möjligt. Ett lån är alltid bättre än en vakans.
-- **Teamfördelningen** (`fordela_team` i `build.py`, `fordelaTeam` i `light/motor.js`): var och en arbetar i sitt hemteam. När ett team har färre än sitt behov lånas först personal utan hemteam in, och sedan från team som har fler än sitt behov. Den som har lånats ut minst går först. Varje pass får `team`. Resultatet får också:
+- **Teamfördelningen** (`fordela_team` i `build.py`, `fordelaTeam` i `light/motor.js`): var och en arbetar i sitt hemteam. När ett team har färre än sitt behov lånas först personal utan hemteam in, och sedan från team som har fler än sitt behov. Bland dem som kan lånas ut går den som har ett extra helgpass den dagen först (grundhelgen arbetar man på sin egen avdelning, extra helgpass kan vara på en annan; användarens beslut 2026-11-23), sedan den som har lånats ut minst. Varje pass får `team`. Resultatet får också:
   - `team` och `team_tackning` (per dag, dygnsdel och team: behov, i tjänst, inlånade och saknas),
   - nyckeltalen `team_lan` och `team_saknas`,
   - `team` och `utlanad` per person.

@@ -112,3 +112,25 @@ def test_inklistring_av_team(tmp_path):
     assert ut["team"] == ["Team 1", "Team 2", "Team 5"]
     assert ut["pers"] == [[100, "Team 1"], [100, "Team 1"], [50, "Team 1"], [100, "Team 2"], [80, "Team 2"], [100, "Team 5"], [50, "Team 5"]]
     assert ut["varn"] == []
+
+
+def test_extra_helgpass_lanas_ut_forst():
+    # grundhelgen arbetar man hemma; den med extra helgpass lånas ut först (docs/team.md)
+    team = [{"id": "A", "behov": [{"morgon": 2}] * 7}, {"id": "B", "behov": [{"morgon": 2}] * 7}]
+    schema = {"a0": [{"dygnsdel": "morgon"}], "a1": [{"dygnsdel": "morgon"}], "a2": [{"dygnsdel": "morgon", "extra_helg": True}],
+              "b1": [{"dygnsdel": "morgon"}]}
+    hem = {"a0": "A", "a1": "A", "a2": "A", "b1": "B"}
+    fordela_team(schema, team, hem, 1)
+    assert schema["a2"][0]["team"] == "B" and schema["a0"][0]["team"] == schema["a1"][0]["team"] == "A"
+
+
+def test_extra_helgpass_lanas_ut_forst_i_lattversionen():
+    if not shutil.which("node"):
+        pytest.skip("Node saknas")
+    ut = subprocess.run(["node", "-e", r"""
+const M = require("./light/motor.js");
+const team = [{ id: "A", behov: Array(7).fill([0, 2, 0, 0]) }, { id: "B", behov: Array(7).fill([0, 2, 0, 0]) }];
+const schema = { a0: [{ dygnsdel: "morgon" }], a1: [{ dygnsdel: "morgon" }], a2: [{ dygnsdel: "morgon", extra_helg: true }], b1: [{ dygnsdel: "morgon" }] };
+M.fordelaTeam(schema, team, { a0: "A", a1: "A", a2: "A", b1: "B" }, 1);
+process.stdout.write(schema.a2[0].team + schema.a0[0].team + schema.a1[0].team);"""], capture_output=True, text=True, timeout=60, check=True, cwd=ROT).stdout
+    assert ut == "BAA"

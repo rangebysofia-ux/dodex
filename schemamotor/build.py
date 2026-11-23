@@ -1130,8 +1130,9 @@ def slutresultat(prob, var, mal, xvarden, steg):
 
 def fordela_team(schema, team, hem, N):
     """Vilket team varje pass arbetar i. Var och en arbetar i sitt hemteam; där ett team har färre än sitt behov
-    lånas personal in, först de utan hemteam, sedan från team som har fler än sitt behov – den som har lånats ut
-    minst först. Sätter "team" på passen och returnerar täckningen per dag, dygnsdel och team."""
+    lånas personal in, först de utan hemteam, sedan från team som har fler än sitt behov – först den som har ett
+    extra helgpass (grundhelgen arbetar man hemma, docs/team.md), sedan den som har lånats ut minst. Sätter "team"
+    på passen och returnerar täckningen per dag, dygnsdel och team."""
     tids = [t["id"] for t in team]
     lan = {pid: 0 for pid in schema}
     rader = []
@@ -1154,7 +1155,8 @@ def fordela_team(schema, team, hem, N):
                         if over:
                             u = max(over, key=lambda u: len(plats[u]) - behov[u])
                             kand = [q for q in plats[u] if hem.get(q) == u] or plats[u]
-                            givare = min(kand, key=lambda q: lan[q]); plats[u].remove(givare)
+                            givare = min(kand, key=lambda q: (not schema[q][d].get("extra_helg"), lan[q]))
+                            plats[u].remove(givare)
                     if givare is None:
                         break
                     plats[t].append(givare); lan[givare] += 1; inlanade[t] += 1
