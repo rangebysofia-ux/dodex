@@ -23,13 +23,15 @@ schema-export = "schemamotor.export:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]
+# MCP v2 är valfritt; servern kräver Python 3.11+ och påverkar inte schema-kärnan.
+mcp = ["mcp>=2,<3"]
 
 [build-system]
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["schemamotor", "schemawebb"]
+packages = ["schemamotor", "schemawebb", "dodexskills"]
 
 [tool.setuptools.package-data]
 schemawebb = ["statisk/*", "grund_forskola.json"]
