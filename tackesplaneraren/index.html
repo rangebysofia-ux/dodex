@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Täckesplaneraren</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: klistrat sidhuvud med flikar, en kolumn med hästkort; varje kort delas i dag | natt med en fyllningsskala 0–400 g. */
+:root {
+  --bg: #ECF0F4;
+  --surface: #FFFFFF;
+  --surface-2: #E1E7EE;
+  --ink: #142030;
+  --muted: #55647A;
+  --line: #C8D2DD;
+  --accent: #1D3D73;
+  --accent-ink: #FFFFFF;
+  --hay: #A2751C;
+  --cold: #2A69AD;
+  --warm: #C0522A;
+  --ok: #2D784C;
+  --warn: #965E0B;
+  --crit: #AE3535;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r: 10px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E141B; --surface: #161F29; --surface-2: #1E2935; --ink: #E5ECF3; --muted: #92A2B5; --line: #2B3846;
+    --accent: #8DB0EE; --accent-ink: #0E141B; --hay: #DDB15A; --cold: #7DB1E6; --warm: #EE8A5E;
+    --ok: #6BBE8C; --warn: #E3A541; --crit: #EF7777; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E141B; --surface: #161F29; --surface-2: #1E2935; --ink: #E5ECF3; --muted: #92A2B5; --line: #2B3846;
+  --accent: #8DB0EE; --accent-ink: #0E141B; --hay: #DDB15A; --cold: #7DB1E6; --warm: #EE8A5E;
+  --ok: #6BBE8C; --warn: #E3A541; --crit: #EF7777; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--accent);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.1; text-wrap: balance; margin: 0; letter-spacing: .01em; }
+.wrap {
+  max-width: 980px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Sidhuvud */
+.topp { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--accent); color: var(--accent-ink); }
+.topp .wrap { padding-block: 12px 0; }
+.titelrad { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.titelrad h1 { font-size: 1.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.titelrad .ort { font-size: .85rem; opacity: .85; }
+.flikar { display: flex; gap: 2px; overflow-x: auto; margin-top: 8px; scrollbar-width: none; }
+.flikar::-webkit-scrollbar { display: none; }
+.flikar a {
+  flex: none; color: inherit; text-decoration: none; padding: 8px 12px 10px;
+  font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; letter-spacing: .03em;
+  border-bottom: 3px solid transparent; opacity: .8; display: flex; gap: 6px; align-items: center;
+}
+.flikar a[aria-current="page"] { opacity: 1; border-bottom-color: var(--hay); }
+.flikar a:focus-visible { outline: 2px solid var(--hay); outline-offset: -2px; }
+.raknare { background: var(--hay); color: #1a1408; border-radius: 99px; font-family: var(--f-body); font-size: .72rem; font-weight: 700; padding: 0 7px; line-height: 1.5; }
+
+main .wrap { padding-block: 18px 40px; display: grid; gap: 18px; }
+.sektion { display: grid; gap: 12px; }
+.sektion > h2 { font-size: 1.45rem; font-weight: 700; }
+.liten { font-size: .85rem; color: var(--muted); margin: 0; }
+p { margin: 0; }
+
+/* Påminnelse */
+.paminn {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px;
+  background: color-mix(in srgb, var(--hay) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--hay) 45%, var(--line));
+  border-radius: var(--r); font-size: .92rem;
+}
+.paminn svg { flex: none; width: 22px; height: 22px; color: var(--hay); margin-top: 1px; }
+
+/* Knappar */
+.knapp {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px;
+  padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+  cursor: pointer; font-weight: 700; font-size: .92rem;
+}
+.knapp:hover { border-color: var(--accent); }
+.knapp:focus-visible, .chip:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, .seg button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.knapp.primar { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.knapp.fara { color: var(--crit); }
+.knapp.fara.fylld { background: var(--crit); color: var(--surface); border-color: var(--crit); }
+.knapp[aria-pressed="true"] { background: var(--ok); color: var(--surface); border-color: var(--ok); }
+.knapp svg { width: 18px; height: 18px; }
+.knapprad { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Dagväljare */
+.dagar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.chip {
+  flex: none; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface);
+  cursor: pointer; font-size: .9rem; white-space: nowrap;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700; }
+
+/* Väderremsa */
+.vader {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: var(--r); overflow: hidden;
+}
+.vader > div { background: var(--surface); padding: 12px 14px; display: flex; gap: 12px; align-items: center; min-width: 0; }
+.vader .ikon { width: 40px; height: 40px; flex: none; color: var(--accent); }
+.vader .temp { font-family: var(--f-display); font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.vader .per { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.vader .detalj { font-size: .85rem; color: var(--muted); }
+.vader .notis { grid-column: 1 / -1; font-size: .85rem; padding: 8px 14px; }
+.vader .notis.varn { color: var(--warn); font-weight: 700; }
+
+/* Hästkort */
+.kortlista { display: grid; gap: 14px; }
+.kort { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.kort-huvud { padding: 12px 14px 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; border-bottom: 1px solid var(--line); }
+.kort-huvud h3 { font-size: 1.5rem; font-weight: 700; }
+.meta { font-size: .82rem; color: var(--muted); }
+.tagg { display: inline-block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 1px 7px; border-radius: 4px; background: var(--surface-2); color: var(--muted); vertical-align: middle; }
+.halvor { display: grid; grid-template-columns: 1fr 1fr; }
+.halva { padding: 12px 14px 14px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.halva + .halva { border-left: 1px solid var(--line); }
+.halva-topp { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: .82rem; color: var(--muted); }
+.halva-topp .per { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.vmini { display: inline-flex; gap: 5px; align-items: center; font-variant-numeric: tabular-nums; }
+.vmini svg { width: 18px; height: 18px; color: var(--accent); }
+.val { font-family: var(--f-display); font-size: 1.35rem; font-weight: 700; line-height: 1.15; }
+.val .g { color: var(--muted); font-weight: 600; }
+.rek { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.skal { display: flex; flex-wrap: wrap; gap: 5px; list-style: none; margin: 0; padding: 0; }
+.skal li { font-size: .78rem; padding: 2px 8px; border-radius: 5px; background: var(--surface-2); }
+.skal li.upp { background: color-mix(in srgb, var(--cold) 16%, var(--surface)); }
+.skal li.ned { background: color-mix(in srgb, var(--warm) 16%, var(--surface)); }
+.saknas { font-size: .85rem; color: var(--warn); font-weight: 700; }
+.atg { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 6px 10px; cursor: pointer; font-size: .85rem; min-height: 38px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"][data-k="varm"] { background: var(--warm); color: var(--surface); font-weight: 700; }
+.seg button[aria-pressed="true"][data-k="lagom"] { background: var(--ok); color: var(--surface); font-weight: 700; }
+.seg button[aria-pressed="true"][data-k="kall"] { background: var(--cold); color: var(--surface); font-weight: 700; }
+
+/* Fyllningsskala */
+.skala { display: grid; gap: 3px; }
+.skala-spar { position: relative; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--surface-2), color-mix(in srgb, var(--cold) 30%, var(--surface-2))); }
+.skala-band { position: absolute; top: -2px; bottom: -2px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 55%, transparent); border: 1px solid var(--accent); }
+.skala-mark { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--hay); box-shadow: 0 0 0 2px var(--surface); }
+.skala-tick { position: relative; height: 14px; font-size: .68rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.skala-tick span { position: absolute; transform: translateX(-50%); }
+.skala-tick span:first-child { transform: none; }
+.skala-tick span:last-child { transform: translateX(-100%); }
+
+/* Veckoplan */
+.tabell-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+table.plan { border-collapse: collapse; min-width: 100%; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.plan th, .plan td { border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+.plan thead th { font-family: var(--f-display); font-size: .95rem; font-weight: 700; background: var(--surface-2); white-space: nowrap; }
+.plan th.hast { position: sticky; left: 0; background: var(--surface); z-index: 1; font-family: var(--f-display); font-size: 1.05rem; min-width: 96px; border-left: 0; }
+.plan thead th.hast { background: var(--surface-2); }
+.plan .vrad td { color: var(--muted); white-space: nowrap; }
+.plan .vrad svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--accent); }
+.plan td.cell { min-width: 92px; background: color-mix(in srgb, var(--cold) var(--mix, 0%), var(--surface)); }
+.plan td.cell.saknas-cell { box-shadow: inset 0 0 0 2px var(--warn); }
+.cell-namn { display: block; font-weight: 700; line-height: 1.25; }
+.cell-g { display: block; color: var(--muted); }
+.teckenforklaring { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); align-items: center; }
+.teckenforklaring .ruta { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; border: 1px solid var(--line); }
+
+/* Varningar */
+.varnlista { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.varn {
+  background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--muted);
+  border-radius: var(--r); padding: 10px 14px; display: grid; gap: 4px;
+}
+.varn.hog { border-left-color: var(--crit); }
+.varn.medel { border-left-color: var(--warn); }
+.varn.info { border-left-color: var(--cold); }
+.varn h3 { font-size: 1.15rem; font-weight: 700; }
+.varn .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.niva { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.varn.hog .niva { color: var(--crit); }
+.varn.medel .niva { color: var(--warn); }
+.varn.info .niva { color: var(--cold); }
+
+/* Logg */
+.logglista { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.post { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; display: grid; gap: 8px; }
+.post-topp { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.post-topp strong { font-family: var(--f-display); font-size: 1.15rem; }
+.forslag { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; }
+
+/* Formulär */
+.falt { display: grid; gap: 4px; min-width: 0; }
+.falt > span, .falt > label { font-size: .8rem; font-weight: 700; color: var(--muted); }
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%; min-height: 40px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+}
+textarea { min-height: 110px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .8rem; }
+.rutnat { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.kryss { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.kryss label { display: inline-flex; gap: 6px; align-items: center; font-size: .92rem; cursor: pointer; }
+.kryss input { width: 18px; height: 18px; accent-color: var(--accent); }
+details.hastform { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+details.hastform > summary {
+  cursor: pointer; padding: 12px 14px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; list-style: none;
+}
+details.hastform > summary::-webkit-details-marker { display: none; }
+details.hastform > summary h3 { font-size: 1.35rem; font-weight: 700; }
+details.hastform > summary::after { content: "Visa"; font-size: .8rem; color: var(--accent); font-weight: 700; }
+details.hastform[open] > summary::after { content: "Dölj"; }
+.formkropp { padding: 4px 14px 16px; display: grid; gap: 18px; border-top: 1px solid var(--line); }
+.formkropp h4 { margin: 10px 0 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.tackrad { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px auto auto auto; gap: 8px; align-items: center; padding-block: 8px; border-bottom: 1px dashed var(--line); }
+.tackrad .kryss label { font-size: .85rem; }
+.ikonknapp { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--crit); }
+.ikonknapp svg { width: 18px; height: 18px; }
+.manuell { display: grid; gap: 10px; }
+.mdag { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; display: grid; gap: 8px; }
+.mdag h3 { font-size: 1.1rem; }
+.mrad { display: grid; grid-template-columns: 52px repeat(4, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.mrad .etikett { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-bottom: 10px; }
+.status { font-size: .88rem; }
+.status.fel { color: var(--crit); }
+.status.ok { color: var(--ok); }
+.tom { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r); padding: 24px 16px; text-align: center; display: grid; gap: 10px; justify-items: center; }
+.tom h2 { font-size: 1.4rem; }
+.bekrafta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-radius: 8px; background: color-mix(in srgb, var(--crit) 10%, var(--surface)); }
+.fot { font-size: .82rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: .9rem; z-index: 20; max-width: calc(100% - 32px); }
+
+@media (max-width: 620px) {
+  .halvor { grid-template-columns: 1fr; }
+  .halva + .halva { border-left: 0; border-top: 1px solid var(--line); }
+  .tackrad { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tackrad .namnf { grid-column: 1 / -1; }
+  .mrad { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mrad .etikett { grid-column: 1 / -1; padding-bottom: 0; }
+  .vader .temp { font-size: 1.6rem; }
+  .vader .ikon { width: 32px; height: 32px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kort, .varn, .post { animation: in .25s ease both; }
+  @keyframes in { from { transform: translateY(4px); } to { transform: none; } }
+}
+</style>
+</head>
+<body>
+<header class="topp">
+  <div class="wrap">
+    <div class="titelrad">
+      <h1>Täckesplaneraren</h1>
+      <span class="ort" id="ort-text"></span>
+    </div>
+    <nav class="flikar" id="flikar" aria-label="Vyer"></nav>
+  </div>
+</header>
+<main id="main"><div class="wrap" id="vy"></div></main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- Grunder ---------- */
+const NYCKEL = 'tackesplaneraren.v1';
+const UINYCKEL = 'tackesplaneraren.ui';
+let lagringOk = true;
+function lasJSON(k) { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : null; } catch (e) { lagringOk = false; return null; } }
+function skrivJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { lagringOk = false; } }
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const tal = v => { const n = Number(String(v ?? '').replace(',', '.').replace('−', '-')); return isFinite(n) ? n : 0; };
+const dagKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const franKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const plusDagar = (k, n) => { const d = franKey(k); d.setDate(d.getDate() + n); return dagKey(d); };
+const idag = () => dagKey(new Date());
+function fmtDag(k) {
+  if (k === idag()) return 'Idag';
+  if (k === plusDagar(idag(), 1)) return 'Imorgon';
+  const s = new Intl.DateTimeFormat('sv-SE', { weekday: 'long', day: 'numeric', month: 'short' }).format(franKey(k));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const fmtKort = k => {
+  const s = new Intl.DateTimeFormat('sv-SE', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(franKey(k));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+const minus = n => (n < 0 ? '−' : '') + Math.abs(n);
+const fmtT = t => minus(Math.round(t)) + ' °C';
+const fmtSteg = n => n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '±0';
+const fmtTid = ms => new Intl.DateTimeFormat('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
+
+const TYPER = { utetacke: 'Utetäcke', regn: 'Regntäcke', stall: 'Stalltäcke', fleece: 'Fleece', svett: 'Svettäcke', underlagg: 'Underlägg' };
+const KLIPP = { oklippt: 'Oklippt', delklippt: 'Delklippt (trace/irländsk)', jaktklippt: 'Jaktklippt', helklippt: 'Helklippt' };
+const KLIPP_KORT = { oklippt: 'oklippt', delklippt: 'delklippt', jaktklippt: 'jaktklippt', helklippt: 'helklippt' };
+const RAS = { kallblod: 'Kallblod', varmblod: 'Varmblod', ponny: 'Ponny', fullblod: 'Fullblod', annan: 'Annan/blandras' };
+const PALS = { tjock: 'Tjock', normal: 'Normal', tunn: 'Tunn' };
+const ARBETE = { vila: 'Vila', latt: 'Lätt', medel: 'Medel', hart: 'Hårt' };
+const PLATS = { hage: 'Hage', losdrift: 'Lösdrift', box: 'Box' };
+const NED = { ingen: 'Uppehåll', regn: 'Regn', blotsno: 'Blötsnö', sno: 'Snö' };
+const PERIOD = { dag: 'Dag 08–20', natt: 'Natt 20–08' };
+
+/* ---------- Ikoner ---------- */
+const MOLN = 'M7 15h10a3.5 3.5 0 0 0 .4-6.98A5 5 0 0 0 7.6 8.6 3.2 3.2 0 0 0 7 15z';
+const IKON = {
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  mane: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  moln: '<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11.1 3.5 3.5 0 0 0 7 18z"/>',
+  regn: `<path d="${MOLN}"/><path d="M8.5 18l-1 3M12.5 18l-1 3M16.5 18l-1 3"/>`,
+  sno: `<path d="${MOLN}"/><circle cx="8" cy="19" r=".9" fill="currentColor"/><circle cx="12" cy="21" r=".9" fill="currentColor"/><circle cx="16" cy="19" r=".9" fill="currentColor"/>`,
+  blotsno: `<path d="${MOLN}"/><path d="M8.5 18l-1 3M15.5 18l-1 3"/><circle cx="12" cy="20" r=".9" fill="currentColor"/>`,
+  vind: '<path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>',
+  hand: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5V4a1.5 1.5 0 0 1 3 0v7.5M14 11.5V5.5a1.5 1.5 0 0 1 3 0V14c0 4-2.5 7-6 7-2.7 0-4.2-1.3-5.6-3.5L3.6 14.6a1.5 1.5 0 0 1 2.5-1.7L8 15"/>',
+  bock: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  kryss: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plats: '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  hamta: '<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4.5h-4.5"/>'
+};
+const ikon = (n, klass = '') => `<svg class="${klass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IKON[n] || IKON.moln}</svg>`;
+function vaderIkon(p) {
+  if (p.ned === 'regn') return 'regn';
+  if (p.ned === 'blotsno') return 'blotsno';
+  if (p.ned === 'sno') return 'sno';
+  if (p.moln != null && p.moln >= 5) return 'moln';
+  return p.period === 'natt' ? 'mane' : 'sol';
+}
+
+/* ---------- Exempeldata ---------- */
+function exempelHastar() {
+  return [
+    {
+      id: uid(), exempel: true, namn: 'Stella', alder: 14, ras: 'varmblod', hull: 3, pals: 'normal', klipp: 'helklippt',
+      behov: { senior: false, mager: false, sjuk: false, svettas: false, fryser: false }, arbete: 'medel', justering: 0, justeringAndrad: 0,
+      miljo: { dag: 'hage', natt: 'box', vindskydd: false, grovfoder: 'fri', stall: 'oisolerat' },
+      tacken: [
+        { id: uid(), namn: 'Regntäcke grått', typ: 'regn', gram: 0, hals: false, vattentat: true },
+        { id: uid(), namn: 'Utetäcke 150 g', typ: 'utetacke', gram: 150, hals: false, vattentat: true },
+        { id: uid(), namn: 'Utetäcke 300 g med hals', typ: 'utetacke', gram: 300, hals: true, vattentat: true },
+        { id: uid(), namn: 'Stalltäcke 200 g', typ: 'stall', gram: 200, hals: false, vattentat: false },
+        { id: uid(), namn: 'Underlägg 100 g', typ: 'underlagg', gram: 100, hals: false, vattentat: false },
+        { id: uid(), namn: 'Fleece', typ: 'fleece', gram: 0, hals: false, vattentat: false }
+      ]
+    },
+    {
+      id: uid(), exempel: true, namn: 'Pålle', alder: 24, ras: 'kallblod', hull: 2, pals: 'tjock', klipp: 'oklippt',
+      behov: { senior: true, mager: false, sjuk: false, svettas: false, fryser: false }, arbete: 'vila', justering: 0, justeringAndrad: 0,
+      miljo: { dag: 'losdrift', natt: 'losdrift', vindskydd: true, grovfoder: 'fri', stall: 'oisolerat' },
+      tacken: [
+        { id: uid(), namn: 'Regntäcke 50 g', typ: 'regn', gram: 50, hals: false, vattentat: true },
+        { id: uid(), namn: 'Utetäcke 100 g', typ: 'utetacke', gram: 100, hals: false, vattentat: true }
+      ]
+    },
+    {
+      id: uid(), exempel: true, namn: 'Mini', alder: 9, ras: 'ponny', hull: 4, pals: 'tjock', klipp: 'oklippt',
+      behov: { senior: false, mager: false, sjuk: false, svettas: true, fryser: false }, arbete: 'latt', justering: 0, justeringAndrad: 0,
+      miljo: { dag: 'hage', natt: 'hage', vindskydd: false, grovfoder: 'begransad', stall: 'oisolerat' },
+      tacken: [{ id: uid(), namn: 'Regntäcke 0 g', typ: 'regn', gram: 0, hals: true, vattentat: true }]
+    }
+  ];
+}
+function exempelVader() {
+  const d0 = idag();
+  const m = [
+    [4, -3, 9, 6, 'regn', 'ingen', 4, 0],
+    [1, -6, 5, 3, 'ingen', 'sno', 0, 2],
+    [-2, -11, 3, 2, 'ingen', 'ingen', 0, 0],
+    [6, 2, 10, 8, 'regn', 'regn', 7, 5],
+    [8, 4, 6, 4, 'ingen', 'regn', 0, 2]
+  ];
+  return m.map((r, i) => ({ datum: plusDagar(d0, i), dagTemp: r[0], nattTemp: r[1], dagVind: r[2], nattVind: r[3], dagNed: r[4], nattNed: r[5], dagMm: r[6], nattMm: r[7] }));
+}
+function startdata() {
+  return {
+    version: 1,
+    installningar: { ort: 'Uppsala', lat: 59.8586, lon: 17.6389, dygn: 4, autoHamta: true },
+    vaderKalla: 'exempel', smhi: null, manuell: [], hastar: exempelHastar(), logg: []
+  };
+}
+function nyHast() {
+  return {
+    id: uid(), namn: 'Ny häst', alder: 10, ras: 'varmblod', hull: 3, pals: 'normal', klipp: 'oklippt',
+    behov: { senior: false, mager: false, sjuk: false, svettas: false, fryser: false }, arbete: 'latt', justering: 0, justeringAndrad: 0,
+    miljo: { dag: 'hage', natt: 'box', vindskydd: false, grovfoder: 'fri', stall: 'oisolerat' }, tacken: []
+  };
+}
+
+/* ---------- Tillstånd ---------- */
+let S = lasJSON(NYCKEL);
+if (!S || !Array.isArray(S.hastar)) S = startdata();
+S.installningar = Object.assign({ ort: '', lat: '', lon: '', dygn: 4, autoHamta: true }, S.installningar || {});
+S.logg = Array.isArray(S.logg) ? S.logg : [];
+S.manuell = Array.isArray(S.manuell) ? S.manuell : [];
+S.hastar.forEach(h => {
+  h.behov = Object.assign({ senior: false, mager: false, sjuk: false, svettas: false, fryser: false }, h.behov || {});
+  h.miljo = Object.assign({ dag: 'hage', natt: 'box', vindskydd: false, grovfoder: 'fri', stall: 'oisolerat' }, h.miljo || {});
+  h.tacken = Array.isArray(h.tacken) ? h.tacken : [];
+});
+const ui = Object.assign({ dag: 0, oppen: null, bekrafta: null, vaderStatus: '', vaderStatusTyp: '' }, lasJSON(UINYCKEL) || {});
+ui.bekrafta = null;
+function spara() { skrivJSON(NYCKEL, S); }
+function sparaUi() { skrivJSON(UINYCKEL, { dag: ui.dag, oppen: ui.oppen }); }
+
+function sakerstallManuell() {
+  const n = S.installningar.dygn;
+  const finns = new Map(S.manuell.map(r => [r.datum, r]));
+  const rader = [];
+  let forra = S.manuell[S.manuell.length - 1] || { dagTemp: 3, nattTemp: -2, dagVind: 4, nattVind: 3, dagNed: 'ingen', nattNed: 'ingen', dagMm: 0, nattMm: 0 };
+  for (let i = 0; i < n; i++) {
+    const d = plusDagar(idag(), i);
+    const r = finns.get(d) || Object.assign({}, forra, { datum: d });
+    rader.push(r); forra = r;
+  }
+  S.manuell = rader;
+}
+
+/* ---------- Väder ---------- */
+function manuellPeriod(r, per) {
+  const temp = tal(r[per + 'Temp']);
+  return { datum: r.datum, period: per, temp, tMin: temp, tMax: temp, vind: tal(r[per + 'Vind']), byar: null, ned: r[per + 'Ned'] || 'ingen', mm: tal(r[per + 'Mm']), moln: null };
+}
+function perioder() {
+  const n = S.installningar.dygn;
+  const d0 = idag();
+  if (S.vaderKalla === 'smhi' && S.smhi && Array.isArray(S.smhi.perioder)) {
+    const ps = S.smhi.perioder.filter(p => p.datum >= d0);
+    const datum = [...new Set(ps.map(p => p.datum))].slice(0, n);
+    if (datum.length) return ps.filter(p => datum.includes(p.datum));
+  }
+  const rader = S.vaderKalla === 'exempel' ? exempelVader() : S.manuell;
+  return rader.filter(r => r.datum >= d0).slice(0, n).flatMap(r => [manuellPeriod(r, 'dag'), manuellPeriod(r, 'natt')]);
+}
+const mening = t => t.replace(/\.$/, '') + '.';
+function vaderKallaText() {
+  if (S.vaderKalla === 'smhi' && S.smhi) {
+    const fard = S.smhi.perioder.some(p => p.datum >= idag());
+    if (fard) return `SMHI-prognos för ${S.installningar.ort || 'vald plats'}, hämtad ${fmtTid(S.smhi.hamtad)}`;
+    return 'SMHI-prognosen är för gammal. Hämta en ny under Väder.';
+  }
+  if (S.vaderKalla === 'manuell') return 'Väder inmatat för hand';
+  return 'Exempelväder. Hämta prognos från SMHI eller fyll i vädret under Väder.';
+}
+
+function nedTypFranRad(r) {
+  if (r.pcat != null && r.pcat > 0) return ({ 1: 'sno', 2: 'blotsno', 3: 'regn', 4: 'regn', 5: 'blotsno', 6: 'blotsno' })[r.pcat] || 'regn';
+  const s = r.sym;
+  if (s != null) {
+    if ([12, 13, 14, 22, 23, 24].includes(s)) return 'blotsno';
+    if ([15, 16, 17, 25, 26, 27].includes(s)) return 'sno';
+    if ([8, 9, 10, 11, 18, 19, 20, 21].includes(s)) return 'regn';
+  }
+  if (r.t <= -1) return 'sno';
+  if (r.t <= 1.5) return 'blotsno';
+  return 'regn';
+}
+function tolkaSMHI(j) {
+  const ts = (j && j.timeSeries) || [];
+  const rader = ts.map(t => {
+    const tid = new Date(t.validTime || t.time);
+    if (Array.isArray(t.parameters)) {
+      const p = {};
+      t.parameters.forEach(x => { p[x.name] = Array.isArray(x.values) ? x.values[0] : x.values; });
+      return { tid, t: p.t, ws: p.ws, gust: p.gust, mm: p.pmean, pcat: p.pcat, sym: p.Wsymb2 };
+    }
+    const d = t.data || {};
+    return {
+      tid, t: d.air_temperature, ws: d.wind_speed, gust: d.wind_speed_of_gust,
+      mm: d.precipitation_amount_mean ?? d.precipitation_amount_median, pcat: null, sym: d.symbol_code
+    };
+  }).filter(r => typeof r.t === 'number' && !isNaN(r.tid));
+  rader.forEach((r, i) => {
+    const nx = rader[i + 1];
+    r.h = nx ? Math.min(6, Math.max(1, (nx.tid - r.tid) / 36e5)) : 1;
+  });
+  const grupper = new Map();
+  for (const r of rader) {
+    const h = r.tid.getHours();
+    let datum = dagKey(r.tid), per = 'dag';
+    if (h >= 20) per = 'natt';
+    else if (h < 8) { per = 'natt'; datum = plusDagar(datum, -1); }
+    const k = datum + '|' + per;
+    if (!grupper.has(k)) grupper.set(k, { datum, period: per, r: [] });
+    grupper.get(k).r.push(r);
+  }
+  return [...grupper.values()].map(g => {
+    const T = g.r.map(r => r.t);
+    const temp = g.period === 'dag' ? T.reduce((a, b) => a + b, 0) / T.length : Math.min(...T);
+    const mm = g.r.reduce((s, r) => s + (typeof r.mm === 'number' && r.mm > 0 ? r.mm * r.h : 0), 0);
+    const typer = g.r.filter(r => typeof r.mm === 'number' && r.mm > 0.05).map(nedTypFranRad);
+    let ned = 'ingen';
+    if (mm >= 0.3 && typer.length) {
+      if (typer.includes('blotsno')) ned = 'blotsno';
+      else ned = typer.filter(x => x === 'regn').length >= typer.filter(x => x === 'sno').length ? 'regn' : 'sno';
+    }
+    const sym = g.r.map(r => r.sym).filter(s => typeof s === 'number');
+    return {
+      datum: g.datum, period: g.period, temp: Math.round(temp * 10) / 10, tMin: Math.min(...T), tMax: Math.max(...T),
+      vind: Math.round(Math.max(...g.r.map(r => r.ws || 0)) * 10) / 10,
+      byar: Math.max(...g.r.map(r => r.gust || 0)) || null,
+      ned, mm: Math.round(mm * 10) / 10,
+      moln: sym.length ? sym.reduce((a, b) => a + Math.min(b, 7), 0) / sym.length : null
+    };
+  }).sort((a, b) => a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.period === 'dag' ? -1 : 1));
+}
+async function hamtaSMHI() {
+  const lat = Number(String(S.installningar.lat).replace(',', '.'));
+  const lon = Number(String(S.installningar.lon).replace(',', '.'));
+  if (!isFinite(lat) || !isFinite(lon) || S.installningar.lat === '' || S.installningar.lon === '') throw new Error('Ange latitud och longitud först.');
+  const la = lat.toFixed(4), lo = lon.toFixed(4);
+  const bas = 'https://opendata-download-metfcst.smhi.se/api/category/';
+  const kallor = [
+    bas + `snow1g/version/1/geotype/point/lon/${lo}/lat/${la}/data.json`,
+    bas + `pmp3g/version/2/geotype/point/lon/${lo}/lat/${la}/data.json`
+  ];
+  let fel = null;
+  for (const u of kallor) {
+    try {
+      const ctl = new AbortController();
+      const tm = setTimeout(() => ctl.abort(), 12000);
+      const res = await fetch(u, { signal: ctl.signal });
+      clearTimeout(tm);
+      if (!res.ok) { fel = new Error(res.status === 404 ? 'SMHI har ingen prognos för den platsen.' : 'SMHI svarade med fel ' + res.status + '.'); continue; }
+      const ps = tolkaSMHI(await res.json());
+      if (ps.length) { S.smhi = { hamtad: Date.now(), perioder: ps }; return; }
+      fel = new Error('Prognosen från SMHI gick inte att läsa.');
+    } catch (e) { fel = e; }
+  }
+  if (fel && (fel.name === 'TypeError' || fel.name === 'AbortError')) throw new Error('SMHI gick inte att nå härifrån.');
+  throw fel || new Error('SMHI gick inte att nå.');
+}
+async function hamtaOchVisa(tyst) {
+  ui.vaderStatus = 'Hämtar prognos från SMHI …'; ui.vaderStatusTyp = '';
+  if (!tyst) render();
+  try {
+    await hamtaSMHI();
+    S.vaderKalla = 'smhi'; spara();
+    ui.vaderStatus = 'Prognosen är hämtad.'; ui.vaderStatusTyp = 'ok';
+  } catch (e) {
+    ui.vaderStatus = `${e.message} Fyll i vädret för hand nedan, eller försök igen senare.`;
+    ui.vaderStatusTyp = 'fel';
+  }
+  render();
+}
+
+/* ---------- Täckeslogik ---------- */
+const STEG = [
+  { min: 0, max: 0, text: 'Inget täcke' },
+  { min: 0, max: 50, text: 'Tunt täcke 0–50 g' },
+  { min: 100, max: 150, text: '100–150 g' },
+  { min: 200, max: 250, text: '200–250 g' },
+  { min: 250, max: 300, text: '250–300 g' },
+  { min: 300, max: 400, text: '300–400 g' },
+  { min: 300, max: 400, text: '300–400 g + underlägg/halsdel', hals: true, extra: true }
+];
+const OKL = {
+  ingen: { min: 0, max: 0, text: 'Inget täcke' },
+  regn: { min: 0, max: 50, text: 'Regntäcke 0–50 g' },
+  latt: { min: 50, max: 150, text: 'Lätt täcke 50–150 g' },
+  mellan: { min: 150, max: 250, text: 'Täcke 150–250 g' }
+};
+function grundsteg(t) {
+  if (t > 15) return 0;
+  if (t > 10) return 1;
+  if (t > 5) return 2;
+  if (t > 0) return 3;
+  if (t > -5) return 4;
+  if (t > -10) return 5;
+  return 6;
+}
+function arSenior(h) { return !!h.behov.senior || tal(h.alder) >= 20; }
+function arMager(h) { return !!h.behov.mager || tal(h.hull) <= 2; }
+
+/* Rekommendation för en häst under en period. temp kan ersättas (för svettkontroll vid dagens max). */
+function rek(h, p, tempErs) {
+  const temp = tempErs ?? p.temp;
+  const plats = h.miljo[p.period];
+  const ute = plats !== 'box';
+  const oklippt = h.klipp === 'oklippt';
+  const blott = p.ned === 'regn' || p.ned === 'blotsno';
+  const blasigt = p.vind > 8;
+  const utsatt = ute && !h.miljo.vindskydd;
+  const senior = arSenior(h), mager = arMager(h);
+  const just = [];
+
+  if (h.klipp === 'delklippt') just.push({ steg: -1, text: 'delklippt' });
+  if (!ute) just.push(h.miljo.stall === 'isolerat' ? { steg: -2, text: 'box i isolerat stall' } : { steg: -1, text: 'står i box' });
+  if (!oklippt && utsatt && (blasigt || blott)) {
+    const t = blasigt && blott ? (p.ned === 'blotsno' ? 'blötsnö och blåst' : 'regn och blåst') : blasigt ? `blåst ${minus(Math.round(p.vind))} m/s` : (p.ned === 'blotsno' ? 'blötsnö' : 'regn') + ' utan vindskydd';
+    just.push({ steg: 1, text: t });
+  }
+  const kanslig = [];
+  if (!oklippt && senior) kanslig.push('senior');
+  if (!oklippt && mager) kanslig.push('mager');
+  if (h.behov.sjuk) kanslig.push('sjuk/skadad');
+  if (h.behov.fryser) kanslig.push('fryser lätt');
+  if (kanslig.length) just.push({ steg: 1, text: kanslig.join(', ') });
+  const varm = [];
+  if (h.behov.svettas) varm.push('svettas lätt');
+  if (h.pals === 'tjock') varm.push('tjock päls');
+  if (tal(h.hull) >= 4) varm.push('gott hull');
+  if (varm.length) just.push({ steg: -1, text: varm.join(', ') });
+  if (h.miljo.grovfoder === 'begransad') just.push({ steg: 1, text: 'begränsat grovfoder' });
+  const egen = tal(h.justering);
+  if (egen) just.push({ steg: egen, text: 'egen justering' });
+
+  const netto = just.reduce((s, j) => s + j.steg, 0);
+  const eff = temp - 5 * netto;
+  let r, stegNr = null;
+
+  if (!oklippt) {
+    stegNr = grundsteg(eff);
+    r = STEG[stegNr];
+    if (stegNr === 6 && eff < -20) just.push({ steg: 0, text: 'mycket kallt: överväg extra underlägg' });
+  } else {
+    const kansligOkl = senior || mager || h.pals === 'tunn' || h.ras === 'fullblod';
+    if (kansligOkl) {
+      const vem = [senior && 'senior', mager && 'mager', h.pals === 'tunn' && 'tunn päls', h.ras === 'fullblod' && 'fullblod'].filter(Boolean).join(', ');
+      just.push({ steg: 0, text: `${vem}: lätt täcke från ca 0 °C` });
+      r = eff > 0 ? OKL.ingen : eff > -10 ? OKL.latt : OKL.mellan;
+    } else {
+      r = eff > -10 ? OKL.ingen : eff > -20 ? OKL.latt : OKL.mellan;
+    }
+    if (r === OKL.ingen && utsatt && blott && p.vind >= 5 && temp < 12) {
+      r = OKL.regn;
+      just.push({ steg: 0, text: (p.ned === 'blotsno' ? 'blötsnö' : 'regn') + ' och vind utan vindskydd' });
+    }
+  }
+  return {
+    min: r.min, max: r.max, text: r.text, hals: !!r.hals, stegNr, eff, netto, just, ute, oklippt,
+    kravVatten: ute && p.ned !== 'ingen'
+  };
+}
+
+const INRE = ['fleece', 'stall', 'underlagg', 'svett'];
+function passarSomYttre(t, r) {
+  if (r.ute) {
+    if (r.kravVatten) return !!t.vattentat;
+    return !!t.vattentat || t.typ === 'utetacke' || t.typ === 'regn';
+  }
+  return !['underlagg', 'svett'].includes(t.typ);
+}
+function avstand(g, r) {
+  if (g >= r.min && g <= r.max) return Math.abs(g - (r.min + r.max) / 2) / 1000;
+  return 1 + Math.min(Math.abs(g - r.min), Math.abs(g - r.max));
+}
+function saknasText(r) {
+  const vad = r.kravVatten ? 'ett vattentätt täcke' : r.ute ? 'ett utetäcke' : 'ett täcke';
+  const g = r.min === 0 ? `${r.min}–${r.max} g` : `ca ${Math.round((r.min + r.max) / 2 / 25) * 25} g`;
+  return `${vad} på ${g}${r.hals ? ' med halsdel' : ''}`;
+}
+function valj(h, r) {
+  if (r.max === 0) return { status: 'inget', delar: [], gram: 0 };
+  const T = h.tacken;
+  const singlar = T.filter(t => passarSomYttre(t, r)).map(t => {
+    const g = tal(t.gram); return { delar: [t], gram: g, d: avstand(g, r) };
+  });
+  const komb = [];
+  for (const y of T) {
+    if (!passarSomYttre(y, r) || INRE.includes(y.typ) && r.ute) continue;
+    for (const i of T) {
+      if (i === y || !INRE.includes(i.typ)) continue;
+      const g = tal(y.gram) + tal(i.gram);
+      komb.push({ delar: [i, y], gram: g, d: avstand(g, r) + 0.0005 });
+    }
+  }
+  singlar.sort((a, b) => a.d - b.d);
+  komb.sort((a, b) => a.d - b.d);
+  let val = null, status = 'ok';
+  if (singlar[0] && singlar[0].d < 1) val = singlar[0];
+  else if (komb[0] && komb[0].d < 1) { val = komb[0]; status = 'kombination'; }
+  if (!val) {
+    const narmast = [...singlar, ...komb].sort((a, b) => a.d - b.d)[0] || null;
+    return { status: 'saknas', delar: narmast ? narmast.delar : [], gram: narmast ? narmast.gram : null, saknas: saknasText(r), narmast: !!narmast };
+  }
+  return Object.assign({ status, halsSaknas: r.hals && !val.delar.some(t => t.hals) }, val);
+}
+function valText(v) {
+  if (v.status === 'inget') return 'Inget täcke';
+  if (!v.delar.length) return 'Inget passande i förrådet';
+  const namn = v.delar.map(t => t.namn || TYPER[t.typ]).join(' + ');
+  return (v.status === 'saknas' ? 'Närmast: ' : '') + namn;
+}
+
+/* ---------- Varningar ---------- */
+function loggForslag(h) {
+  const e = S.logg.filter(l => l.hast === h.id && l.kansla && l.tid > (h.justeringAndrad || 0))
+    .sort((a, b) => a.tid - b.tid).slice(-6);
+  const varm = e.filter(l => l.kansla === 'varm').length;
+  const kall = e.filter(l => l.kansla === 'kall').length;
+  const j = tal(h.justering);
+  if (varm >= 3 && varm > kall + 1 && j > -2) return { hast: h, steg: -1, text: `${h.namn} har känts för varm ${varm} gånger sedan egen justering senast ändrades. Prova att ändra egen justering från ${fmtSteg(j)} till ${fmtSteg(j - 1)} (svalare).` };
+  if (kall >= 3 && kall > varm + 1 && j < 2) return { hast: h, steg: 1, text: `${h.namn} har känts för kall ${kall} gånger sedan egen justering senast ändrades. Prova att ändra egen justering från ${fmtSteg(j)} till ${fmtSteg(j + 1)} (varmare).` };
+  return null;
+}
+function allaVarningar() {
+  const ps = perioder();
+  const ut = [];
+  const datum = [...new Set(ps.map(p => p.datum))];
+  for (const d of datum) {
+    const dp = ps.filter(p => p.datum === d);
+    const hi = Math.max(...dp.map(p => p.tMax)), lo = Math.min(...dp.map(p => p.tMin));
+    if (hi - lo > 8) ut.push({ niva: 'medel', datum: d, titel: `Stort temperaturhopp: ${Math.round(hi - lo)} °C`, text: `Mellan ${fmtT(lo)} och ${fmtT(hi)} under dygnet. Byt täcke mellan dag och natt och känn efter bakom bogen både morgon och kväll.` });
+  }
+  for (const h of S.hastar) {
+    const forslag = loggForslag(h);
+    if (forslag) ut.push({ niva: 'medel', hast: h.namn, titel: 'Ändra egen justering?', text: forslag.text, forslag });
+    if (h.arbete === 'hart') ut.push({ niva: 'info', hast: h.namn, titel: 'Hårt arbete', text: 'Låt hästen torka i svettäcke eller fleece innan utetäcket tas på igen efter arbete.' });
+    const val = {};
+    for (const p of ps) {
+      const r = rek(h, p), v = valj(h, r);
+      val[p.datum + p.period] = v;
+      const var_ = { hast: h.namn, datum: p.datum, period: p.period };
+      if (v.status === 'saknas') ut.push(Object.assign({ niva: 'medel', titel: 'Passande täcke saknas', text: `Rekommenderat ${r.text.toLowerCase()}. Förrådet saknar ${v.saknas}.${v.narmast ? ' ' + valText(v) + ` (${v.gram} g).` : ''}` }, var_));
+      if (v.halsSaknas) ut.push(Object.assign({ niva: 'info', titel: 'Halsdel saknas', text: 'Under −10 °C rekommenderas halsdel. Inget av de valda täckena har det.' }, var_));
+      if (v.gram > 0 && v.status !== 'saknas') {
+        const varmast = rek(h, p, p.period === 'dag' ? p.tMax : p.tMax);
+        if (p.tMax - p.temp >= 3 && varmast.max < v.gram - 75) {
+          ut.push(Object.assign({ niva: 'medel', titel: 'Risk för svettning', text: `Upp till ${fmtT(p.tMax)} under perioden. Då räcker ${varmast.text.toLowerCase()}, men valt täcke är ${v.gram} g. Känn efter bakom bogen mitt på dagen.` }, var_));
+        } else if (h.behov.svettas && v.gram >= 150 && p.tMax > 5) {
+          ut.push(Object.assign({ niva: 'medel', titel: 'Risk för svettning', text: `${h.namn} svettas lätt och det blir upp till ${fmtT(p.tMax)}. Kontrollera under täcket.` }, var_));
+        }
+      }
+      const blott = p.ned === 'regn' || p.ned === 'blotsno';
+      if (r.ute && v.delar.length && blott && v.delar.some(t => !t.vattentat) && v.status !== 'kombination') {
+        ut.push(Object.assign({ niva: 'hog', titel: 'Täcket är inte vattentätt', text: `${NED[p.ned]} väntas. Ett blött täcke kyler mer än inget täcke. Använd ett vattentätt täcke ytterst.` }, var_));
+      }
+      if (r.ute && v.status !== 'inget' && blott && p.mm >= 5) {
+        ut.push(Object.assign({ niva: 'medel', titel: 'Täcket kan bli genomblött', text: `${minus(Math.round(p.mm))} mm ${NED[p.ned].toLowerCase()} väntas. Kontrollera att täcket är torrt på insidan och ha ett torrt reservtäcke.` }, var_));
+      }
+    }
+    for (const d of datum) {
+      const a = val[d + 'dag'], b = val[d + 'natt'];
+      if (a && b && Math.abs((a.gram || 0) - (b.gram || 0)) >= 100) {
+        ut.push({ niva: 'info', hast: h.namn, datum: d, period: 'natt', titel: 'Byt täcke till natten', text: `Från ${valText(a).toLowerCase()} (${a.gram || 0} g) på dagen till ${valText(b).toLowerCase()} (${b.gram || 0} g) på natten.` });
+      }
+    }
+  }
+  const ordning = { hog: 0, medel: 1, info: 2 };
+  return ut.sort((a, b) => ordning[a.niva] - ordning[b.niva] || String(a.datum || '').localeCompare(String(b.datum || '')));
+}
+
+/* ---------- Logg ---------- */
+function hittaLogg(hid, d, per) { return S.logg.find(l => l.hast === hid && l.datum === d && l.period === per); }
+function loggPost(h, p) {
+  let l = hittaLogg(h.id, p.datum, p.period);
+  if (!l) {
+    const v = valj(h, rek(h, p));
+    l = { id: uid(), hast: h.id, datum: p.datum, period: p.period, tacke: valText(v) + (v.gram ? ` (${v.gram} g)` : ''), pa: false, kansla: null, anteckning: '', tid: Date.now() };
+    S.logg.push(l);
+  }
+  return l;
+}
+
+/* ---------- Rendering ---------- */
+const VYER = [['oversikt', 'Översikt'], ['vecka', 'Veckoplan'], ['varningar', 'Varningar'], ['logg', 'Logg'], ['hastar', 'Hästar'], ['vader', 'Väder']];
+function aktuellVy() { const h = location.hash.slice(1); return VYER.some(v => v[0] === h) ? h : 'oversikt'; }
+const $ = id => document.getElementById(id);
+
+function renderNav() {
+  const vy = aktuellVy();
+  const antal = allaVarningar().filter(v => v.niva !== 'info').length;
+  $('flikar').innerHTML = VYER.map(([k, t]) => `<a href="#${k}" ${k === vy ? 'aria-current="page"' : ''}>${t}${k === 'varningar' && antal ? ` <span class="raknare">${antal}</span>` : ''}</a>`).join('');
+  $('ort-text').textContent = S.installningar.ort ? `${S.installningar.ort}` : '';
+}
+function paminnelse() {
+  return `<div class="paminn">${ikon('hand')}<p><strong>Tumregler, inte facit.</strong> Känn alltid efter bakom bogen: varm och fuktig betyder för varmt, kall betyder för kallt. Varje häst är olika.</p></div>`;
+}
+function tomt(titel, text, lank, lanktext) {
+  return `<div class="tom"><h2>${titel}</h2><p class="liten">${text}</p>${lank ? `<a class="knapp primar" href="#${lank}">${lanktext}</a>` : ''}</div>`;
+}
+function fot() {
+  return `<p class="fot">Data sparas bara i den här webbläsaren${lagringOk ? '' : ' – men lagring är avstängd här, så ändringar försvinner när sidan stängs'}. Rekommendationerna bygger på tumregler för klippta och oklippta hästar och ersätter inte din egen bedömning.</p>`;
+}
+function vaderMini(p) {
+  return `<span class="vmini">${ikon(vaderIkon(p))} ${fmtT(p.temp)} · ${minus(Math.round(p.vind))} m/s${p.ned !== 'ingen' ? ' · ' + NED[p.ned].toLowerCase() + (p.mm ? ' ' + String(p.mm).replace('.', ',') + ' mm' : '') : ''}</span>`;
+}
+function skala(r, v) {
+  const max = 450, pct = g => Math.max(0, Math.min(100, g / max * 100));
+  const band = r.max > 0 ? `<span class="skala-band" style="left:${pct(r.min)}%;width:${Math.max(pct(r.max) - pct(r.min), 1.6)}%"></span>` : '';
+  const mark = v.gram != null && v.status !== 'inget' && v.delar.length ? `<span class="skala-mark" style="left:${pct(v.gram)}%"></span>` : '';
+  const tick = [0, 100, 200, 300, 400].map(g => `<span style="left:${pct(g)}%">${g}</span>`).join('') + `<span style="left:100%">g</span>`;
+  const etikett = r.max > 0 ? `Rekommenderat ${r.min}–${r.max} g` : 'Inget täcke rekommenderas';
+  return `<div class="skala" role="img" aria-label="${etikett}${mark ? ', valt ' + v.gram + ' g' : ''}"><div class="skala-spar">${band}${mark}</div><div class="skala-tick">${tick}</div></div>`;
+}
+function skal(r) {
+  if (!r.just.length) return '<ul class="skal"><li>Grundtabell utan justering</li></ul>';
+  return `<ul class="skal">${r.just.map(j => `<li class="${j.steg > 0 ? 'upp' : j.steg < 0 ? 'ned' : ''}">${j.steg ? fmtSteg(j.steg) + ' steg: ' : ''}${esc(j.text)}</li>`).join('')}</ul>`;
+}
+function halva(h, p, per) {
+  if (!p) return `<section class="halva"><div class="halva-topp"><span class="per">${PERIOD[per]}</span></div><p class="liten">Ingen prognos för perioden.</p></section>`;
+  const r = rek(h, p), v = valj(h, r);
+  const l = hittaLogg(h.id, p.datum, p.period);
+  const data = `data-h="${h.id}" data-d="${p.datum}" data-p="${p.period}"`;
+  const kansla = ['varm', 'lagom', 'kall'].map(k => `<button type="button" data-act="kansla" data-k="${k}" ${data} aria-pressed="${l && l.kansla === k}">${k === 'varm' ? 'För varm' : k === 'kall' ? 'För kall' : 'Lagom'}</button>`).join('');
+  const effText = r.netto ? ` · effektiv ${fmtT(r.eff)}` : '';
+  return `<section class="halva">
+    <div class="halva-topp"><span class="per">${PERIOD[p.period]}</span>${vaderMini(p)}</div>
+    <p class="val">${esc(valText(v))}${v.delar.length && v.status !== 'inget' ? ` <span class="g">${v.gram} g</span>` : ''}</p>
+    <p class="rek">Rekommenderat: ${r.text}${effText}</p>
+    ${skala(r, v)}
+    ${skal(r)}
+    ${v.status === 'saknas' ? `<p class="saknas">Saknas: ${esc(v.saknas)}</p>` : ''}
+    ${v.halsSaknas ? '<p class="saknas">Halsdel rekommenderas men saknas</p>' : ''}
+    <div class="atg">
+      <button type="button" class="knapp" data-act="pa" ${data} aria-pressed="${!!(l && l.pa)}">${ikon('bock')}${l && l.pa ? 'Täcke på' : 'Bocka av: täcke på'}</button>
+      <div class="seg" role="group" aria-label="Hur kändes hästen?">${kansla}</div>
+    </div>
+  </section>`;
+}
+function vyOversikt() {
+  if (!S.hastar.length) return paminnelse() + tomt('Inga hästar ännu', 'Lägg in hästen, dess miljö och vilka täcken som finns.', 'hastar', 'Lägg till häst');
+  const ps = perioder();
+  const datum = [...new Set(ps.map(p => p.datum))];
+  if (!datum.length) return paminnelse() + tomt('Väder saknas', vaderKallaText(), 'vader', 'Gå till Väder');
+  if (ui.dag >= datum.length) ui.dag = 0;
+  const d = datum[ui.dag];
+  const dag = ps.find(p => p.datum === d && p.period === 'dag');
+  const natt = ps.find(p => p.datum === d && p.period === 'natt');
+  const vcell = p => p ? `<div>${ikon(vaderIkon(p), 'ikon')}<div><div class="per">${PERIOD[p.period]}</div><div class="temp">${fmtT(p.temp)}</div><div class="detalj">${ikon('vind', '').replace('<svg', '<svg style="width:14px;height:14px;vertical-align:-2px"')} ${minus(Math.round(p.vind))} m/s${p.byar ? ` (byar ${Math.round(p.byar)})` : ''} · ${NED[p.ned]}${p.mm ? ' ' + String(p.mm).replace('.', ',') + ' mm' : ''}</div></div></div>` : '<div><p class="liten">Ingen prognos</p></div>';
+  let notis = '';
+  if (dag && natt) {
+    const skillnad = Math.round(Math.max(dag.tMax, natt.tMax) - Math.min(dag.tMin, natt.tMin));
+    notis = `<div class="notis ${skillnad > 8 ? 'varn' : ''}">Skillnad mellan dygnets varmaste och kallaste: ${skillnad} °C${skillnad > 8 ? ' – byt täcke mellan dag och natt.' : ''}${dag.period === 'dag' && S.vaderKalla !== 'smhi' ? '' : ''}</div>`;
+  }
+  return `${paminnelse()}
+  <section class="sektion">
+    <p class="liten">${esc(vaderKallaText())}</p>
+    <div class="dagar" role="group" aria-label="Välj dag">${datum.map((x, i) => `<button type="button" class="chip" data-act="dag" data-i="${i}" aria-pressed="${i === ui.dag}">${fmtDag(x)}</button>`).join('')}</div>
+    <div class="vader">${vcell(dag)}${vcell(natt)}${notis}</div>
+  </section>
+  <section class="kortlista">${S.hastar.map(h => `<article class="kort">
+    <header class="kort-huvud"><h3>${esc(h.namn)} ${h.exempel ? '<span class="tagg">Exempel</span>' : ''}</h3>
+    <p class="meta">${KLIPP_KORT[h.klipp]} · dag i ${PLATS[h.miljo.dag].toLowerCase()}, natt i ${PLATS[h.miljo.natt].toLowerCase()}${h.miljo.vindskydd ? ' · vindskydd' : ''}${tal(h.justering) ? ' · egen justering ' + fmtSteg(tal(h.justering)) : ''}</p></header>
+    <div class="halvor">${halva(h, dag, 'dag')}${halva(h, natt, 'natt')}</div>
+  </article>`).join('')}</section>${fot()}`;
+}
+function vyVecka() {
+  if (!S.hastar.length) return tomt('Inga hästar ännu', 'Lägg till en häst för att se veckoplanen.', 'hastar', 'Lägg till häst');
+  const ps = perioder();
+  const datum = [...new Set(ps.map(p => p.datum))];
+  if (!datum.length) return tomt('Väder saknas', vaderKallaText(), 'vader', 'Gå till Väder');
+  const hitta = (d, per) => ps.find(p => p.datum === d && p.period === per);
+  const huvud1 = datum.map(d => `<th colspan="2" scope="colgroup">${fmtKort(d)}</th>`).join('');
+  const huvud2 = datum.map(() => '<th scope="col">Dag</th><th scope="col">Natt</th>').join('');
+  const vrad = datum.map(d => ['dag', 'natt'].map(per => { const p = hitta(d, per); return `<td>${p ? ikon(vaderIkon(p)) + ' ' + fmtT(p.temp) + '<br>' + minus(Math.round(p.vind)) + ' m/s' : '–'}</td>`; }).join('')).join('');
+  const rader = S.hastar.map(h => `<tr><th class="hast" scope="row">${esc(h.namn)}</th>${datum.map(d => ['dag', 'natt'].map(per => {
+    const p = hitta(d, per);
+    if (!p) return '<td class="cell">–</td>';
+    const r = rek(h, p), v = valj(h, r);
+    const g = v.status === 'inget' ? 0 : (v.gram || 0);
+    const mix = Math.round(Math.min(g, 450) / 450 * 42);
+    const l = hittaLogg(h.id, p.datum, p.period);
+    return `<td class="cell ${v.status === 'saknas' ? 'saknas-cell' : ''}" style="--mix:${mix}%" title="${esc(r.text)}"><span class="cell-namn">${esc(valText(v))}</span><span class="cell-g">${v.status === 'inget' ? '0 g' : (v.gram ?? '–') + ' g'}${l && l.pa ? ' · på ✓' : ''}</span></td>`;
+  }).join('')).join('')}</tr>`).join('');
+  return `<section class="sektion"><h2>Veckoplan</h2><p class="liten">${esc(mening(vaderKallaText()))} Ju mörkare ruta, desto mer fyllning.</p>
+  <div class="tabell-wrap"><table class="plan"><thead><tr><th class="hast" rowspan="2" scope="col">Häst</th>${huvud1}</tr><tr>${huvud2}</tr></thead>
+  <tbody><tr class="vrad"><th class="hast" scope="row">Väder</th>${vrad}</tr>${rader}</tbody></table></div>
+  <div class="teckenforklaring"><span><span class="ruta" style="background:var(--surface)"></span>Inget täcke</span><span><span class="ruta" style="background:color-mix(in srgb, var(--cold) 20%, var(--surface))"></span>ca 200 g</span><span><span class="ruta" style="background:color-mix(in srgb, var(--cold) 38%, var(--surface))"></span>400 g</span><span><span class="ruta" style="box-shadow:inset 0 0 0 2px var(--warn)"></span>Passande täcke saknas</span></div>
+  </section>${paminnelse()}`;
+}
+function vyVarningar() {
+  const v = allaVarningar();
+  if (!v.length) return `<section class="sektion"><h2>Varningar</h2>${tomt('Inga varningar', 'Inga stora temperaturhopp, svettrisker eller blöta täcken i prognosen.')}</section>${paminnelse()}`;
+  const NIVA = { hog: 'Viktigt', medel: 'Se upp', info: 'Tips' };
+  return `<section class="sektion"><h2>Varningar</h2><p class="liten">${esc(vaderKallaText())}</p><ul class="varnlista">${v.map(x => `<li class="varn ${x.niva}">
+    <div class="meta"><span class="niva">${NIVA[x.niva]}</span>${x.hast ? `<span>${esc(x.hast)}</span>` : '<span>Alla hästar</span>'}${x.datum ? `<span>${fmtDag(x.datum)}${x.period ? ', ' + x.period : ''}</span>` : ''}</div>
+    <h3>${esc(x.titel)}</h3><p>${esc(x.text)}</p>
+    ${x.forslag ? `<div class="knapprad"><button type="button" class="knapp primar" data-act="justera" data-h="${x.forslag.hast.id}" data-steg="${x.forslag.steg}">Ändra till ${fmtSteg(tal(x.forslag.hast.justering) + x.forslag.steg)}</button></div>` : ''}
+  </li>`).join('')}</ul></section>${paminnelse()}`;
+}
+function vyLogg() {
+  const forslag = S.hastar.map(loggForslag).filter(Boolean);
+  const poster = S.logg.filter(l => S.hastar.some(h => h.id === l.hast)).sort((a, b) => b.datum.localeCompare(a.datum) || (a.period === 'natt' ? -1 : 1));
+  const namn = id => (S.hastar.find(h => h.id === id) || {}).namn || '';
+  const fs = forslag.map(f => `<div class="forslag"><p>${esc(f.text)}</p><div class="knapprad"><button type="button" class="knapp primar" data-act="justera" data-h="${f.hast.id}" data-steg="${f.steg}">Ändra till ${fmtSteg(tal(f.hast.justering) + f.steg)}</button></div></div>`).join('');
+  const lista = poster.length ? `<ul class="logglista">${poster.map(l => `<li class="post">
+    <div class="post-topp"><strong>${esc(namn(l.hast))}</strong><span class="meta">${fmtDag(l.datum)} · ${PERIOD[l.period]}</span></div>
+    <p>${esc(l.tacke)}</p>
+    <div class="atg">
+      <button type="button" class="knapp" data-act="logg-pa" data-id="${l.id}" aria-pressed="${!!l.pa}">${ikon('bock')}${l.pa ? 'Täcke på' : 'Inte på'}</button>
+      <div class="seg" role="group" aria-label="Hur kändes hästen?">${['varm', 'lagom', 'kall'].map(k => `<button type="button" data-act="logg-kansla" data-id="${l.id}" data-k="${k}" aria-pressed="${l.kansla === k}">${k === 'varm' ? 'För varm' : k === 'kall' ? 'För kall' : 'Lagom'}</button>`).join('')}</div>
+      <button type="button" class="ikonknapp" data-act="logg-bort" data-id="${l.id}" aria-label="Ta bort posten">${ikon('kryss')}</button>
+    </div>
+    <label class="falt"><span>Anteckning</span><input type="text" id="ant-${l.id}" data-lf="anteckning" data-id="${l.id}" value="${esc(l.anteckning)}" placeholder="T.ex. varm bakom bogen kl 7"></label>
+  </li>`).join('')}</ul>` : tomt('Loggen är tom', 'Bocka av "täcke på" eller tryck För varm, Lagom eller För kall på Översikt. Efter tre likadana känslor föreslår appen en ny egen justering.', 'oversikt', 'Till Översikt');
+  return `<section class="sektion"><h2>Logg</h2>${fs}${lista}</section>${paminnelse()}`;
+}
+function sel(attr, varden, valt, id) {
+  return `<select id="${id}" ${attr}>${Object.entries(varden).map(([k, t]) => `<option value="${k}" ${String(k) === String(valt) ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+}
+function vyHastar() {
+  const former = S.hastar.map(h => {
+    const a = f => `data-hf="${f}" data-h="${h.id}"`;
+    const id = f => `f-${h.id}-${f.replace('.', '-')}`;
+    const kryss = (f, t, v) => `<label><input type="checkbox" id="${id(f)}" ${a(f)} ${v ? 'checked' : ''}> ${t}</label>`;
+    const tack = h.tacken.map(t => {
+      const b = f => `data-tf="${f}" data-h="${h.id}" data-t="${t.id}"`;
+      const tid = f => `t-${t.id}-${f}`;
+      return `<div class="tackrad">
+        <label class="falt namnf"><span>Namn</span><input type="text" id="${tid('namn')}" ${b('namn')} value="${esc(t.namn)}"></label>
+        <label class="falt"><span>Typ</span>${sel(b('typ'), TYPER, t.typ, tid('typ'))}</label>
+        <label class="falt"><span>Fyllning (g)</span><input type="number" inputmode="numeric" min="0" step="10" id="${tid('gram')}" ${b('gram')} value="${esc(t.gram)}"></label>
+        <div class="kryss"><label><input type="checkbox" id="${tid('hals')}" ${b('hals')} ${t.hals ? 'checked' : ''}> Halsdel</label></div>
+        <div class="kryss"><label><input type="checkbox" id="${tid('vattentat')}" ${b('vattentat')} ${t.vattentat ? 'checked' : ''}> Vattentätt</label></div>
+        <button type="button" class="ikonknapp" data-act="ta-bort-tacke" data-h="${h.id}" data-t="${t.id}" aria-label="Ta bort ${esc(t.namn)}">${ikon('kryss')}</button>
+      </div>`;
+    }).join('');
+    const bekr = ui.bekrafta === h.id
+      ? `<div class="bekrafta"><span>Ta bort ${esc(h.namn)} med täcken och logg?</span><button type="button" class="knapp fara fylld" data-act="ta-bort-hast-ja" data-h="${h.id}">Ja, ta bort</button><button type="button" class="knapp" data-act="avbryt">Avbryt</button></div>`
+      : `<div class="knapprad"><button type="button" class="knapp fara" data-act="ta-bort-hast" data-h="${h.id}">Ta bort häst</button></div>`;
+    return `<details class="hastform" data-id="${h.id}" ${ui.oppen === h.id ? 'open' : ''}>
+      <summary><h3>${esc(h.namn)} ${h.exempel ? '<span class="tagg">Exempel</span>' : ''}</h3><span class="meta">${KLIPP_KORT[h.klipp]} · ${h.tacken.length} täcken</span></summary>
+      <div class="formkropp">
+        <div><h4>Profil</h4><div class="rutnat">
+          <label class="falt"><span>Namn</span><input type="text" id="${id('namn')}" ${a('namn')} value="${esc(h.namn)}"></label>
+          <label class="falt"><span>Ålder (år)</span><input type="number" inputmode="numeric" min="0" max="45" id="${id('alder')}" ${a('alder')} value="${esc(h.alder)}"></label>
+          <label class="falt"><span>Ras/typ</span>${sel(a('ras'), RAS, h.ras, id('ras'))}</label>
+          <label class="falt"><span>Hull (1 mager – 5 fet)</span>${sel(a('hull'), { 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' }, h.hull, id('hull'))}</label>
+          <label class="falt"><span>Pälstyp</span>${sel(a('pals'), PALS, h.pals, id('pals'))}</label>
+          <label class="falt"><span>Klippning</span>${sel(a('klipp'), KLIPP, h.klipp, id('klipp'))}</label>
+          <label class="falt"><span>Arbetsmängd</span>${sel(a('arbete'), ARBETE, h.arbete, id('arbete'))}</label>
+          <label class="falt"><span>Egen justering</span>${sel(a('justering'), { '-2': '−2 (mycket svalare)', '-1': '−1 (svalare)', '0': '±0 (normal)', '1': '+1 (varmare)', '2': '+2 (mycket varmare)' }, tal(h.justering), id('justering'))}</label>
+        </div></div>
+        <div><h4>Särskilda behov</h4><div class="kryss">${kryss('behov.senior', 'Senior', h.behov.senior)}${kryss('behov.mager', 'Mager', h.behov.mager)}${kryss('behov.sjuk', 'Sjuk/skadad', h.behov.sjuk)}${kryss('behov.svettas', 'Svettas lätt', h.behov.svettas)}${kryss('behov.fryser', 'Fryser lätt', h.behov.fryser)}</div>
+          <p class="liten" style="margin-top:6px">Från 20 år räknas hästen som senior och hull 1–2 som mager, även utan kryss.</p></div>
+        <div><h4>Miljö</h4><div class="rutnat">
+          <label class="falt"><span>Dagtid</span>${sel(a('miljo.dag'), PLATS, h.miljo.dag, id('miljo.dag'))}</label>
+          <label class="falt"><span>Nattetid</span>${sel(a('miljo.natt'), PLATS, h.miljo.natt, id('miljo.natt'))}</label>
+          <label class="falt"><span>Grovfoder</span>${sel(a('miljo.grovfoder'), { fri: 'Fri tillgång', begransad: 'Begränsad' }, h.miljo.grovfoder, id('miljo.grovfoder'))}</label>
+          <label class="falt"><span>Stall</span>${sel(a('miljo.stall'), { oisolerat: 'Oisolerat', isolerat: 'Isolerat' }, h.miljo.stall, id('miljo.stall'))}</label>
+        </div><div class="kryss" style="margin-top:10px">${kryss('miljo.vindskydd', 'Vindskydd eller ligghall', h.miljo.vindskydd)}</div></div>
+        <div><h4>Täckesförråd</h4>${tack || '<p class="liten">Inga täcken inlagda ännu.</p>'}
+          <div class="knapprad" style="margin-top:10px"><button type="button" class="knapp" data-act="nytt-tacke" data-h="${h.id}">Lägg till täcke</button></div></div>
+        ${bekr}
+      </div>
+    </details>`;
+  }).join('');
+  return `<section class="sektion"><h2>Hästar</h2><p class="liten">Ändringar sparas direkt.</p>${former}
+    <div class="knapprad"><button type="button" class="knapp primar" data-act="ny-hast">Lägg till häst</button>${S.hastar.some(h => h.exempel) ? '<button type="button" class="knapp" data-act="rensa-exempel">Ta bort exempelhästarna</button>' : ''}</div></section>${paminnelse()}`;
+}
+function vyVader() {
+  const st = S.installningar;
+  if (S.vaderKalla === 'manuell') sakerstallManuell();
+  const s = (f, typ, extra = '') => `<input type="${typ}" id="s-${f}" data-sf="${f}" value="${esc(st[f])}" ${extra}>`;
+  const manuell = S.vaderKalla === 'manuell' ? `<div class="manuell">${S.manuell.map(r => {
+    const m = (f, extra = '') => `<input type="number" inputmode="decimal" step="any" id="m-${r.datum}-${f}" data-mf="${f}" data-d="${r.datum}" value="${esc(r[f])}" ${extra}>`;
+    const rad = per => `<div class="mrad"><span class="etikett">${per === 'dag' ? 'Dag' : 'Natt'}</span>
+      <label class="falt"><span>Temp °C</span>${m(per + 'Temp')}</label>
+      <label class="falt"><span>Vind m/s</span>${m(per + 'Vind', 'min="0"')}</label>
+      <label class="falt"><span>Nederbörd</span>${sel(`data-mf="${per}Ned" data-d="${r.datum}"`, NED, r[per + 'Ned'], `m-${r.datum}-${per}Ned`)}</label>
+      <label class="falt"><span>Mängd mm</span>${m(per + 'Mm', 'min="0"')}</label></div>`;
+    return `<div class="mdag"><h3>${fmtDag(r.datum)}</h3>${rad('dag')}${rad('natt')}</div>`;
+  }).join('')}</div>` : '';
+  const kalla = [['smhi', 'SMHI-prognos'], ['manuell', 'Mata in själv'], ['exempel', 'Exempelväder']];
+  return `<section class="sektion"><h2>Väder</h2>
+    <div class="rutnat">
+      <label class="falt"><span>Plats (namn)</span>${s('ort', 'text', 'placeholder="T.ex. Stallet i Bälinge"')}</label>
+      <label class="falt"><span>Latitud</span>${s('lat', 'text', 'inputmode="decimal" placeholder="59.86"')}</label>
+      <label class="falt"><span>Longitud</span>${s('lon', 'text', 'inputmode="decimal" placeholder="17.64"')}</label>
+      <label class="falt"><span>Planera framåt</span>${sel('data-sf="dygn"', { 3: '3 dygn', 4: '4 dygn', 5: '5 dygn' }, st.dygn, 's-dygn')}</label>
+    </div>
+    <div class="knapprad">
+      <button type="button" class="knapp primar" data-act="hamta">${ikon('hamta')}Hämta prognos från SMHI</button>
+      <button type="button" class="knapp" data-act="position">${ikon('plats')}Använd min position</button>
+    </div>
+    ${ui.vaderStatus ? `<p class="status ${ui.vaderStatusTyp}" role="status">${esc(ui.vaderStatus)}</p>` : ''}
+    <p class="liten">${esc(mening(vaderKallaText()))} Dag räknas 08–20 (medeltemperatur), natt 20–08 (lägsta temperatur). Vinden är högsta medelvind under perioden.</p>
+    <div class="falt"><span>Väder som används</span><div class="dagar" role="radiogroup" aria-label="Väderkälla">${kalla.map(([k, t]) => `<button type="button" class="chip" role="radio" aria-checked="${S.vaderKalla === k}" aria-pressed="${S.vaderKalla === k}" data-act="kalla" data-k="${k}">${t}</button>`).join('')}</div></div>
+    ${manuell}
+  </section>
+  <section class="sektion"><h2>Spara och flytta data</h2>
+    <p class="liten">Allt sparas i den här webbläsaren. För att flytta till en annan enhet: kopiera texten nedan och klistra in den där.</p>
+    <label class="falt"><span>Dina data</span><textarea id="export" readonly>${esc(JSON.stringify(S))}</textarea></label>
+    <div class="knapprad"><button type="button" class="knapp" data-act="kopiera">Kopiera</button></div>
+    <label class="falt"><span>Klistra in data från en annan enhet</span><textarea id="import" placeholder="Klistra in här"></textarea></label>
+    <div class="knapprad"><button type="button" class="knapp" data-act="importera">Läs in</button>
+    ${ui.bekrafta === 'alla' ? '<span class="bekrafta"><span>Radera alla hästar, täcken och loggen?</span><button type="button" class="knapp fara fylld" data-act="aterstall-ja">Ja, radera</button><button type="button" class="knapp" data-act="avbryt">Avbryt</button></span>' : '<button type="button" class="knapp fara" data-act="aterstall">Radera allt</button>'}</div>
+  </section>${fot()}`;
+}
+const RENDER = { oversikt: vyOversikt, vecka: vyVecka, varningar: vyVarningar, logg: vyLogg, hastar: vyHastar, vader: vyVader };
+function render() {
+  renderNav();
+  $('vy').innerHTML = RENDER[aktuellVy()]();
+}
+let toastTimer;
+function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600); }
+
+/* ---------- Händelser ---------- */
+const hast = id => S.hastar.find(h => h.id === id);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act, h = b.dataset.h ? hast(b.dataset.h) : null;
+  const periodFor = () => perioder().find(p => p.datum === b.dataset.d && p.period === b.dataset.p);
+  switch (act) {
+    case 'dag': ui.dag = +b.dataset.i; sparaUi(); break;
+    case 'pa': { const p = periodFor(); if (!h || !p) return; const l = loggPost(h, p); l.pa = !l.pa; l.tid = Date.now(); if (l.pa) toast(`${h.namn}: ${l.tacke} – loggat`); break; }
+    case 'kansla': {
+      const p = periodFor(); if (!h || !p) return; const l = loggPost(h, p);
+      l.kansla = l.kansla === b.dataset.k ? null : b.dataset.k; l.tid = Date.now();
+      const f = loggForslag(h); if (f) toast(`Förslag: ändra egen justering för ${h.namn}. Se Varningar.`);
+      break;
+    }
+    case 'logg-pa': { const l = S.logg.find(x => x.id === b.dataset.id); if (l) l.pa = !l.pa; break; }
+    case 'logg-kansla': { const l = S.logg.find(x => x.id === b.dataset.id); if (l) { l.kansla = l.kansla === b.dataset.k ? null : b.dataset.k; l.tid = Date.now(); } break; }
+    case 'logg-bort': S.logg = S.logg.filter(x => x.id !== b.dataset.id); break;
+    case 'justera': if (h) { h.justering = Math.max(-2, Math.min(2, tal(h.justering) + +b.dataset.steg)); h.justeringAndrad = Date.now(); toast(`Egen justering för ${h.namn}: ${fmtSteg(h.justering)}`); } break;
+    case 'ny-hast': { const n = nyHast(); S.hastar.push(n); ui.oppen = n.id; sparaUi(); break; }
+    case 'ta-bort-hast': ui.bekrafta = b.dataset.h; render(); return;
+    case 'ta-bort-hast-ja': S.hastar = S.hastar.filter(x => x.id !== b.dataset.h); S.logg = S.logg.filter(l => l.hast !== b.dataset.h); ui.bekrafta = null; break;
+    case 'avbryt': ui.bekrafta = null; render(); return;
+    case 'nytt-tacke': if (h) { h.tacken.push({ id: uid(), namn: 'Nytt täcke', typ: 'utetacke', gram: 150, hals: false, vattentat: true }); ui.oppen = h.id; } break;
+    case 'ta-bort-tacke': if (h) h.tacken = h.tacken.filter(t => t.id !== b.dataset.t); break;
+    case 'rensa-exempel': {
+      const ids = S.hastar.filter(x => x.exempel).map(x => x.id);
+      S.hastar = S.hastar.filter(x => !x.exempel); S.logg = S.logg.filter(l => !ids.includes(l.hast));
+      toast('Exempelhästarna är borttagna'); break;
+    }
+    case 'kalla':
+      S.vaderKalla = b.dataset.k;
+      if (S.vaderKalla === 'manuell') sakerstallManuell();
+      if (S.vaderKalla === 'smhi' && !S.smhi) { spara(); hamtaOchVisa(); return; }
+      break;
+    case 'hamta': hamtaOchVisa(); return;
+    case 'position':
+      try {
+        navigator.geolocation.getCurrentPosition(pos => {
+          S.installningar.lat = pos.coords.latitude.toFixed(4); S.installningar.lon = pos.coords.longitude.toFixed(4);
+          spara(); ui.vaderStatus = 'Positionen är ifylld. Tryck Hämta prognos.'; ui.vaderStatusTyp = 'ok'; render();
+        }, () => { ui.vaderStatus = 'Positionen gick inte att läsa. Skriv in latitud och longitud, till exempel från en kartapp.'; ui.vaderStatusTyp = 'fel'; render(); }, { timeout: 10000 });
+      } catch (err) { ui.vaderStatus = 'Positionen gick inte att läsa här. Skriv in latitud och longitud.'; ui.vaderStatusTyp = 'fel'; render(); }
+      return;
+    case 'kopiera': {
+      const ta = $('export');
+      const valjText = () => { ta.focus(); ta.select(); toast('Texten är markerad. Kopiera den med din enhets kopiera-kommando.'); };
+      try { navigator.clipboard.writeText(ta.value).then(() => toast('Kopierat'), valjText); } catch (err) { valjText(); }
+      return;
+    }
+    case 'importera': {
+      try {
+        const d = JSON.parse($('import').value);
+        if (!d || !Array.isArray(d.hastar)) throw new Error();
+        S = d; S.logg = S.logg || []; S.manuell = S.manuell || []; S.installningar = Object.assign({ dygn: 4 }, S.installningar || {});
+        toast('Data inläst');
+      } catch (err) { toast('Texten gick inte att läsa. Kontrollera att hela texten kom med.'); return; }
+      break;
+    }
+    case 'aterstall': ui.bekrafta = 'alla'; render(); return;
+    case 'aterstall-ja': S = { version: 1, installningar: S.installningar, vaderKalla: S.vaderKalla === 'exempel' ? 'manuell' : S.vaderKalla, smhi: S.smhi, manuell: [], hastar: [], logg: [] }; sakerstallManuell(); ui.bekrafta = null; toast('Allt är raderat'); break;
+    default: return;
+  }
+  spara(); render();
+});
+function satt(obj, vag, v) { const d = vag.split('.'); let o = obj; while (d.length > 1) o = o[d.shift()]; o[d[0]] = v; }
+function vardeAv(el) {
+  if (el.type === 'checkbox') return el.checked;
+  if (el.type === 'number') return el.value === '' ? '' : tal(el.value);
+  return el.value;
+}
+function hanteraFalt(e) {
+  const el = e.target;
+  const text = el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number');
+  if (e.type === 'change' && text) return; // redan sparat vid input
+  if (e.type === 'input' && !text) return;
+  if (el.dataset.hf) {
+    const h = hast(el.dataset.h); if (!h) return;
+    let v = vardeAv(el);
+    if (['hull', 'justering'].includes(el.dataset.hf)) v = tal(v);
+    satt(h, el.dataset.hf, v);
+    if (el.dataset.hf === 'justering') h.justeringAndrad = Date.now();
+    if (el.dataset.hf === 'namn') { const s = el.closest('details').querySelector('summary h3'); if (s) s.firstChild.textContent = v + ' '; }
+  } else if (el.dataset.tf) {
+    const h = hast(el.dataset.h); const t = h && h.tacken.find(x => x.id === el.dataset.t); if (!t) return;
+    t[el.dataset.tf] = el.dataset.tf === 'gram' ? tal(el.value) : vardeAv(el);
+  } else if (el.dataset.sf) {
+    S.installningar[el.dataset.sf] = el.dataset.sf === 'dygn' ? tal(el.value) : el.value;
+    if (el.dataset.sf === 'dygn') { sakerstallManuell(); spara(); render(); return; }
+  } else if (el.dataset.mf) {
+    const r = S.manuell.find(x => x.datum === el.dataset.d); if (!r) return;
+    r[el.dataset.mf] = el.tagName === 'SELECT' ? el.value : (el.value === '' ? '' : tal(el.value));
+  } else if (el.dataset.lf) {
+    const l = S.logg.find(x => x.id === el.dataset.id); if (l) l[el.dataset.lf] = el.value;
+  } else return;
+  spara(); renderNav();
+}
+document.addEventListener('input', hanteraFalt);
+document.addEventListener('change', hanteraFalt);
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d.classList && d.classList.contains('hastform')) {
+    if (d.open) ui.oppen = d.dataset.id; else if (ui.oppen === d.dataset.id) ui.oppen = null;
+    sparaUi();
+  }
+}, true);
+window.addEventListener('hashchange', () => { ui.bekrafta = null; render(); window.scrollTo(0, 0); });
+
+/* ---------- Start ---------- */
+if (S.vaderKalla === 'manuell') sakerstallManuell();
+render();
+const gammal = !S.smhi || Date.now() - S.smhi.hamtad > 2 * 3600e3;
+if (S.installningar.autoHamta && gammal && (S.vaderKalla === 'smhi' || S.vaderKalla === 'exempel') && S.installningar.lat !== '' && S.installningar.lon !== '') {
+  const kalla = S.vaderKalla;
+  hamtaSMHI().then(() => { if (S.vaderKalla === kalla) S.vaderKalla = 'smhi'; spara(); render(); })
+    .catch(() => { if (S.vaderKalla === 'smhi' && S.smhi) { ui.vaderStatus = 'Kunde inte uppdatera från SMHI. Visar senast hämtade prognos.'; ui.vaderStatusTyp = 'fel'; } else if (S.vaderKalla === 'exempel') { ui.vaderStatus = 'SMHI gick inte att nå härifrån. Exempelväder visas tills du fyller i vädret eller försöker igen.'; ui.vaderStatusTyp = 'fel'; } render(); });
+}
+})();
+</script>
+</body>
+</html>

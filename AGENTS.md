@@ -27,6 +27,7 @@ Det här projektet bygger ett system för cykliska grundscheman i dygnet runt-ve
 - `schemawebb/statisk/enhetsfil.js` – enhetsfil: en enhet med inställningar och scheman som sparas i webben eller lättversionen och öppnas i den andra. Indata förs över orörd; scheman granskas om när filen öppnas. Se `docs/enhetsfil.md`.
 - `schemawebb/statisk/grafer.js` – nyckeltal och grafer (översikt, värmekarta, simulering) och balansmallen (behov, arbetsmiljö, budget, kvalitet; `docs/balansmall.md`), delas av webben och lättversionen. Fristående, inga regler.
 - `schemawebb/statisk/assistent.js` – schemaassistentens verktyg, delas av webben (`chatt.js`, `/api/assistent`) och lättversionen. Assistenten får bara föreslå ändringar; de tillämpas först när användaren godkänner. Den får aldrig ändra regler eller skriva kod som körs i lösaren. Se `docs/assistent.md`.
+- `tackesplaneraren/` – fristående app för hästtäcken (en HTML-fil), hör inte till schemasystemet. Se `tackesplaneraren/README.md`.
 - `docs/` – regler, modell och dataformat. Uppdatera dokumentationen i samma ändring som koden.
 - `tests/fall/` – testfall med fältet `forvantat`. `tests/test_motor.py` kör dem.
 
